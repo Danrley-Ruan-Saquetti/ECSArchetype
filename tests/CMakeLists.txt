@@ -11,3 +11,4 @@ endfunction()
 
 ecs_add_test(unit_table unit_table.cpp)
 ecs_add_test(unit_type_info unit_type_info.cpp)
+ecs_add_test(unit_entity unit_entity.cpp)
