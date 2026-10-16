@@ -265,3 +265,39 @@ const SmallMap<ArchetypeId, uint16_t>* World::smallestIndex(const Signature& wit
 }
 
 }  // namespace ecs
+
+namespace ecs {
+
+void World::materialize(Entity e) {
+    EntityRecord& rec = store_.record(e.index);
+    Archetype& root = *archetypes_[0];
+    rec.row = root.table.pushUninit(e);
+    rec.arch = &root;
+}
+
+void World::flushSequential(CommandBuffer& cb) {
+    ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
+    ECS_ASSERT(cb.store() == &store_, "flush de buffer criado por outro World");
+    cb.forEach([&](const CommandView& v) {
+        switch (v.op) {
+            case CommandOp::Spawn:
+                if (store_.isReserved(v.e)) materialize(v.e);
+                break;
+            case CommandOp::Destroy:
+                if (store_.isAlive(v.e))
+                    destroy(v.e);
+                else if (store_.isReserved(v.e))
+                    store_.release(v.e.index);
+                break;
+            case CommandOp::Add:
+                if (store_.isAlive(v.e)) addRaw(v.e, v.cid, v.payload);
+                break;
+            case CommandOp::Remove:
+                if (store_.isAlive(v.e)) removeRaw(v.e, v.cid);
+                break;
+        }
+    });
+    cb.clear();
+}
+
+}  // namespace ecs

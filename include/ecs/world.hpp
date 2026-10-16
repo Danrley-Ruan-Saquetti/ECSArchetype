@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <ecs/archetype.hpp>
+#include <ecs/command_buffer.hpp>
 #include <ecs/detail/assert.hpp>
 #include <ecs/entity.hpp>
 #include <ecs/query.hpp>
@@ -56,6 +57,10 @@ public:
     void addRaw(Entity e, ComponentId cid, void* value);  // move de `value`; ignorado para tags
     void removeRaw(Entity e, ComponentId cid);
 
+    CommandBuffer commands() { return CommandBuffer(store_); }
+    // Oráculo sem coalescing: aplica cada comando na ordem de gravação e limpa o buffer.
+    void flushSequential(CommandBuffer& cb);
+
     // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação.
     template <class... Ts, class... Filters>
     Query<Ts...>& query(Filters... filters);
@@ -91,6 +96,7 @@ private:
     const SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
 
     const Edge& edgeFor(Archetype& src, ComponentId cid, bool adding);
+    void materialize(Entity e);  // põe uma entidade reservada no arquétipo raiz
     Entity place(Archetype& a);  // aloca entidade e linha morta em `a`
 
     EntityStore store_;
