@@ -4,6 +4,7 @@
 #include <ecs/world.hpp>
 #include <vector>
 
+#include "alloc_counter.hpp"
 #include "components.hpp"
 
 TEST_CASE("create() nasce vivo no arquétipo raiz") {
@@ -111,4 +112,26 @@ TEST_CASE("handle antigo após reciclagem do índice") {  // Review Focus 4
     CHECK_FALSE(w.isAlive(e));
     CHECK(w.tryGet<A>(e) == nullptr);
     CHECK(w.get<A>(e2).v == 2);
+}
+
+TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") {
+    struct C1 { uint64_t v; };
+    struct C2 { uint64_t v; };
+    struct C3 { uint64_t v; };
+    struct C4 { uint64_t v; };
+    ecs::World w;
+    auto e = w.create(C1{1}, C2{2}, C3{3});
+    w.add(e, C4{4});
+    w.remove<C4>(e);  // aquece arestas e capacidade (64 linhas)
+    auto allocs = allocationCount();
+    auto lookups = w.signatureLookupCount();
+    for (int i = 0; i < 1000; ++i) {
+        w.add(e, C4{uint64_t(i)});
+        w.remove<C4>(e);
+    }
+    auto allocsAfter = allocationCount();
+    auto lookupsAfter = w.signatureLookupCount();
+    CHECK(allocsAfter == allocs);
+    CHECK(lookupsAfter == lookups);
+    CHECK(w.get<C3>(e).v == 3);
 }

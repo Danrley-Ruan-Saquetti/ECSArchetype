@@ -60,6 +60,8 @@ public:
         if (!col || *col == NoColumn) return nullptr;
         return rec.arch->table.column(*col).at(rec.row);
     }
+    uint64_t signatureLookupCount() const noexcept { return sigLookups_; }
+
     // Verifica as invariantes I-1, I-3..I-7, I-10, I-11 (compilado em todos os builds).
     // Em falha escreve em *why o ID e o objeto (ex.: "I-3 e=4:1") e devolve false.
     bool checkInvariants(std::string* why = nullptr) const;
@@ -72,6 +74,7 @@ public:
 private:
     Archetype* findOrCreate(Signature sig);
     uint32_t moveEntity(Entity e, EntityRecord& rec, Archetype& dst, const Edge& edge);
+    const Edge& edgeFor(Archetype& src, ComponentId cid, bool adding);
     Entity place(Archetype& a);  // aloca entidade e linha morta em `a`
 
     EntityStore store_;
@@ -79,6 +82,7 @@ private:
     std::unordered_map<Signature, Archetype*, SigHash> bySignature_;
     std::vector<SmallMap<ArchetypeId, uint16_t>> componentIndex_;  // [cid]: arquétipo → coluna (NoColumn p/ tag)
     uint32_t iterating_ = 0;
+    mutable uint64_t sigLookups_ = 0;
 };
 
 template <class... Ts>

@@ -5,11 +5,25 @@
 
 namespace ecs {
 
+namespace {
+// srcToDst[i] deve apontar para a coluna de b com o mesmo ComponentId (ou -1 sse ausente em b).
+bool checkEdgeMapping(const Archetype& a, const Archetype& b, const Edge& edge) {
+    if (edge.srcToDst.size() != a.columnTypes.size()) return false;
+    for (size_t i = 0; i < a.columnTypes.size(); ++i) {
+        const uint16_t col = columnOf(b, a.columnTypes[i]);
+        const int16_t want = col == NoColumn ? int16_t(-1) : static_cast<int16_t>(col);
+        if (edge.srcToDst[i] != want) return false;
+    }
+    return true;
+}
+}  // namespace
+
 World::World() { findOrCreate({}); }  // arquétipo raiz: id == 0 (R-AR-3)
 
 World::~World() = default;
 
 Archetype* World::findOrCreate(Signature sig) {
+    ++sigLookups_;
     if (auto it = bySignature_.find(sig); it != bySignature_.end()) return it->second;
     const auto id = static_cast<ArchetypeId>(archetypes_.size());
     archetypes_.push_back(std::make_unique<Archetype>(id, sig));
@@ -76,10 +90,8 @@ void World::addRaw(Entity e, ComponentId cid, void* value) {
             ti.moveConstruct(p, value);
         return;
     }
-    Signature sig = src.signature;
-    sig.insert(std::lower_bound(sig.begin(), sig.end(), cid), cid);
-    Archetype& dst = *findOrCreate(std::move(sig));
-    Edge edge = buildEdge(src, dst, cid);
+    const Edge& edge = edgeFor(src, cid, true);
+    Archetype& dst = *edge.target;
     const uint32_t dstRow = moveEntity(e, rec, dst, edge);
     if (edge.addedColumn >= 0) {
         void* p = dst.table.column(static_cast<uint16_t>(edge.addedColumn)).at(dstRow);
@@ -95,13 +107,22 @@ void World::removeRaw(Entity e, ComponentId cid) {
                int(typeInfo(cid).name.size()), typeInfo(cid).name.data());
     EntityRecord& rec = store_.record(e.index);
     Archetype& src = *rec.arch;
-    auto it = std::lower_bound(src.signature.begin(), src.signature.end(), cid);
-    if (it == src.signature.end() || *it != cid) return;
+    if (!std::binary_search(src.signature.begin(), src.signature.end(), cid)) return;
+    const Edge& edge = edgeFor(src, cid, false);
+    moveEntity(e, rec, *edge.target, edge);
+}
+
+const Edge& World::edgeFor(Archetype& src, ComponentId cid, bool adding) {
+    SmallMap<ComponentId, Edge>& edges = adding ? src.addEdges : src.removeEdges;
+    if (const Edge* cached = edges.find(cid)) return *cached;
     Signature sig = src.signature;
-    sig.erase(sig.begin() + (it - src.signature.begin()));
-    Archetype& dst = *findOrCreate(std::move(sig));
-    Edge edge = buildEdge(src, dst, NoComponent);
-    moveEntity(e, rec, dst, edge);
+    auto pos = std::lower_bound(sig.begin(), sig.end(), cid);
+    if (adding)
+        sig.insert(pos, cid);
+    else
+        sig.erase(pos);
+    Archetype* dst = findOrCreate(std::move(sig));
+    return edges.insert(cid, buildEdge(src, *dst, adding ? cid : NoComponent));
 }
 
 }  // namespace ecs
@@ -184,6 +205,28 @@ bool World::checkInvariants(std::string* why) const {
             if (!std::binary_search(a.signature.begin(), a.signature.end(), ComponentId(c)) ||
                 col != columnOf(a, ComponentId(c)))
                 return fail("I-7", "cid=" + std::to_string(c) + " " + arch(a));
+        }
+    }
+    // I-9
+    for (const auto& ap : archetypes_) {
+        const Archetype& a = *ap;
+        for (int adding = 1; adding >= 0; --adding) {
+            for (const auto& [c, edge] : adding ? a.addEdges : a.removeEdges) {
+                const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(c) + " " + arch(a);
+                if (!edge.target) return fail("I-9", where + " sem destino");
+                const Archetype& b = *edge.target;
+                Signature expected = a.signature;
+                auto pos = std::lower_bound(expected.begin(), expected.end(), c);
+                if (adding)
+                    expected.insert(pos, c);
+                else if (pos != expected.end() && *pos == c)
+                    expected.erase(pos);
+                if (b.signature != expected) return fail("I-9", where + " assinatura");
+                if (!checkEdgeMapping(a, b, edge)) return fail("I-9", where + " srcToDst");
+                int16_t wantAdded = -1;
+                if (adding && !typeInfo(c).tag) wantAdded = static_cast<int16_t>(columnOf(b, c));
+                if (edge.addedColumn != wantAdded) return fail("I-9", where + " addedColumn");
+            }
         }
     }
     return true;
