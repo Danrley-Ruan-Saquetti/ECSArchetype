@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <new>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -18,6 +19,29 @@ struct CommandView {
     Entity e;
     ComponentId cid;
     void* payload;  // nullptr se não há payload (Spawn/Destroy/Remove/tag)
+};
+
+// Passada 1 do flush (R-CB-3): efeito líquido por entidade.
+struct NetComponentOp {
+    ComponentId cid;
+    bool present;     // true: componente presente ao final; false: ausente
+    void* payload;    // valor do último Add (nullptr para tags e remoções)
+};
+
+struct EntityPlan {
+    Entity e;
+    bool spawned = false;
+    bool destroyed = false;
+    uint32_t opBegin = 0, opCount = 0;  // faixa em CommandPlan::ops, ordenada por cid
+};
+
+// As ops de todas as entidades ficam num único vetor (uma alocação em vez de uma por entidade).
+struct CommandPlan {
+    std::vector<EntityPlan> entities;  // na ordem da primeira aparição
+    std::vector<NetComponentOp> ops;
+    std::span<const NetComponentOp> opsOf(const EntityPlan& p) const noexcept {
+        return std::span<const NetComponentOp>(ops).subspan(p.opBegin, p.opCount);
+    }
 };
 
 // Registro (alinhado a 8): [op:u8][pad:7][entity:u64][cid:u32][size:u32][payload alinhado].
@@ -53,6 +77,9 @@ public:
             f(static_cast<const CommandView&>(v));
         }
     }
+
+    // Agrupa os comandos por entidade preservando a ordem e calcula o efeito líquido (R-CB-3, R-CB-4).
+    CommandPlan plan() const;
 
     size_t commandCount() const noexcept { return count_; }
     bool empty() const noexcept { return count_ == 0; }

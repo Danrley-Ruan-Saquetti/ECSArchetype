@@ -239,6 +239,15 @@ bool World::checkInvariants(std::string* why) const {
             }
         }
     }
+    // I-9 (arestas de salto do flush)
+    for (const auto& [key, edge] : jumpEdges_) {
+        const uint32_t sid = static_cast<uint32_t>(key >> 32), did = static_cast<uint32_t>(key);
+        const std::string where = "jump " + std::to_string(sid) + "->" + std::to_string(did);
+        if (sid >= archetypes_.size() || did >= archetypes_.size()) return fail("I-9", where + " id");
+        if (edge.target != archetypes_[did].get()) return fail("I-9", where + " destino");
+        if (!checkEdgeMapping(*archetypes_[sid], *archetypes_[did], edge)) return fail("I-9", where + " srcToDst");
+        if (edge.addedColumn != -1) return fail("I-9", where + " addedColumn");
+    }
     return true;
 }
 
@@ -297,6 +306,103 @@ void World::flushSequential(CommandBuffer& cb) {
                 break;
         }
     });
+    cb.clear();
+}
+
+}  // namespace ecs
+
+namespace ecs {
+
+const Edge& World::jumpEdge(Archetype& src, Archetype& dst) {
+    const uint64_t key = (uint64_t(src.id) << 32) | dst.id;
+    if (auto it = jumpEdges_.find(key); it != jumpEdges_.end()) return it->second;
+    return jumpEdges_.emplace(key, buildEdge(src, dst, NoComponent)).first->second;
+}
+
+void World::flush(CommandBuffer& cb) {
+    ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
+    ECS_ASSERT(cb.store() == &store_, "flush de buffer criado por outro World");
+    const CommandPlan plan = cb.plan();
+
+    // Memo do último resultado: entidades de um lote costumam ter o mesmo (origem, ops),
+    // então a assinatura final, a aresta e as colunas são calculadas uma vez só.
+    struct Memo {
+        bool valid = false;
+        const Archetype* src = nullptr;
+        std::vector<std::pair<ComponentId, bool>> key;
+        Archetype* dst = nullptr;
+        const Edge* edge = nullptr;  // nullptr se src == dst ou entidade reservada
+        std::vector<int32_t> col;    // por op: coluna no destino (-1: sem valor a construir)
+        std::vector<uint8_t> existed;  // por op: o componente já existia na origem
+    } memo;
+    auto memoMatches = [&](const Archetype* src, std::span<const NetComponentOp> ops) {
+        if (!memo.valid || memo.src != src || memo.key.size() != ops.size()) return false;
+        for (size_t i = 0; i < ops.size(); ++i)
+            if (memo.key[i].first != ops[i].cid || memo.key[i].second != ops[i].present) return false;
+        return true;
+    };
+    auto memoBuild = [&](Archetype* src, std::span<const NetComponentOp> ops) {
+        Signature sig = src ? src->signature : Signature{};
+        for (const NetComponentOp& op : ops) {
+            auto pos = std::lower_bound(sig.begin(), sig.end(), op.cid);
+            const bool has = pos != sig.end() && *pos == op.cid;
+            if (op.present && !has)
+                sig.insert(pos, op.cid);
+            else if (!op.present && has)
+                sig.erase(pos);
+        }
+        memo.dst = findOrCreate(std::move(sig));
+        memo.edge = (src && memo.dst != src) ? &jumpEdge(*src, *memo.dst) : nullptr;
+        memo.src = src;
+        memo.key.clear();
+        memo.col.clear();
+        memo.existed.clear();
+        for (const NetComponentOp& op : ops) {
+            memo.key.emplace_back(op.cid, op.present);
+            memo.col.push_back(op.present && !typeInfo(op.cid).tag ? int32_t(columnOf(*memo.dst, op.cid)) : -1);
+            memo.existed.push_back(src && std::binary_search(src->signature.begin(), src->signature.end(), op.cid));
+        }
+        memo.valid = true;
+    };
+
+    for (const EntityPlan& ep : plan.entities) {
+        const Entity e = ep.e;
+        const bool alive = store_.isAlive(e);
+        const bool reserved = ep.spawned && store_.isReserved(e);
+        if (!alive && !reserved) continue;  // handle obsoleto: ignorado (questão 3)
+        if (ep.destroyed) {
+            if (alive)
+                destroy(e);
+            else
+                store_.release(e.index);
+            continue;
+        }
+        const std::span<const NetComponentOp> ops = plan.opsOf(ep);
+        EntityRecord& rec = store_.record(e.index);
+        Archetype* src = alive ? rec.arch : nullptr;
+        if (!memoMatches(src, ops)) memoBuild(src, ops);
+
+        uint32_t row;
+        if (!src) {
+            row = memo.dst->table.pushUninit(e);
+            rec.arch = memo.dst;
+            rec.row = row;
+        } else if (memo.edge) {
+            row = moveEntity(e, rec, *memo.dst, *memo.edge);
+        } else {
+            row = rec.row;
+        }
+        for (size_t i = 0; i < ops.size(); ++i) {
+            if (memo.col[i] < 0) continue;
+            Column& c = memo.dst->table.column(static_cast<uint16_t>(memo.col[i]));
+            void* p = c.at(row);
+            if (memo.existed[i]) destroyValue(*c.info, p);
+            if (c.info->trivial)
+                std::memcpy(p, ops[i].payload, c.info->size);
+            else
+                c.info->moveConstruct(p, ops[i].payload);
+        }
+    }
     cb.clear();
 }
 

@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cstring>
+#include <unordered_map>
 
 #include <ecs/detail/align.hpp>
+#include <ecs/detail/assert.hpp>
 #include <ecs/table.hpp>
 
 namespace ecs {
@@ -133,6 +135,89 @@ void CommandBuffer::clear() noexcept {
     size_ = 0;
     count_ = 0;
     spawned_.clear();
+}
+
+}  // namespace ecs
+
+namespace ecs {
+
+CommandPlan CommandBuffer::plan() const {
+    constexpr uint32_t None = UINT32_MAX;
+    struct Cmd {
+        CommandView v;
+        uint32_t next;
+    };
+    CommandPlan p;
+    std::vector<Cmd> cmds;
+    cmds.reserve(count_);
+    std::vector<uint32_t> head, tail;  // por plano: primeiro e último comando
+    std::vector<uint32_t> slotOf(store_->slotCount(), None);  // índice da entidade → plano
+    std::unordered_map<uint64_t, uint32_t> overflow;          // geração diferente no mesmo índice / índice fora da faixa
+
+    auto newPlan = [&](Entity e) {
+        p.entities.push_back(EntityPlan{e});
+        head.push_back(None);
+        tail.push_back(None);
+        return static_cast<uint32_t>(p.entities.size() - 1);
+    };
+    auto planOf = [&](Entity e) -> uint32_t {
+        if (e.index < slotOf.size()) {
+            uint32_t& s = slotOf[e.index];
+            if (s == None) s = newPlan(e);
+            if (p.entities[s].e == e) return s;
+        }
+        const uint64_t key = (uint64_t(e.generation) << 32) | e.index;
+        auto [it, inserted] = overflow.try_emplace(key, None);
+        if (inserted) it->second = newPlan(e);
+        return it->second;
+    };
+
+    // Passada 1a: encadeia os comandos de cada entidade, na ordem de gravação (estável, O(n)).
+    for (size_t off = 0; off < size_;) {
+        CommandView v;
+        const size_t next = readAt(off, v);
+        const auto ci = static_cast<uint32_t>(cmds.size());
+        cmds.push_back(Cmd{v, None});
+        const uint32_t pi = planOf(v.e);
+        if (tail[pi] == None)
+            head[pi] = ci;
+        else
+            cmds[tail[pi]].next = ci;
+        tail[pi] = ci;
+        off = next;
+    }
+
+    // Passada 1b: efeito líquido por entidade (R-CB-4), aplicado na ordem de gravação.
+    for (uint32_t pi = 0; pi < p.entities.size(); ++pi) {
+        EntityPlan& ep = p.entities[pi];
+        ep.opBegin = static_cast<uint32_t>(p.ops.size());
+        for (uint32_t ci = head[pi]; ci != None; ci = cmds[ci].next) {
+            const CommandView& v = cmds[ci].v;
+            if (v.op == CommandOp::Spawn) {
+                ep.spawned = true;
+                continue;
+            }
+            if (ep.destroyed) {
+                ECS_ASSERT(false, "command after destroy e=%u:%u", v.e.index, v.e.generation);
+                continue;  // sem asserts: ignorado (R-CB-4)
+            }
+            if (v.op == CommandOp::Destroy) {
+                p.ops.resize(ep.opBegin);  // destroy descarta os comandos anteriores
+                ep.destroyed = true;
+                continue;
+            }
+            auto first = p.ops.begin() + ep.opBegin;
+            auto it = std::lower_bound(first, p.ops.end(), v.cid,
+                                       [](const NetComponentOp& op, ComponentId c) { return op.cid < c; });
+            const NetComponentOp net{v.cid, v.op == CommandOp::Add, v.op == CommandOp::Add ? v.payload : nullptr};
+            if (it != p.ops.end() && it->cid == v.cid)
+                *it = net;  // o último comando por tipo vale
+            else
+                p.ops.insert(it, net);
+        }
+        ep.opCount = static_cast<uint32_t>(p.ops.size()) - ep.opBegin;
+    }
+    return p;
 }
 
 }  // namespace ecs

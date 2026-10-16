@@ -60,6 +60,8 @@ public:
     CommandBuffer commands() { return CommandBuffer(store_); }
     // Oráculo sem coalescing: aplica cada comando na ordem de gravação e limpa o buffer.
     void flushSequential(CommandBuffer& cb);
+    // Duas passadas (R-CB-3): agrupa por entidade e faz uma única transição para o arquétipo final.
+    void flush(CommandBuffer& cb);
 
     // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação.
     template <class... Ts, class... Filters>
@@ -96,6 +98,7 @@ private:
     const SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
 
     const Edge& edgeFor(Archetype& src, ComponentId cid, bool adding);
+    const Edge& jumpEdge(Archetype& src, Archetype& dst);
     void materialize(Entity e);  // põe uma entidade reservada no arquétipo raiz
     Entity place(Archetype& a);  // aloca entidade e linha morta em `a`
 
@@ -107,6 +110,7 @@ private:
     mutable uint64_t sigLookups_ = 0;
     std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
     std::vector<QueryCacheBase*> queries_;
+    std::unordered_map<uint64_t, Edge> jumpEdges_;  // (src.id << 32) | dst.id
 };
 
 template <class... Ts>
