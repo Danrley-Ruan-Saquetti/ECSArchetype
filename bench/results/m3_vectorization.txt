@@ -1,0 +1,4 @@
+/app/bench/iterate.cpp:17:30: optimized: loop vectorized using 16 byte vectors
+/app/bench/iterate.cpp:17:30: optimized: loop vectorized using 8 byte vectors
+/app/bench/iterate.cpp:40:34: optimized: loop vectorized using 16 byte vectors
+/app/bench/iterate.cpp:40:34: optimized: loop vectorized using 8 byte vectors
