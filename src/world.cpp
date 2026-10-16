@@ -33,6 +33,7 @@ Archetype* World::findOrCreate(Signature sig) {
         if (cid >= componentIndex_.size()) componentIndex_.resize(size_t(cid) + 1);
         componentIndex_[cid].insert(id, columnOf(*a, cid));
     }
+    for (QueryCacheBase* q : queries_) q->onArchetypeCreated(*a);
     return a;
 }
 
@@ -207,6 +208,12 @@ bool World::checkInvariants(std::string* why) const {
                 return fail("I-7", "cid=" + std::to_string(c) + " " + arch(a));
         }
     }
+    // I-8
+    for (size_t qi = 0; qi < queries_.size(); ++qi)
+        for (const auto& ap : archetypes_)
+            if (queries_[qi]->isMatched(ap.get()) != queries_[qi]->matches(*ap))
+                return fail("I-8", "query=" + std::to_string(qi) + " " + arch(*ap));
+
     // I-9
     for (const auto& ap : archetypes_) {
         const Archetype& a = *ap;
@@ -230,6 +237,28 @@ bool World::checkInvariants(std::string* why) const {
         }
     }
     return true;
+}
+
+}  // namespace ecs
+
+namespace ecs {
+
+QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> q) {
+    QueryCacheBase* raw = q.get();
+    queries_.push_back(raw);
+    queryCache_.emplace(std::move(key), std::move(q));
+    return raw;
+}
+
+// c* = componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
+const SmallMap<ArchetypeId, uint16_t>* World::smallestIndex(const Signature& with) const {
+    static const SmallMap<ArchetypeId, uint16_t> empty;
+    const SmallMap<ArchetypeId, uint16_t>* best = nullptr;
+    for (ComponentId c : with) {
+        const auto* idx = c < componentIndex_.size() ? &componentIndex_[c] : &empty;
+        if (!best || idx->size() < best->size()) best = idx;
+    }
+    return best;
 }
 
 }  // namespace ecs

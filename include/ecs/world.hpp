@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <new>
 #include <string>
@@ -12,6 +13,7 @@
 #include <ecs/archetype.hpp>
 #include <ecs/detail/assert.hpp>
 #include <ecs/entity.hpp>
+#include <ecs/query.hpp>
 #include <ecs/table.hpp>
 #include <ecs/type_info.hpp>
 
@@ -52,6 +54,10 @@ public:
     // Núcleo não template.
     void addRaw(Entity e, ComponentId cid, void* value);  // move de `value`; ignorado para tags
     void removeRaw(Entity e, ComponentId cid);
+
+    // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação.
+    template <class... Ts, class... Filters>
+    Query<Ts...>& query(Filters... filters);
     void* getRaw(Entity e, ComponentId cid) noexcept {
         if (!store_.isAlive(e)) return nullptr;
         const EntityRecord& rec = store_.record(e.index);
@@ -75,6 +81,14 @@ public:
 private:
     Archetype* findOrCreate(Signature sig);
     uint32_t moveEntity(Entity e, EntityRecord& rec, Archetype& dst, const Edge& edge);
+    struct QueryKey {
+        std::vector<uint64_t> ts;  // (cid << 1) | isConst, na ordem de Ts
+        Signature with, without;
+        auto operator<=>(const QueryKey&) const = default;
+    };
+    QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> q);
+    const SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
+
     const Edge& edgeFor(Archetype& src, ComponentId cid, bool adding);
     Entity place(Archetype& a);  // aloca entidade e linha morta em `a`
 
@@ -84,6 +98,8 @@ private:
     std::vector<SmallMap<ArchetypeId, uint16_t>> componentIndex_;  // [cid]: arquétipo → coluna (NoColumn p/ tag)
     uint32_t iterating_ = 0;
     mutable uint64_t sigLookups_ = 0;
+    std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
+    std::vector<QueryCacheBase*> queries_;
 };
 
 template <class... Ts>
@@ -150,6 +166,39 @@ T* World::tryGet(Entity e) noexcept {
     using U = std::remove_cvref_t<T>;
     static_assert(!std::is_empty_v<U>, "tryGet<Tag> não é permitido");
     return static_cast<U*>(getRaw(e, componentId<U>()));
+}
+
+
+namespace detail {
+template <class... Us>
+void addFilter(std::vector<ComponentId>& with, std::vector<ComponentId>&, With<Us...>) {
+    (with.push_back(componentId<Us>()), ...);
+}
+template <class... Us>
+void addFilter(std::vector<ComponentId>&, std::vector<ComponentId>& without, Without<Us...>) {
+    (without.push_back(componentId<Us>()), ...);
+}
+inline void sortUnique(std::vector<ComponentId>& v) {
+    std::sort(v.begin(), v.end());
+    v.erase(std::unique(v.begin(), v.end()), v.end());
+}
+}  // namespace detail
+
+template <class... Ts, class... Filters>
+Query<Ts...>& World::query(Filters... filters) {
+    using Q = Query<Ts...>;
+    Signature with{componentId<std::remove_const_t<Ts>>()...}, without;
+    (detail::addFilter(with, without, filters), ...);
+    detail::sortUnique(with);
+    detail::sortUnique(without);
+    QueryKey key{std::vector<uint64_t>{(uint64_t(componentId<std::remove_const_t<Ts>>()) << 1 | uint64_t(std::is_const_v<Ts>))...},
+                 with, without};
+    if (auto it = queryCache_.find(key); it != queryCache_.end()) return static_cast<Q&>(*it->second);
+    auto q = std::make_unique<Q>(&iterating_, with, without);
+    q->initialize(archetypes_, smallestIndex(with));
+    Q& ref = *q;
+    registerQuery(std::move(key), std::move(q));
+    return ref;
 }
 
 }  // namespace ecs
