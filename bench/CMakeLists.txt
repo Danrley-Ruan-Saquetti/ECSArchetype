@@ -16,3 +16,4 @@ function(ecs_add_bench name)
 endfunction()
 
 ecs_add_bench(bench_iterate iterate.cpp)
+ecs_add_bench(bench_transitions transitions.cpp)

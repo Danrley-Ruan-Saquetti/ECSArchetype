@@ -135,3 +135,14 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
     CHECK(lookupsAfter == lookups);
     CHECK(w.get<C3>(e).v == 3);
 }
+
+TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
+    ecs::World w;
+    CHECK(w.archetypeCount() == 1);
+    w.create(A{1});
+    CHECK(w.archetypeCount() == 2);
+    w.create(A{2});
+    CHECK(w.archetypeCount() == 2);
+    w.create(A{3}, B{0, 0});
+    CHECK(w.archetypeCount() == 3);
+}

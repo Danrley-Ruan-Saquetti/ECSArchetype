@@ -61,6 +61,7 @@ public:
         return rec.arch->table.column(*col).at(rec.row);
     }
     uint64_t signatureLookupCount() const noexcept { return sigLookups_; }
+    uint32_t archetypeCount() const noexcept { return static_cast<uint32_t>(archetypes_.size()); }
 
     // Verifica as invariantes I-1, I-3..I-7, I-10, I-11 (compilado em todos os builds).
     // Em falha escreve em *why o ID e o objeto (ex.: "I-3 e=4:1") e devolve false.
