@@ -418,3 +418,35 @@ void World::flush(CommandBuffer& cb) {
 }
 
 }  // namespace ecs
+
+namespace ecs {
+
+WorldStats World::stats() const {
+    WorldStats st{};
+    st.archetypeCount = archetypeCount();
+    st.signatureLookups = sigLookups_;
+    for (const auto& up : archetypes_) {
+        const Archetype& a = *up;
+        size_t rowBytes = sizeof(Entity);
+        for (uint16_t i = 0; i < a.table.columnCount(); ++i) rowBytes += a.table.column(i).info->size;
+        ArchetypeStats as{};
+        as.id = a.id;
+        as.signature = a.signature;
+        as.count = a.table.count();
+        as.capacity = a.table.capacity();
+        as.edgeCount = static_cast<uint32_t>(a.addEdges.size() + a.removeEdges.size());
+        as.columnBytes = size_t(as.capacity) * rowBytes;
+        as.idleBytes = size_t(as.capacity - as.count) * rowBytes;
+        as.signatureBytes = (a.signature.capacity() + a.columnTypes.capacity()) * sizeof(ComponentId);
+        as.edgeBytes = a.addEdges.capacityBytes() + a.removeEdges.capacityBytes();
+        for (const auto& [cid, e] : a.addEdges) as.edgeBytes += e.srcToDst.capacity() * sizeof(int16_t);
+        for (const auto& [cid, e] : a.removeEdges) as.edgeBytes += e.srcToDst.capacity() * sizeof(int16_t);
+        st.liveEntities += as.count;
+        const uint32_t bucket = as.count == 0 ? 0 : 1 + (31 - static_cast<uint32_t>(__builtin_clz(as.count)));
+        ++st.histogram[bucket];
+        st.archetypes.push_back(std::move(as));
+    }
+    return st;
+}
+
+}  // namespace ecs

@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <ecs/world.hpp>
 #include <vector>
@@ -145,4 +146,21 @@ TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
     CHECK(w.archetypeCount() == 2);
     w.create(A{3}, B{0, 0});
     CHECK(w.archetypeCount() == 3);
+}
+
+TEST_CASE("stats: contagens, histograma e memória ociosa") {
+    ecs::World w;
+    for (uint64_t i = 0; i < 5; ++i) w.create(A{i});  // {A}: 5
+    w.create(A{0}, B{0, 0});                          // {A,B}: 1
+    auto s = w.stats();
+    CHECK(s.archetypeCount == 3);  // raiz, {A}, {A,B}
+    CHECK(s.liveEntities == 6);
+    CHECK(s.histogram[0] == 1);  // raiz vazia
+    CHECK(s.histogram[1] == 1);  // count 1
+    CHECK(s.histogram[3] == 1);  // count 5 ∈ [4, 8)
+    auto& a = *std::find_if(s.archetypes.begin(), s.archetypes.end(),
+                            [](auto& x) { return x.signature == ecs::Signature{ecs::componentId<A>()}; });
+    CHECK(a.capacity == 64);
+    CHECK(a.idleBytes == (64 - 5) * (sizeof(A) + sizeof(ecs::Entity)));
+    CHECK(a.columnBytes == 64 * (sizeof(A) + sizeof(ecs::Entity)));
 }

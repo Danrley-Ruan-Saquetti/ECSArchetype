@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -26,6 +27,24 @@ inline constexpr bool distinctTypes = true;
 template <class T, class... Rest>
 inline constexpr bool distinctTypes<T, Rest...> = (!(std::is_same_v<T, Rest> || ...)) && distinctTypes<Rest...>;
 }  // namespace detail
+
+struct ArchetypeStats {
+    ArchetypeId id;
+    Signature signature;
+    uint32_t count, capacity, edgeCount;
+    size_t columnBytes;     // capacity × Σ size das colunas + capacity × sizeof(Entity)
+    size_t idleBytes;       // (capacity − count) × (Σ size + sizeof(Entity))
+    size_t signatureBytes;  // capacity() de signature + columnTypes, em bytes
+    size_t edgeBytes;       // capacityBytes() de addEdges/removeEdges + srcToDst
+};
+
+struct WorldStats {
+    uint32_t archetypeCount;
+    uint32_t liveEntities;
+    std::vector<ArchetypeStats> archetypes;  // por id
+    std::array<uint32_t, 33> histogram;      // [0] = arquétipos vazios; [i] = count em [2^(i-1), 2^i)
+    uint64_t signatureLookups;
+};
 
 class World {
 public:
@@ -76,6 +95,7 @@ public:
     }
     uint64_t signatureLookupCount() const noexcept { return sigLookups_; }
     uint32_t archetypeCount() const noexcept { return static_cast<uint32_t>(archetypes_.size()); }
+    WorldStats stats() const;
 
     // Verifica as invariantes I-1, I-3..I-7, I-10, I-11 (compilado em todos os builds).
     // Em falha escreve em *why o ID e o objeto (ex.: "I-3 e=4:1") e devolve false.
