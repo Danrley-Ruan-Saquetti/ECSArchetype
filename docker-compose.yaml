@@ -1,0 +1,16 @@
+name: cpp_services
+
+services:
+  build:
+    build: .
+    volumes:
+      - .:/app
+      - ./build:/app/build
+    command: make build
+
+  run:
+    build: .
+    volumes:
+      - .:/app
+      - ./build:/app/build
+    command: make run
