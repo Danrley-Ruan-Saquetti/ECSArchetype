@@ -323,6 +323,7 @@ void World::flush(CommandBuffer& cb) {
     ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
     ECS_ASSERT(cb.store() == &store_, "flush de buffer criado por outro World");
     const CommandPlan plan = cb.plan();
+    NetEffect net;
 
     // Memo do último resultado: entidades de um lote costumam ter o mesmo (origem, ops),
     // então a assinatura final, a aresta e as colunas são calculadas uma vez só.
@@ -332,7 +333,7 @@ void World::flush(CommandBuffer& cb) {
         std::vector<std::pair<ComponentId, bool>> key;
         Archetype* dst = nullptr;
         const Edge* edge = nullptr;  // nullptr se src == dst ou entidade reservada
-        std::vector<int32_t> col;    // por op: coluna no destino (-1: sem valor a construir)
+        std::vector<Column*> col;    // por op: coluna no destino (nullptr: sem valor a construir)
         std::vector<uint8_t> existed;  // por op: o componente já existia na origem
     } memo;
     auto memoMatches = [&](const Archetype* src, std::span<const NetComponentOp> ops) {
@@ -359,7 +360,8 @@ void World::flush(CommandBuffer& cb) {
         memo.existed.clear();
         for (const NetComponentOp& op : ops) {
             memo.key.emplace_back(op.cid, op.present);
-            memo.col.push_back(op.present && !typeInfo(op.cid).tag ? int32_t(columnOf(*memo.dst, op.cid)) : -1);
+            memo.col.push_back(op.present && !typeInfo(op.cid).tag ? &memo.dst->table.column(columnOf(*memo.dst, op.cid))
+                                                                   : nullptr);
             memo.existed.push_back(src && std::binary_search(src->signature.begin(), src->signature.end(), op.cid));
         }
         memo.valid = true;
@@ -367,17 +369,18 @@ void World::flush(CommandBuffer& cb) {
 
     for (const EntityPlan& ep : plan.entities) {
         const Entity e = ep.e;
+        cb.netEffect(plan, ep, net);
         const bool alive = store_.isAlive(e);
-        const bool reserved = ep.spawned && store_.isReserved(e);
+        const bool reserved = net.spawned && store_.isReserved(e);
         if (!alive && !reserved) continue;  // handle obsoleto: ignorado (questão 3)
-        if (ep.destroyed) {
+        if (net.destroyed) {
             if (alive)
                 destroy(e);
             else
                 store_.release(e.index);
             continue;
         }
-        const std::span<const NetComponentOp> ops = plan.opsOf(ep);
+        const std::span<const NetComponentOp> ops = net.ops;
         EntityRecord& rec = store_.record(e.index);
         Archetype* src = alive ? rec.arch : nullptr;
         if (!memoMatches(src, ops)) memoBuild(src, ops);
@@ -393,14 +396,22 @@ void World::flush(CommandBuffer& cb) {
             row = rec.row;
         }
         for (size_t i = 0; i < ops.size(); ++i) {
-            if (memo.col[i] < 0) continue;
-            Column& c = memo.dst->table.column(static_cast<uint16_t>(memo.col[i]));
+            if (!memo.col[i]) continue;
+            Column& c = *memo.col[i];
             void* p = c.at(row);
             if (memo.existed[i]) destroyValue(*c.info, p);
-            if (c.info->trivial)
-                std::memcpy(p, ops[i].payload, c.info->size);
-            else
+            if (c.info->trivial) {
+                // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
+                switch (c.info->size) {
+                    case 4: std::memcpy(p, ops[i].payload, 4); break;
+                    case 8: std::memcpy(p, ops[i].payload, 8); break;
+                    case 12: std::memcpy(p, ops[i].payload, 12); break;
+                    case 16: std::memcpy(p, ops[i].payload, 16); break;
+                    default: std::memcpy(p, ops[i].payload, c.info->size);
+                }
+            } else {
                 c.info->moveConstruct(p, ops[i].payload);
+            }
         }
     }
     cb.clear();

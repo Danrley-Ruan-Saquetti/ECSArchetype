@@ -361,3 +361,41 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
     }
     CHECK(LifeCounter::alive == 0);
 }
+
+TEST_CASE("R-CB-3: comandos intercalados entre entidades ainda coalescem por entidade") {
+    ecs::World w;
+    auto e1 = w.create();
+    auto e2 = w.create();
+    auto cb = w.commands();
+    cb.add(e1, A{1});
+    cb.add(e2, A{2});
+    cb.add(e1, B{3, 4});  // e1 volta fora do trecho consecutivo
+    cb.add(e2, B{5, 6});
+    cb.add(e1, A{7});
+    auto before = w.archetypeCount();
+    w.flush(cb);
+    CHECK(w.archetypeCount() == before + 1);  // só {A,B}
+    CHECK(w.get<A>(e1).v == 7);
+    CHECK(w.get<B>(e1).w == 4);
+    CHECK(w.get<A>(e2).v == 2);
+    CHECK(w.get<B>(e2).w == 6);
+    CHECK_INV(w);
+}
+
+TEST_CASE("buffer reutilizado depois do flush agrupa de novo") {
+    ecs::World w;
+    auto e1 = w.create();
+    auto e2 = w.create();
+    auto cb = w.commands();
+    cb.add(e1, A{1});
+    cb.add(e2, A{2});
+    cb.add(e1, B{0, 0});  // não consecutivo: o primeiro lote cai no caminho geral
+    w.flush(cb);
+    cb.add(e2, B{8, 9});  // segundo lote: o estado de agrupamento foi zerado pelo flush
+    cb.add(e1, A{5});
+    w.flush(cb);
+    CHECK(w.get<A>(e1).v == 5);
+    CHECK(w.get<B>(e2).w == 9);
+    CHECK(w.get<A>(e2).v == 2);
+    CHECK_INV(w);
+}

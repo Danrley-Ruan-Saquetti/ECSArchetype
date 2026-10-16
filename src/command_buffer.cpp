@@ -23,11 +23,16 @@ CommandBuffer::~CommandBuffer() {
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer&& o) noexcept
-    : store_(o.store_), data_(o.data_), size_(o.size_), cap_(o.cap_), count_(o.count_), spawned_(std::move(o.spawned_)) {
+    : store_(o.store_), data_(o.data_), size_(o.size_), cap_(o.cap_), count_(o.count_), nonTrivial_(o.nonTrivial_), spawned_(std::move(o.spawned_)), grouped_(o.grouped_),
+      runs_(std::move(o.runs_)), seen_(std::move(o.seen_)) {
     o.store_ = nullptr;
     o.data_ = nullptr;
     o.size_ = o.cap_ = o.count_ = 0;
+    o.nonTrivial_ = false;
     o.spawned_.clear();
+    o.runs_.clear();
+    o.seen_.clear();
+    o.grouped_ = true;
 }
 
 CommandBuffer& CommandBuffer::operator=(CommandBuffer&& o) noexcept {
@@ -43,11 +48,22 @@ CommandBuffer& CommandBuffer::operator=(CommandBuffer&& o) noexcept {
         size_ = o.size_;
         cap_ = o.cap_;
         count_ = o.count_;
+        nonTrivial_ = o.nonTrivial_;
         spawned_ = std::move(o.spawned_);
+        grouped_ = o.grouped_;
+        runs_ = std::move(o.runs_);
+        seen_ = std::move(o.seen_);
         o.store_ = nullptr;
         o.data_ = nullptr;
         o.size_ = o.cap_ = o.count_ = 0;
+    o.nonTrivial_ = false;
         o.spawned_.clear();
+        o.runs_.clear();
+        o.seen_.clear();
+        o.grouped_ = true;
+    o.runs_.clear();
+    o.seen_.clear();
+    o.grouped_ = true;
     }
     return *this;
 }
@@ -68,7 +84,7 @@ size_t CommandBuffer::readAt(size_t off, CommandView& out) const noexcept {
     std::memcpy(&size, h + 20, 4);
     out.e = Entity{static_cast<uint32_t>(eb), static_cast<uint32_t>(eb >> 32)};
     if (out.op == CommandOp::Add && size > 0) {
-        const size_t payloadOff = alignUp(off + kHeader, std::max<size_t>(8, typeInfo(out.cid).align));
+        const size_t payloadOff = alignUp(off + kHeader, std::max<size_t>(8, static_cast<uint8_t>(h[1])));
         out.payload = const_cast<std::byte*>(data_) + payloadOff;
         return alignUp(payloadOff + size, 8);
     }
@@ -80,6 +96,9 @@ void CommandBuffer::grow(size_t need) {
     size_t newCap = std::max<size_t>(1024, cap_ * 2);
     while (newCap < need) newCap *= 2;
     std::byte* fresh = alignedAlloc(newCap, kBlockAlign);
+    if (!nonTrivial_) {
+        if (size_ > 0) std::memcpy(fresh, data_, size_);  // só payloads triviais: os offsets se preservam
+    } else {
     for (size_t off = 0; off < size_;) {
         CommandView v;
         const size_t next = readAt(off, v);
@@ -90,12 +109,14 @@ void CommandBuffer::grow(size_t need) {
         }
         off = next;
     }
+    }
     if (data_) alignedFree(data_, kBlockAlign);
     data_ = fresh;
     cap_ = newCap;
 }
 
-std::byte* CommandBuffer::pushRecord(CommandOp op, Entity e, ComponentId cid, uint32_t size, uint32_t align) {
+std::byte* CommandBuffer::pushRecord(CommandOp op, Entity e, ComponentId cid, uint32_t size, uint32_t align,
+                                     bool trivial) {
     const size_t off = size_;
     size_t payloadOff = off + kHeader, next = off + kHeader;
     if (size > 0) {
@@ -103,35 +124,59 @@ std::byte* CommandBuffer::pushRecord(CommandOp op, Entity e, ComponentId cid, ui
         next = alignUp(payloadOff + size, 8);
     }
     if (next > cap_) grow(next);
+    if (grouped_) {
+        if (!runs_.empty() && runs_.back().e == e) {
+            ++runs_.back().count;
+        } else {
+            const size_t word = e.index >> 6;
+            if (word >= seen_.size()) seen_.resize(std::max(word + 1, seen_.size() * 2), 0);
+            const uint64_t bit = uint64_t(1) << (e.index & 63);
+            if (seen_[word] & bit) {
+                grouped_ = false;  // entidade voltou fora do trecho atual: plan() agrupa por counting sort
+                runs_.clear();
+            } else {
+                seen_[word] |= bit;
+                runs_.push_back(EntityPlan{e, static_cast<uint32_t>(off >> 3), 1});
+            }
+        }
+    }
     std::byte* h = data_ + off;
     const uint64_t eb = (uint64_t(e.generation) << 32) | e.index;
     h[0] = static_cast<std::byte>(op);
     std::memset(h + 1, 0, 7);
+    h[1] = static_cast<std::byte>(align);  // alinhamento do payload (<= 64): readAt não consulta o TypeInfo
     std::memcpy(h + 8, &eb, 8);
     std::memcpy(h + 16, &cid, 4);
     std::memcpy(h + 20, &size, 4);
     size_ = next;
     ++count_;
+    if (!trivial) nonTrivial_ = true;
     return size > 0 ? data_ + payloadOff : nullptr;
 }
 
 Entity CommandBuffer::spawn() {
     Entity e = store_->allocate();
-    pushRecord(CommandOp::Spawn, e, 0, 0, 1);
+    pushRecord(CommandOp::Spawn, e, 0, 0, 1, true);
     spawned_.push_back(e);
     return e;
 }
 
-void CommandBuffer::destroy(Entity e) { pushRecord(CommandOp::Destroy, e, 0, 0, 1); }
+void CommandBuffer::destroy(Entity e) { pushRecord(CommandOp::Destroy, e, 0, 0, 1, true); }
 
-void CommandBuffer::removeRaw(Entity e, ComponentId cid) { pushRecord(CommandOp::Remove, e, cid, 0, 1); }
+void CommandBuffer::removeRaw(Entity e, ComponentId cid) { pushRecord(CommandOp::Remove, e, cid, 0, 1, true); }
 
 void CommandBuffer::clear() noexcept {
-    for (size_t off = 0; off < size_;) {
-        CommandView v;
-        off = readAt(off, v);
-        if (v.payload) destroyValue(typeInfo(v.cid), v.payload);
+    if (nonTrivial_) {
+        for (size_t off = 0; off < size_;) {
+            CommandView v;
+            off = readAt(off, v);
+            if (v.payload) destroyValue(typeInfo(v.cid), v.payload);
+        }
     }
+    nonTrivial_ = false;
+    grouped_ = true;
+    runs_.clear();
+    std::fill(seen_.begin(), seen_.end(), 0);
     size_ = 0;
     count_ = 0;
     spawned_.clear();
@@ -143,81 +188,93 @@ namespace ecs {
 
 CommandPlan CommandBuffer::plan() const {
     constexpr uint32_t None = UINT32_MAX;
-    struct Cmd {
-        CommandView v;
-        uint32_t next;
-    };
     CommandPlan p;
-    std::vector<Cmd> cmds;
-    cmds.reserve(count_);
-    std::vector<uint32_t> head, tail;  // por plano: primeiro e último comando
+
+    if (grouped_) {
+        p.entities = runs_;
+        return p;
+    }
     std::vector<uint32_t> slotOf(store_->slotCount(), None);  // índice da entidade → plano
     std::unordered_map<uint64_t, uint32_t> overflow;          // geração diferente no mesmo índice / índice fora da faixa
 
-    auto newPlan = [&](Entity e) {
-        p.entities.push_back(EntityPlan{e});
-        head.push_back(None);
-        tail.push_back(None);
-        return static_cast<uint32_t>(p.entities.size() - 1);
-    };
     auto planOf = [&](Entity e) -> uint32_t {
+        auto make = [&] {
+            p.owned.push_back(EntityPlan{e});
+            return static_cast<uint32_t>(p.owned.size() - 1);
+        };
         if (e.index < slotOf.size()) {
             uint32_t& s = slotOf[e.index];
-            if (s == None) s = newPlan(e);
-            if (p.entities[s].e == e) return s;
+            if (s == None) s = make();
+            if (p.owned[s].e == e) return s;
         }
         const uint64_t key = (uint64_t(e.generation) << 32) | e.index;
         auto [it, inserted] = overflow.try_emplace(key, None);
-        if (inserted) it->second = newPlan(e);
+        if (inserted) it->second = make();
         return it->second;
     };
 
-    // Passada 1a: encadeia os comandos de cada entidade, na ordem de gravação (estável, O(n)).
+    // Passada 1a: conta os comandos de cada entidade.
     for (size_t off = 0; off < size_;) {
         CommandView v;
         const size_t next = readAt(off, v);
-        const auto ci = static_cast<uint32_t>(cmds.size());
-        cmds.push_back(Cmd{v, None});
-        const uint32_t pi = planOf(v.e);
-        if (tail[pi] == None)
-            head[pi] = ci;
-        else
-            cmds[tail[pi]].next = ci;
-        tail[pi] = ci;
+        ++p.owned[planOf(v.e)].count;
         off = next;
     }
-
-    // Passada 1b: efeito líquido por entidade (R-CB-4), aplicado na ordem de gravação.
-    for (uint32_t pi = 0; pi < p.entities.size(); ++pi) {
-        EntityPlan& ep = p.entities[pi];
-        ep.opBegin = static_cast<uint32_t>(p.ops.size());
-        for (uint32_t ci = head[pi]; ci != None; ci = cmds[ci].next) {
-            const CommandView& v = cmds[ci].v;
-            if (v.op == CommandOp::Spawn) {
-                ep.spawned = true;
-                continue;
-            }
-            if (ep.destroyed) {
-                ECS_ASSERT(false, "command after destroy e=%u:%u", v.e.index, v.e.generation);
-                continue;  // sem asserts: ignorado (R-CB-4)
-            }
-            if (v.op == CommandOp::Destroy) {
-                p.ops.resize(ep.opBegin);  // destroy descarta os comandos anteriores
-                ep.destroyed = true;
-                continue;
-            }
-            auto first = p.ops.begin() + ep.opBegin;
-            auto it = std::lower_bound(first, p.ops.end(), v.cid,
-                                       [](const NetComponentOp& op, ComponentId c) { return op.cid < c; });
-            const NetComponentOp net{v.cid, v.op == CommandOp::Add, v.op == CommandOp::Add ? v.payload : nullptr};
-            if (it != p.ops.end() && it->cid == v.cid)
-                *it = net;  // o último comando por tipo vale
-            else
-                p.ops.insert(it, net);
-        }
-        ep.opCount = static_cast<uint32_t>(p.ops.size()) - ep.opBegin;
+    uint32_t acc = 0;
+    for (EntityPlan& ep : p.owned) {
+        ep.begin = acc;
+        acc += ep.count;
     }
+    // Passada 1b: distribui os offsets (estável); `begin` avança e depois volta.
+    p.order.resize(acc);
+    for (size_t off = 0; off < size_;) {
+        CommandView v;
+        const size_t next = readAt(off, v);
+        p.order[p.owned[planOf(v.e)].begin++] = static_cast<uint32_t>(off >> 3);
+        off = next;
+    }
+    for (EntityPlan& ep : p.owned) ep.begin -= ep.count;
+    p.entities = p.owned;
+    p.contiguous = false;
     return p;
+}
+
+// Efeito líquido por entidade (R-CB-4), aplicado na ordem de gravação.
+void CommandBuffer::netEffect(const CommandPlan& plan, const EntityPlan& ep, NetEffect& out) const {
+    out.spawned = out.destroyed = false;
+    out.ops.clear();
+    size_t off = static_cast<size_t>(ep.begin) << 3;
+    for (uint32_t i = 0; i < ep.count; ++i) {
+        CommandView v;
+        if (plan.contiguous)
+            off = readAt(off, v);
+        else
+            readAt(static_cast<size_t>(plan.order[ep.begin + i]) << 3, v);
+        if (v.op == CommandOp::Spawn) {
+            out.spawned = true;
+            continue;
+        }
+        if (out.destroyed) {
+            ECS_ASSERT(false, "command after destroy e=%u:%u", v.e.index, v.e.generation);
+            continue;  // sem asserts: ignorado (R-CB-4)
+        }
+        if (v.op == CommandOp::Destroy) {
+            out.ops.clear();  // destroy descarta os comandos anteriores
+            out.destroyed = true;
+            continue;
+        }
+        const NetComponentOp net{v.cid, v.op == CommandOp::Add, v.op == CommandOp::Add ? v.payload : nullptr};
+        if (out.ops.empty() || out.ops.back().cid < v.cid) {  // caso comum: ids crescentes
+            out.ops.push_back(net);
+            continue;
+        }
+        auto it = std::lower_bound(out.ops.begin(), out.ops.end(), v.cid,
+                                   [](const NetComponentOp& op, ComponentId c) { return op.cid < c; });
+        if (it != out.ops.end() && it->cid == v.cid)
+            *it = net;  // o último comando por tipo vale
+        else
+            out.ops.insert(it, net);
+    }
 }
 
 }  // namespace ecs
