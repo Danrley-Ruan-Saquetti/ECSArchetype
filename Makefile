@@ -1,15 +1,23 @@
-BUILD_DIR=build
+PRESET ?= debug-asan
+T ?= .
 
 configure:
-	mkdir -p $(BUILD_DIR) && cd $(BUILD_DIR) && cmake ..
+	cmake --preset $(PRESET)
 .PHONY: configure
 
 build: configure
-	cd $(BUILD_DIR) && cmake --build .
+	cmake --build --preset $(PRESET) -j
 .PHONY: build
 
-run: build
-	./$(BUILD_DIR)/bin/ECSArchetype
+test: build
+	ctest --preset $(PRESET) -R '$(T)' --no-tests=error
+.PHONY: test
+
+bench:
+	$(MAKE) build PRESET=release
+.PHONY: bench
+
+run: test
 .PHONY: run
 
-all: run
+all: test

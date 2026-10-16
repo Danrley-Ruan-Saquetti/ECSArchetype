@@ -1,0 +1,41 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base", "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_CXX_STANDARD": "20", "ECS_WERROR": "ON" }
+    },
+    {
+      "name": "debug-asan", "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug", "ECS_SANITIZE": "ON",
+        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "OFF"
+      }
+    },
+    {
+      "name": "release", "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release", "ECS_SANITIZE": "OFF",
+        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "ON", "ECS_ENABLE_ASSERTS": "0"
+      }
+    },
+    {
+      "name": "relwithdebinfo", "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ECS_SANITIZE": "OFF",
+        "ECS_BUILD_TESTS": "OFF", "ECS_BUILD_BENCH": "ON", "ECS_ENABLE_ASSERTS": "0"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug-asan", "configurePreset": "debug-asan" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" }
+  ],
+  "testPresets": [
+    { "name": "debug-asan", "configurePreset": "debug-asan", "output": { "outputOnFailure": true } },
+    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } }
+  ]
+}

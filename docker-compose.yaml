@@ -14,3 +14,18 @@ services:
       - .:/app
       - ./build:/app/build
     command: make run
+
+  dev:
+    build: .
+    volumes:
+      - .:/app
+      - ./build:/app/build
+    command: bash
+
+  perf:
+    build: .
+    privileged: true
+    volumes:
+      - .:/app
+      - ./build:/app/build
+    command: bash

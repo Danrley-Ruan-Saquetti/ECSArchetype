@@ -1,0 +1,12 @@
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+
+# ecs_add_test(<nome> <fontes...>)
+function(ecs_add_test name)
+  add_executable(${name} ${ARGN} ${CMAKE_CURRENT_SOURCE_DIR}/support/doctest_main.cpp)
+  target_link_libraries(${name} PRIVATE ecs doctest::doctest)
+  target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+  ecs_warnings(${name})
+  add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
+ecs_add_test(unit_table unit_table.cpp)
