@@ -45,10 +45,13 @@ Entity World::place(Archetype& a) {
     return e;
 }
 
-Entity World::create() { return place(*archetypes_[0]); }
+Entity World::create() {
+    ECS_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
+    return place(*archetypes_[0]);
+}
 
 void World::destroy(Entity e) {
-    ECS_ASSERT(isAlive(e), "destroy e=%u:%u", e.index, e.generation);
+    ECS_ASSERT(isAlive(e) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", e.index, e.generation, iterating_);
     EntityRecord& rec = store_.record(e.index);
     Table& t = rec.arch->table;
     const uint32_t row = rec.row;

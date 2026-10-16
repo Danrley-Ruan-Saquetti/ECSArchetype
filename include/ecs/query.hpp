@@ -3,6 +3,9 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <span>
+#include <tuple>
+#include <utility>
 #include <type_traits>
 #include <vector>
 
@@ -29,6 +32,17 @@ public:
 protected:
     uint32_t* iterating_;
 };
+
+namespace detail {
+// R-QY-5: mantém iterating_ > 0 enquanto um each/eachBlock está em andamento (aninhável, seguro com exceção).
+struct IterationGuard {
+    explicit IterationGuard(uint32_t* p) noexcept : p_(p) { ++*p_; }
+    ~IterationGuard() { --*p_; }
+    IterationGuard(const IterationGuard&) = delete;
+    IterationGuard& operator=(const IterationGuard&) = delete;
+    uint32_t* p_;
+};
+}  // namespace detail
 
 template <class... Ts>
 struct MatchedTable {
@@ -83,7 +97,46 @@ public:
         matched_.push_back(m);
     }
 
+    // f(std::span<Ts>...) uma vez por tabela não vazia. Ts const → std::span<const T>.
+    template <class F>
+    void eachBlock(F&& f) {
+        detail::IterationGuard guard(iterating_);
+        for (const MatchedTable<Ts...>& m : matched_) {
+            Table& t = m.arch->table;
+            if (t.count() == 0) continue;
+            callBlock(f, t, m, std::index_sequence_for<Ts...>{});
+        }
+    }
+
+    // f(Ts&...) ou f(Entity, Ts&...). Os ponteiros de coluna são resolvidos antes do laço interno.
+    template <class F>
+    void each(F&& f) {
+        detail::IterationGuard guard(iterating_);
+        for (const MatchedTable<Ts...>& m : matched_) {
+            Table& t = m.arch->table;
+            const uint32_t n = t.count();
+            if (n == 0) continue;
+            callRows(f, t, m, n, std::index_sequence_for<Ts...>{});
+        }
+    }
+
 private:
+    template <class F, size_t... Is>
+    static void callBlock(F& f, Table& t, const MatchedTable<Ts...>& m, std::index_sequence<Is...>) {
+        f(std::span<Ts>(reinterpret_cast<Ts*>(t.column(m.cols[Is]).data), t.count())...);
+    }
+
+    template <class F, size_t... Is>
+    static void callRows(F& f, Table& t, const MatchedTable<Ts...>& m, uint32_t n, std::index_sequence<Is...>) {
+        std::tuple<Ts*...> cols{reinterpret_cast<Ts*>(t.column(m.cols[Is]).data)...};
+        const Entity* ents = t.entities().data();
+        if constexpr (std::is_invocable_v<F&, Entity, Ts&...>) {
+            for (uint32_t r = 0; r < n; ++r) f(ents[r], std::get<Is>(cols)[r]...);
+        } else {
+            for (uint32_t r = 0; r < n; ++r) f(std::get<Is>(cols)[r]...);
+        }
+    }
+
     std::vector<ComponentId> with_, without_;
     std::array<ComponentId, sizeof...(Ts)> tsIds_;
     std::vector<MatchedTable<Ts...>> matched_;

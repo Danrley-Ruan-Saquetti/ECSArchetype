@@ -39,6 +39,7 @@ public:
     Entity create(Ts&&... comps);
     void destroy(Entity e);
     bool isAlive(Entity e) const noexcept { return store_.isAlive(e); }
+    bool isIterating() const noexcept { return iterating_ > 0; }
 
     template <class T>
     void add(Entity e, T&& value);  // ou atribui, se já tiver T
@@ -105,6 +106,7 @@ private:
 template <class... Ts>
 Entity World::create(Ts&&... comps) {
     static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "create<Ts...>: tipos repetidos");
+    ECS_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
     Signature sig{componentId<Ts>()...};
     std::sort(sig.begin(), sig.end());
     Archetype* a = findOrCreate(std::move(sig));
