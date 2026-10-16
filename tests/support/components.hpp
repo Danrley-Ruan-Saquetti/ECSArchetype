@@ -23,3 +23,12 @@ struct LifeCounter {
     LifeCounter& operator=(LifeCounter&&) noexcept = default;
     ~LifeCounter() { --alive; }
 };
+
+#include <string>
+
+// Requer doctest incluído antes do uso.
+#define CHECK_INV(w)                                          \
+    do {                                                      \
+        std::string why_;                                     \
+        CHECK_MESSAGE((w).checkInvariants(&why_), why_);      \
+    } while (0)

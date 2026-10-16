@@ -105,3 +105,88 @@ void World::removeRaw(Entity e, ComponentId cid) {
 }
 
 }  // namespace ecs
+
+namespace ecs {
+
+bool World::checkInvariants(std::string* why) const {
+    auto fail = [&](const char* id, const std::string& what) {
+        if (why) *why = std::string(id) + " " + what;
+        return false;
+    };
+    auto ent = [](uint32_t i, uint32_t g) { return "e=" + std::to_string(i) + ":" + std::to_string(g); };
+    auto arch = [](const Archetype& a) { return "arch=" + std::to_string(a.id); };
+
+    // I-11
+    if (iterating_ != 0) return fail("I-11", "iterating=" + std::to_string(iterating_));
+
+    for (size_t i = 0; i < archetypes_.size(); ++i) {
+        const Archetype& a = *archetypes_[i];
+        const Table& t = a.table;
+        // I-6 (metade): id == posição e lookup pela própria assinatura
+        if (a.id != i) return fail("I-6", arch(a));
+        auto it = bySignature_.find(a.signature);
+        if (it == bySignature_.end() || it->second != &a) return fail("I-6", arch(a));
+
+        // I-1
+        if (t.entities().size() != t.count() || t.capacity() < t.count()) return fail("I-1", arch(a));
+
+        // I-5
+        if (!std::is_sorted(a.signature.begin(), a.signature.end()) ||
+            std::adjacent_find(a.signature.begin(), a.signature.end()) != a.signature.end())
+            return fail("I-5", arch(a) + " signature");
+        std::vector<ComponentId> data;
+        for (ComponentId c : a.signature)
+            if (!typeInfo(c).tag) data.push_back(c);
+        if (data != a.columnTypes) return fail("I-5", arch(a) + " columnTypes");
+        if (t.columnCount() != a.columnTypes.size() ||
+            !std::equal(t.columnTypes().begin(), t.columnTypes().end(), a.columnTypes.begin(), a.columnTypes.end()))
+            return fail("I-5", arch(a) + " table");
+
+        // I-4
+        for (uint32_t r = 0; r < t.count(); ++r) {
+            Entity e = t.entities()[r];
+            if (e.index >= store_.slotCount()) return fail("I-4", arch(a) + " row=" + std::to_string(r));
+            const EntityRecord& rec = store_.record(e.index);
+            if (rec.arch != &a || rec.row != r || rec.generation != e.generation)
+                return fail("I-4", ent(e.index, e.generation) + " " + arch(a) + " row=" + std::to_string(r));
+        }
+    }
+    // I-6
+    if (bySignature_.size() != archetypes_.size()) return fail("I-6", "tamanhos diferentes");
+
+    // I-3 e I-10
+    for (uint32_t i = 0; i < store_.slotCount(); ++i) {
+        const EntityRecord& rec = store_.record(i);
+        if (!rec.arch) continue;
+        const Table& t = rec.arch->table;
+        if (rec.row >= t.count() || t.entities()[rec.row] != Entity{i, rec.generation})
+            return fail("I-3", ent(i, rec.generation));
+    }
+    {
+        std::vector<uint32_t> fl(store_.freeList().begin(), store_.freeList().end());
+        for (uint32_t i : fl)
+            if (i >= store_.slotCount() || store_.record(i).arch != nullptr) return fail("I-10", "slot=" + std::to_string(i));
+        std::sort(fl.begin(), fl.end());
+        if (std::adjacent_find(fl.begin(), fl.end()) != fl.end()) return fail("I-10", "repetido");
+    }
+
+    // I-7
+    for (const auto& ap : archetypes_) {
+        for (ComponentId c : ap->signature) {
+            const uint16_t* col = c < componentIndex_.size() ? componentIndex_[c].find(ap->id) : nullptr;
+            if (!col || *col != columnOf(*ap, c)) return fail("I-7", "cid=" + std::to_string(c) + " " + arch(*ap));
+        }
+    }
+    for (size_t c = 0; c < componentIndex_.size(); ++c) {
+        for (const auto& [aid, col] : componentIndex_[c]) {
+            if (aid >= archetypes_.size()) return fail("I-7", "cid=" + std::to_string(c));
+            const Archetype& a = *archetypes_[aid];
+            if (!std::binary_search(a.signature.begin(), a.signature.end(), ComponentId(c)) ||
+                col != columnOf(a, ComponentId(c)))
+                return fail("I-7", "cid=" + std::to_string(c) + " " + arch(a));
+        }
+    }
+    return true;
+}
+
+}  // namespace ecs

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <new>
+#include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -59,6 +60,10 @@ public:
         if (!col || *col == NoColumn) return nullptr;
         return rec.arch->table.column(*col).at(rec.row);
     }
+    // Verifica as invariantes I-1, I-3..I-7, I-10, I-11 (compilado em todos os builds).
+    // Em falha escreve em *why o ID e o objeto (ex.: "I-3 e=4:1") e devolve false.
+    bool checkInvariants(std::string* why = nullptr) const;
+
     bool hasRaw(Entity e, ComponentId cid) const noexcept {
         if (!store_.isAlive(e) || cid >= componentIndex_.size()) return false;
         return componentIndex_[cid].find(store_.record(e.index).arch->id) != nullptr;
