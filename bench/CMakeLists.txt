@@ -14,3 +14,5 @@ function(ecs_add_bench name)
     endif()
   endif()
 endfunction()
+
+ecs_add_bench(bench_iterate iterate.cpp)
