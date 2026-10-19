@@ -217,9 +217,7 @@ namespace ecs {
     count_ = 0;
     spawned_.clear();
   }
-} // namespace ecs
 
-namespace ecs {
   CommandPlan CommandBuffer::plan() const {
     constexpr uint32_t None = UINT32_MAX;
     CommandPlan p;

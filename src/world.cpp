@@ -157,9 +157,7 @@ namespace ecs {
     Archetype* dst = findOrCreate(std::move(sig));
     return edges.insert(cid, buildEdge(src, *dst, adding ? cid : NoComponent));
   }
-} // namespace ecs
 
-namespace ecs {
   bool World::checkInvariants(std::string* why) const {
     auto fail = [&](const char* id, const std::string& what) {
       if (why)
@@ -307,9 +305,7 @@ namespace ecs {
 
     return true;
   }
-} // namespace ecs
 
-namespace ecs {
   QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> q) {
     QueryCacheBase* raw = q.get();
     queries_.push_back(raw);
@@ -330,9 +326,7 @@ namespace ecs {
 
     return best;
   }
-} // namespace ecs
 
-namespace ecs {
   void World::materialize(Entity e) {
     EntityRecord& rec = store_.record(e.index);
     Archetype& root = *archetypes_[0];
@@ -369,9 +363,7 @@ namespace ecs {
 
     cb.clear();
   }
-} // namespace ecs
 
-namespace ecs {
   const Edge& World::jumpEdge(Archetype& src, Archetype& dst) {
     const uint64_t key = (uint64_t(src.id) << 32) | dst.id;
     if (auto it = jumpEdges_.find(key); it != jumpEdges_.end())
@@ -491,9 +483,7 @@ namespace ecs {
 
     cb.clear();
   }
-} // namespace ecs
 
-namespace ecs {
   WorldStats World::stats() const {
     WorldStats st{};
     st.archetypeCount = archetypeCount();

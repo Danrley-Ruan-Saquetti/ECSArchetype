@@ -43,9 +43,7 @@ namespace ecs {
       ti.name = typeName<U>();
       return ti;
     }
-  } // namespace detail
 
-  namespace detail {
     // O static fica em U (já sem cvref) para que componentId<const A&> e componentId<A> compartilhem o ID.
     template <class U>
     ComponentId componentIdOf() {
