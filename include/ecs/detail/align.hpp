@@ -14,4 +14,4 @@ namespace ecs {
   inline void alignedFree(std::byte* p, size_t align) noexcept {
     ::operator delete(p, std::align_val_t(align));
   }
-} // namespace ecs
+}

@@ -10,7 +10,7 @@ namespace ecs {
     size_t columnAlign(const TypeInfo& ti) {
       return std::max<size_t>(ti.align, 64);
     }
-  } // namespace
+  }
 
   Table::Table(std::span<const ComponentId> columnTypes)
     : columnTypes_(columnTypes.begin(), columnTypes.end()) {
@@ -138,4 +138,4 @@ namespace ecs {
     entities_.pop_back();
     return entities_[r];
   }
-} // namespace ecs
+}

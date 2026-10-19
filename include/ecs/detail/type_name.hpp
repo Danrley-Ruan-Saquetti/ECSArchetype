@@ -20,4 +20,4 @@ namespace ecs::detail {
     return s.substr(b, e - b);
 #endif
   }
-} // namespace ecs::detail
+}

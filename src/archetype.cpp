@@ -12,7 +12,7 @@ namespace ecs {
 
       return out;
     }
-  } // namespace
+  }
 
   Archetype::Archetype(ArchetypeId id_, Signature sig)
     : id(id_),
@@ -45,4 +45,4 @@ namespace ecs {
       e.addedColumn = static_cast<int16_t>(columnOf(dst, added));
     return e;
   }
-} // namespace ecs
+}

@@ -61,4 +61,4 @@ namespace ecs {
 
     std::vector<value_type> items_;
   };
-} // namespace ecs
+}

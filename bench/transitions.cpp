@@ -150,6 +150,6 @@ namespace {
     state.counters["ns_per_op"] = benchmark::Counter(2.0 * K, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_CreateDestroyChurn);
-} // namespace
+}
 
 BENCHMARK_MAIN();

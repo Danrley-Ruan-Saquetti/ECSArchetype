@@ -73,7 +73,7 @@ namespace {
     void (*run)();
     std::vector<const char*> required;
   };
-} // namespace
+}
 
 int main(int argc, char** argv) {
   static const std::vector<Case> cases = {

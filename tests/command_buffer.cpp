@@ -23,7 +23,7 @@ namespace {
     else
       cb.add(e, LifeCounter{v});
   }
-} // namespace
+}
 
 TEST_CASE("spawn referenciado no mesmo buffer") {
   ecs::World w;
@@ -41,7 +41,7 @@ TEST_CASE("spawn referenciado no mesmo buffer") {
   CHECK_INV(w);
 }
 
-TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") { // Review Focus 1
+TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") {
   ecs::World w;
   auto e = w.create();
   auto eShort = w.create();
@@ -303,7 +303,7 @@ TEST_CASE("flush: entidade com dados nasce direto no arquétipo final") {
   CHECK_INV(w);
 }
 
-TEST_CASE("comandos para handle destruído diretamente são ignorados") { // Review Focus 4 / questão 3
+TEST_CASE("comandos para handle destruído diretamente são ignorados") {
   ecs::World w;
   auto e = w.create(A{1});
   auto cb = w.commands();
@@ -319,7 +319,7 @@ TEST_CASE("comandos para handle destruído diretamente são ignorados") { // Rev
   CHECK_INV(w);
 }
 
-TEST_CASE("spawn+destroy no mesmo buffer devolve o índice com geração + 1") { // Review Focus 4
+TEST_CASE("spawn+destroy no mesmo buffer devolve o índice com geração + 1") {
   ecs::World w;
   auto cb = w.commands();
   auto s = cb.spawn();
@@ -335,19 +335,19 @@ TEST_CASE("spawn+destroy no mesmo buffer devolve o índice com geração + 1") {
 TEST_CASE("fuzz: flush coalescido == flushSequential") {
   LifeCounter::alive = 0;
   {
-    ecs::World w1, w2; // w1: flush coalescido; w2: flushSequential
+    ecs::World coalesced, sequential;
     std::vector<std::pair<ecs::Entity, ecs::Entity>> live; // handles lógicos
     std::mt19937_64 rng(fuzzSeed() ^ 0xBADC0DE);
     uint64_t counter = 0, total = 0;
 
     auto compare = [&] {
       for (auto& [e1, e2] : live) {
-        REQUIRE(w1.isAlive(e1));
-        REQUIRE(w2.isAlive(e2));
+        REQUIRE(coalesced.isAlive(e1));
+        REQUIRE(sequential.isAlive(e2));
         for (int i = 0; i < 5; ++i) {
           const auto cid = fuzz::universe()[i];
           uint64_t v1 = 0, v2 = 0;
-          bool h1 = readFromWorld(w1, e1, cid, v1), h2 = readFromWorld(w2, e2, cid, v2);
+          bool h1 = readFromWorld(coalesced, e1, cid, v1), h2 = readFromWorld(sequential, e2, cid, v2);
           if (h1 != h2 || v1 != v2)
             FAIL("divergência em " << ecs::typeInfo(cid).name << " e1=" << e1.index);
         }
@@ -355,8 +355,8 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
     };
 
     while (total < 30000) {
-      auto cbA = w1.commands();
-      auto cbB = w2.commands();
+      auto cbA = coalesced.commands();
+      auto cbB = sequential.commands();
       const unsigned n = 1 + unsigned(rng() % 64);
       std::vector<std::pair<ecs::Entity, ecs::Entity>> destroyedNow;
       for (unsigned k = 0; k < n; ++k, ++total) {
@@ -386,15 +386,15 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
         }
       }
 
-      w1.flush(cbA);
-      w2.flushSequential(cbB);
+      coalesced.flush(cbA);
+      sequential.flushSequential(cbB);
 
       compare();
-      CHECK_INV(w1);
-      CHECK_INV(w2);
+      CHECK_INV(coalesced);
+      CHECK_INV(sequential);
       for (auto& [e1, e2] : destroyedNow) {
-        CHECK_FALSE(w1.isAlive(e1));
-        CHECK_FALSE(w2.isAlive(e2));
+        CHECK_FALSE(coalesced.isAlive(e1));
+        CHECK_FALSE(sequential.isAlive(e2));
       }
     }
   }

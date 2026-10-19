@@ -89,7 +89,7 @@ TEST_CASE("destroy atualiza o record da entidade deslocada") {
   CHECK(w.tryGet<A>(e0) == nullptr);
 }
 
-TEST_CASE("remove/destroy da última e da única linha") { // Review Focus 3
+TEST_CASE("remove/destroy da última e da única linha") {
   ecs::World w;
   auto a = w.create(A{1});
   auto b = w.create(A{2});
@@ -102,7 +102,7 @@ TEST_CASE("remove/destroy da última e da única linha") { // Review Focus 3
   CHECK(w.isAlive(b));
 }
 
-TEST_CASE("add com valor lido de outra entidade da tabela destino que realoca") { // Review Focus 2
+TEST_CASE("add com valor lido de outra entidade da tabela destino que realoca") {
   ecs::World w;
   std::vector<ecs::Entity> full;
   for (uint64_t i = 0; i < 64; ++i)
@@ -141,7 +141,7 @@ TEST_CASE("tags: add/has/remove sem coluna") {
   CHECK(w.get<A>(e).v == 1);
 }
 
-TEST_CASE("handle antigo após reciclagem do índice") { // Review Focus 4
+TEST_CASE("handle antigo após reciclagem do índice") {
   ecs::World w;
   auto e = w.create(A{1});
   w.destroy(e);

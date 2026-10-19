@@ -15,7 +15,7 @@ namespace {
     std::sort(s.begin(), s.end());
     return s;
   }
-} // namespace
+}
 
 TEST_CASE("columnTypes exclui tags; signature ordenada inclui") {
   ecs::Signature sig = sorted({ecs::componentId<A>(), ecs::componentId<Tag>(), ecs::componentId<B>()});

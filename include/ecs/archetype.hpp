@@ -15,14 +15,16 @@ namespace ecs {
   inline constexpr uint16_t NoColumn = UINT16_MAX;
   inline constexpr ComponentId NoComponent = UINT32_MAX;
 
-  // FNV-1a 64 sobre os IDs.
   struct SigHash {
+    static constexpr uint64_t kFnv1aOffsetBasis = 1469598103934665603ull;
+    static constexpr uint64_t kFnv1aPrime = 1099511628211ull;
+
     size_t operator()(const Signature& s) const noexcept {
-      uint64_t h = 1469598103934665603ull;
+      uint64_t h = kFnv1aOffsetBasis;
       for (ComponentId id : s)
         for (int i = 0; i < 4; ++i) {
           h ^= (id >> (8 * i)) & 0xffu;
-          h *= 1099511628211ull;
+          h *= kFnv1aPrime;
         }
 
       return static_cast<size_t>(h);
@@ -50,7 +52,6 @@ namespace ecs {
   // Coluna de `c` em `a`, ou NoColumn se ausente ou tag.
   uint16_t columnOf(const Archetype& a, ComponentId c) noexcept;
 
-  // Merge O(k) das columnTypes de src e dst (R-AR-2). `added` = componente recém-adicionado
-  // (NoComponent para remoção ou salto arbitrário).
+  // `added` = componente recém-adicionado; NoComponent para remoção ou salto arbitrário.
   Edge buildEdge(const Archetype& src, Archetype& dst, ComponentId added);
-} // namespace ecs
+}

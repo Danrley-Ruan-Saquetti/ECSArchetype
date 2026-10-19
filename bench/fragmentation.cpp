@@ -11,7 +11,7 @@
 
 namespace {
   template <int I>
-  struct Frag {}; // tag
+  struct Frag {};
 
   constexpr int kFragTags = 12; // 2^12 = 4096 combinações
 
@@ -81,6 +81,6 @@ namespace {
       static_cast<double>(kN), benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_IterateFragmented)->Arg(1)->Arg(8)->Arg(64)->Arg(512)->Arg(4096);
-} // namespace
+}
 
 BENCHMARK_MAIN();

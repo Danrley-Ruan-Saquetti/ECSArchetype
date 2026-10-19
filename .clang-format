@@ -33,6 +33,7 @@ ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
 DerivePointerBinding: false
+FixNamespaceComments: false
 IndentCaseLabels: false
 IndentExportBlock: true
 IndentFunctionDeclarationAfterType: false

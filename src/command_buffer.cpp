@@ -12,18 +12,21 @@ namespace ecs {
   namespace {
     constexpr size_t kHeader = 24;
     constexpr size_t kBlockAlign = 64;
-  } // namespace
+  }
 
   CommandBuffer::~CommandBuffer() {
     if (!store_)
-      return; // moved-from
+      return;
 
-    for (Entity e : spawned_)
-      if (store_->isReserved(e))
-        store_->release(e.index); // R-CB-2: índices reservados voltam à freeList
-
+    releasePendingSpawns();
     clear();
     freeBlock();
+  }
+
+  void CommandBuffer::releasePendingSpawns() noexcept {
+    for (Entity e : spawned_)
+      if (store_->isReserved(e))
+        store_->release(e.index);
   }
 
   CommandBuffer::CommandBuffer(CommandBuffer&& o) noexcept
@@ -32,7 +35,7 @@ namespace ecs {
       size_(o.size_),
       cap_(o.cap_),
       count_(o.count_),
-      nonTrivial_(o.nonTrivial_),
+      hasNonTrivialPayload_(o.hasNonTrivialPayload_),
       spawned_(std::move(o.spawned_)),
       grouped_(o.grouped_),
       runs_(std::move(o.runs_)),
@@ -40,7 +43,7 @@ namespace ecs {
     o.store_ = nullptr;
     o.data_ = nullptr;
     o.size_ = o.cap_ = o.count_ = 0;
-    o.nonTrivial_ = false;
+    o.hasNonTrivialPayload_ = false;
     o.spawned_.clear();
     o.runs_.clear();
     o.seen_.clear();
@@ -50,9 +53,7 @@ namespace ecs {
   CommandBuffer& CommandBuffer::operator=(CommandBuffer&& o) noexcept {
     if (this != &o) {
       if (store_) {
-        for (Entity e : spawned_)
-          if (store_->isReserved(e))
-            store_->release(e.index);
+        releasePendingSpawns();
         clear();
         freeBlock();
       }
@@ -62,7 +63,7 @@ namespace ecs {
       size_ = o.size_;
       cap_ = o.cap_;
       count_ = o.count_;
-      nonTrivial_ = o.nonTrivial_;
+      hasNonTrivialPayload_ = o.hasNonTrivialPayload_;
       spawned_ = std::move(o.spawned_);
       grouped_ = o.grouped_;
       runs_ = std::move(o.runs_);
@@ -71,7 +72,7 @@ namespace ecs {
       o.store_ = nullptr;
       o.data_ = nullptr;
       o.size_ = o.cap_ = o.count_ = 0;
-      o.nonTrivial_ = false;
+      o.hasNonTrivialPayload_ = false;
       o.spawned_.clear();
       o.runs_.clear();
       o.seen_.clear();
@@ -115,9 +116,9 @@ namespace ecs {
       newCap *= 2;
 
     std::byte* fresh = alignedAlloc(newCap, kBlockAlign);
-    if (!nonTrivial_) {
+    if (!hasNonTrivialPayload_) {
       if (size_ > 0)
-        std::memcpy(fresh, data_, size_); // só payloads triviais: os offsets se preservam
+        std::memcpy(fresh, data_, size_);
     } else {
       for (size_t off = 0; off < size_;) {
         CommandView v;
@@ -171,7 +172,7 @@ namespace ecs {
     const uint64_t eb = (uint64_t(e.generation) << 32) | e.index;
     h[0] = static_cast<std::byte>(op);
     std::memset(h + 1, 0, 7);
-    h[1] = static_cast<std::byte>(align); // alinhamento do payload (<= 64): readAt não consulta o TypeInfo
+    h[1] = static_cast<std::byte>(align); // para readAt não consultar o TypeInfo
     std::memcpy(h + 8, &eb, 8);
     std::memcpy(h + 16, &cid, 4);
     std::memcpy(h + 20, &size, 4);
@@ -179,7 +180,7 @@ namespace ecs {
     size_ = next;
     ++count_;
     if (!trivial)
-      nonTrivial_ = true;
+      hasNonTrivialPayload_ = true;
 
     return size > 0 ? data_ + payloadOff : nullptr;
   }
@@ -200,7 +201,7 @@ namespace ecs {
   }
 
   void CommandBuffer::clear() noexcept {
-    if (nonTrivial_) {
+    if (hasNonTrivialPayload_) {
       for (size_t off = 0; off < size_;) {
         CommandView v;
         off = readAt(off, v);
@@ -209,7 +210,7 @@ namespace ecs {
       }
     }
 
-    nonTrivial_ = false;
+    hasNonTrivialPayload_ = false;
     grouped_ = true;
     runs_.clear();
     std::fill(seen_.begin(), seen_.end(), 0);
@@ -226,7 +227,7 @@ namespace ecs {
       return p;
     }
 
-    std::vector<uint32_t> slotOf(store_->slotCount(), None); // índice da entidade → plano
+    std::vector<uint32_t> planBySlot(store_->slotCount(), None);
     std::unordered_map<uint64_t, uint32_t> overflow; // geração diferente no mesmo índice / índice fora da faixa
     auto planOf = [&](Entity e) -> uint32_t {
       auto make = [&] {
@@ -234,8 +235,8 @@ namespace ecs {
         return static_cast<uint32_t>(p.owned.size() - 1);
       };
 
-      if (e.index < slotOf.size()) {
-        uint32_t& s = slotOf[e.index];
+      if (e.index < planBySlot.size()) {
+        uint32_t& s = planBySlot[e.index];
         if (s == None)
           s = make();
         if (p.owned[s].e == e)
@@ -249,7 +250,6 @@ namespace ecs {
       return it->second;
     };
 
-    // Passada 1a: conta os comandos de cada entidade.
     for (size_t off = 0; off < size_;) {
       CommandView v;
       const size_t next = readAt(off, v);
@@ -263,7 +263,7 @@ namespace ecs {
       acc += ep.count;
     }
 
-    // Passada 1b: distribui os offsets (estável); `begin` avança e depois volta.
+    // `begin` serve de cursor de escrita e é restaurado logo abaixo.
     p.order.resize(acc);
     for (size_t off = 0; off < size_;) {
       CommandView v;
@@ -279,7 +279,6 @@ namespace ecs {
     return p;
   }
 
-  // Efeito líquido por entidade (R-CB-4), aplicado na ordem de gravação.
   void CommandBuffer::netEffect(const CommandPlan& plan, const EntityPlan& ep, NetEffect& out) const {
     out.spawned = out.destroyed = false;
     out.ops.clear();
@@ -301,7 +300,7 @@ namespace ecs {
         continue; // sem asserts: ignorado (R-CB-4)
       }
       if (v.op == CommandOp::Destroy) {
-        out.ops.clear(); // destroy descarta os comandos anteriores
+        out.ops.clear();
         out.destroyed = true;
         continue;
       }
@@ -315,9 +314,9 @@ namespace ecs {
       auto it = std::lower_bound(out.ops.begin(), out.ops.end(), v.cid,
                                  [](const NetComponentOp& op, ComponentId c) { return op.cid < c; });
       if (it != out.ops.end() && it->cid == v.cid)
-        *it = net; // o último comando por tipo vale
+        *it = net;
       else
         out.ops.insert(it, net);
     }
   }
-} // namespace ecs
+}

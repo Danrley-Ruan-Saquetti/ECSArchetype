@@ -109,7 +109,6 @@ TEST_CASE("fuzz: World == modelo de referência") {
         }
       }
 
-      // Review Focus 4: handles obsoletos
       if (!dead.empty() && rng() % 100 == 0) {
         ecs::Entity old = dead[rng() % dead.size()];
         if (w.isAlive(old) || w.tryGet<A>(old) != nullptr)

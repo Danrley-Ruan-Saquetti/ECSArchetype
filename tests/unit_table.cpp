@@ -18,7 +18,6 @@ namespace {
     return static_cast<uint16_t>(std::lower_bound(ct.begin(), ct.end(), id) - ct.begin());
   }
 
-  // placement-new de A{v} e LifeCounter{v} nas respectivas colunas
   void construct(ecs::Table& t, uint32_t row, uint64_t v) {
     new (t.column(colOf(t, ecs::componentId<A>())).at(row)) A{v};
     new (t.column(colOf(t, ecs::componentId<LifeCounter>())).at(row)) LifeCounter{v};
@@ -33,7 +32,7 @@ namespace {
     CHECK(t.capacity() >= t.count());
     CHECK(LifeCounter::alive == t.count());
   }
-} // namespace
+}
 
 TEST_CASE("smoke: asserts ligados em debug") {
 #ifdef NDEBUG

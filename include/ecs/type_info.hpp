@@ -12,13 +12,13 @@ namespace ecs {
   using ComponentId = uint32_t;
 
   struct TypeInfo {
-    uint32_t size; // 0 para tags
+    uint32_t size;
     uint32_t align;
-    bool trivial; // is_trivially_copyable_v && is_trivially_destructible_v
-    bool tag; // is_empty_v
+    bool trivial;
+    bool tag;
     void (*moveConstruct)(void* dst, void* src) noexcept; // nullptr se trivial
     void (*destroy)(void* p) noexcept; // nullptr se trivial
-    std::string_view name; // para diagnóstico
+    std::string_view name;
   };
 
   const TypeInfo& typeInfo(ComponentId id);
@@ -53,10 +53,10 @@ namespace ecs {
       static const ComponentId id = registerType(makeTypeInfo<U>());
       return id;
     }
-  } // namespace detail
+  }
 
   template <class T>
   ComponentId componentId() {
     return detail::componentIdOf<std::remove_cvref_t<T>>();
   }
-} // namespace ecs
+}

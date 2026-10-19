@@ -26,7 +26,7 @@ namespace ecs {
     inline constexpr bool distinctTypes = true;
     template <class T, class... Rest>
     inline constexpr bool distinctTypes<T, Rest...> = (!(std::is_same_v<T, Rest> || ...)) && distinctTypes<Rest...>;
-  } // namespace detail
+  }
 
   struct ArchetypeStats {
     ArchetypeId id;
@@ -76,7 +76,6 @@ namespace ecs {
     template <class T>
     T* tryGet(Entity e) noexcept;
 
-    // Núcleo não template.
     void addRaw(Entity e, ComponentId cid, void* value); // move de `value`; ignorado para tags
     void removeRaw(Entity e, ComponentId cid);
 
@@ -140,10 +139,12 @@ namespace ecs {
 
     const Edge& edgeFor(Archetype& src, ComponentId cid, bool adding);
     const Edge& jumpEdge(Archetype& src, Archetype& dst);
-    void materialize(Entity e); // põe uma entidade reservada no arquétipo raiz
-    Entity place(Archetype& a); // aloca entidade e linha morta em `a`
+    void materialize(Entity reserved);
+    Entity place(Archetype& a); // a linha nasce morta: o chamador constrói as colunas
+    Archetype& root() noexcept {
+      return *archetypes_[0];
+    }
 
-    // Partes de checkInvariants: cada uma devolve false na primeira violação e a descreve em *why.
     bool checkArchetypes(std::string* why) const;
     bool checkRows(const Archetype& a, std::string* why) const;
     bool checkRecords(std::string* why) const;
@@ -249,7 +250,7 @@ namespace ecs {
       std::sort(v.begin(), v.end());
       v.erase(std::unique(v.begin(), v.end()), v.end());
     }
-  } // namespace detail
+  }
 
   template <class... Ts, class... Filters>
   Query<Ts...>& World::query(Filters... filters) {
@@ -271,4 +272,4 @@ namespace ecs {
     registerQuery(std::move(key), std::move(q));
     return ref;
   }
-} // namespace ecs
+}

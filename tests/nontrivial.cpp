@@ -12,7 +12,7 @@ namespace {
   std::string longStr(uint64_t i) {
     return std::string(48, 'z') + std::to_string(i);
   }
-} // namespace
+}
 
 TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e transições") {
   LifeCounter::alive = 0;

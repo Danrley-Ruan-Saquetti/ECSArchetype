@@ -25,7 +25,7 @@ namespace {
 
     throw std::bad_alloc();
   }
-} // namespace
+}
 
 size_t allocationCount() noexcept {
   return g_count.load(std::memory_order_relaxed);

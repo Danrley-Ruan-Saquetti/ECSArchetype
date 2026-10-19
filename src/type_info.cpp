@@ -10,7 +10,7 @@ namespace ecs {
       static std::deque<TypeInfo> r;
       return r;
     }
-  } // namespace
+  }
 
   const TypeInfo& typeInfo(ComponentId id) {
     return registry()[id];
@@ -24,4 +24,4 @@ namespace ecs {
     registry().push_back(info);
     return static_cast<ComponentId>(registry().size() - 1);
   }
-} // namespace ecs
+}

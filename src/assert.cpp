@@ -13,7 +13,7 @@ namespace ecs {
     }
 
     AssertHandler g_handler = &defaultHandler;
-  } // namespace
+  }
 
   AssertHandler setAssertHandler(AssertHandler handler) noexcept {
     AssertHandler previous = g_handler;
@@ -35,5 +35,5 @@ namespace ecs {
       g_handler(full);
       std::abort();
     }
-  } // namespace detail
-} // namespace ecs
+  }
+}

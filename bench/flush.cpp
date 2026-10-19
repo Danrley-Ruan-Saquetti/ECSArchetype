@@ -118,6 +118,6 @@ namespace {
                                                          benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_DirectAdds)->Arg(1000)->Arg(100000);
-} // namespace
+}
 
 BENCHMARK_MAIN();

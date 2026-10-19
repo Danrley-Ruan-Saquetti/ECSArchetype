@@ -5,7 +5,6 @@
 
 namespace ecs {
   namespace {
-    // srcToDst[i] deve apontar para a coluna de b com o mesmo ComponentId (ou -1 sse ausente em b).
     bool checkEdgeMapping(const Archetype& a, const Archetype& b, const Edge& edge) {
       if (edge.srcToDst.size() != a.columnTypes.size())
         return false;
@@ -34,7 +33,6 @@ namespace ecs {
       return "arch=" + std::to_string(a.id);
     }
 
-    // I-1
     bool checkTableShape(const Archetype& a, std::string* why) {
       const Table& t = a.table;
       if (t.entities().size() != t.count() || t.capacity() < t.count())
@@ -43,7 +41,6 @@ namespace ecs {
       return true;
     }
 
-    // I-5
     bool checkColumnTypes(const Archetype& a, std::string* why) {
       if (!std::is_sorted(a.signature.begin(), a.signature.end()) || std::adjacent_find(a.signature.begin(), a.signature.end()) != a.signature.end())
         return fail(why, "I-5", archLabel(a) + " signature");
@@ -62,7 +59,6 @@ namespace ecs {
       return true;
     }
 
-    // Assinatura de `sig` com `c` inserido (adding) ou removido.
     Signature edgeSignature(Signature sig, ComponentId c, bool adding) {
       auto pos = std::lower_bound(sig.begin(), sig.end(), c);
       if (adding)
@@ -72,7 +68,6 @@ namespace ecs {
       return sig;
     }
 
-    // I-9: arestas add/remove em cache de `a`.
     bool checkCachedEdges(const Archetype& a, std::string* why) {
       for (int adding = 1; adding >= 0; --adding) {
         for (const auto& [c, edge] : adding ? a.addEdges : a.removeEdges) {
@@ -134,7 +129,6 @@ namespace ecs {
       }
     };
 
-    // Assinatura de `sig` depois de aplicar o efeito líquido `ops`.
     Signature applyOps(Signature sig, std::span<const NetComponentOp> ops) {
       for (const NetComponentOp& op : ops) {
         auto pos = std::lower_bound(sig.begin(), sig.end(), op.cid);
@@ -147,7 +141,6 @@ namespace ecs {
       return sig;
     }
 
-    // Constrói os valores de `ops` na linha `row` do destino; os que já existiam são destruídos antes.
     void writeValues(const FlushMemo& memo, std::span<const NetComponentOp> ops, uint32_t row) {
       for (size_t i = 0; i < ops.size(); ++i) {
         if (!memo.col[i])
@@ -172,11 +165,11 @@ namespace ecs {
         }
       }
     }
-  } // namespace
+  }
 
   World::World() {
-    findOrCreate({});
-  } // arquétipo raiz: id == 0 (R-AR-3)
+    findOrCreate({}); // o primeiro arquétipo recebe id 0: é o que root() devolve (R-AR-3)
+  }
 
   World::~World() = default;
 
@@ -211,7 +204,7 @@ namespace ecs {
 
   Entity World::create() {
     ECS_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
-    return place(*archetypes_[0]);
+    return place(root());
   }
 
   void World::destroy(Entity e) {
@@ -319,12 +312,10 @@ namespace ecs {
       && checkEdges(why);
   }
 
-  // I-1, I-4, I-5 e I-6
   bool World::checkArchetypes(std::string* why) const {
     for (size_t i = 0; i < archetypes_.size(); ++i) {
       const Archetype& a = *archetypes_[i];
 
-      // I-6 (metade): id == posição e lookup pela própria assinatura
       auto it = bySignature_.find(a.signature);
       if (a.id != i || it == bySignature_.end() || it->second != &a)
         return fail(why, "I-6", archLabel(a));
@@ -339,7 +330,6 @@ namespace ecs {
     return true;
   }
 
-  // I-4: cada linha aponta para um record que aponta de volta para ela.
   bool World::checkRows(const Archetype& a, std::string* why) const {
     const Table& t = a.table;
     for (uint32_t r = 0; r < t.count(); ++r) {
@@ -355,7 +345,6 @@ namespace ecs {
     return true;
   }
 
-  // I-3: cada record vivo aponta para uma linha que guarda a mesma entidade.
   bool World::checkRecords(std::string* why) const {
     for (uint32_t i = 0; i < store_.slotCount(); ++i) {
       const EntityRecord& rec = store_.record(i);
@@ -370,7 +359,6 @@ namespace ecs {
     return true;
   }
 
-  // I-10: a freeList só tem slots válidos, mortos e sem repetição.
   bool World::checkFreeList(std::string* why) const {
     std::vector<uint32_t> fl(store_.freeList().begin(), store_.freeList().end());
     for (uint32_t i : fl)
@@ -384,7 +372,6 @@ namespace ecs {
     return true;
   }
 
-  // I-7: componentIndex_ e as assinaturas se espelham.
   bool World::checkComponentIndex(std::string* why) const {
     for (const auto& ap : archetypes_) {
       for (ComponentId c : ap->signature) {
@@ -408,7 +395,6 @@ namespace ecs {
     return true;
   }
 
-  // I-8
   bool World::checkQueries(std::string* why) const {
     for (size_t qi = 0; qi < queries_.size(); ++qi)
       for (const auto& ap : archetypes_)
@@ -418,7 +404,6 @@ namespace ecs {
     return true;
   }
 
-  // I-9: arestas em cache dos arquétipos e arestas de salto do flush.
   bool World::checkEdges(std::string* why) const {
     for (const auto& ap : archetypes_)
       if (!checkCachedEdges(*ap, why))
@@ -447,7 +432,7 @@ namespace ecs {
     return raw;
   }
 
-  // c* = componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
+  // Índice do componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
   const SmallMap<ArchetypeId, uint16_t>* World::smallestIndex(const Signature& with) const {
     static const SmallMap<ArchetypeId, uint16_t> empty;
 
@@ -461,11 +446,11 @@ namespace ecs {
     return best;
   }
 
-  void World::materialize(Entity e) {
-    EntityRecord& rec = store_.record(e.index);
-    Archetype& root = *archetypes_[0];
-    rec.row = root.table.pushUninit(e);
-    rec.arch = &root;
+  void World::materialize(Entity reserved) {
+    EntityRecord& rec = store_.record(reserved.index);
+    Archetype& r = root();
+    rec.row = r.table.pushUninit(reserved);
+    rec.arch = &r;
   }
 
   void World::flushSequential(CommandBuffer& cb) {
@@ -521,7 +506,7 @@ namespace ecs {
       const bool alive = store_.isAlive(e);
       const bool reserved = net.spawned && store_.isReserved(e);
       if (!alive && !reserved)
-        continue; // handle obsoleto: ignorado (questão 3)
+        continue; // handle obsoleto: ignorado em vez de cancelar os comandos no destroy (spec §10, questão 3)
       if (net.destroyed) {
         if (alive)
           destroy(e);
@@ -589,4 +574,4 @@ namespace ecs {
 
     return st;
   }
-} // namespace ecs
+}

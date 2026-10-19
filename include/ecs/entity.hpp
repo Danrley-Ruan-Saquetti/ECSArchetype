@@ -30,7 +30,7 @@ namespace ecs {
   struct EntityRecord {
     Archetype* arch; // nullptr = morto ou reservado (pendente)
     uint32_t row;
-    uint32_t generation; // geração atual do slot
+    uint32_t generation;
   };
   static_assert(sizeof(EntityRecord) == 16, "NF-M1: 16 bytes por EntityRecord");
 
@@ -92,4 +92,4 @@ namespace ecs {
     std::vector<EntityRecord> records_;
     std::vector<uint32_t> freeList_;
   };
-} // namespace ecs
+}

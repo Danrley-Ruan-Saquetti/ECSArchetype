@@ -36,7 +36,6 @@ namespace ecs {
   };
 
   namespace detail {
-    // R-QY-5: mantém iterating_ > 0 enquanto um each/eachBlock está em andamento (aninhável, seguro com exceção).
     struct IterationGuard {
       explicit IterationGuard(uint32_t* p) noexcept
         : p_(p) {
@@ -50,7 +49,7 @@ namespace ecs {
 
       uint32_t* p_;
     };
-  } // namespace detail
+  }
 
   template <class... Ts>
   struct MatchedTable {
@@ -66,7 +65,7 @@ namespace ecs {
                   "Query<Ts...> aceita apenas T ou const T");
 
    public:
-    // Metadado de leitura/escrita por tipo (R-QY-1), para uso futuro pelo scheduler.
+    // Sem uso na v1: reservado para o scheduler (R-QY-1).
     static constexpr std::array<bool, sizeof...(Ts)> writes{!std::is_const_v<Ts>...};
 
     // `with` = ids de Ts ∪ With<...>, ordenados e sem repetição; `without` idem.
@@ -76,7 +75,7 @@ namespace ecs {
         without_(std::move(without)),
         tsIds_{componentId<std::remove_const_t<Ts>>()...} {}
 
-    // Matching inicial. Com `smallest` percorre só os arquétipos do menor componentIndex (R-QY-3).
+    // Com `smallest`, percorre só os arquétipos do menor componentIndex (R-QY-3).
     void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const SmallMap<ArchetypeId, uint16_t>* smallest) {
       if (smallest) {
         for (const auto& [aid, col] : *smallest)
@@ -111,7 +110,7 @@ namespace ecs {
 
       MatchedTable<Ts...> m{&a, {}};
       for (size_t i = 0; i < tsIds_.size(); ++i)
-        m.cols[i] = columnOf(a, tsIds_[i]); // resolvido no match (R-QY-4)
+        m.cols[i] = columnOf(a, tsIds_[i]);
       matched_.push_back(m);
     }
 
@@ -128,7 +127,7 @@ namespace ecs {
       }
     }
 
-    // f(Ts&...) ou f(Entity, Ts&...). Os ponteiros de coluna são resolvidos antes do laço interno.
+    // f(Ts&...) ou f(Entity, Ts&...).
     template <class F>
     void each(F&& f) {
       detail::IterationGuard guard(iterating_);
@@ -166,4 +165,4 @@ namespace ecs {
     std::array<ComponentId, sizeof...(Ts)> tsIds_;
     std::vector<MatchedTable<Ts...>> matched_;
   };
-} // namespace ecs
+}

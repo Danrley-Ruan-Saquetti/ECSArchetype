@@ -19,8 +19,8 @@ namespace ecs {
     __attribute__((format(printf, 4, 5)))
 #endif
     [[noreturn]] void assertFail(const char* expr, const char* file, int line, const char* fmt, ...) noexcept;
-  } // namespace detail
-} // namespace ecs
+  }
+}
 
 #if ECS_ENABLE_ASSERTS
 #define ECS_ASSERT(cond, ...)                                            \

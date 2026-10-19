@@ -1,6 +1,5 @@
 #pragma once
 
-// Modelo de referência trivialmente correto e utilitários para fuzz (reutilizado em Tasks 15-16).
 #include <doctest/doctest.h>
 
 #include <cstdint>
@@ -26,7 +25,6 @@ namespace fuzz {
     return FS{kFsPrefix + std::to_string(v)};
   }
 
-  // Universo do fuzz: A, B, FS, Tag, LifeCounter.
   inline const ecs::ComponentId* universe() {
     static const ecs::ComponentId ids[5] = {ecs::componentId<A>(), ecs::componentId<B>(), ecs::componentId<FS>(),
                                             ecs::componentId<Tag>(), ecs::componentId<LifeCounter>()};
@@ -36,7 +34,7 @@ namespace fuzz {
   inline bool isTag(ecs::ComponentId cid) {
     return cid == ecs::componentId<Tag>();
   }
-} // namespace fuzz
+}
 
 // Mistura index, generation e contador (splitmix64): troca de linhas aparece como valor errado.
 inline uint64_t makeValue(ecs::Entity e, uint64_t counter) {

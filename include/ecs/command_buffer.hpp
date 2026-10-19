@@ -24,10 +24,9 @@ namespace ecs {
     void* payload; // nullptr se não há payload (Spawn/Destroy/Remove/tag)
   };
 
-  // Passada 1 do flush (R-CB-3): efeito líquido por entidade.
   struct NetComponentOp {
     ComponentId cid;
-    bool present; // true: componente presente ao final; false: ausente
+    bool present;
     void* payload; // valor do último Add (nullptr para tags e remoções)
   };
 
@@ -36,19 +35,18 @@ namespace ecs {
     uint32_t begin = 0, count = 0; // faixa em CommandPlan::order (ou offset/8 do primeiro registro, se contíguo)
   };
 
-  // Efeito líquido de uma entidade (R-CB-4); montado sob demanda por CommandBuffer::netEffect.
   struct NetEffect {
     bool spawned = false;
     bool destroyed = false;
     std::vector<NetComponentOp> ops; // ordenado por cid
   };
 
-  // Passada 1: agrupa os comandos por entidade (counting sort estável). Guarda só offsets (em múltiplos
-  // de 8) dos registros, para tocar pouca memória; o efeito líquido sai de netEffect, uma entidade por vez.
+  // Guarda só offsets/8 dos registros, para tocar pouca memória; o efeito líquido sai de
+  // netEffect, uma entidade por vez.
   struct CommandPlan {
     CommandPlan() = default;
-    CommandPlan(CommandPlan&&) = default; // `entities` pode apontar para `owned` ou para os trechos do buffer
-    CommandPlan(const CommandPlan&) = delete;
+    CommandPlan(CommandPlan&&) = default;
+    CommandPlan(const CommandPlan&) = delete; // a span `entities` da cópia apontaria para o `owned` do original
 
     std::vector<EntityPlan> owned;
     std::span<const EntityPlan> entities; // na ordem da primeira aparição
@@ -59,7 +57,7 @@ namespace ecs {
     bool contiguous = true;
   };
 
-  // Registro (alinhado a 8): [op:u8][pad:7][entity:u64][cid:u32][size:u32][payload alinhado].
+  // Registro (alinhado a 8): [op:u8][payloadAlign:u8][pad:6][entity:u64][cid:u32][size:u32][payload alinhado].
   // O bloco é alinhado a 64. Ao crescer, cada payload é realocado pelo seu TypeInfo
   // (memcpy se trivial, moveConstruct + destroy caso contrário): um memmove cego quebraria
   // tipos que apontam para si mesmos (ex.: std::string com SSO).
@@ -94,7 +92,6 @@ namespace ecs {
       }
     }
 
-    // Agrupa os comandos por entidade preservando a ordem (R-CB-3) e calcula o efeito líquido de cada uma (R-CB-4).
     CommandPlan plan() const;
     void netEffect(const CommandPlan& plan, const EntityPlan& ep, NetEffect& out) const;
 
@@ -117,12 +114,13 @@ namespace ecs {
     size_t readAt(size_t off, CommandView& out) const noexcept; // devolve o offset do próximo registro
     void grow(size_t need);
     void freeBlock() noexcept;
+    void releasePendingSpawns() noexcept;
 
     EntityStore* store_;
     std::byte* data_ = nullptr;
     size_t size_ = 0, cap_ = 0;
     size_t count_ = 0;
-    bool nonTrivial_ = false; // algum payload exige moveConstruct/destroy
+    bool hasNonTrivialPayload_ = false;
     std::vector<Entity> spawned_;
 
     // Enquanto cada entidade ocupa um trecho consecutivo (caso comum de lotes), os trechos são
@@ -145,4 +143,4 @@ namespace ecs {
       ::new (p) U(std::forward<T>(value));
     }
   }
-} // namespace ecs
+}

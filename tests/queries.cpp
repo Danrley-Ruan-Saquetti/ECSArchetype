@@ -32,7 +32,7 @@ TEST_CASE("arquétipos criados antes e depois da query; with/without de tag") {
   CHECK(all.matchedCount() == 4);
   CHECK(tagged.matchedCount() == 2);
   CHECK(untagged.matchedCount() == 2);
-  CHECK_INV(w); // I-8
+  CHECK_INV(w);
 }
 
 TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") {
@@ -120,7 +120,7 @@ TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
   CHECK(blocks == 1);
 }
 
-TEST_CASE("iterating_ aninha e volta a zero, inclusive com exceção") { // Review Focus 5
+TEST_CASE("iterating_ aninha e volta a zero, inclusive com exceção") {
   ecs::World w;
   w.create(A{1});
 

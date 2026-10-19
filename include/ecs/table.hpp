@@ -11,7 +11,7 @@
 #include "ecs/type_info.hpp"
 
 namespace ecs {
-  // Move o valor de src para dst (dst não construído). Triviais: memcpy; demais: moveConstruct + destroy.
+  // `dst` não pode estar construído; `src` termina destruído.
   inline void relocateValue(const TypeInfo& ti, void* dst, void* src) noexcept {
     if (ti.trivial) {
       std::memcpy(dst, src, ti.size);
@@ -74,12 +74,12 @@ namespace ecs {
     }
 
    private:
-    void reserve(uint32_t newCap); // realoca TODAS as colunas juntas
-    void releaseAll() noexcept; // destrói linhas vivas e libera memória
+    void reserve(uint32_t newCap);
+    void releaseAll() noexcept;
 
     std::vector<Column> columns_;
     std::vector<ComponentId> columnTypes_;
-    std::vector<Entity> entities_; // size() == count
+    std::vector<Entity> entities_;
     uint32_t count_ = 0, capacity_ = 0;
   };
-} // namespace ecs
+}
