@@ -18,13 +18,15 @@ namespace {
   void handler(const char* message) noexcept {
     std::fprintf(stderr, "%s\n", message);
 
-    if (g_required)
-      for (const char* needle : *g_required)
+    if (g_required) {
+      for (const char* needle : *g_required) {
         if (!std::strstr(message, needle)) {
           std::fprintf(stderr, "mensagem sem a substring exigida: \"%s\"\n", needle);
           std::fflush(stderr);
           std::_Exit(2);
         }
+      }
+    }
 
     std::fflush(stderr);
     std::_Exit(0);
@@ -90,8 +92,9 @@ int main(int argumentCount, char** arguments) {
   }
 
   for (const Case& testCase : cases) {
-    if (std::strcmp(testCase.name, arguments[1]) != 0)
+    if (std::strcmp(testCase.name, arguments[1]) != 0) {
       continue;
+    }
 
     g_required = &testCase.required;
     ecs::setAssertHandler(&handler);

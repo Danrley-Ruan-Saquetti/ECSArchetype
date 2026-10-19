@@ -24,12 +24,15 @@ namespace ecs {
 
   void Table::releaseAll() noexcept {
     for (Column& column : columns_) {
-      if (!column.data)
+      if (!column.data) {
         continue;
+      }
 
-      if (!column.info->trivial)
-        for (uint32_t row = 0; row < count_; ++row)
+      if (!column.info->trivial) {
+        for (uint32_t row = 0; row < count_; ++row) {
           column.info->destroy(column.at(row));
+        }
+      }
 
       alignedFree(column.data, columnAlignment(*column.info));
       column.data = nullptr;
@@ -78,12 +81,15 @@ namespace ecs {
     // Aloca tudo antes de mover qualquer coisa: se uma alocação lançar, nada foi tocado.
     std::vector<std::byte*> fresh(columns_.size(), nullptr);
     try {
-      for (size_t i = 0; i < columns_.size(); ++i)
+      for (size_t i = 0; i < columns_.size(); ++i) {
         fresh[i] = alignedAllocate(size_t(newCapacity) * columns_[i].info->size, columnAlignment(*columns_[i].info));
+      }
     } catch (...) {
-      for (size_t i = 0; i < columns_.size(); ++i)
-        if (fresh[i])
+      for (size_t i = 0; i < columns_.size(); ++i) {
+        if (fresh[i]) {
           alignedFree(fresh[i], columnAlignment(*columns_[i].info));
+        }
+      }
       throw;
     }
 
@@ -91,8 +97,9 @@ namespace ecs {
       Column& column = columns_[i];
       if (column.data) {
         if (column.info->trivial) {
-          if (count_ > 0)
+          if (count_ > 0) {
             std::memcpy(fresh[i], column.data, size_t(count_) * column.info->size);
+          }
         } else {
           for (uint32_t row = 0; row < count_; ++row) {
             std::byte* destination = fresh[i] + size_t(row) * column.info->size;
@@ -111,16 +118,18 @@ namespace ecs {
   }
 
   uint32_t Table::pushUninitialized(Entity entity) {
-    if (count_ == capacity_)
+    if (count_ == capacity_) {
       reserve(std::max<uint32_t>(64, capacity_ * 2));
+    }
 
     entities_.push_back(entity);
     return count_++;
   }
 
   void Table::destroyRow(uint32_t row) noexcept {
-    for (Column& column : columns_)
+    for (Column& column : columns_) {
       destroyValue(*column.info, column.at(row));
+    }
   }
 
   std::optional<Entity> Table::fillHole(uint32_t row) noexcept {
@@ -131,8 +140,9 @@ namespace ecs {
       return std::nullopt;
     }
 
-    for (Column& column : columns_)
+    for (Column& column : columns_) {
       relocateValue(*column.info, column.at(row), column.at(last));
+    }
 
     entities_[row] = entities_.back();
     entities_.pop_back();

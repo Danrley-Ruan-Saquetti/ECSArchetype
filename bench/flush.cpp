@@ -33,8 +33,9 @@ namespace {
       world->destroy(warm);
 
       entities.reserve(static_cast<size_t>(entityCount));
-      for (int64_t i = 0; i < entityCount; ++i)
+      for (int64_t i = 0; i < entityCount; ++i) {
         entities.push_back(world->create());
+      }
     }
   };
 

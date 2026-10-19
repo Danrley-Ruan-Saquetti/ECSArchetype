@@ -25,8 +25,9 @@ namespace ecs {
 #if ECS_ENABLE_ASSERTS
 #define ECS_ASSERT(condition, ...)                                            \
   do {                                                                        \
-    if (!(condition))                                                         \
+    if (!(condition)) {                                                       \
       ::ecs::detail::assertFail(#condition, __FILE__, __LINE__, __VA_ARGS__); \
+    }                                                                         \
   } while (0)
 #else
 #define ECS_ASSERT(condition, ...) \

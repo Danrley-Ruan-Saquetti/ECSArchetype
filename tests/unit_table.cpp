@@ -79,8 +79,9 @@ TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
 
   table.pushUninitialized({0, 0});
 
-  for (uint16_t column = 0; column < table.columnCount(); ++column)
+  for (uint16_t column = 0; column < table.columnCount(); ++column) {
     CHECK(reinterpret_cast<uintptr_t>(table.column(column).data) % 64 == 0);
+  }
 }
 
 TEST_CASE("std::string sobrevive à realocação") {
@@ -94,6 +95,7 @@ TEST_CASE("std::string sobrevive à realocação") {
   }
 
   CHECK(table.capacity() == 128); // cruzou 64
-  for (uint32_t i = 0; i < 100; ++i)
+  for (uint32_t i = 0; i < 100; ++i) {
     CHECK(*static_cast<std::string*>(table.column(0).at(i)) == make(i));
+  }
 }

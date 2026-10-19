@@ -46,12 +46,14 @@ TEST_CASE("I-2: LifeCounter bate com linhas vivas") {
     std::vector<bool> hasLifeCounter(kEntityCount, false), dead(kEntityCount, false);
     auto expected = [&] {
       int64_t count = 0;
-      for (int i = 0; i < kEntityCount; ++i)
+      for (int i = 0; i < kEntityCount; ++i) {
         count += (hasLifeCounter[i] && !dead[i]);
+      }
       return count;
     };
-    for (int i = 0; i < kEntityCount; ++i)
+    for (int i = 0; i < kEntityCount; ++i) {
       entities.push_back(world.create(A{uint64_t(i)}));
+    }
 
     for (int i = 0; i < kEntityCount; i += 2) {
       world.add(entities[i], LifeCounter{uint64_t(i)});

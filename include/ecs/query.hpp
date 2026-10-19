@@ -78,11 +78,13 @@ namespace ecs {
     // Com `smallest`, percorre só os arquétipos do menor componentIndex (R-QY-3).
     void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const SmallMap<ArchetypeId, uint16_t>* smallest) {
       if (smallest) {
-        for (const auto& [archetypeId, column] : *smallest)
+        for (const auto& [archetypeId, column] : *smallest) {
           onArchetypeCreated(*all[archetypeId]);
+        }
       } else {
-        for (const auto& archetype : all)
+        for (const auto& archetype : all) {
           onArchetypeCreated(*archetype);
+        }
       }
     }
 
@@ -91,11 +93,14 @@ namespace ecs {
     }
 
     bool matches(const Archetype& archetype) const override {
-      if (!std::includes(archetype.signature.begin(), archetype.signature.end(), with_.begin(), with_.end()))
+      if (!std::includes(archetype.signature.begin(), archetype.signature.end(), with_.begin(), with_.end())) {
         return false;
-      for (ComponentId componentId : without_)
-        if (std::binary_search(archetype.signature.begin(), archetype.signature.end(), componentId))
+      }
+      for (ComponentId componentId : without_) {
+        if (std::binary_search(archetype.signature.begin(), archetype.signature.end(), componentId)) {
           return false;
+        }
+      }
 
       return true;
     }
@@ -105,12 +110,14 @@ namespace ecs {
     }
 
     void onArchetypeCreated(Archetype& archetype) override {
-      if (!matches(archetype))
+      if (!matches(archetype)) {
         return;
+      }
 
       MatchedTable<Ts...> matched{&archetype, {}};
-      for (size_t i = 0; i < componentIds_.size(); ++i)
+      for (size_t i = 0; i < componentIds_.size(); ++i) {
         matched.columns[i] = columnOf(archetype, componentIds_[i]);
+      }
       matched_.push_back(matched);
     }
 
@@ -120,8 +127,9 @@ namespace ecs {
       detail::IterationGuard guard(iterating_);
       for (const MatchedTable<Ts...>& matched : matched_) {
         Table& table = matched.archetype->table;
-        if (table.count() == 0)
+        if (table.count() == 0) {
           continue;
+        }
 
         callBlock(callback, table, matched, std::index_sequence_for<Ts...>{});
       }
@@ -134,8 +142,9 @@ namespace ecs {
       for (const MatchedTable<Ts...>& matched : matched_) {
         Table& table = matched.archetype->table;
         const uint32_t rowCount = table.count();
-        if (rowCount == 0)
+        if (rowCount == 0) {
           continue;
+        }
 
         callRows(callback, table, matched, rowCount, std::index_sequence_for<Ts...>{});
       }
@@ -153,11 +162,13 @@ namespace ecs {
       const Entity* entities = table.entities().data();
 
       if constexpr (std::is_invocable_v<F&, Entity, Ts&...>) {
-        for (uint32_t row = 0; row < rowCount; ++row)
+        for (uint32_t row = 0; row < rowCount; ++row) {
           callback(entities[row], std::get<Is>(columns)[row]...);
+        }
       } else {
-        for (uint32_t row = 0; row < rowCount; ++row)
+        for (uint32_t row = 0; row < rowCount; ++row) {
           callback(std::get<Is>(columns)[row]...);
+        }
       }
     }
 

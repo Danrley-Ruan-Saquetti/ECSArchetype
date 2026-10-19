@@ -105,8 +105,9 @@ TEST_CASE("remove/destroy da última e da única linha") {
 TEST_CASE("add com valor lido de outra entidade da tabela destino que realoca") {
   ecs::World world;
   std::vector<ecs::Entity> full;
-  for (uint64_t i = 0; i < 64; ++i)
+  for (uint64_t i = 0; i < 64; ++i) {
     full.push_back(world.create(A{i}, B{i, i})); // capacidade 64 cheia
+  }
   auto entity = world.create(A{999});
 
   world.add(entity, world.get<B>(full[5])); // destino {A,B} realoca no pushUninitialized
@@ -202,8 +203,9 @@ TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
 
 TEST_CASE("stats: contagens, histograma e memória ociosa") {
   ecs::World world;
-  for (uint64_t i = 0; i < 5; ++i)
+  for (uint64_t i = 0; i < 5; ++i) {
     world.create(A{i}); // {A}: 5
+  }
   world.create(A{0}, B{0, 0}); // {A,B}: 1
 
   auto stats = world.stats();

@@ -21,11 +21,12 @@ namespace ecs {
 
     size_t operator()(const Signature& signature) const noexcept {
       uint64_t hash = kFnv1aOffsetBasis;
-      for (ComponentId id : signature)
+      for (ComponentId id : signature) {
         for (int i = 0; i < 4; ++i) {
           hash ^= (id >> (8 * i)) & 0xffu;
           hash *= kFnv1aPrime;
         }
+      }
 
       return static_cast<size_t>(hash);
     }

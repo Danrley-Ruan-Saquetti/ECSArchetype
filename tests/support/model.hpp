@@ -46,22 +46,24 @@ inline uint64_t makeValue(ecs::Entity entity, uint64_t counter) {
 }
 
 inline void addToWorld(ecs::World& world, ecs::Entity entity, ecs::ComponentId componentId, uint64_t value) {
-  if (componentId == ecs::componentId<A>())
+  if (componentId == ecs::componentId<A>()) {
     world.add(entity, A{value});
-  else if (componentId == ecs::componentId<B>())
+  } else if (componentId == ecs::componentId<B>()) {
     world.add(entity, B{value, ~value});
-  else if (componentId == ecs::componentId<FuzzState>())
+  } else if (componentId == ecs::componentId<FuzzState>()) {
     world.add(entity, fuzz::makeFuzzState(value));
-  else if (componentId == ecs::componentId<Tag>())
+  } else if (componentId == ecs::componentId<Tag>()) {
     world.add(entity, Tag{});
-  else
+  } else {
     world.add(entity, LifeCounter{value});
+  }
 }
 
 // Devolve false se a entidade não tem o componente. Tag devolve 0.
 inline bool readFromWorld(ecs::World& world, ecs::Entity entity, ecs::ComponentId componentId, uint64_t& out) {
-  if (!world.hasRaw(entity, componentId))
+  if (!world.hasRaw(entity, componentId)) {
     return false;
+  }
 
   if (componentId == ecs::componentId<A>()) {
     out = world.get<A>(entity).value;
@@ -82,19 +84,22 @@ inline bool readFromWorld(ecs::World& world, ecs::Entity entity, ecs::ComponentI
 
 inline void requireEqual(ecs::World& world, const Model& model) {
   for (const auto& [entity, components] : model) {
-    if (!world.isAlive(entity))
+    if (!world.isAlive(entity)) {
       FAIL("entidade do modelo morta no World: e=" << entity.index << ":" << entity.generation);
+    }
 
     for (int i = 0; i < 5; ++i) {
       const ecs::ComponentId componentId = fuzz::universe()[i];
       auto it = components.find(componentId);
       uint64_t got = 0;
       const bool has = readFromWorld(world, entity, componentId, got);
-      if (has != (it != components.end()))
+      if (has != (it != components.end())) {
         FAIL("presença diverge: e=" << entity.index << ":" << entity.generation << " tipo=" << ecs::typeInfo(componentId).name);
-      if (has && got != it->second)
+      }
+      if (has && got != it->second) {
         FAIL("valor diverge: e=" << entity.index << ":" << entity.generation << " tipo=" << ecs::typeInfo(componentId).name
                                  << " esperado=" << it->second << " obtido=" << got);
+      }
     }
   }
 }

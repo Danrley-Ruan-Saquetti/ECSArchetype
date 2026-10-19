@@ -14,10 +14,11 @@
 namespace {
   template <bool NT, int I>
   auto makeComponent(uint64_t value) {
-    if constexpr (NT)
+    if constexpr (NT) {
       return NonTrivial<Component<I>>{Component<I>{value}};
-    else
+    } else {
       return Component<I>{value};
+    }
   }
 
   template <bool NT, size_t... Is>
@@ -32,8 +33,9 @@ namespace {
     constexpr int kEntityCount = 1024;
     ecs::World world;
     std::vector<ecs::Entity> entities;
-    for (int i = 0; i < kEntityCount; ++i)
+    for (int i = 0; i < kEntityCount; ++i) {
       entities.push_back(createWithComponents<NT>(world, i, std::make_index_sequence<K>{}));
+    }
 
     using X = decltype(makeComponent<NT, kExtra>(0));
     for (auto entity : entities) { // aquece arestas e capacidades
@@ -97,14 +99,16 @@ namespace {
     ecs::World world;
     std::vector<ecs::Entity> entities;
     entities.reserve(kGetCount);
-    for (uint32_t i = 0; i < kGetCount; ++i)
+    for (uint32_t i = 0; i < kGetCount; ++i) {
       entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
+    }
     const auto shuffledIndices = permutation(kGetCount);
 
     for (auto _ : state) {
       uint64_t sum = 0;
-      for (uint32_t i : shuffledIndices)
+      for (uint32_t i : shuffledIndices) {
         sum += world.get<Component<2>>(entities[i]).value;
+      }
       benchmark::DoNotOptimize(sum);
     }
 
@@ -114,14 +118,16 @@ namespace {
 
   void BM_RandomGet_VectorStruct(benchmark::State& state) {
     std::vector<Record4> records(kGetCount);
-    for (uint32_t i = 0; i < kGetCount; ++i)
+    for (uint32_t i = 0; i < kGetCount; ++i) {
       records[i] = Record4{i, i, i, i};
+    }
     const auto shuffledIndices = permutation(kGetCount);
 
     for (auto _ : state) {
       uint64_t sum = 0;
-      for (uint32_t i : shuffledIndices)
+      for (uint32_t i : shuffledIndices) {
         sum += records[i].third;
+      }
       benchmark::DoNotOptimize(sum);
     }
 
@@ -135,8 +141,9 @@ namespace {
     ecs::World world;
     std::vector<ecs::Entity> entities;
     entities.reserve(kEntityCount);
-    for (uint32_t i = 0; i < kEntityCount; ++i)
+    for (uint32_t i = 0; i < kEntityCount; ++i) {
       entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
+    }
 
     std::mt19937 generator(99);
     for (auto _ : state) {

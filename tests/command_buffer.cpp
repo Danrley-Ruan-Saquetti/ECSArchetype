@@ -12,16 +12,17 @@
 
 namespace {
   void addToCommandBuffer(ecs::CommandBuffer& commandBuffer, ecs::Entity entity, ecs::ComponentId componentId, uint64_t value) {
-    if (componentId == ecs::componentId<A>())
+    if (componentId == ecs::componentId<A>()) {
       commandBuffer.add(entity, A{value});
-    else if (componentId == ecs::componentId<B>())
+    } else if (componentId == ecs::componentId<B>()) {
       commandBuffer.add(entity, B{value, ~value});
-    else if (componentId == ecs::componentId<FuzzState>())
+    } else if (componentId == ecs::componentId<FuzzState>()) {
       commandBuffer.add(entity, fuzz::makeFuzzState(value));
-    else if (componentId == ecs::componentId<Tag>())
+    } else if (componentId == ecs::componentId<Tag>()) {
       commandBuffer.add(entity, Tag{});
-    else
+    } else {
       commandBuffer.add(entity, LifeCounter{value});
+    }
   }
 }
 
@@ -50,8 +51,9 @@ TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") {
 
   commandBuffer.add(entity, FuzzState{big});
   commandBuffer.add(shortEntity, FuzzState{"abc"}); // SSO: um memcpy deixaria o ponteiro interno apontando para o bloco antigo
-  for (int i = 0; i < 500; ++i)
+  for (int i = 0; i < 500; ++i) {
     commandBuffer.add(world.create(), A{uint64_t(i)}); // força várias realocações
+  }
   world.flushSequential(commandBuffer);
 
   CHECK(world.get<FuzzState>(entity).text == big);
@@ -179,8 +181,9 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
   }
 
   int64_t lifeCounters = 0;
-  for (auto& [entity, components] : model)
+  for (auto& [entity, components] : model) {
     lifeCounters += components.count(ecs::componentId<LifeCounter>());
+  }
   CHECK(LifeCounter::alive == lifeCounters);
 }
 
@@ -348,8 +351,9 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
           const auto componentId = fuzz::universe()[i];
           uint64_t coalescedValue = 0, sequentialValue = 0;
           bool coalescedHas = readFromWorld(coalesced, coalescedEntity, componentId, coalescedValue), sequentialHas = readFromWorld(sequential, sequentialEntity, componentId, sequentialValue);
-          if (coalescedHas != sequentialHas || coalescedValue != sequentialValue)
+          if (coalescedHas != sequentialHas || coalescedValue != sequentialValue) {
             FAIL("divergência em " << ecs::typeInfo(componentId).name << " e1=" << coalescedEntity.index);
+          }
         }
       }
     };

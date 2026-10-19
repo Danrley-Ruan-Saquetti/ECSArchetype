@@ -15,8 +15,9 @@ namespace ecs {
   }
 
   CommandBuffer::~CommandBuffer() {
-    if (!store_)
+    if (!store_) {
       return;
+    }
 
     releasePendingSpawns();
     clear();
@@ -24,9 +25,11 @@ namespace ecs {
   }
 
   void CommandBuffer::releasePendingSpawns() noexcept {
-    for (Entity entity : spawned_)
-      if (store_->isReserved(entity))
+    for (Entity entity : spawned_) {
+      if (store_->isReserved(entity)) {
         store_->release(entity.index);
+      }
+    }
   }
 
   CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
@@ -83,8 +86,9 @@ namespace ecs {
   }
 
   void CommandBuffer::freeBlock() noexcept {
-    if (data_)
+    if (data_) {
       alignedFree(data_, kBlockAlignment);
+    }
 
     data_ = nullptr;
     size_ = capacity_ = 0;
@@ -112,13 +116,15 @@ namespace ecs {
 
   void CommandBuffer::grow(size_t need) {
     size_t newCapacity = std::max<size_t>(1024, capacity_ * 2);
-    while (newCapacity < need)
+    while (newCapacity < need) {
       newCapacity *= 2;
+    }
 
     std::byte* fresh = alignedAllocate(newCapacity, kBlockAlignment);
     if (!hasNonTrivialPayload_) {
-      if (size_ > 0)
+      if (size_ > 0) {
         std::memcpy(fresh, data_, size_);
+      }
     } else {
       for (size_t offset = 0; offset < size_;) {
         CommandView command;
@@ -132,8 +138,9 @@ namespace ecs {
       }
     }
 
-    if (data_)
+    if (data_) {
       alignedFree(data_, kBlockAlignment);
+    }
     data_ = fresh;
     capacity_ = newCapacity;
   }
@@ -146,16 +153,18 @@ namespace ecs {
       next = alignUp(payloadOffset + size, 8);
     }
 
-    if (next > capacity_)
+    if (next > capacity_) {
       grow(next);
+    }
 
     if (grouped_) {
       if (!runs_.empty() && runs_.back().entity == entity) {
         ++runs_.back().count;
       } else {
         const size_t word = entity.index >> 6;
-        if (word >= seen_.size())
+        if (word >= seen_.size()) {
           seen_.resize(std::max(word + 1, seen_.size() * 2), 0);
+        }
 
         const uint64_t bit = uint64_t(1) << (entity.index & 63);
         if (seen_[word] & bit) {
@@ -179,8 +188,9 @@ namespace ecs {
 
     size_ = next;
     ++count_;
-    if (!trivial)
+    if (!trivial) {
       hasNonTrivialPayload_ = true;
+    }
 
     return size > 0 ? data_ + payloadOffset : nullptr;
   }
@@ -205,8 +215,9 @@ namespace ecs {
       for (size_t offset = 0; offset < size_;) {
         CommandView command;
         offset = readAt(offset, command);
-        if (command.payload)
+        if (command.payload) {
           destroyValue(typeInfo(command.componentId), command.payload);
+        }
       }
     }
 
@@ -237,16 +248,19 @@ namespace ecs {
 
       if (entity.index < planBySlot.size()) {
         uint32_t& planIndex = planBySlot[entity.index];
-        if (planIndex == None)
+        if (planIndex == None) {
           planIndex = make();
-        if (result.owned[planIndex].entity == entity)
+        }
+        if (result.owned[planIndex].entity == entity) {
           return planIndex;
+        }
       }
 
       const uint64_t key = (uint64_t(entity.generation) << 32) | entity.index;
       auto [it, inserted] = overflow.try_emplace(key, None);
-      if (inserted)
+      if (inserted) {
         it->second = make();
+      }
       return it->second;
     };
 
@@ -271,8 +285,9 @@ namespace ecs {
       result.order[result.owned[planOf(command.entity)].begin++] = static_cast<uint32_t>(offset >> 3);
       offset = next;
     }
-    for (EntityPlan& entityPlan : result.owned)
+    for (EntityPlan& entityPlan : result.owned) {
       entityPlan.begin -= entityPlan.count;
+    }
 
     result.entities = result.owned;
     result.contiguous = false;
@@ -286,10 +301,11 @@ namespace ecs {
     size_t offset = static_cast<size_t>(entityPlan.begin) << 3;
     for (uint32_t i = 0; i < entityPlan.count; ++i) {
       CommandView command;
-      if (plan.contiguous)
+      if (plan.contiguous) {
         offset = readAt(offset, command);
-      else
+      } else {
         readAt(static_cast<size_t>(plan.order[entityPlan.begin + i]) << 3, command);
+      }
 
       if (command.operation == CommandOperation::Spawn) {
         out.spawned = true;
@@ -313,10 +329,11 @@ namespace ecs {
 
       auto it = std::lower_bound(out.operations.begin(), out.operations.end(), command.componentId,
                                  [](const NetComponentOperation& operation, ComponentId componentId) { return operation.componentId < componentId; });
-      if (it != out.operations.end() && it->componentId == command.componentId)
+      if (it != out.operations.end() && it->componentId == command.componentId) {
         *it = net;
-      else
+      } else {
         out.operations.insert(it, net);
+      }
     }
   }
 }

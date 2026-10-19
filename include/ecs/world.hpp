@@ -91,16 +91,19 @@ namespace ecs {
     template <class... Ts, class... Filters>
     Query<Ts...>& query(Filters... filters);
     void* getRaw(Entity entity, ComponentId componentId) noexcept {
-      if (!store_.isAlive(entity))
+      if (!store_.isAlive(entity)) {
         return nullptr;
+      }
 
       const EntityRecord& record = store_.record(entity.index);
-      if (componentId >= componentIndex_.size())
+      if (componentId >= componentIndex_.size()) {
         return nullptr;
+      }
 
       const uint16_t* column = componentIndex_[componentId].find(record.archetype->id);
-      if (!column || *column == NoColumn)
+      if (!column || *column == NoColumn) {
         return nullptr;
+      }
 
       return record.archetype->table.column(*column).at(record.row);
     }
@@ -118,8 +121,9 @@ namespace ecs {
     bool checkInvariants(std::string* why = nullptr) const;
 
     bool hasRaw(Entity entity, ComponentId componentId) const noexcept {
-      if (!store_.isAlive(entity) || componentId >= componentIndex_.size())
+      if (!store_.isAlive(entity) || componentId >= componentIndex_.size()) {
         return false;
+      }
 
       return componentIndex_[componentId].find(store_.record(entity.index).archetype->id) != nullptr;
     }
@@ -263,8 +267,9 @@ namespace ecs {
 
     QueryKey key{std::vector<uint64_t>{(uint64_t(componentId<std::remove_const_t<Ts>>()) << 1 | uint64_t(std::is_const_v<Ts>))...},
                  with, without};
-    if (auto it = queryCache_.find(key); it != queryCache_.end())
+    if (auto it = queryCache_.find(key); it != queryCache_.end()) {
       return static_cast<Q&>(*it->second);
+    }
 
     auto created = std::make_unique<Q>(&iterating_, with, without);
     created->initialize(archetypes_, smallestIndex(with));

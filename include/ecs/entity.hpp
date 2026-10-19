@@ -59,8 +59,9 @@ namespace ecs {
       record.archetype = nullptr;
       ++record.generation;
 
-      if (record.generation != UINT32_MAX)
+      if (record.generation != UINT32_MAX) {
         freeList_.push_back(index);
+      }
     }
 
     bool isAlive(Entity entity) const noexcept {

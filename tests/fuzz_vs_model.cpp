@@ -76,10 +76,11 @@ TEST_CASE("fuzz: World == modelo de referência") {
           model.erase(entity);
           live[i] = live.back();
           live.pop_back();
-          if (dead.size() < 1024)
+          if (dead.size() < 1024) {
             dead.push_back(entity);
-          else
+          } else {
             dead[generator() % dead.size()] = entity;
+          }
         }
       } else if (roll < 20 + destroyWeight + 30) {
         if (!live.empty()) {
@@ -104,29 +105,34 @@ TEST_CASE("fuzz: World == modelo de referência") {
           auto it = components.find(componentId);
           uint64_t got = 0;
           bool has = readFromWorld(world, entity, componentId, got);
-          if (has != (it != components.end()) || (has && got != it->second))
+          if (has != (it != components.end()) || (has && got != it->second)) {
             FAIL("get diverge no op " << operation << " e=" << entity.index << ":" << entity.generation);
+          }
         }
       }
 
       if (!dead.empty() && generator() % 100 == 0) {
         ecs::Entity old = dead[generator() % dead.size()];
-        if (world.isAlive(old) || world.tryGet<A>(old) != nullptr)
+        if (world.isAlive(old) || world.tryGet<A>(old) != nullptr) {
           FAIL("handle obsoleto vivo: e=" << old.index);
+        }
       }
 
-      if (operation % 1000 == 0)
+      if (operation % 1000 == 0) {
         requireEqual(world, model);
-      if (operation % 100000 == 0)
+      }
+      if (operation % 100000 == 0) {
         CHECK_INVARIANTS(world);
+      }
     }
 
     requireEqual(world, model);
     CHECK_INVARIANTS(world);
 
     int64_t lifeCounters = 0;
-    for (auto& [entity, components] : model)
+    for (auto& [entity, components] : model) {
       lifeCounters += components.count(ecs::componentId<LifeCounter>());
+    }
     CHECK(LifeCounter::alive == lifeCounters);
   }
   CHECK(LifeCounter::alive == 0);

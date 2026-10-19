@@ -80,14 +80,16 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
 
   CHECK(seen == expected);
   CHECK(visits == expected.size()); // cada entidade exatamente uma vez
-  for (auto entity : withB)
+  for (auto entity : withB) {
     CHECK(world.get<A>(entity).value >= 1000);
+  }
 }
 
 TEST_CASE("each sem entidade no lambda") {
   ecs::World world;
-  for (uint64_t i = 0; i < 10; ++i)
+  for (uint64_t i = 0; i < 10; ++i) {
     world.create(A{i});
+  }
 
   uint64_t sum = 0;
   world.query<const A>().each([&](const A& componentA) { sum += componentA.value; });
@@ -112,8 +114,9 @@ TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
     CHECK(componentsA.size() == componentsB.size());
     total += componentsA.size();
     ++blocks;
-    for (size_t i = 0; i < componentsA.size(); ++i)
+    for (size_t i = 0; i < componentsA.size(); ++i) {
       CHECK(componentsA[i].value == componentsB[i].first);
+    }
   });
 
   CHECK(total == expected);

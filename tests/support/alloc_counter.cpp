@@ -9,8 +9,9 @@ namespace {
 
   void* allocate(size_t size) {
     g_count.fetch_add(1, std::memory_order_relaxed);
-    if (void* pointer = std::malloc(size ? size : 1))
+    if (void* pointer = std::malloc(size ? size : 1)) {
       return pointer;
+    }
 
     throw std::bad_alloc();
   }
@@ -20,8 +21,9 @@ namespace {
 
     const size_t alignmentBytes = static_cast<size_t>(alignment);
     size = (size + alignmentBytes - 1) / alignmentBytes * alignmentBytes; // aligned_alloc exige múltiplo do alinhamento
-    if (void* pointer = std::aligned_alloc(alignmentBytes, size ? size : alignmentBytes))
+    if (void* pointer = std::aligned_alloc(alignmentBytes, size ? size : alignmentBytes)) {
       return pointer;
+    }
 
     throw std::bad_alloc();
   }

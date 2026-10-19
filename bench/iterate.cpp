@@ -33,8 +33,9 @@ BENCHMARK(BM_IterateSingle_SoA)->Arg(1000)->Arg(10000)->Arg(100000)->Arg(1000000
 static void BM_IterateSingle_ECS(benchmark::State& state) {
   const auto entityCount = static_cast<size_t>(state.range(0));
   ecs::World world;
-  for (size_t i = 0; i < entityCount; ++i)
+  for (size_t i = 0; i < entityCount; ++i) {
     world.create(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
+  }
   auto& query = world.query<Position, const Velocity>();
 
   for (auto _ : state) {

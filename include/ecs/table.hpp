@@ -21,8 +21,9 @@ namespace ecs {
     }
   }
   inline void destroyValue(const TypeInfo& info, void* value) noexcept {
-    if (!info.trivial)
+    if (!info.trivial) {
       info.destroy(value);
+    }
   }
 
   struct Column {

@@ -55,9 +55,11 @@ namespace {
     for (uint32_t i = 0; i < kEntityCount; ++i) {
       ecs::Entity entity = world.create(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
       const uint32_t mask = i % archetypeCount;
-      for (int j = 0; j < kFragmentTags; ++j)
-        if (mask & (1u << j))
+      for (int j = 0; j < kFragmentTags; ++j) {
+        if (mask & (1u << j)) {
           world.addRaw(entity, tags[j], nullptr);
+        }
+      }
     }
     auto& query = world.query<Position, const Velocity>();
 
