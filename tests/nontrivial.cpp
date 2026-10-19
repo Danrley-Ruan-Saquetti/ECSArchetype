@@ -1,12 +1,12 @@
 #include <doctest/doctest.h>
 
 #include <cstdint>
-#include <ecs/world.hpp>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "components.hpp"
+#include "ecs/world.hpp"
 
 namespace {
   std::string longStr(uint64_t i) {

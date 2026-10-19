@@ -3,13 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <ecs/archetype.hpp>
-#include <ecs/command_buffer.hpp>
-#include <ecs/detail/assert.hpp>
-#include <ecs/entity.hpp>
-#include <ecs/query.hpp>
-#include <ecs/table.hpp>
-#include <ecs/type_info.hpp>
 #include <map>
 #include <memory>
 #include <new>
@@ -18,6 +11,14 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "ecs/archetype.hpp"
+#include "ecs/command_buffer.hpp"
+#include "ecs/detail/assert.hpp"
+#include "ecs/entity.hpp"
+#include "ecs/query.hpp"
+#include "ecs/table.hpp"
+#include "ecs/type_info.hpp"
 
 namespace ecs {
 

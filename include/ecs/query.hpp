@@ -3,15 +3,16 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <ecs/archetype.hpp>
-#include <ecs/detail/small_map.hpp>
-#include <ecs/type_info.hpp>
 #include <memory>
 #include <span>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "ecs/archetype.hpp"
+#include "ecs/detail/small_map.hpp"
+#include "ecs/type_info.hpp"
 
 namespace ecs {
 

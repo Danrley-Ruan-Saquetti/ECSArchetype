@@ -1,10 +1,10 @@
 #include <doctest/doctest.h>
 
 #include <algorithm>
-#include <ecs/type_info.hpp>
 #include <string>
 
 #include "components.hpp"
+#include "ecs/type_info.hpp"
 
 TEST_CASE("componentId é estável, denso e ignora cvref") {
   auto a = ecs::componentId<A>();

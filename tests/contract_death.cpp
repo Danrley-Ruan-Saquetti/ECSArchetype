@@ -4,13 +4,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ecs/detail/assert.hpp>
-#include <ecs/world.hpp>
 #include <span>
 #include <string>
 #include <vector>
 
 #include "components.hpp"
+#include "ecs/detail/assert.hpp"
+#include "ecs/world.hpp"
 
 namespace {
 

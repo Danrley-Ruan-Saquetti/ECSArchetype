@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstdint>
-#include <ecs/detail/type_name.hpp>
 #include <new>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+
+#include "ecs/detail/type_name.hpp"
 
 namespace ecs {
 

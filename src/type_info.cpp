@@ -1,5 +1,6 @@
+#include "ecs/type_info.hpp"
+
 #include <deque>
-#include <ecs/type_info.hpp>
 
 namespace ecs {
   namespace {

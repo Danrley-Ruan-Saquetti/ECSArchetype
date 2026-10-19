@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <ecs/world.hpp>
 #include <vector>
 
 #include "alloc_counter.hpp"
 #include "components.hpp"
+#include "ecs/world.hpp"
 
 TEST_CASE("create() nasce vivo no arquétipo raiz") {
   ecs::World w;

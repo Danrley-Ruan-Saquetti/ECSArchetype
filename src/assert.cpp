@@ -1,7 +1,8 @@
+#include "ecs/detail/assert.hpp"
+
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <ecs/detail/assert.hpp>
 
 namespace ecs {
   namespace {

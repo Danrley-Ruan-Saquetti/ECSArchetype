@@ -1,5 +1,6 @@
+#include "ecs/archetype.hpp"
+
 #include <algorithm>
-#include <ecs/archetype.hpp>
 
 namespace ecs {
   namespace {

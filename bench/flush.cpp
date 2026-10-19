@@ -1,12 +1,12 @@
 #include <benchmark/benchmark.h>
 
 #include <cstdint>
-#include <ecs/world.hpp>
 #include <memory>
 #include <optional>
 #include <vector>
 
 #include "common.hpp"
+#include "ecs/world.hpp"
 
 namespace {
 

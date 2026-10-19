@@ -1,10 +1,10 @@
 #include <doctest/doctest.h>
 
 #include <cstdint>
-#include <ecs/world.hpp>
 #include <vector>
 
 #include "components.hpp"
+#include "ecs/world.hpp"
 
 TEST_CASE("sequência create/add/remove/destroy mantém invariantes") {
   ecs::World w;

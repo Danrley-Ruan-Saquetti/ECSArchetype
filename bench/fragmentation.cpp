@@ -2,12 +2,12 @@
 
 #include <array>
 #include <cstdint>
-#include <ecs/world.hpp>
 #include <span>
 #include <utility>
 #include <vector>
 
 #include "common.hpp"
+#include "ecs/world.hpp"
 
 namespace {
 

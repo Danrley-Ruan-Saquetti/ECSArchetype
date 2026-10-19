@@ -1,7 +1,9 @@
+#include "ecs/table.hpp"
+
 #include <algorithm>
-#include <ecs/detail/align.hpp>
-#include <ecs/detail/assert.hpp>
-#include <ecs/table.hpp>
+
+#include "ecs/detail/align.hpp"
+#include "ecs/detail/assert.hpp"
 
 namespace ecs {
   namespace {

@@ -1,12 +1,13 @@
+#include "ecs/command_buffer.hpp"
+
 #include <doctest/doctest.h>
 
 #include <cstdint>
-#include <ecs/command_buffer.hpp>
-#include <ecs/world.hpp>
 #include <random>
 #include <string>
 #include <vector>
 
+#include "ecs/world.hpp"
 #include "model.hpp"
 
 namespace {

@@ -5,12 +5,12 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <ecs/world.hpp>
 #include <map>
 #include <string>
 #include <unordered_map>
 
 #include "components.hpp"
+#include "ecs/world.hpp"
 
 struct FS {
   std::string s; // não trivial; valor sempre > 32 chars para sair do SSO

@@ -2,9 +2,10 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <ecs/detail/assert.hpp>
 #include <utility>
 #include <vector>
+
+#include "ecs/detail/assert.hpp"
 
 namespace ecs {
 

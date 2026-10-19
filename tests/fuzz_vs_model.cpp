@@ -2,10 +2,10 @@
 
 #include <cstdint>
 #include <cstdio>
-#include <ecs/world.hpp>
 #include <random>
 #include <vector>
 
+#include "ecs/world.hpp"
 #include "model.hpp"
 
 TEST_CASE("fuzz: World == modelo de referência") {

@@ -96,20 +96,22 @@ tools/ bench_ratio.py perf_fragmented.sh
 ### Task 1: Build, presets, container e `ECS_ASSERT`
 
 **Files:**
+
 - Modify: `CMakeLists.txt` (reescrever), `Dockerfile`, `docker-compose.yaml`, `Makefile`, `.gitignore`
 - Delete: `src/main.cpp`
 - Create: `CMakePresets.json`, `include/ecs/detail/assert.hpp`, `src/assert.cpp`, `tests/CMakeLists.txt`, `tests/support/doctest_main.cpp`, `tests/unit_table.cpp`, `bench/CMakeLists.txt`
 
 **Interfaces:**
+
 - Produces:
-  - Alvo CMake `ecs` (STATIC, `target_include_directories(ecs PUBLIC include)`, `cxx_std_20`).
-  - Função CMake `ecs_add_test(<nome> <fontes...>)`: cria executável `<nome>` em `build/<preset>/tests/`, linka `ecs`, `doctest::doctest` e `tests/support/doctest_main.cpp`, registra `add_test(NAME <nome> ...)`.
-  - Função CMake `ecs_add_bench(<nome> <fontes...>)`: executável em `build/<preset>/bench/`, linka `ecs` e `benchmark::benchmark`.
-  - Opções: `ECS_BUILD_TESTS`, `ECS_BUILD_BENCH`, `ECS_SANITIZE` (adiciona `-fsanitize=address,undefined -fno-omit-frame-pointer` a compile e link), `ECS_WERROR`, `ECS_ENABLE_ASSERTS` (string; vazio = `0` se `NDEBUG`, senão `1`; passado como `target_compile_definitions(ecs PUBLIC ECS_ENABLE_ASSERTS=...)`).
-  - `ECS_ASSERT(cond, fmt, ...)` (printf-style; expande para nada quando `ECS_ENABLE_ASSERTS == 0`, sem avaliar `cond`).
-  - `namespace ecs { using AssertHandler = void(*)(const char* message) noexcept; AssertHandler setAssertHandler(AssertHandler) noexcept; }` — devolve o anterior. Handler padrão: escreve a mensagem em `stderr` e chama `std::abort()`.
-  - `[[noreturn]] void ecs::detail::assertFail(const char* expr, const char* file, int line, const char* fmt, ...) noexcept` — formata `"ECS_ASSERT failed: <expr> | <msg> (<file>:<line>)"` num buffer de 512 bytes e chama o handler; se o handler retornar, `std::abort()`.
-  - Makefile: `PRESET ?= debug-asan`, `T ?= .`; alvos `configure` (`cmake --preset $(PRESET)`), `build`, `test` (`ctest --preset $(PRESET) -R '$(T)' --output-on-failure`), `bench` (força `PRESET=release`).
+    - Alvo CMake `ecs` (STATIC, `target_include_directories(ecs PUBLIC include)`, `cxx_std_20`).
+    - Função CMake `ecs_add_test(<nome> <fontes...>)`: cria executável `<nome>` em `build/<preset>/tests/`, linka `ecs`, `doctest::doctest` e `tests/support/doctest_main.cpp`, registra `add_test(NAME <nome> ...)`.
+    - Função CMake `ecs_add_bench(<nome> <fontes...>)`: executável em `build/<preset>/bench/`, linka `ecs` e `benchmark::benchmark`.
+    - Opções: `ECS_BUILD_TESTS`, `ECS_BUILD_BENCH`, `ECS_SANITIZE` (adiciona `-fsanitize=address,undefined -fno-omit-frame-pointer` a compile e link), `ECS_WERROR`, `ECS_ENABLE_ASSERTS` (string; vazio = `0` se `NDEBUG`, senão `1`; passado como `target_compile_definitions(ecs PUBLIC ECS_ENABLE_ASSERTS=...)`).
+    - `ECS_ASSERT(cond, fmt, ...)` (printf-style; expande para nada quando `ECS_ENABLE_ASSERTS == 0`, sem avaliar `cond`).
+    - `namespace ecs { using AssertHandler = void(*)(const char* message) noexcept; AssertHandler setAssertHandler(AssertHandler) noexcept; }` — devolve o anterior. Handler padrão: escreve a mensagem em `stderr` e chama `std::abort()`.
+    - `[[noreturn]] void ecs::detail::assertFail(const char* expr, const char* file, int line, const char* fmt, ...) noexcept` — formata `"ECS_ASSERT failed: <expr> | <msg> (<file>:<line>)"` num buffer de 512 bytes e chama o handler; se o handler retornar, `std::abort()`.
+    - Makefile: `PRESET ?= debug-asan`, `T ?= .`; alvos `configure` (`cmake --preset $(PRESET)`), `build`, `test` (`ctest --preset $(PRESET) -R '$(T)' --output-on-failure`), `bench` (força `PRESET=release`).
 
 - [ ] **Step 1: Criar o branch**
 
@@ -129,7 +131,8 @@ Expected: `cmake version 3.25` ou superior. Se for menor, instalar CMake do Kitw
 ```cpp
 // tests/unit_table.cpp
 #include <doctest/doctest.h>
-#include <ecs/detail/assert.hpp>
+
+#include "ecs/detail/assert.hpp"
 
 TEST_CASE("smoke: asserts ligados em debug") {
 #ifdef NDEBUG
@@ -150,11 +153,11 @@ Expected: FAIL na configuração (preset ou alvo inexistente).
 
 Presets (todos com `binaryDir: build/${presetName}`, `CMAKE_CXX_STANDARD 20`, `ECS_WERROR ON`, e um `testPreset` de mesmo nome com `output.outputOnFailure`):
 
-| preset | `CMAKE_BUILD_TYPE` | `ECS_SANITIZE` | `ECS_BUILD_TESTS` | `ECS_BUILD_BENCH` | `ECS_ENABLE_ASSERTS` |
-| --- | --- | --- | --- | --- | --- |
-| `debug-asan` | Debug | ON | ON | OFF | (padrão → 1) |
-| `release` | Release | OFF | ON | ON | 0 |
-| `relwithdebinfo` | RelWithDebInfo | OFF | OFF | ON | 0 |
+| preset           | `CMAKE_BUILD_TYPE` | `ECS_SANITIZE` | `ECS_BUILD_TESTS` | `ECS_BUILD_BENCH` | `ECS_ENABLE_ASSERTS` |
+| ---------------- | ------------------ | -------------- | ----------------- | ----------------- | -------------------- |
+| `debug-asan`     | Debug              | ON             | ON                | OFF               | (padrão → 1)         |
+| `release`        | Release            | OFF            | ON                | ON                | 0                    |
+| `relwithdebinfo` | RelWithDebInfo     | OFF            | OFF               | ON                | 0                    |
 
 doctest via `FetchContent` (tag `v2.4.11`), Google Benchmark (tag `v1.8.3`, com `BENCHMARK_ENABLE_TESTING OFF`, `BENCHMARK_ENABLE_GTEST_TESTS OFF`). `.gitignore` mantém `build`.
 
@@ -174,14 +177,16 @@ git add -A && git commit -m "build: presets CMake, container dev e ECS_ASSERT"
 ### Task 2: Linha de base SoA e comparador de benchmarks
 
 **Files:**
+
 - Create: `bench/common.hpp`, `bench/iterate.cpp`, `tools/bench_ratio.py`, `bench/results/m0_iterate_single_soa.json`
 - Modify: `bench/CMakeLists.txt`
 
 **Interfaces:**
+
 - Produces:
-  - `bench/common.hpp`: `struct float3 { float x, y, z; };` `struct Position { float3 v; };` `struct Velocity { float3 v; };` `inline constexpr float kDt = 1.0f / 60.0f;`
-  - Benchmark `BM_IterateSingle_SoA` com `Arg` em {1000, 10000, 100000, 1000000}, `state.counters["per_entity"]` = `benchmark::Counter(n, kIsIterationInvariantRate | kInvert)` (tempo por entidade). Executável `bench_iterate`.
-  - `tools/bench_ratio.py --json <arquivo> --name <benchmark> --baseline <benchmark> --max <razão>`: lê o agregado `<nome>_median` (`real_time`) de cada um, imprime `ratio=<x>` e sai com 0 se `ratio <= max`, 1 caso contrário, 2 se algum nome não existir. Rodar sempre com `python3 -I`.
+    - `bench/common.hpp`: `struct float3 { float x, y, z; };` `struct Position { float3 v; };` `struct Velocity { float3 v; };` `inline constexpr float kDt = 1.0f / 60.0f;`
+    - Benchmark `BM_IterateSingle_SoA` com `Arg` em {1000, 10000, 100000, 1000000}, `state.counters["per_entity"]` = `benchmark::Counter(n, kIsIterationInvariantRate | kInvert)` (tempo por entidade). Executável `bench_iterate`.
+    - `tools/bench_ratio.py --json <arquivo> --name <benchmark> --baseline <benchmark> --max <razão>`: lê o agregado `<nome>_median` (`real_time`) de cada um, imprime `ratio=<x>` e sai com 0 se `ratio <= max`, 1 caso contrário, 2 se algum nome não existir. Rodar sempre com `python3 -I`.
 
 - [ ] **Step 1: Escrever o benchmark SoA** — dois `std::vector<float3>` de tamanho `n`, loop `pos[i] += vel[i] * kDt` componente a componente, `benchmark::DoNotOptimize(pos.data())`.
 
@@ -206,17 +211,19 @@ Expected: `ratio=1.000`, exit 0. Com `--max 0.5`: exit 1. Com `--name inexistent
 ### Task 3: `type_info`
 
 **Files:**
+
 - Create: `include/ecs/type_info.hpp`, `include/ecs/detail/type_name.hpp`, `src/type_info.cpp`, `tests/unit_type_info.cpp`, `tests/support/components.hpp`
 - Modify: `tests/CMakeLists.txt`, `CMakeLists.txt` (fontes de `ecs`)
 
 **Interfaces:**
+
 - Produces:
-  - `using ComponentId = uint32_t;` `struct TypeInfo` exatamente como na seção 4.1 da spec.
-  - `template<class T> ComponentId componentId();` — `using U = std::remove_cvref_t<T>`; `static_assert`s de R-TI-3; `static const ComponentId id = detail::registerType(detail::makeTypeInfo<U>()); return id;` (R-TI-4). Para tags (`std::is_empty_v<U>`): `size = 0`, `tag = true`, `trivial = true`.
-  - `const TypeInfo& typeInfo(ComponentId);` `uint32_t registeredTypeCount() noexcept;`
-  - `ComponentId detail::registerType(const TypeInfo&);` — registro em `std::deque<TypeInfo>` dentro de função com `static` local (referências estáveis).
-  - `template<class T> constexpr std::string_view detail::typeName();` — extraído de `__PRETTY_FUNCTION__` (GCC/Clang) / `__FUNCSIG__` (MSVC), ex.: `"Position"`.
-  - `tests/support/components.hpp`: `struct A { uint64_t v; }; struct B { uint64_t v, w; }; struct Tag {}; struct alignas(64) Wide { float f[16]; };` e `struct LifeCounter { static inline int64_t alive = 0; uint64_t v = 0; /* ++ em todo ctor, -- no dtor, move noexcept */ };`
+    - `using ComponentId = uint32_t;` `struct TypeInfo` exatamente como na seção 4.1 da spec.
+    - `template<class T> ComponentId componentId();` — `using U = std::remove_cvref_t<T>`; `static_assert`s de R-TI-3; `static const ComponentId id = detail::registerType(detail::makeTypeInfo<U>()); return id;` (R-TI-4). Para tags (`std::is_empty_v<U>`): `size = 0`, `tag = true`, `trivial = true`.
+    - `const TypeInfo& typeInfo(ComponentId);` `uint32_t registeredTypeCount() noexcept;`
+    - `ComponentId detail::registerType(const TypeInfo&);` — registro em `std::deque<TypeInfo>` dentro de função com `static` local (referências estáveis).
+    - `template<class T> constexpr std::string_view detail::typeName();` — extraído de `__PRETTY_FUNCTION__` (GCC/Clang) / `__FUNCSIG__` (MSVC), ex.: `"Position"`.
+    - `tests/support/components.hpp`: `struct A { uint64_t v; }; struct B { uint64_t v, w; }; struct Tag {}; struct alignas(64) Wide { float f[16]; };` e `struct LifeCounter { static inline int64_t alive = 0; uint64_t v = 0; /* ++ em todo ctor, -- no dtor, move noexcept */ };`
 
 - [ ] **Step 1: Testes que falham**
 
@@ -252,20 +259,22 @@ TEST_CASE("TypeInfo de trivial, não trivial e tag") {
 ### Task 4: `entity` e `EntityStore`
 
 **Files:**
+
 - Create: `include/ecs/entity.hpp`, `tests/unit_entity.cpp`
 
 **Interfaces:**
+
 - Consumes: nada além de `<cstdint>`; `struct Archetype;` declarado adiante.
 - Produces:
-  - `Entity`, `NullEntity`, `EntityRecord` exatamente como na seção 4.2; `static_assert(sizeof(EntityRecord) == 16)`; `struct EntityHash` (para `unordered_map<Entity, …>` nos testes).
-  - `class EntityStore` (header-only):
-    - `Entity allocate();` — pega do fim da `freeList` (LIFO) ou cria slot novo com geração 0; deixa `arch = nullptr` (estado reservado, R-EN-3); devolve `{index, generation}`.
-    - `void release(uint32_t index) noexcept;` — `arch = nullptr`, `++generation`; se `generation == UINT32_MAX` o slot é aposentado (não volta à `freeList`), senão `freeList.push_back(index)` (R-EN-1).
-    - `bool isAlive(Entity) const noexcept;` — fórmula de R-EN-2.
-    - `bool isReserved(Entity) const noexcept;` — índice válido, geração igual e `arch == nullptr`.
-    - `EntityRecord& record(uint32_t index) noexcept; const EntityRecord& record(uint32_t) const noexcept;`
-    - `uint32_t slotCount() const noexcept; std::span<const uint32_t> freeList() const noexcept;`
-    - `void setGenerationForTest(uint32_t index, uint32_t gen) noexcept;`
+    - `Entity`, `NullEntity`, `EntityRecord` exatamente como na seção 4.2; `static_assert(sizeof(EntityRecord) == 16)`; `struct EntityHash` (para `unordered_map<Entity, …>` nos testes).
+    - `class EntityStore` (header-only):
+        - `Entity allocate();` — pega do fim da `freeList` (LIFO) ou cria slot novo com geração 0; deixa `arch = nullptr` (estado reservado, R-EN-3); devolve `{index, generation}`.
+        - `void release(uint32_t index) noexcept;` — `arch = nullptr`, `++generation`; se `generation == UINT32_MAX` o slot é aposentado (não volta à `freeList`), senão `freeList.push_back(index)` (R-EN-1).
+        - `bool isAlive(Entity) const noexcept;` — fórmula de R-EN-2.
+        - `bool isReserved(Entity) const noexcept;` — índice válido, geração igual e `arch == nullptr`.
+        - `EntityRecord& record(uint32_t index) noexcept; const EntityRecord& record(uint32_t) const noexcept;`
+        - `uint32_t slotCount() const noexcept; std::span<const uint32_t> freeList() const noexcept;`
+        - `void setGenerationForTest(uint32_t index, uint32_t gen) noexcept;`
 
 - [ ] **Step 1: Testes que falham**
 
@@ -304,16 +313,18 @@ TEST_CASE("NullEntity nunca está vivo") { ecs::EntityStore s; CHECK_FALSE(s.isA
 ### Task 5: `Table`
 
 **Files:**
+
 - Create: `include/ecs/table.hpp`, `include/ecs/detail/align.hpp`, `src/table.cpp`
 - Modify: `tests/unit_table.cpp`
 
 **Interfaces:**
+
 - Consumes: `TypeInfo`, `typeInfo()`, `Entity`.
 - Produces:
-  - `Column` e `Table` com a API pública exata da seção 4.3, mais `uint32_t capacity() const noexcept;` e `std::span<const ComponentId> columnTypes() const noexcept;`.
-  - `void relocateValue(const TypeInfo&, void* dst, void* src) noexcept;` — `memcpy` se `trivial`, senão `moveConstruct` + `destroy`.
-  - `void destroyValue(const TypeInfo&, void* p) noexcept;` — no-op se `trivial`.
-  - `detail/align.hpp`: `constexpr size_t alignUp(size_t v, size_t a) noexcept;` `std::byte* alignedAlloc(size_t bytes, size_t align);` `void alignedFree(std::byte*, size_t align) noexcept;` (via `::operator new(bytes, std::align_val_t)`).
+    - `Column` e `Table` com a API pública exata da seção 4.3, mais `uint32_t capacity() const noexcept;` e `std::span<const ComponentId> columnTypes() const noexcept;`.
+    - `void relocateValue(const TypeInfo&, void* dst, void* src) noexcept;` — `memcpy` se `trivial`, senão `moveConstruct` + `destroy`.
+    - `void destroyValue(const TypeInfo&, void* p) noexcept;` — no-op se `trivial`.
+    - `detail/align.hpp`: `constexpr size_t alignUp(size_t v, size_t a) noexcept;` `std::byte* alignedAlloc(size_t bytes, size_t align);` `void alignedFree(std::byte*, size_t align) noexcept;` (via `::operator new(bytes, std::align_val_t)`).
 - Regras pinadas: crescimento `newCap = max(64, capacity*2)`; `reserve` também faz `entities_.reserve(newCap)` (necessário para NF-P4); trivial = um `memcpy` por coluna, não trivial = `moveConstruct`+`destroy` por elemento (R-TB-2); `fillHole` conforme R-TB-5 (usa `relocateValue` da última linha para `r`, `entities_[r] = entities_.back()`, `pop_back`, devolve a entidade deslocada ou `nullopt` se `r` era a última); construtor faz `ECS_ASSERT` de que nenhum tipo é tag.
 
 - [ ] **Step 1: Testes que falham** (substituir o smoke; cada passo verifica I-1 e I-2)
@@ -367,17 +378,19 @@ TEST_CASE("std::string sobrevive à realocação") { /* 100 strings longas (>32 
 ### Task 6: `Archetype`, `Signature`, `SmallMap` e `buildEdge`
 
 **Files:**
+
 - Create: `include/ecs/archetype.hpp`, `include/ecs/detail/small_map.hpp`, `src/archetype.cpp`, `tests/unit_archetype.cpp`
 
 **Interfaces:**
+
 - Consumes: `Table`, `TypeInfo`.
 - Produces:
-  - `using ArchetypeId = uint32_t; using Signature = std::vector<ComponentId>; inline constexpr uint16_t NoColumn = UINT16_MAX;`
-  - `struct SigHash { size_t operator()(const Signature&) const noexcept; };` — FNV-1a 64 sobre os IDs.
-  - `template<class K, class V> class SmallMap` — vetor ordenado de `std::pair<K,V>`: `V* find(K) noexcept`, `const V* find(K) const noexcept`, `V& insert(K, V)` (`ECS_ASSERT` de chave ausente; pode invalidar referências), `size()`, `begin()/end()`, `capacityBytes()`.
-  - `Edge` como na seção 4.4. `Archetype` como na seção 4.4 **sem** `mask`, com construtor `Archetype(ArchetypeId, Signature)` que deriva `columnTypes` (não tags) e constrói `table(columnTypes)`.
-  - `Edge buildEdge(const Archetype& src, Archetype& dst, ComponentId added);` — merge O(k) das duas `columnTypes` (R-AR-2); `addedColumn` = coluna de `added` em `dst` se `added` tem dados e não está em `src`, senão `-1`. Para remoção ou salto arbitrário, passar `added = NoComponent` onde `inline constexpr ComponentId NoComponent = UINT32_MAX;`.
-  - `uint16_t columnOf(const Archetype&, ComponentId) noexcept;` — `NoColumn` se ausente ou tag (busca binária em `columnTypes`).
+    - `using ArchetypeId = uint32_t; using Signature = std::vector<ComponentId>; inline constexpr uint16_t NoColumn = UINT16_MAX;`
+    - `struct SigHash { size_t operator()(const Signature&) const noexcept; };` — FNV-1a 64 sobre os IDs.
+    - `template<class K, class V> class SmallMap` — vetor ordenado de `std::pair<K,V>`: `V* find(K) noexcept`, `const V* find(K) const noexcept`, `V& insert(K, V)` (`ECS_ASSERT` de chave ausente; pode invalidar referências), `size()`, `begin()/end()`, `capacityBytes()`.
+    - `Edge` como na seção 4.4. `Archetype` como na seção 4.4 **sem** `mask`, com construtor `Archetype(ArchetypeId, Signature)` que deriva `columnTypes` (não tags) e constrói `table(columnTypes)`.
+    - `Edge buildEdge(const Archetype& src, Archetype& dst, ComponentId added);` — merge O(k) das duas `columnTypes` (R-AR-2); `addedColumn` = coluna de `added` em `dst` se `added` tem dados e não está em `src`, senão `-1`. Para remoção ou salto arbitrário, passar `added = NoComponent` onde `inline constexpr ComponentId NoComponent = UINT32_MAX;`.
+    - `uint16_t columnOf(const Archetype&, ComponentId) noexcept;` — `NoColumn` se ausente ou tag (busca binária em `columnTypes`).
 
 - [ ] **Step 1: Testes que falham**
 
@@ -411,22 +424,24 @@ TEST_CASE("SigHash difere para assinaturas diferentes") { CHECK(ecs::SigHash{}({
 ### Task 7: `World` mínimo (sem arestas em cache)
 
 **Files:**
+
 - Create: `include/ecs/world.hpp`, `src/world.cpp`, `tests/unit_world.cpp`
 
 **Interfaces:**
+
 - Consumes: Tasks 3–6.
 - Produces (API pública da seção 5, exceto `query`, `commands`, `flush`, `stats`, `checkInvariants`, que chegam depois):
-  - `World(); ~World();` não copiável. Construtor cria o arquétipo raiz `id == 0` (R-AR-3).
-  - `Entity create(); template<class... Ts> Entity create(Ts&&...); void destroy(Entity); bool isAlive(Entity) const noexcept;`
-  - `template<class T> void add(Entity, T&&); template<class T> void remove(Entity); template<class T> bool has(Entity) const noexcept; template<class T> T& get(Entity); template<class T> T* tryGet(Entity) noexcept;`
-  - Núcleo não template (públicos, usados por `flushSequential` e testes): `void addRaw(Entity, ComponentId, void* value);` (move de `value`; se já tem o componente: `destroyValue` + `moveConstruct`/`memcpy` no lugar; para tag `value` é ignorado), `void removeRaw(Entity, ComponentId);`, `void* getRaw(Entity, ComponentId) noexcept;` (`nullptr` se ausente/morto), `bool hasRaw(Entity, ComponentId) const noexcept;`
-  - Privados com nomes fixos (usados por Tasks 8, 10, 16, 19): `Archetype* findOrCreate(Signature sig);` (lookup em `bySignature_`; se cria: `archetypes_.push_back`, insere em `bySignature_`, atualiza `componentIndex_[cid].insert(id, columnOf(...))` para todo `cid` da assinatura — R-WI-1 — e, a partir da Task 12, notifica `queries_`), `uint32_t moveEntity(Entity, EntityRecord&, Archetype& dst, const Edge&);` e os membros de 4.5 com `records_`/`freeList_` substituídos por `EntityStore store_;`.
-  - `moveEntity` (pinado): `dstRow = dst.table.pushUninit(e)`; para cada coluna `c` de origem: se `srcToDst[c] >= 0` → `relocateValue` para `dst.column(srcToDst[c]).at(dstRow)`, senão `destroyValue`; `src.table.fillHole(srcRow)` e, se devolver entidade deslocada `d`, `store_.record(d.index).row = srcRow`; atualiza `rec = {&dst, dstRow, rec.generation}`; devolve `dstRow`. A coluna `edge.addedColumn` fica para o chamador construir.
-  - `add<T>` (pinado): `using U = remove_cvref_t<T>`; `ECS_ASSERT(isAlive(e) && iterating_ == 0, "add e=%u:%u type=%s", …)`; para não tag, construir `U tmp(std::forward<T>(value))` **antes** de qualquer mudança estrutural e chamar `addRaw(e, cid, &tmp)`.
-  - `get<T>`: `static_assert(!std::is_empty_v<U>)` (questão 4); custo conforme R-WI-2; `ECS_ASSERT(isAlive(e) && has, "get e=%u:%u type=%s", …)`.
-  - `create<Ts...>`: `static_assert` de tipos distintos; assinatura ordenada; `findOrCreate` uma vez; `pushUninit`; placement-new de cada `T` na sua coluna (nasce direto no arquétipo final).
-  - `destroy`: `destroyRow` + `fillHole` + atualização do deslocado + `store_.release`.
-  - Na M1, transições usam `buildEdge(src, *findOrCreate(sig ± cid), cid)` a cada chamada (sem cache).
+    - `World(); ~World();` não copiável. Construtor cria o arquétipo raiz `id == 0` (R-AR-3).
+    - `Entity create(); template<class... Ts> Entity create(Ts&&...); void destroy(Entity); bool isAlive(Entity) const noexcept;`
+    - `template<class T> void add(Entity, T&&); template<class T> void remove(Entity); template<class T> bool has(Entity) const noexcept; template<class T> T& get(Entity); template<class T> T* tryGet(Entity) noexcept;`
+    - Núcleo não template (públicos, usados por `flushSequential` e testes): `void addRaw(Entity, ComponentId, void* value);` (move de `value`; se já tem o componente: `destroyValue` + `moveConstruct`/`memcpy` no lugar; para tag `value` é ignorado), `void removeRaw(Entity, ComponentId);`, `void* getRaw(Entity, ComponentId) noexcept;` (`nullptr` se ausente/morto), `bool hasRaw(Entity, ComponentId) const noexcept;`
+    - Privados com nomes fixos (usados por Tasks 8, 10, 16, 19): `Archetype* findOrCreate(Signature sig);` (lookup em `bySignature_`; se cria: `archetypes_.push_back`, insere em `bySignature_`, atualiza `componentIndex_[cid].insert(id, columnOf(...))` para todo `cid` da assinatura — R-WI-1 — e, a partir da Task 12, notifica `queries_`), `uint32_t moveEntity(Entity, EntityRecord&, Archetype& dst, const Edge&);` e os membros de 4.5 com `records_`/`freeList_` substituídos por `EntityStore store_;`.
+    - `moveEntity` (pinado): `dstRow = dst.table.pushUninit(e)`; para cada coluna `c` de origem: se `srcToDst[c] >= 0` → `relocateValue` para `dst.column(srcToDst[c]).at(dstRow)`, senão `destroyValue`; `src.table.fillHole(srcRow)` e, se devolver entidade deslocada `d`, `store_.record(d.index).row = srcRow`; atualiza `rec = {&dst, dstRow, rec.generation}`; devolve `dstRow`. A coluna `edge.addedColumn` fica para o chamador construir.
+    - `add<T>` (pinado): `using U = remove_cvref_t<T>`; `ECS_ASSERT(isAlive(e) && iterating_ == 0, "add e=%u:%u type=%s", …)`; para não tag, construir `U tmp(std::forward<T>(value))` **antes** de qualquer mudança estrutural e chamar `addRaw(e, cid, &tmp)`.
+    - `get<T>`: `static_assert(!std::is_empty_v<U>)` (questão 4); custo conforme R-WI-2; `ECS_ASSERT(isAlive(e) && has, "get e=%u:%u type=%s", …)`.
+    - `create<Ts...>`: `static_assert` de tipos distintos; assinatura ordenada; `findOrCreate` uma vez; `pushUninit`; placement-new de cada `T` na sua coluna (nasce direto no arquétipo final).
+    - `destroy`: `destroyRow` + `fillHole` + atualização do deslocado + `store_.release`.
+    - Na M1, transições usam `buildEdge(src, *findOrCreate(sig ± cid), cid)` a cada chamada (sem cache).
 
 - [ ] **Step 1: Testes que falham** — um caso por linha da tabela da seção 5, mais os itens 2 e 3 do Review Focus:
 
@@ -472,10 +487,12 @@ TEST_CASE("tags: add/has/remove sem coluna") { /* add(e, Tag{}) → has; remove<
 ### Task 8: `checkInvariants()` (I-1…I-7, I-10) e suíte `invariants`
 
 **Files:**
+
 - Modify: `include/ecs/world.hpp`, `src/world.cpp`
 - Create: `tests/invariants.cpp`
 
 **Interfaces:**
+
 - Produces: `bool World::checkInvariants(std::string* why = nullptr) const;` — compilado em todos os builds (spec: "só em debug" refere-se ao uso; tests release também a chamam). Em falha escreve em `*why` o ID da invariante e o objeto (ex.: `"I-3 e=4:1"`) e devolve `false`. Nesta task cobre I-1, I-3, I-4, I-5, I-6, I-7, I-10 e I-11 (`iterating_ == 0`). I-2 é verificada pelos testes via `LifeCounter`. Tasks 10 e 12 estendem com I-9 e I-8.
 - Helper de teste em `tests/support/components.hpp`: `#define CHECK_INV(w) do { std::string why_; CHECK_MESSAGE((w).checkInvariants(&why_), why_); } while (0)`.
 
@@ -505,16 +522,18 @@ TEST_CASE("I-2: LifeCounter bate com linhas vivas") { /* criar/remover/destruir 
 ### Task 9: `fuzz_vs_model` e `nontrivial`
 
 **Files:**
+
 - Create: `tests/support/model.hpp`, `tests/fuzz_vs_model.cpp`, `tests/nontrivial.cpp`
 
 **Interfaces:**
+
 - Produces (`model.hpp`, reutilizado em Tasks 15–16):
-  - `struct FS { std::string s; };` (não trivial, valor sempre > 32 chars para sair do SSO).
-  - Universo do fuzz: `A`, `B`, `FS`, `Tag`, `LifeCounter`. `using Model = std::unordered_map<ecs::Entity, std::map<ecs::ComponentId, uint64_t>, ecs::EntityHash>;` (tag guarda 0).
-  - `uint64_t makeValue(ecs::Entity, uint64_t counter);` — mistura `index`, `generation` e contador (splitmix64), para que troca de linhas apareça como valor errado.
-  - `void addToWorld(ecs::World&, ecs::Entity, ecs::ComponentId, uint64_t)`, `bool readFromWorld(const ecs::World&, ecs::Entity, ecs::ComponentId, uint64_t& out)` — despacho por `cid` para os 5 tipos.
-  - `void requireEqual(ecs::World&, const Model&)` — para cada entidade do modelo: vivo, e para cada um dos 5 tipos `has` == presente no modelo e valor igual.
-  - `uint64_t fuzzSeed()` (env `ECS_FUZZ_SEED`, padrão `0xEC5`) e `uint64_t fuzzOps()` (env `ECS_FUZZ_OPS`, padrão `1'000'000`).
+    - `struct FS { std::string s; };` (não trivial, valor sempre > 32 chars para sair do SSO).
+    - Universo do fuzz: `A`, `B`, `FS`, `Tag`, `LifeCounter`. `using Model = std::unordered_map<ecs::Entity, std::map<ecs::ComponentId, uint64_t>, ecs::EntityHash>;` (tag guarda 0).
+    - `uint64_t makeValue(ecs::Entity, uint64_t counter);` — mistura `index`, `generation` e contador (splitmix64), para que troca de linhas apareça como valor errado.
+    - `void addToWorld(ecs::World&, ecs::Entity, ecs::ComponentId, uint64_t)`, `bool readFromWorld(const ecs::World&, ecs::Entity, ecs::ComponentId, uint64_t& out)` — despacho por `cid` para os 5 tipos.
+    - `void requireEqual(ecs::World&, const Model&)` — para cada entidade do modelo: vivo, e para cada um dos 5 tipos `has` == presente no modelo e valor igual.
+    - `uint64_t fuzzSeed()` (env `ECS_FUZZ_SEED`, padrão `0xEC5`) e `uint64_t fuzzOps()` (env `ECS_FUZZ_OPS`, padrão `1'000'000`).
 
 - [ ] **Step 1: Escrever o fuzz**
 
@@ -540,16 +559,18 @@ Expected: PASS, `seed=` impresso, nenhum relatório de ASan/UBSan. Se algo falha
 ### Task 10: Arestas em cache, I-9 e NF-P4
 
 **Files:**
+
 - Modify: `include/ecs/world.hpp`, `src/world.cpp`, `tests/unit_world.cpp`, `tests/invariants.cpp`
 - Create: `tests/support/alloc_counter.cpp`, `tests/support/alloc_counter.hpp`
 - Modify: `tests/CMakeLists.txt` (linkar `alloc_counter.cpp` só em `unit_world`)
 
 **Interfaces:**
+
 - Produces:
-  - Privado `const Edge& World::edgeFor(Archetype& src, ComponentId cid, bool adding);` — procura em `src.addEdges`/`src.removeEdges`; na falta, `findOrCreate(src.signature ± cid)` + `buildEdge` e insere (R-AR-2). `add`/`remove` passam a usar isto.
-  - `uint64_t World::signatureLookupCount() const noexcept;` — incrementado a cada consulta a `bySignature_`.
-  - `checkInvariants` cobre I-9: para toda aresta `a --±c--> b`, `b.signature == a.signature ± c` e `srcToDst[i]` aponta para a coluna de `b` com o mesmo `ComponentId` (ou `-1` sse ausente em `b`); `addedColumn` correto.
-  - `alloc_counter.hpp`: `size_t allocationCount() noexcept;` — contador incrementado por substituições globais de todas as formas de `operator new` (incluindo `align_val_t`).
+    - Privado `const Edge& World::edgeFor(Archetype& src, ComponentId cid, bool adding);` — procura em `src.addEdges`/`src.removeEdges`; na falta, `findOrCreate(src.signature ± cid)` + `buildEdge` e insere (R-AR-2). `add`/`remove` passam a usar isto.
+    - `uint64_t World::signatureLookupCount() const noexcept;` — incrementado a cada consulta a `bySignature_`.
+    - `checkInvariants` cobre I-9: para toda aresta `a --±c--> b`, `b.signature == a.signature ± c` e `srcToDst[i]` aponta para a coluna de `b` com o mesmo `ComponentId` (ou `-1` sse ausente em `b`); `addedColumn` correto.
+    - `alloc_counter.hpp`: `size_t allocationCount() noexcept;` — contador incrementado por substituições globais de todas as formas de `operator new` (incluindo `align_val_t`).
 
 - [ ] **Step 1: Teste NF-P4 que falha**
 
@@ -579,17 +600,19 @@ Em `invariants.cpp`, `CHECK_INV` já passa a cobrir I-9 em todas as sequências.
 ### Task 11: Benchmarks `transition` e `transition_cold`
 
 **Files:**
+
 - Create: `bench/transitions.cpp`, `bench/results/m2_transitions.json`
 - Modify: `bench/common.hpp`, `bench/CMakeLists.txt`
 
 **Interfaces:**
+
 - Produces:
-  - `template<class T> struct NonTrivial { T v; NonTrivial(T x) noexcept; NonTrivial(NonTrivial&&) noexcept; NonTrivial& operator=(NonTrivial&&) noexcept; ~NonTrivial() {} };` em `common.hpp` — mesmos bytes, caminho não `memcpy`.
-  - `template<int I> struct Comp { uint64_t v; };`
-  - `BM_Transition<Trivial|NonTrivial>/k` com `k ∈ {2,4,8,16}`: entidades com `k` componentes `Comp<0..k-1>` (ou `NonTrivial<…>`), laço `add<Comp<31>>` + `remove<Comp<31>>`; reporta ns/operação, `archetypes` e `entities_per_archetype` como counters.
-  - `BM_TransitionCold`: cada iteração cria um `World` novo (fora do tempo) e mede a primeira transição para arquétipo inédito.
-  - `BM_RandomGet` (NF-P6, sem meta) e baseline `BM_RandomGet_VectorStruct`: 1M entidades com `Comp<0..3>`, `get<Comp<2>>` numa permutação aleatória fixa vs `std::vector<struct{4×uint64}>` indexado pela mesma permutação.
-  - `BM_CreateDestroyChurn`: 100k entidades com 4 componentes; por iteração destrói 10 % aleatórios e cria 10 % novos; ns/operação.
+    - `template<class T> struct NonTrivial { T v; NonTrivial(T x) noexcept; NonTrivial(NonTrivial&&) noexcept; NonTrivial& operator=(NonTrivial&&) noexcept; ~NonTrivial() {} };` em `common.hpp` — mesmos bytes, caminho não `memcpy`.
+    - `template<int I> struct Comp { uint64_t v; };`
+    - `BM_Transition<Trivial|NonTrivial>/k` com `k ∈ {2,4,8,16}`: entidades com `k` componentes `Comp<0..k-1>` (ou `NonTrivial<…>`), laço `add<Comp<31>>` + `remove<Comp<31>>`; reporta ns/operação, `archetypes` e `entities_per_archetype` como counters.
+    - `BM_TransitionCold`: cada iteração cria um `World` novo (fora do tempo) e mede a primeira transição para arquétipo inédito.
+    - `BM_RandomGet` (NF-P6, sem meta) e baseline `BM_RandomGet_VectorStruct`: 1M entidades com `Comp<0..3>`, `get<Comp<2>>` numa permutação aleatória fixa vs `std::vector<struct{4×uint64}>` indexado pela mesma permutação.
+    - `BM_CreateDestroyChurn`: 100k entidades com 4 componentes; por iteração destrói 10 % aleatórios e cria 10 % novos; ns/operação.
 
 - [ ] **Step 1: Escrever os benchmarks.**
 - [ ] **Step 2: Rodar e salvar**
@@ -608,19 +631,21 @@ Expected: medianas para as 8 variações quentes, a fria, `random_get` (com base
 ### Task 12: `Query<Ts...>` — cache, matching incremental e I-8
 
 **Files:**
+
 - Create: `include/ecs/query.hpp`, `tests/queries.cpp`
 - Modify: `include/ecs/world.hpp`, `src/world.cpp`
 
 **Interfaces:**
+
 - Consumes: `Archetype`, `SmallMap`, `componentIndex_`.
 - Produces:
-  - `template<class... Us> struct With {}; template<class... Us> struct Without {};`
-  - `class QueryCacheBase { public: virtual ~QueryCacheBase(); virtual void onArchetypeCreated(Archetype&) = 0; virtual bool matches(const Archetype&) const = 0; virtual bool isMatched(const Archetype*) const = 0; protected: uint32_t* iterating_; };`
-  - `MatchedTable<Ts...>` como na seção 4.6.
-  - `Query<Ts...>`: `static_assert` de que nenhum `std::remove_const_t<T>` é tag (R-QY-2/NF-S3); `static constexpr std::array<bool, sizeof...(Ts)> writes` = `!std::is_const_v<T>` (R-QY-1). Construtor `Query(uint32_t* iterating, std::vector<ComponentId> with, std::vector<ComponentId> without)` (`with` = ids de `Ts` ∪ `With`, ordenados). `void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const SmallMap<ArchetypeId, uint16_t>* smallest);` — com `smallest != nullptr` percorre só ele (R-QY-3), senão todos. `size_t matchedCount() const noexcept;`
-  - `matches(a)`: `std::includes(a.signature, with_)` e interseção vazia com `without_`. Colunas de `MatchedTable::cols` via `columnOf` no match (R-QY-4).
-  - `World::query`: `template<class... Ts, class... Filters> Query<Ts...>& query(Filters...);` — chave `struct QueryKey { std::vector<uint64_t> ts /* (cid<<1)|isConst */; Signature with, without; auto operator<=>(const QueryKey&) const = default; };` em `std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_`; `queries_` guarda os ponteiros; `c*` = componente de `with` com menor `componentIndex_[c].size()`. `findOrCreate` chama `q->onArchetypeCreated(a)` para cada query.
-  - `checkInvariants` cobre I-8.
+    - `template<class... Us> struct With {}; template<class... Us> struct Without {};`
+    - `class QueryCacheBase { public: virtual ~QueryCacheBase(); virtual void onArchetypeCreated(Archetype&) = 0; virtual bool matches(const Archetype&) const = 0; virtual bool isMatched(const Archetype*) const = 0; protected: uint32_t* iterating_; };`
+    - `MatchedTable<Ts...>` como na seção 4.6.
+    - `Query<Ts...>`: `static_assert` de que nenhum `std::remove_const_t<T>` é tag (R-QY-2/NF-S3); `static constexpr std::array<bool, sizeof...(Ts)> writes` = `!std::is_const_v<T>` (R-QY-1). Construtor `Query(uint32_t* iterating, std::vector<ComponentId> with, std::vector<ComponentId> without)` (`with` = ids de `Ts` ∪ `With`, ordenados). `void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const SmallMap<ArchetypeId, uint16_t>* smallest);` — com `smallest != nullptr` percorre só ele (R-QY-3), senão todos. `size_t matchedCount() const noexcept;`
+    - `matches(a)`: `std::includes(a.signature, with_)` e interseção vazia com `without_`. Colunas de `MatchedTable::cols` via `columnOf` no match (R-QY-4).
+    - `World::query`: `template<class... Ts, class... Filters> Query<Ts...>& query(Filters...);` — chave `struct QueryKey { std::vector<uint64_t> ts /* (cid<<1)|isConst */; Signature with, without; auto operator<=>(const QueryKey&) const = default; };` em `std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_`; `queries_` guarda os ponteiros; `c*` = componente de `with` com menor `componentIndex_[c].size()`. `findOrCreate` chama `q->onArchetypeCreated(a)` para cada query.
+    - `checkInvariants` cobre I-8.
 
 - [ ] **Step 1: Testes que falham**
 
@@ -652,15 +677,17 @@ TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") { 
 ### Task 13: `eachBlock`, `each` e modo iterando
 
 **Files:**
+
 - Modify: `include/ecs/query.hpp`, `include/ecs/world.hpp`, `tests/queries.cpp`
 
 **Interfaces:**
+
 - Produces:
-  - `template<class F> void Query::eachBlock(F&& f);` — para cada `MatchedTable` com `count > 0`: `f(std::span<Ts>(ptr_i, count)...)`; `Ts` const → `std::span<const T>`.
-  - `template<class F> void Query::each(F&& f);` — se `std::is_invocable_v<F, Entity, Ts&...>` chama `f(entity, comps...)`, senão `f(comps...)`; ponteiros de coluna resolvidos antes do laço interno.
-  - Guard RAII `detail::IterationGuard` (incrementa `*iterating_` no construtor, decrementa no destrutor) usado por ambos (R-QY-5, Review Focus 5).
-  - `World::isIterating() const noexcept` (`iterating_ > 0`) para testes.
-  - `ECS_ASSERT(iterating_ == 0, "<op> e=%u:%u durante iteração", …)` em `create`, `destroy`, `add`, `remove` (death tests na Task 17).
+    - `template<class F> void Query::eachBlock(F&& f);` — para cada `MatchedTable` com `count > 0`: `f(std::span<Ts>(ptr_i, count)...)`; `Ts` const → `std::span<const T>`.
+    - `template<class F> void Query::each(F&& f);` — se `std::is_invocable_v<F, Entity, Ts&...>` chama `f(entity, comps...)`, senão `f(comps...)`; ponteiros de coluna resolvidos antes do laço interno.
+    - Guard RAII `detail::IterationGuard` (incrementa `*iterating_` no construtor, decrementa no destrutor) usado por ambos (R-QY-5, Review Focus 5).
+    - `World::isIterating() const noexcept` (`iterating_ > 0`) para testes.
+    - `ECS_ASSERT(iterating_ == 0, "<op> e=%u:%u durante iteração", …)` em `create`, `destroy`, `add`, `remove` (death tests na Task 17).
 
 - [ ] **Step 1: Testes que falham**
 
@@ -697,14 +724,16 @@ Compile-fail de `w.query<Tag>()` não entra no CTest; registrar no commit que fo
 ### Task 14: Benchmarks NF-P1, NF-P2, NF-P3
 
 **Files:**
+
 - Modify: `bench/iterate.cpp`, `bench/CMakeLists.txt`, `CMakeLists.txt`
 - Create: `bench/fragmentation.cpp`, `bench/results/m3_iterate.json`, `bench/results/m3_fragmented.json`, `bench/results/m3_vectorization.txt`
 
 **Interfaces:**
+
 - Produces:
-  - `BM_IterateSingle_ECS/n` em `bench_iterate` (mesmos `n` do SoA): `world.query<Position, const Velocity>().eachBlock(...)` com o mesmo corpo de laço do SoA.
-  - `bench_fragmented`: `BM_IterateFragmented/A` com `A ∈ {1, 8, 64, 512, 4096}`, 1M entidades distribuídas uniformemente; o arquétipo de cada entidade é `Position, Velocity` + o subconjunto de tags `Frag<0..11>` dado pelos bits de `i % A`. Counters `archetypes` e `entities_per_archetype`. Também `BM_IterateSingle_SoA/1000000` como baseline no mesmo binário.
-  - Opção CMake `ECS_VEC_REPORT` (OFF por padrão): adiciona `-fopt-info-vec-optimized` (GCC) / `-Rpass=loop-vectorize` (Clang) aos alvos de bench.
+    - `BM_IterateSingle_ECS/n` em `bench_iterate` (mesmos `n` do SoA): `world.query<Position, const Velocity>().eachBlock(...)` com o mesmo corpo de laço do SoA.
+    - `bench_fragmented`: `BM_IterateFragmented/A` com `A ∈ {1, 8, 64, 512, 4096}`, 1M entidades distribuídas uniformemente; o arquétipo de cada entidade é `Position, Velocity` + o subconjunto de tags `Frag<0..11>` dado pelos bits de `i % A`. Counters `archetypes` e `entities_per_archetype`. Também `BM_IterateSingle_SoA/1000000` como baseline no mesmo binário.
+    - Opção CMake `ECS_VEC_REPORT` (OFF por padrão): adiciona `-fopt-info-vec-optimized` (GCC) / `-Rpass=loop-vectorize` (Clang) aos alvos de bench.
 
 - [ ] **Step 1: Escrever os benchmarks.**
 - [ ] **Step 2: Medir e verificar NF-P1/NF-P2**
@@ -735,23 +764,25 @@ Expected: ao menos uma linha apontando para o laço interno do lambda do `eachBl
 ### Task 15: `CommandBuffer` (gravação, crescimento seguro, descarte) e flush sequencial
 
 **Files:**
+
 - Create: `include/ecs/command_buffer.hpp`, `src/command_buffer.cpp`, `tests/command_buffer.cpp`
 - Modify: `include/ecs/world.hpp`, `src/world.cpp`, `tests/CMakeLists.txt`
 
 **Interfaces:**
+
 - Consumes: `EntityStore`, `TypeInfo`, `relocateValue`, `destroyValue`, `alignedAlloc`.
 - Produces:
-  - `enum class CommandOp : uint8_t { Spawn, Destroy, Add, Remove };`
-  - Registro: cabeçalho de 24 bytes `[op:u8][pad:7][entity:u64][cid:u32][size:u32]`; payload em `alignUp(offset + 24, max(8, align))`; próximo registro em `alignUp(fim do payload, 8)`. Bloco alinhado a 64; crescimento ×2 (mínimo 1 KiB) percorrendo registros e usando `relocateValue` por payload.
-  - `class CommandBuffer` (move-only):
-    - `explicit CommandBuffer(EntityStore&)`; `~CommandBuffer()` destrói payloads não triviais e devolve ao `EntityStore` (`release`) os índices reservados ainda não materializados (R-CB-2).
-    - `Entity spawn();` — `store.allocate()` imediato (R-CB-1).
-    - `void destroy(Entity); template<class T> void add(Entity, T&& v); template<class T> void remove(Entity);` (`add` constrói `U` por move no payload).
-    - `struct CommandView { CommandOp op; Entity e; ComponentId cid; void* payload; };` `template<class F> void forEach(F&&);` em ordem de gravação.
-    - `size_t commandCount() const noexcept; bool empty() const noexcept; const EntityStore* store() const noexcept;`
-    - `void clear() noexcept;` — destrói todos os payloads não triviais (inclusive moved-from), zera o buffer e esquece os spawns (já materializados ou liberados pelo flush).
-  - `World::commands()` → `CommandBuffer{store_}`.
-  - `void World::flushSequential(CommandBuffer&);` — oráculo sem coalescing: aplica cada comando na ordem via `create`-no-slot-reservado (Spawn: coloca a entidade reservada no arquétipo raiz), `destroy`, `addRaw` (com `moveConstruct` a partir do payload), `removeRaw`; comandos para handles nem vivos nem reservados são ignorados; depois `cb.clear()`. Assert `iterating_ == 0` e `cb.store() == &store_`.
+    - `enum class CommandOp : uint8_t { Spawn, Destroy, Add, Remove };`
+    - Registro: cabeçalho de 24 bytes `[op:u8][pad:7][entity:u64][cid:u32][size:u32]`; payload em `alignUp(offset + 24, max(8, align))`; próximo registro em `alignUp(fim do payload, 8)`. Bloco alinhado a 64; crescimento ×2 (mínimo 1 KiB) percorrendo registros e usando `relocateValue` por payload.
+    - `class CommandBuffer` (move-only):
+        - `explicit CommandBuffer(EntityStore&)`; `~CommandBuffer()` destrói payloads não triviais e devolve ao `EntityStore` (`release`) os índices reservados ainda não materializados (R-CB-2).
+        - `Entity spawn();` — `store.allocate()` imediato (R-CB-1).
+        - `void destroy(Entity); template<class T> void add(Entity, T&& v); template<class T> void remove(Entity);` (`add` constrói `U` por move no payload).
+        - `struct CommandView { CommandOp op; Entity e; ComponentId cid; void* payload; };` `template<class F> void forEach(F&&);` em ordem de gravação.
+        - `size_t commandCount() const noexcept; bool empty() const noexcept; const EntityStore* store() const noexcept;`
+        - `void clear() noexcept;` — destrói todos os payloads não triviais (inclusive moved-from), zera o buffer e esquece os spawns (já materializados ou liberados pelo flush).
+    - `World::commands()` → `CommandBuffer{store_}`.
+    - `void World::flushSequential(CommandBuffer&);` — oráculo sem coalescing: aplica cada comando na ordem via `create`-no-slot-reservado (Spawn: coloca a entidade reservada no arquétipo raiz), `destroy`, `addRaw` (com `moveConstruct` a partir do payload), `removeRaw`; comandos para handles nem vivos nem reservados são ignorados; depois `cb.clear()`. Assert `iterating_ == 0` e `cb.store() == &store_`.
 
 - [ ] **Step 1: Testes que falham**
 
@@ -793,14 +824,16 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
 ### Task 16: Flush coalescido (R-CB-3, R-CB-4)
 
 **Files:**
+
 - Modify: `include/ecs/command_buffer.hpp`, `src/command_buffer.cpp`, `include/ecs/world.hpp`, `src/world.cpp`, `tests/command_buffer.cpp`
 
 **Interfaces:**
+
 - Produces:
-  - Passada 1 (em `command_buffer.cpp`): `struct NetComponentOp { ComponentId cid; bool present; void* payload; };` `struct EntityPlan { Entity e; bool spawned; bool destroyed; std::vector<NetComponentOp> ops; /* ordenado por cid */ };` `std::vector<EntityPlan> CommandBuffer::plan() const;` — agrupa por entidade preservando a ordem (ordenação estável de `(entity.index, seq)`); por `cid` vale o último comando: Add → `present = true, payload` do último Add; Remove → `present = false`. `Destroy` zera `ops` e marca `destroyed`; comandos depois de `Destroy` disparam `ECS_ASSERT(false, "command after destroy e=%u:%u")` e, sem asserts, são ignorados (R-CB-4).
-  - Passada 2: `void World::flush(CommandBuffer&);` — para cada plano: descarta se o handle não está vivo nem reservado (questão 3); `destroyed` → `destroy(e)` se vivo, `store_.release` se reservado; senão assinatura final = assinatura atual (vazia se reservado) com `ops` aplicadas, `dst = findOrCreate(final)`, **uma** transição via aresta de salto `jumpEdge(src, dst)` (ou `pushUninit` direto se reservado), e para cada `present` com payload: se a coluna já existia na origem, `destroyValue` + `moveConstruct`/`memcpy`; senão constrói na coluna nova. No fim `cb.clear()` (R-CB-3).
-  - Privado `const Edge& World::jumpEdge(Archetype& src, Archetype& dst);` — cache `std::unordered_map<uint64_t, Edge> jumpEdges_` com chave `(uint64_t(src.id) << 32) | dst.id`; I-9 verifica a consistência de `srcToDst` dessas arestas também.
-  - `ECS_ASSERT(iterating_ == 0, "flush durante iteração")` (R-CB-5).
+    - Passada 1 (em `command_buffer.cpp`): `struct NetComponentOp { ComponentId cid; bool present; void* payload; };` `struct EntityPlan { Entity e; bool spawned; bool destroyed; std::vector<NetComponentOp> ops; /* ordenado por cid */ };` `std::vector<EntityPlan> CommandBuffer::plan() const;` — agrupa por entidade preservando a ordem (ordenação estável de `(entity.index, seq)`); por `cid` vale o último comando: Add → `present = true, payload` do último Add; Remove → `present = false`. `Destroy` zera `ops` e marca `destroyed`; comandos depois de `Destroy` disparam `ECS_ASSERT(false, "command after destroy e=%u:%u")` e, sem asserts, são ignorados (R-CB-4).
+    - Passada 2: `void World::flush(CommandBuffer&);` — para cada plano: descarta se o handle não está vivo nem reservado (questão 3); `destroyed` → `destroy(e)` se vivo, `store_.release` se reservado; senão assinatura final = assinatura atual (vazia se reservado) com `ops` aplicadas, `dst = findOrCreate(final)`, **uma** transição via aresta de salto `jumpEdge(src, dst)` (ou `pushUninit` direto se reservado), e para cada `present` com payload: se a coluna já existia na origem, `destroyValue` + `moveConstruct`/`memcpy`; senão constrói na coluna nova. No fim `cb.clear()` (R-CB-3).
+    - Privado `const Edge& World::jumpEdge(Archetype& src, Archetype& dst);` — cache `std::unordered_map<uint64_t, Edge> jumpEdges_` com chave `(uint64_t(src.id) << 32) | dst.id`; I-9 verifica a consistência de `srcToDst` dessas arestas também.
+    - `ECS_ASSERT(iterating_ == 0, "flush durante iteração")` (R-CB-5).
 
 - [ ] **Step 1: Testes que falham**
 
@@ -840,20 +873,22 @@ Adicionar `uint32_t World::archetypeCount() const noexcept` nesta task (usado aq
 ### Task 17: `contract_death` e I-11
 
 **Files:**
+
 - Create: `tests/contract_death.cpp`
 - Modify: `tests/CMakeLists.txt`
 
 **Interfaces:**
+
 - Consumes: `setAssertHandler`, `World`, `Query::each`, `CommandBuffer`.
 - Produces: executável `contract_death` (sem doctest), compilado só quando `ECS_ENABLE_ASSERTS` resolve para 1. `main(argc, argv)` instala um handler que imprime a mensagem em `stderr`, verifica que ela contém as substrings exigidas pelo caso (senão `std::_Exit(2)`) e chama `std::_Exit(0)`; executa o caso nomeado em `argv[1]`; se retornar, imprime "assert não disparou" e devolve 1. Um `add_test(NAME contract_death.<caso> COMMAND contract_death <caso>)` por caso:
 
-| caso | ação | substrings exigidas |
-| --- | --- | --- |
-| `add_during_each` | `w.add(e, B{})` dentro de `query<A>().each` | `add`, `e=` |
-| `get_dead_entity` | `w.destroy(e); w.get<Position>(e)` (`struct Position { float x; }` local) | `get`, `e=`, `Position` |
-| `flush_during_each` | `w.flush(cb)` dentro de `each` | `flush` |
-| `command_after_destroy` | `cb.destroy(e); cb.add(e, A{}); w.flush(cb)` | `after destroy` |
-| `destroy_during_each_block` | `w.destroy(e)` dentro de `eachBlock` | `destroy` |
+| caso                        | ação                                                                      | substrings exigidas     |
+| --------------------------- | ------------------------------------------------------------------------- | ----------------------- |
+| `add_during_each`           | `w.add(e, B{})` dentro de `query<A>().each`                               | `add`, `e=`             |
+| `get_dead_entity`           | `w.destroy(e); w.get<Position>(e)` (`struct Position { float x; }` local) | `get`, `e=`, `Position` |
+| `flush_during_each`         | `w.flush(cb)` dentro de `each`                                            | `flush`                 |
+| `command_after_destroy`     | `cb.destroy(e); cb.add(e, A{}); w.flush(cb)`                              | `after destroy`         |
+| `destroy_during_each_block` | `w.destroy(e)` dentro de `eachBlock`                                      | `destroy`               |
 
 - [ ] **Step 1: Escrever o executável e registrar os casos.**
 - [ ] **Step 2: Rodar** — `$DC make test PRESET=debug-asan T=contract_death` → 5/5 PASS. Sanidade: trocar temporariamente um caso por código válido e ver o teste falhar com "assert não disparou"; desfazer.
@@ -865,10 +900,12 @@ Adicionar `uint32_t World::archetypeCount() const noexcept` nesta task (usado aq
 ### Task 18: Benchmark `flush_coalesced` (NF-P5)
 
 **Files:**
+
 - Create: `bench/flush.cpp`, `bench/results/m4_flush.json`
 - Modify: `bench/CMakeLists.txt`
 
 **Interfaces:**
+
 - Produces: `bench_flush` com `BM_FlushCoalesced/N` e `BM_DirectAdds/N`, `N ∈ {1000, 100000}`: `N` entidades criadas no arquétipo raiz (fora do tempo, `PauseTiming`), 3 adds (`Comp<0>`, `Comp<1>`, `Comp<2>`) por entidade; o primeiro grava num `CommandBuffer` e faz `flush` dentro do tempo, o segundo faz `3N` `add` diretos. Ambos aquecem as arestas/arquétipos antes. Reporta ns/entidade.
 
 - [ ] **Step 1: Escrever.**
@@ -894,9 +931,11 @@ Expected: `exit 0` nos dois (≥ 2× mais rápido).
 ### Task 19: `stats()`
 
 **Files:**
+
 - Modify: `include/ecs/world.hpp`, `src/world.cpp`, `tests/unit_world.cpp`
 
 **Interfaces:**
+
 - Produces:
 
 ```cpp
@@ -947,9 +986,11 @@ TEST_CASE("stats: contagens, histograma e memória ociosa") {
 ### Task 20: `iterate_fragmented` sob `perf stat`
 
 **Files:**
+
 - Create: `tools/perf_fragmented.sh`, `bench/results/m5_perf_fragmented.txt`, `bench/results/README.md`
 
 **Interfaces:**
+
 - Consumes: `bench_fragmented` (Task 14), preset `relwithdebinfo`, serviço `perf` (privileged).
 - Produces: `tools/perf_fragmented.sh <bench_bin> <out>` — para cada `A ∈ {1, 8, 64, 512, 4096}` roda `perf stat -x, -e cycles,instructions,cache-misses,L1-dcache-load-misses <bin> --benchmark_filter='BM_IterateFragmented/A$' --benchmark_min_time=2s` e escreve uma linha CSV `A,ns_per_entity,cycles,instructions,cache_misses_per_entity,l1d_misses_per_entity` (eventos divididos por `iterações × 1M`). `README.md` em `bench/results/` lista cada JSON/TXT, o commit e a máquina em que foi medido, e a curva de ns e misses por entidade em função de `A`.
 
@@ -963,3 +1004,4 @@ Expected: 5 linhas CSV com contadores numéricos. Se `perf` não funcionar no ke
 - [ ] **Step 4: Commit** — `bench: perf stat de iterate_fragmented e registro de resultados (M5)`
 
 **Gate M5:** Tasks 19–20. Fim da v1: rodar `$DC make test PRESET=debug-asan` e `$DC make test PRESET=release` uma última vez e anexar a saída ao PR.
+

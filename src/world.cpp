@@ -1,6 +1,7 @@
+#include "ecs/world.hpp"
+
 #include <algorithm>
 #include <cstring>
-#include <ecs/world.hpp>
 
 namespace ecs {
 

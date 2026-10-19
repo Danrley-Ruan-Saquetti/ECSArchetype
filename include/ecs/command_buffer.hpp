@@ -2,13 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <ecs/entity.hpp>
-#include <ecs/type_info.hpp>
 #include <new>
 #include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "ecs/entity.hpp"
+#include "ecs/type_info.hpp"
 
 namespace ecs {
 

@@ -1,10 +1,12 @@
+#include "ecs/command_buffer.hpp"
+
 #include <algorithm>
 #include <cstring>
-#include <ecs/command_buffer.hpp>
-#include <ecs/detail/align.hpp>
-#include <ecs/detail/assert.hpp>
-#include <ecs/table.hpp>
 #include <unordered_map>
+
+#include "ecs/detail/align.hpp"
+#include "ecs/detail/assert.hpp"
+#include "ecs/table.hpp"
 
 namespace ecs {
   namespace {

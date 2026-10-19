@@ -1,6 +1,6 @@
 #include <doctest/doctest.h>
 
-#include <ecs/detail/assert.hpp>
+#include "ecs/detail/assert.hpp"
 
 TEST_CASE("smoke: asserts ligados em debug") {
 #ifdef NDEBUG
@@ -13,14 +13,14 @@ TEST_CASE("smoke: asserts ligados em debug") {
 
 #include <algorithm>
 #include <cstdint>
-#include <ecs/table.hpp>
-#include <ecs/type_info.hpp>
 #include <iterator>
 #include <new>
 #include <string>
 #include <vector>
 
 #include "components.hpp"
+#include "ecs/table.hpp"
+#include "ecs/type_info.hpp"
 
 namespace {
   uint16_t colOf(const ecs::Table& t, ecs::ComponentId id) {

@@ -3,11 +3,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <ecs/entity.hpp>
-#include <ecs/type_info.hpp>
 #include <optional>
 #include <span>
 #include <vector>
+
+#include "ecs/entity.hpp"
+#include "ecs/type_info.hpp"
 
 namespace ecs {
 

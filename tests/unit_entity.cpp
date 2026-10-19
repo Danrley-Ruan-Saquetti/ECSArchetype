@@ -1,7 +1,8 @@
 #include <doctest/doctest.h>
 
 #include <cstdint>
-#include <ecs/entity.hpp>
+
+#include "ecs/entity.hpp"
 
 TEST_CASE("reciclagem incrementa geração e invalida handle antigo") {
   ecs::EntityStore s;

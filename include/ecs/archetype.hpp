@@ -2,10 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <ecs/detail/small_map.hpp>
-#include <ecs/table.hpp>
-#include <ecs/type_info.hpp>
 #include <vector>
+
+#include "ecs/detail/small_map.hpp"
+#include "ecs/table.hpp"
+#include "ecs/type_info.hpp"
 
 namespace ecs {
 

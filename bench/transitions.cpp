@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <ecs/world.hpp>
 #include <memory>
 #include <numeric>
 #include <random>
@@ -10,6 +9,7 @@
 #include <vector>
 
 #include "common.hpp"
+#include "ecs/world.hpp"
 
 namespace {
 

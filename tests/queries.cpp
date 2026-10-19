@@ -1,9 +1,9 @@
 #include <doctest/doctest.h>
 
 #include <cstdint>
-#include <ecs/world.hpp>
 
 #include "components.hpp"
+#include "ecs/world.hpp"
 
 TEST_CASE("mesma instância para a mesma combinação; filtros mudam a chave") {
   ecs::World w;

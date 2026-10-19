@@ -1,10 +1,10 @@
 #include <doctest/doctest.h>
 
 #include <algorithm>
-#include <ecs/archetype.hpp>
-#include <ecs/detail/small_map.hpp>
 
 #include "components.hpp"
+#include "ecs/archetype.hpp"
+#include "ecs/detail/small_map.hpp"
 
 namespace {
   struct C {

@@ -1,11 +1,11 @@
 #include <benchmark/benchmark.h>
 
 #include <cstdint>
-#include <ecs/world.hpp>
 #include <span>
 #include <vector>
 
 #include "common.hpp"
+#include "ecs/world.hpp"
 
 static void BM_IterateSingle_SoA(benchmark::State& state) {
   const auto n = static_cast<size_t>(state.range(0));
