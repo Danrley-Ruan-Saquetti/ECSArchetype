@@ -76,9 +76,6 @@ namespace ecs {
       o.runs_.clear();
       o.seen_.clear();
       o.grouped_ = true;
-      o.runs_.clear();
-      o.seen_.clear();
-      o.grouped_ = true;
     }
 
     return *this;
