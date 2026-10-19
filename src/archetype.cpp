@@ -49,6 +49,7 @@ namespace ecs {
     if (added != NoComponent && !typeInfo(added).tag && columnOf(source, added) == NoColumn) {
       edge.addedColumn = static_cast<int16_t>(columnOf(destination, added));
     }
+
     return edge;
   }
 }

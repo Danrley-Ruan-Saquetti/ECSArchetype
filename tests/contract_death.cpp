@@ -42,6 +42,7 @@ namespace {
     struct Position {
       float x;
     };
+
     ecs::World world;
     auto entity = world.create(Position{1.f});
     world.destroy(entity);

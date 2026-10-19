@@ -9,6 +9,7 @@ namespace {
 
   void* allocate(size_t size) {
     g_count.fetch_add(1, std::memory_order_relaxed);
+
     if (void* pointer = std::malloc(size ? size : 1)) {
       return pointer;
     }

@@ -108,16 +108,16 @@ namespace ecs {
     // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação.
     template <class... Ts, class... Filters>
     Query<Ts...>& query(Filters... filters);
+
     void* getRaw(Entity entity, ComponentId componentId) noexcept {
       if (!store_.isAlive(entity)) {
         return nullptr;
       }
-
-      const EntityRecord& record = store_.record(entity.index);
       if (componentId >= componentIndex_.size()) {
         return nullptr;
       }
 
+      const EntityRecord& record = store_.record(entity.index);
       const uint16_t* column = componentIndex_[componentId].find(record.archetype->id);
       if (!column || *column == NoColumn) {
         return nullptr;

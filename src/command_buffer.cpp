@@ -141,6 +141,7 @@ namespace ecs {
     if (data_) {
       alignedFree(data_, kBlockAlignment);
     }
+
     data_ = fresh;
     capacity_ = newCapacity;
   }

@@ -36,6 +36,7 @@ static void BM_IterateSingle_ECS(benchmark::State& state) {
   for (size_t i = 0; i < entityCount; ++i) {
     world.create(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
   }
+
   auto& query = world.query<Position, const Velocity>();
 
   for (auto _ : state) {
@@ -49,6 +50,7 @@ static void BM_IterateSingle_ECS(benchmark::State& state) {
         positionData[i].value.z += velocityData[i].value.z * kDeltaTime;
       }
     });
+
     benchmark::ClobberMemory();
   }
 

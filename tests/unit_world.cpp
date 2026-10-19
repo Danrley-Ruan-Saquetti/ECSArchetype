@@ -108,6 +108,7 @@ TEST_CASE("add com valor lido de outra entidade da tabela destino que realoca") 
   for (uint64_t i = 0; i < 64; ++i) {
     full.push_back(world.create(A{i}, B{i, i})); // capacidade 64 cheia
   }
+
   auto entity = world.create(A{999});
 
   world.add(entity, world.get<B>(full[5])); // destino {A,B} realoca no pushUninitialized
@@ -168,6 +169,7 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
   struct C4 {
     uint64_t value;
   };
+
   ecs::World world;
   auto entity = world.create(C1{1}, C2{2}, C3{3});
   world.add(entity, C4{4});

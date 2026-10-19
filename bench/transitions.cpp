@@ -102,6 +102,7 @@ namespace {
     for (uint32_t i = 0; i < kGetCount; ++i) {
       entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
     }
+
     const auto shuffledIndices = permutation(kGetCount);
 
     for (auto _ : state) {
@@ -121,6 +122,7 @@ namespace {
     for (uint32_t i = 0; i < kGetCount; ++i) {
       records[i] = Record4{i, i, i, i};
     }
+
     const auto shuffledIndices = permutation(kGetCount);
 
     for (auto _ : state) {

@@ -25,6 +25,7 @@ namespace ecs {
       if (why) {
         *why = std::string(invariantId) + " " + what;
       }
+
       return false;
     }
 
@@ -56,6 +57,7 @@ namespace ecs {
           data.push_back(componentId);
         }
       }
+
       if (data != archetype.columnTypes) {
         return fail(why, "I-5", archetypeLabel(archetype) + " columnTypes");
       }
@@ -75,6 +77,7 @@ namespace ecs {
       } else if (position != signature.end() && *position == componentId) {
         signature.erase(position);
       }
+
       return signature;
     }
 
@@ -119,6 +122,7 @@ namespace ecs {
         if (!valid || source != candidateSource || key.size() != operations.size()) {
           return false;
         }
+
         for (size_t i = 0; i < operations.size(); ++i) {
           if (key[i].first != operations[i].componentId || key[i].second != operations[i].present) {
             return false;
@@ -156,6 +160,7 @@ namespace ecs {
           signature.erase(position);
         }
       }
+
       return signature;
     }
 
@@ -167,6 +172,7 @@ namespace ecs {
 
         Column& column = *memo.columns[i];
         void* slot = column.at(row);
+
         if (memo.existed[i]) {
           destroyValue(*column.info, slot);
         }
@@ -195,6 +201,7 @@ namespace ecs {
 
   Archetype* World::findOrCreate(Signature signature) {
     ++signatureLookups_;
+
     if (auto it = bySignature_.find(signature); it != bySignature_.end()) {
       return it->second;
     }
@@ -210,6 +217,7 @@ namespace ecs {
       }
       componentIndex_[componentId].insert(id, columnOf(*archetype, componentId));
     }
+
     for (QueryCacheBase* query : queries_) {
       query->onArchetypeCreated(*archetype);
     }
@@ -220,8 +228,10 @@ namespace ecs {
   Entity World::place(Archetype& archetype) {
     Entity entity = store_.allocate();
     EntityRecord& record = store_.record(entity.index);
+
     record.row = archetype.table.pushUninitialized(entity);
     record.archetype = &archetype;
+
     return entity;
   }
 
@@ -236,6 +246,7 @@ namespace ecs {
     EntityRecord& record = store_.record(entity.index);
     Table& table = record.archetype->table;
     const uint32_t row = record.row;
+
     table.destroyRow(row);
     if (auto moved = table.fillHole(row)) {
       store_.record(moved->index).row = row;
@@ -265,6 +276,7 @@ namespace ecs {
 
     record.archetype = &destination;
     record.row = destinationRow;
+
     return destinationRow;
   }
 
@@ -275,6 +287,7 @@ namespace ecs {
 
     EntityRecord& record = store_.record(entity.index);
     Archetype& source = *record.archetype;
+
     if (std::binary_search(source.signature.begin(), source.signature.end(), componentId)) {
       if (info.tag) {
         return;
@@ -287,6 +300,7 @@ namespace ecs {
       } else {
         info.moveConstruct(slot, value);
       }
+
       return;
     }
 
@@ -310,6 +324,7 @@ namespace ecs {
 
     EntityRecord& record = store_.record(entity.index);
     Archetype& source = *record.archetype;
+
     if (!std::binary_search(source.signature.begin(), source.signature.end(), componentId)) {
       return;
     }
@@ -482,8 +497,10 @@ namespace ecs {
 
   QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query) {
     QueryCacheBase* registered = query.get();
+
     queries_.push_back(registered);
     queryCache_.emplace(std::move(key), std::move(query));
+
     return registered;
   }
 
@@ -505,6 +522,7 @@ namespace ecs {
   void World::materialize(Entity reserved) {
     EntityRecord& record = store_.record(reserved.index);
     Archetype& rootArchetype = root();
+
     record.row = rootArchetype.table.pushUninitialized(reserved);
     record.archetype = &rootArchetype;
   }
@@ -569,18 +587,21 @@ namespace ecs {
       if (!alive && !reserved) {
         continue; // handle obsoleto: ignorado em vez de cancelar os comandos no destroy (spec §10, questão 3)
       }
+
       if (net.destroyed) {
         if (alive) {
           destroy(entity);
         } else {
           store_.release(entity.index);
         }
+
         continue;
       }
 
       const std::span<const NetComponentOperation> operations = net.operations;
       EntityRecord& record = store_.record(entity.index);
       Archetype* source = alive ? record.archetype : nullptr;
+
       if (!memo.matches(source, operations)) {
         Archetype* destination = findOrCreate(applyOperations(source ? source->signature : Signature{}, operations));
         memo.assign(source, operations, destination, (source && destination != source) ? &jumpEdge(*source, *destination) : nullptr);
@@ -624,6 +645,7 @@ namespace ecs {
       archetypeStats.columnBytes = size_t(archetypeStats.capacity) * rowBytes;
       archetypeStats.idleBytes = size_t(archetypeStats.capacity - archetypeStats.count) * rowBytes;
       archetypeStats.signatureBytes = (archetype.signature.capacity() + archetype.columnTypes.capacity()) * sizeof(ComponentId);
+
       archetypeStats.edgeBytes = archetype.addEdges.capacityBytes() + archetype.removeEdges.capacityBytes();
       for (const auto& [componentId, edge] : archetype.addEdges) {
         archetypeStats.edgeBytes += edge.sourceToDestination.capacity() * sizeof(int16_t);

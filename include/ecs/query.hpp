@@ -124,6 +124,7 @@ namespace ecs {
       for (size_t i = 0; i < componentIds_.size(); ++i) {
         matched.columns[i] = columnOf(archetype, componentIds_[i]);
       }
+
       matched_.push_back(matched);
     }
 

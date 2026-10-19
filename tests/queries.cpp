@@ -66,6 +66,7 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
       withB.push_back(entity);
     }
   }
+
   world.create(B{0, 0}); // arquétipo sem A
   auto empty = world.create(A{0}, B{0, 0}, Tag{});
   world.destroy(empty); // arquétipo vazio é pulado

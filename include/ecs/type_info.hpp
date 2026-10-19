@@ -34,13 +34,13 @@ namespace ecs {
       info.size = info.tag ? 0 : static_cast<uint32_t>(sizeof(U));
       info.alignment = static_cast<uint32_t>(alignof(U));
       info.trivial = info.tag || (std::is_trivially_copyable_v<U> && std::is_trivially_destructible_v<U>);
+      info.name = typeName<U>();
 
       if (!info.trivial) {
         info.moveConstruct = [](void* destination, void* source) noexcept { ::new (destination) U(std::move(*static_cast<U*>(source))); };
         info.destroy = [](void* object) noexcept { static_cast<U*>(object)->~U(); };
       }
 
-      info.name = typeName<U>();
       return info;
     }
 

@@ -61,6 +61,7 @@ namespace {
         }
       }
     }
+
     auto& query = world.query<Position, const Velocity>();
 
     for (auto _ : state) {
@@ -74,6 +75,7 @@ namespace {
           positionData[i].value.z += velocityData[i].value.z * kDeltaTime;
         }
       });
+
       benchmark::ClobberMemory();
     }
 
