@@ -164,6 +164,23 @@ namespace ecs {
       return signature;
     }
 
+    // `slot` não pode estar construído; `value` fica moved-from, e destruí-lo é do chamador.
+    void constructValue(const TypeInfo& info, void* slot, void* value) noexcept {
+      if (!info.trivial) {
+        info.moveConstruct(slot, value);
+        return;
+      }
+
+      // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
+      switch (info.size) {
+      case 4: std::memcpy(slot, value, 4); break;
+      case 8: std::memcpy(slot, value, 8); break;
+      case 12: std::memcpy(slot, value, 12); break;
+      case 16: std::memcpy(slot, value, 16); break;
+      default: std::memcpy(slot, value, info.size);
+      }
+    }
+
     void writeValues(const FlushMemo& memo, std::span<const NetComponentOperation> operations, uint32_t row) {
       for (size_t i = 0; i < operations.size(); ++i) {
         if (!memo.columns[i]) {
@@ -172,23 +189,11 @@ namespace ecs {
 
         Column& column = *memo.columns[i];
         void* slot = column.at(row);
-
         if (memo.existed[i]) {
           destroyValue(*column.info, slot);
         }
 
-        if (column.info->trivial) {
-          // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
-          switch (column.info->size) {
-          case 4: std::memcpy(slot, operations[i].payload, 4); break;
-          case 8: std::memcpy(slot, operations[i].payload, 8); break;
-          case 12: std::memcpy(slot, operations[i].payload, 12); break;
-          case 16: std::memcpy(slot, operations[i].payload, 16); break;
-          default: std::memcpy(slot, operations[i].payload, column.info->size);
-          }
-        } else {
-          column.info->moveConstruct(slot, operations[i].payload);
-        }
+        constructValue(*column.info, slot, operations[i].payload);
       }
     }
   }
@@ -295,12 +300,7 @@ namespace ecs {
 
       void* slot = source.table.column(columnOf(source, componentId)).at(record.row);
       destroyValue(info, slot);
-      if (info.trivial) {
-        std::memcpy(slot, value, info.size);
-      } else {
-        info.moveConstruct(slot, value);
-      }
-
+      constructValue(info, slot, value);
       return;
     }
 
@@ -310,11 +310,7 @@ namespace ecs {
 
     if (edge.addedColumn >= 0) {
       void* slot = destination.table.column(static_cast<uint16_t>(edge.addedColumn)).at(destinationRow);
-      if (info.trivial) {
-        std::memcpy(slot, value, info.size);
-      } else {
-        info.moveConstruct(slot, value);
-      }
+      constructValue(info, slot, value);
     }
   }
 
@@ -527,6 +523,25 @@ namespace ecs {
     record.archetype = &rootArchetype;
   }
 
+  void World::destroyOrRelease(Entity entity, bool alive) {
+    if (alive) {
+      destroy(entity);
+    } else {
+      store_.release(entity.index);
+    }
+  }
+
+  uint32_t World::transitionTo(Entity entity, EntityRecord& record, Archetype& destination, const Edge* edge) {
+    if (!record.archetype) {
+      record.row = destination.table.pushUninitialized(entity);
+      record.archetype = &destination;
+    } else if (edge) {
+      moveEntity(entity, record, destination, *edge);
+    }
+
+    return record.row;
+  }
+
   void World::flushSequential(CommandBuffer& commandBuffer) {
     ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
     ECS_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
@@ -589,35 +604,19 @@ namespace ecs {
       }
 
       if (net.destroyed) {
-        if (alive) {
-          destroy(entity);
-        } else {
-          store_.release(entity.index);
-        }
-
+        destroyOrRelease(entity, alive);
         continue;
       }
 
       const std::span<const NetComponentOperation> operations = net.operations;
       EntityRecord& record = store_.record(entity.index);
-      Archetype* source = alive ? record.archetype : nullptr;
-
+      Archetype* source = record.archetype; // nullptr se reservada
       if (!memo.matches(source, operations)) {
         Archetype* destination = findOrCreate(applyOperations(source ? source->signature : Signature{}, operations));
         memo.assign(source, operations, destination, (source && destination != source) ? &jumpEdge(*source, *destination) : nullptr);
       }
 
-      uint32_t row;
-      if (!source) {
-        row = memo.destination->table.pushUninitialized(entity);
-        record.archetype = memo.destination;
-        record.row = row;
-      } else if (memo.edge) {
-        row = moveEntity(entity, record, *memo.destination, *memo.edge);
-      } else {
-        row = record.row;
-      }
-
+      const uint32_t row = transitionTo(entity, record, *memo.destination, memo.edge);
       writeValues(memo, operations, row);
     }
 

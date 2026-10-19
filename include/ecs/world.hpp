@@ -156,6 +156,9 @@ namespace ecs {
     const Edge& edgeFor(Archetype& source, ComponentId componentId, bool adding);
     const Edge& jumpEdge(Archetype& source, Archetype& destination);
     void materialize(Entity reserved);
+    void destroyOrRelease(Entity entity, bool alive); // reservada (não viva) só devolve o índice
+    // A linha nasce morta se a entidade estava reservada. `edge` nullptr: reservada ou já em `destination`.
+    uint32_t transitionTo(Entity entity, EntityRecord& record, Archetype& destination, const Edge* edge);
     Entity place(Archetype& archetype); // a linha nasce morta: o chamador constrói as colunas
     Archetype& root() noexcept {
       return *archetypes_[0];
