@@ -19,6 +19,159 @@ namespace ecs {
 
       return true;
     }
+
+    bool fail(std::string* why, const char* id, const std::string& what) {
+      if (why)
+        *why = std::string(id) + " " + what;
+      return false;
+    }
+
+    std::string entityLabel(uint32_t index, uint32_t generation) {
+      return "e=" + std::to_string(index) + ":" + std::to_string(generation);
+    }
+
+    std::string archLabel(const Archetype& a) {
+      return "arch=" + std::to_string(a.id);
+    }
+
+    // I-1
+    bool checkTableShape(const Archetype& a, std::string* why) {
+      const Table& t = a.table;
+      if (t.entities().size() != t.count() || t.capacity() < t.count())
+        return fail(why, "I-1", archLabel(a));
+
+      return true;
+    }
+
+    // I-5
+    bool checkColumnTypes(const Archetype& a, std::string* why) {
+      if (!std::is_sorted(a.signature.begin(), a.signature.end()) || std::adjacent_find(a.signature.begin(), a.signature.end()) != a.signature.end())
+        return fail(why, "I-5", archLabel(a) + " signature");
+
+      std::vector<ComponentId> data;
+      for (ComponentId c : a.signature)
+        if (!typeInfo(c).tag)
+          data.push_back(c);
+      if (data != a.columnTypes)
+        return fail(why, "I-5", archLabel(a) + " columnTypes");
+
+      const Table& t = a.table;
+      if (t.columnCount() != a.columnTypes.size() || !std::equal(t.columnTypes().begin(), t.columnTypes().end(), a.columnTypes.begin(), a.columnTypes.end()))
+        return fail(why, "I-5", archLabel(a) + " table");
+
+      return true;
+    }
+
+    // Assinatura de `sig` com `c` inserido (adding) ou removido.
+    Signature edgeSignature(Signature sig, ComponentId c, bool adding) {
+      auto pos = std::lower_bound(sig.begin(), sig.end(), c);
+      if (adding)
+        sig.insert(pos, c);
+      else if (pos != sig.end() && *pos == c)
+        sig.erase(pos);
+      return sig;
+    }
+
+    // I-9: arestas add/remove em cache de `a`.
+    bool checkCachedEdges(const Archetype& a, std::string* why) {
+      for (int adding = 1; adding >= 0; --adding) {
+        for (const auto& [c, edge] : adding ? a.addEdges : a.removeEdges) {
+          const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(c) + " " + archLabel(a);
+          if (!edge.target)
+            return fail(why, "I-9", where + " sem destino");
+
+          const Archetype& b = *edge.target;
+          if (b.signature != edgeSignature(a.signature, c, adding))
+            return fail(why, "I-9", where + " assinatura");
+          if (!checkEdgeMapping(a, b, edge))
+            return fail(why, "I-9", where + " srcToDst");
+
+          const int16_t wantAdded = adding && !typeInfo(c).tag ? static_cast<int16_t>(columnOf(b, c)) : int16_t(-1);
+          if (edge.addedColumn != wantAdded)
+            return fail(why, "I-9", where + " addedColumn");
+        }
+      }
+
+      return true;
+    }
+
+    // Memo do último resultado do flush: entidades de um lote costumam ter o mesmo (origem, ops),
+    // então a assinatura final, a aresta e as colunas são calculadas uma vez só.
+    struct FlushMemo {
+      bool valid = false;
+      const Archetype* src = nullptr;
+      std::vector<std::pair<ComponentId, bool>> key;
+      Archetype* dst = nullptr;
+      const Edge* edge = nullptr; // nullptr se src == dst ou entidade reservada
+      std::vector<Column*> col; // por op: coluna no destino (nullptr: sem valor a construir)
+      std::vector<uint8_t> existed; // por op: o componente já existia na origem
+
+      bool matches(const Archetype* s, std::span<const NetComponentOp> ops) const {
+        if (!valid || src != s || key.size() != ops.size())
+          return false;
+        for (size_t i = 0; i < ops.size(); ++i)
+          if (key[i].first != ops[i].cid || key[i].second != ops[i].present)
+            return false;
+
+        return true;
+      }
+
+      void assign(const Archetype* s, std::span<const NetComponentOp> ops, Archetype* d, const Edge* e) {
+        src = s;
+        dst = d;
+        edge = e;
+
+        key.clear();
+        col.clear();
+        existed.clear();
+        for (const NetComponentOp& op : ops) {
+          key.emplace_back(op.cid, op.present);
+          col.push_back(op.present && !typeInfo(op.cid).tag ? &dst->table.column(columnOf(*dst, op.cid)) : nullptr);
+          existed.push_back(src && std::binary_search(src->signature.begin(), src->signature.end(), op.cid));
+        }
+
+        valid = true;
+      }
+    };
+
+    // Assinatura de `sig` depois de aplicar o efeito líquido `ops`.
+    Signature applyOps(Signature sig, std::span<const NetComponentOp> ops) {
+      for (const NetComponentOp& op : ops) {
+        auto pos = std::lower_bound(sig.begin(), sig.end(), op.cid);
+        const bool has = pos != sig.end() && *pos == op.cid;
+        if (op.present && !has)
+          sig.insert(pos, op.cid);
+        else if (!op.present && has)
+          sig.erase(pos);
+      }
+      return sig;
+    }
+
+    // Constrói os valores de `ops` na linha `row` do destino; os que já existiam são destruídos antes.
+    void writeValues(const FlushMemo& memo, std::span<const NetComponentOp> ops, uint32_t row) {
+      for (size_t i = 0; i < ops.size(); ++i) {
+        if (!memo.col[i])
+          continue;
+
+        Column& c = *memo.col[i];
+        void* p = c.at(row);
+        if (memo.existed[i])
+          destroyValue(*c.info, p);
+
+        if (c.info->trivial) {
+          // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
+          switch (c.info->size) {
+          case 4: std::memcpy(p, ops[i].payload, 4); break;
+          case 8: std::memcpy(p, ops[i].payload, 8); break;
+          case 12: std::memcpy(p, ops[i].payload, 12); break;
+          case 16: std::memcpy(p, ops[i].payload, 16); break;
+          default: std::memcpy(p, ops[i].payload, c.info->size);
+          }
+        } else {
+          c.info->moveConstruct(p, ops[i].payload);
+        }
+      }
+    }
   } // namespace
 
   World::World() {
@@ -159,61 +312,51 @@ namespace ecs {
   }
 
   bool World::checkInvariants(std::string* why) const {
-    auto fail = [&](const char* id, const std::string& what) {
-      if (why)
-        *why = std::string(id) + " " + what;
-      return false;
-    };
-    auto ent = [](uint32_t i, uint32_t g) { return "e=" + std::to_string(i) + ":" + std::to_string(g); };
-    auto arch = [](const Archetype& a) { return "arch=" + std::to_string(a.id); };
-
-    // I-11
     if (iterating_ != 0)
-      return fail("I-11", "iterating=" + std::to_string(iterating_));
+      return fail(why, "I-11", "iterating=" + std::to_string(iterating_));
 
+    return checkArchetypes(why) && checkRecords(why) && checkFreeList(why) && checkComponentIndex(why) && checkQueries(why)
+      && checkEdges(why);
+  }
+
+  // I-1, I-4, I-5 e I-6
+  bool World::checkArchetypes(std::string* why) const {
     for (size_t i = 0; i < archetypes_.size(); ++i) {
       const Archetype& a = *archetypes_[i];
-      const Table& t = a.table;
 
       // I-6 (metade): id == posição e lookup pela própria assinatura
-      if (a.id != i)
-        return fail("I-6", arch(a));
       auto it = bySignature_.find(a.signature);
-      if (it == bySignature_.end() || it->second != &a)
-        return fail("I-6", arch(a));
+      if (a.id != i || it == bySignature_.end() || it->second != &a)
+        return fail(why, "I-6", archLabel(a));
 
-      // I-1
-      if (t.entities().size() != t.count() || t.capacity() < t.count())
-        return fail("I-1", arch(a));
-
-      // I-5
-      if (!std::is_sorted(a.signature.begin(), a.signature.end()) || std::adjacent_find(a.signature.begin(), a.signature.end()) != a.signature.end())
-        return fail("I-5", arch(a) + " signature");
-      std::vector<ComponentId> data;
-      for (ComponentId c : a.signature)
-        if (!typeInfo(c).tag)
-          data.push_back(c);
-      if (data != a.columnTypes)
-        return fail("I-5", arch(a) + " columnTypes");
-      if (t.columnCount() != a.columnTypes.size() || !std::equal(t.columnTypes().begin(), t.columnTypes().end(), a.columnTypes.begin(), a.columnTypes.end()))
-        return fail("I-5", arch(a) + " table");
-
-      // I-4
-      for (uint32_t r = 0; r < t.count(); ++r) {
-        Entity e = t.entities()[r];
-        if (e.index >= store_.slotCount())
-          return fail("I-4", arch(a) + " row=" + std::to_string(r));
-        const EntityRecord& rec = store_.record(e.index);
-        if (rec.arch != &a || rec.row != r || rec.generation != e.generation)
-          return fail("I-4", ent(e.index, e.generation) + " " + arch(a) + " row=" + std::to_string(r));
-      }
+      if (!checkTableShape(a, why) || !checkColumnTypes(a, why) || !checkRows(a, why))
+        return false;
     }
 
-    // I-6
     if (bySignature_.size() != archetypes_.size())
-      return fail("I-6", "tamanhos diferentes");
+      return fail(why, "I-6", "tamanhos diferentes");
 
-    // I-3 e I-10
+    return true;
+  }
+
+  // I-4: cada linha aponta para um record que aponta de volta para ela.
+  bool World::checkRows(const Archetype& a, std::string* why) const {
+    const Table& t = a.table;
+    for (uint32_t r = 0; r < t.count(); ++r) {
+      Entity e = t.entities()[r];
+      if (e.index >= store_.slotCount())
+        return fail(why, "I-4", archLabel(a) + " row=" + std::to_string(r));
+
+      const EntityRecord& rec = store_.record(e.index);
+      if (rec.arch != &a || rec.row != r || rec.generation != e.generation)
+        return fail(why, "I-4", entityLabel(e.index, e.generation) + " " + archLabel(a) + " row=" + std::to_string(r));
+    }
+
+    return true;
+  }
+
+  // I-3: cada record vivo aponta para uma linha que guarda a mesma entidade.
+  bool World::checkRecords(std::string* why) const {
     for (uint32_t i = 0; i < store_.slotCount(); ++i) {
       const EntityRecord& rec = store_.record(i);
       if (!rec.arch)
@@ -221,86 +364,77 @@ namespace ecs {
 
       const Table& t = rec.arch->table;
       if (rec.row >= t.count() || t.entities()[rec.row] != Entity{i, rec.generation})
-        return fail("I-3", ent(i, rec.generation));
-    }
-    {
-      std::vector<uint32_t> fl(store_.freeList().begin(), store_.freeList().end());
-      for (uint32_t i : fl)
-        if (i >= store_.slotCount() || store_.record(i).arch != nullptr)
-          return fail("I-10", "slot=" + std::to_string(i));
-
-      std::sort(fl.begin(), fl.end());
-      if (std::adjacent_find(fl.begin(), fl.end()) != fl.end())
-        return fail("I-10", "repetido");
+        return fail(why, "I-3", entityLabel(i, rec.generation));
     }
 
-    // I-7
+    return true;
+  }
+
+  // I-10: a freeList só tem slots válidos, mortos e sem repetição.
+  bool World::checkFreeList(std::string* why) const {
+    std::vector<uint32_t> fl(store_.freeList().begin(), store_.freeList().end());
+    for (uint32_t i : fl)
+      if (i >= store_.slotCount() || store_.record(i).arch != nullptr)
+        return fail(why, "I-10", "slot=" + std::to_string(i));
+
+    std::sort(fl.begin(), fl.end());
+    if (std::adjacent_find(fl.begin(), fl.end()) != fl.end())
+      return fail(why, "I-10", "repetido");
+
+    return true;
+  }
+
+  // I-7: componentIndex_ e as assinaturas se espelham.
+  bool World::checkComponentIndex(std::string* why) const {
     for (const auto& ap : archetypes_) {
       for (ComponentId c : ap->signature) {
         const uint16_t* col = c < componentIndex_.size() ? componentIndex_[c].find(ap->id) : nullptr;
         if (!col || *col != columnOf(*ap, c))
-          return fail("I-7", "cid=" + std::to_string(c) + " " + arch(*ap));
+          return fail(why, "I-7", "cid=" + std::to_string(c) + " " + archLabel(*ap));
       }
     }
+
     for (size_t c = 0; c < componentIndex_.size(); ++c) {
       for (const auto& [aid, col] : componentIndex_[c]) {
         if (aid >= archetypes_.size())
-          return fail("I-7", "cid=" + std::to_string(c));
+          return fail(why, "I-7", "cid=" + std::to_string(c));
+
         const Archetype& a = *archetypes_[aid];
         if (!std::binary_search(a.signature.begin(), a.signature.end(), ComponentId(c)) || col != columnOf(a, ComponentId(c)))
-          return fail("I-7", "cid=" + std::to_string(c) + " " + arch(a));
+          return fail(why, "I-7", "cid=" + std::to_string(c) + " " + archLabel(a));
       }
     }
 
-    // I-8
+    return true;
+  }
+
+  // I-8
+  bool World::checkQueries(std::string* why) const {
     for (size_t qi = 0; qi < queries_.size(); ++qi)
       for (const auto& ap : archetypes_)
         if (queries_[qi]->isMatched(ap.get()) != queries_[qi]->matches(*ap))
-          return fail("I-8", "query=" + std::to_string(qi) + " " + arch(*ap));
+          return fail(why, "I-8", "query=" + std::to_string(qi) + " " + archLabel(*ap));
 
-    // I-9
-    for (const auto& ap : archetypes_) {
-      const Archetype& a = *ap;
-      for (int adding = 1; adding >= 0; --adding) {
-        for (const auto& [c, edge] : adding ? a.addEdges : a.removeEdges) {
-          const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(c) + " " + arch(a);
-          if (!edge.target)
-            return fail("I-9", where + " sem destino");
+    return true;
+  }
 
-          const Archetype& b = *edge.target;
-          Signature expected = a.signature;
-          auto pos = std::lower_bound(expected.begin(), expected.end(), c);
-          if (adding)
-            expected.insert(pos, c);
-          else if (pos != expected.end() && *pos == c)
-            expected.erase(pos);
-          if (b.signature != expected)
-            return fail("I-9", where + " assinatura");
+  // I-9: arestas em cache dos arquétipos e arestas de salto do flush.
+  bool World::checkEdges(std::string* why) const {
+    for (const auto& ap : archetypes_)
+      if (!checkCachedEdges(*ap, why))
+        return false;
 
-          if (!checkEdgeMapping(a, b, edge))
-            return fail("I-9", where + " srcToDst");
-
-          int16_t wantAdded = -1;
-          if (adding && !typeInfo(c).tag)
-            wantAdded = static_cast<int16_t>(columnOf(b, c));
-          if (edge.addedColumn != wantAdded)
-            return fail("I-9", where + " addedColumn");
-        }
-      }
-    }
-
-    // I-9 (arestas de salto do flush)
     for (const auto& [key, edge] : jumpEdges_) {
       const uint32_t sid = static_cast<uint32_t>(key >> 32), did = static_cast<uint32_t>(key);
       const std::string where = "jump " + std::to_string(sid) + "->" + std::to_string(did);
       if (sid >= archetypes_.size() || did >= archetypes_.size())
-        return fail("I-9", where + " id");
+        return fail(why, "I-9", where + " id");
       if (edge.target != archetypes_[did].get())
-        return fail("I-9", where + " destino");
+        return fail(why, "I-9", where + " destino");
       if (!checkEdgeMapping(*archetypes_[sid], *archetypes_[did], edge))
-        return fail("I-9", where + " srcToDst");
+        return fail(why, "I-9", where + " srcToDst");
       if (edge.addedColumn != -1)
-        return fail("I-9", where + " addedColumn");
+        return fail(why, "I-9", where + " addedColumn");
     }
 
     return true;
@@ -378,51 +512,7 @@ namespace ecs {
 
     const CommandPlan plan = cb.plan();
     NetEffect net;
-
-    // Memo do último resultado: entidades de um lote costumam ter o mesmo (origem, ops),
-    // então a assinatura final, a aresta e as colunas são calculadas uma vez só.
-    struct Memo {
-      bool valid = false;
-      const Archetype* src = nullptr;
-      std::vector<std::pair<ComponentId, bool>> key;
-      Archetype* dst = nullptr;
-      const Edge* edge = nullptr; // nullptr se src == dst ou entidade reservada
-      std::vector<Column*> col; // por op: coluna no destino (nullptr: sem valor a construir)
-      std::vector<uint8_t> existed; // por op: o componente já existia na origem
-    } memo;
-    auto memoMatches = [&](const Archetype* src, std::span<const NetComponentOp> ops) {
-      if (!memo.valid || memo.src != src || memo.key.size() != ops.size())
-        return false;
-      for (size_t i = 0; i < ops.size(); ++i)
-        if (memo.key[i].first != ops[i].cid || memo.key[i].second != ops[i].present)
-          return false;
-
-      return true;
-    };
-    auto memoBuild = [&](Archetype* src, std::span<const NetComponentOp> ops) {
-      Signature sig = src ? src->signature : Signature{};
-      for (const NetComponentOp& op : ops) {
-        auto pos = std::lower_bound(sig.begin(), sig.end(), op.cid);
-        const bool has = pos != sig.end() && *pos == op.cid;
-        if (op.present && !has)
-          sig.insert(pos, op.cid);
-        else if (!op.present && has)
-          sig.erase(pos);
-      }
-
-      memo.dst = findOrCreate(std::move(sig));
-      memo.edge = (src && memo.dst != src) ? &jumpEdge(*src, *memo.dst) : nullptr;
-      memo.src = src;
-      memo.key.clear();
-      memo.col.clear();
-      memo.existed.clear();
-      for (const NetComponentOp& op : ops) {
-        memo.key.emplace_back(op.cid, op.present);
-        memo.col.push_back(op.present && !typeInfo(op.cid).tag ? &memo.dst->table.column(columnOf(*memo.dst, op.cid)) : nullptr);
-        memo.existed.push_back(src && std::binary_search(src->signature.begin(), src->signature.end(), op.cid));
-      }
-      memo.valid = true;
-    };
+    FlushMemo memo;
 
     for (const EntityPlan& ep : plan.entities) {
       const Entity e = ep.e;
@@ -443,8 +533,10 @@ namespace ecs {
       const std::span<const NetComponentOp> ops = net.ops;
       EntityRecord& rec = store_.record(e.index);
       Archetype* src = alive ? rec.arch : nullptr;
-      if (!memoMatches(src, ops))
-        memoBuild(src, ops);
+      if (!memo.matches(src, ops)) {
+        Archetype* dst = findOrCreate(applyOps(src ? src->signature : Signature{}, ops));
+        memo.assign(src, ops, dst, (src && dst != src) ? &jumpEdge(*src, *dst) : nullptr);
+      }
 
       uint32_t row;
       if (!src) {
@@ -457,28 +549,7 @@ namespace ecs {
         row = rec.row;
       }
 
-      for (size_t i = 0; i < ops.size(); ++i) {
-        if (!memo.col[i])
-          continue;
-
-        Column& c = *memo.col[i];
-        void* p = c.at(row);
-        if (memo.existed[i])
-          destroyValue(*c.info, p);
-
-        if (c.info->trivial) {
-          // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
-          switch (c.info->size) {
-          case 4: std::memcpy(p, ops[i].payload, 4); break;
-          case 8: std::memcpy(p, ops[i].payload, 8); break;
-          case 12: std::memcpy(p, ops[i].payload, 12); break;
-          case 16: std::memcpy(p, ops[i].payload, 16); break;
-          default: std::memcpy(p, ops[i].payload, c.info->size);
-          }
-        } else {
-          c.info->moveConstruct(p, ops[i].payload);
-        }
-      }
+      writeValues(memo, ops, row);
     }
 
     cb.clear();

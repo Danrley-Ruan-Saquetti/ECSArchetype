@@ -143,6 +143,15 @@ namespace ecs {
     void materialize(Entity e); // põe uma entidade reservada no arquétipo raiz
     Entity place(Archetype& a); // aloca entidade e linha morta em `a`
 
+    // Partes de checkInvariants: cada uma devolve false na primeira violação e a descreve em *why.
+    bool checkArchetypes(std::string* why) const;
+    bool checkRows(const Archetype& a, std::string* why) const;
+    bool checkRecords(std::string* why) const;
+    bool checkFreeList(std::string* why) const;
+    bool checkComponentIndex(std::string* why) const;
+    bool checkQueries(std::string* why) const;
+    bool checkEdges(std::string* why) const;
+
     EntityStore store_;
     std::vector<std::unique_ptr<Archetype>> archetypes_;
     std::unordered_map<Signature, Archetype*, SigHash> bySignature_;
