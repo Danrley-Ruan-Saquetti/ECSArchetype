@@ -22,6 +22,9 @@ namespace ecs {
   struct Without {};
 
   class QueryCacheBase {
+   protected:
+    uint32_t* iterating_;
+
    public:
     explicit QueryCacheBase(uint32_t* iterating)
       : iterating_(iterating) {}
@@ -30,13 +33,12 @@ namespace ecs {
     virtual void onArchetypeCreated(Archetype& archetype) = 0;
     virtual bool matches(const Archetype& archetype) const = 0;
     virtual bool isMatched(const Archetype* archetype) const = 0;
-
-   protected:
-    uint32_t* iterating_;
   };
 
   namespace detail {
     struct IterationGuard {
+      uint32_t* counter_;
+
       explicit IterationGuard(uint32_t* counter) noexcept
         : counter_(counter) {
         ++*counter_;
@@ -46,8 +48,6 @@ namespace ecs {
       }
       IterationGuard(const IterationGuard&) = delete;
       IterationGuard& operator=(const IterationGuard&) = delete;
-
-      uint32_t* counter_;
     };
   }
 
@@ -68,6 +68,12 @@ namespace ecs {
     // Sem uso na v1: reservado para o scheduler (R-QY-1).
     static constexpr std::array<bool, sizeof...(Ts)> writes{!std::is_const_v<Ts>...};
 
+   private:
+    std::vector<ComponentId> with_, without_;
+    std::array<ComponentId, sizeof...(Ts)> componentIds_;
+    std::vector<MatchedTable<Ts...>> matched_;
+
+   public:
     // `with` = ids de Ts ∪ With<...>, ordenados e sem repetição; `without` idem.
     Query(uint32_t* iterating, std::vector<ComponentId> with, std::vector<ComponentId> without)
       : QueryCacheBase(iterating),
@@ -171,9 +177,5 @@ namespace ecs {
         }
       }
     }
-
-    std::vector<ComponentId> with_, without_;
-    std::array<ComponentId, sizeof...(Ts)> componentIds_;
-    std::vector<MatchedTable<Ts...>> matched_;
   };
 }

@@ -14,6 +14,10 @@ namespace ecs {
    public:
     using value_type = std::pair<K, V>;
 
+   private:
+    std::vector<value_type> items_;
+
+   public:
     V* find(K key) noexcept {
       auto it = lowerBound(key);
       return (it != items_.end() && it->first == key) ? &it->second : nullptr;
@@ -58,7 +62,5 @@ namespace ecs {
     auto lowerBound(K key) const noexcept {
       return std::lower_bound(items_.begin(), items_.end(), key, [](const value_type& item, K target) { return item.first < target; });
     }
-
-    std::vector<value_type> items_;
   };
 }

@@ -44,10 +44,6 @@ namespace ecs {
   // Guarda só offsets/8 dos registros, para tocar pouca memória; o efeito líquido sai de
   // netEffect, uma entidade por vez.
   struct CommandPlan {
-    CommandPlan() = default;
-    CommandPlan(CommandPlan&&) = default;
-    CommandPlan(const CommandPlan&) = delete; // a span `entities` da cópia apontaria para o `owned` do original
-
     std::vector<EntityPlan> owned;
     std::span<const EntityPlan> entities; // na ordem da primeira aparição
     // Vazio quando os comandos de cada entidade já são consecutivos no buffer (caso comum de lotes):
@@ -55,6 +51,10 @@ namespace ecs {
     // Senão, o offset/8 de cada registro, agrupado por entidade e na ordem de gravação.
     std::vector<uint32_t> order;
     bool contiguous = true;
+
+    CommandPlan() = default;
+    CommandPlan(CommandPlan&&) = default;
+    CommandPlan(const CommandPlan&) = delete; // a span `entities` da cópia apontaria para o `owned` do original
   };
 
   // Registro (alinhado a 8): [operation:u8][payloadAlignment:u8][pad:6][entity:u64][componentId:u32][size:u32][payload alinhado].
@@ -62,6 +62,20 @@ namespace ecs {
   // (memcpy se trivial, moveConstruct + destroy caso contrário): um memmove cego quebraria
   // tipos que apontam para si mesmos (ex.: std::string com SSO).
   class CommandBuffer {
+   private:
+    EntityStore* store_;
+    std::byte* data_ = nullptr;
+    size_t size_ = 0, capacity_ = 0;
+    size_t count_ = 0;
+    bool hasNonTrivialPayload_ = false;
+    std::vector<Entity> spawned_;
+
+    // Enquanto cada entidade ocupa um trecho consecutivo (caso comum de lotes), os trechos são
+    // mantidos na gravação e plan() não precisa reler o buffer. `seen_` é um bitset por slot.
+    bool grouped_ = true;
+    std::vector<EntityPlan> runs_;
+    std::vector<uint64_t> seen_;
+
    public:
     explicit CommandBuffer(EntityStore& store) noexcept
       : store_(&store) {}
@@ -115,19 +129,6 @@ namespace ecs {
     void grow(size_t need);
     void freeBlock() noexcept;
     void releasePendingSpawns() noexcept;
-
-    EntityStore* store_;
-    std::byte* data_ = nullptr;
-    size_t size_ = 0, capacity_ = 0;
-    size_t count_ = 0;
-    bool hasNonTrivialPayload_ = false;
-    std::vector<Entity> spawned_;
-
-    // Enquanto cada entidade ocupa um trecho consecutivo (caso comum de lotes), os trechos são
-    // mantidos na gravação e plan() não precisa reler o buffer. `seen_` é um bitset por slot.
-    bool grouped_ = true;
-    std::vector<EntityPlan> runs_;
-    std::vector<uint64_t> seen_;
   };
 
   template <class T>

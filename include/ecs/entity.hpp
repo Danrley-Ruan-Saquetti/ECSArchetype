@@ -37,6 +37,10 @@ namespace ecs {
   // Dono dos records e da freeList. Fica aqui (e não no World) para que o CommandBuffer,
   // uma camada abaixo do World, possa reservar índices (R-CB-1) sem conhecê-lo.
   class EntityStore {
+   private:
+    std::vector<EntityRecord> records_;
+    std::vector<uint32_t> freeList_;
+
    public:
     // Pega do fim da freeList (LIFO) ou cria um slot novo. Deixa archetype = nullptr (reservado, R-EN-3).
     Entity allocate() {
@@ -88,9 +92,5 @@ namespace ecs {
     void setGenerationForTest(uint32_t index, uint32_t generation) noexcept {
       records_[index].generation = generation;
     }
-
-   private:
-    std::vector<EntityRecord> records_;
-    std::vector<uint32_t> freeList_;
   };
 }

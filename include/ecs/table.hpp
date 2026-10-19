@@ -39,6 +39,12 @@ namespace ecs {
   };
 
   class Table {
+   private:
+    std::vector<Column> columns_;
+    std::vector<ComponentId> columnTypes_;
+    std::vector<Entity> entities_;
+    uint32_t count_ = 0, capacity_ = 0;
+
    public:
     explicit Table(std::span<const ComponentId> columnTypes);
     ~Table();
@@ -77,10 +83,5 @@ namespace ecs {
    private:
     void reserve(uint32_t newCapacity);
     void releaseAll() noexcept;
-
-    std::vector<Column> columns_;
-    std::vector<ComponentId> columnTypes_;
-    std::vector<Entity> entities_;
-    uint32_t count_ = 0, capacity_ = 0;
   };
 }

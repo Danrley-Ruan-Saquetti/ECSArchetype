@@ -47,6 +47,24 @@ namespace ecs {
   };
 
   class World {
+   private:
+    struct QueryKey {
+      std::vector<uint64_t> components; // (componentId << 1) | isConst, na ordem de Ts
+      Signature with, without;
+
+      auto operator<=>(const QueryKey&) const = default;
+    };
+
+    EntityStore store_;
+    std::vector<std::unique_ptr<Archetype>> archetypes_;
+    std::unordered_map<Signature, Archetype*, SignatureHash> bySignature_;
+    std::vector<SmallMap<ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
+    uint32_t iterating_ = 0;
+    mutable uint64_t signatureLookups_ = 0;
+    std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
+    std::vector<QueryCacheBase*> queries_;
+    std::unordered_map<uint64_t, Edge> jumpEdges_; // (source.id << 32) | destination.id
+
    public:
     World();
     ~World();
@@ -132,12 +150,6 @@ namespace ecs {
     Archetype* findOrCreate(Signature signature);
     uint32_t moveEntity(Entity entity, EntityRecord& record, Archetype& destination, const Edge& edge);
 
-    struct QueryKey {
-      std::vector<uint64_t> components; // (componentId << 1) | isConst, na ordem de Ts
-      Signature with, without;
-
-      auto operator<=>(const QueryKey&) const = default;
-    };
     QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query);
     const SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
 
@@ -156,16 +168,6 @@ namespace ecs {
     bool checkComponentIndex(std::string* why) const;
     bool checkQueries(std::string* why) const;
     bool checkEdges(std::string* why) const;
-
-    EntityStore store_;
-    std::vector<std::unique_ptr<Archetype>> archetypes_;
-    std::unordered_map<Signature, Archetype*, SignatureHash> bySignature_;
-    std::vector<SmallMap<ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
-    uint32_t iterating_ = 0;
-    mutable uint64_t signatureLookups_ = 0;
-    std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
-    std::vector<QueryCacheBase*> queries_;
-    std::unordered_map<uint64_t, Edge> jumpEdges_; // (source.id << 32) | destination.id
   };
 
   template <class... Ts>

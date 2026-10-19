@@ -62,4 +62,5 @@ Validade: qualquer mudança estrutural invalida ponteiros/spans de qualquer enti
 - Comentários só para o porquê ou para contratos não óbvios; nada que repita o código. Se um comentário explica o quê, prefira um nome ou uma função extraída.
 - Linhas em branco separam ideias (blocos lógicos), não linhas soltas.
 - Um bloco `namespace` por arquivo, sem reabrir o mesmo namespace mais abaixo.
+- Em `class`/`struct`, os atributos (membros de dados, inclusive privados e estáticos) ficam no topo, antes de construtores e métodos. Numa `class` isso significa abrir com uma seção `private:` só de dados (e dos tipos aninhados que eles usam), depois `public:` e, por fim, `private:` com os métodos auxiliares. Mover blocos de membros não pode mudar a ordem relativa entre eles (ordem de inicialização, `-Wreorder`).
 - `#include` dos headers do projeto com aspas (`"ecs/..."`), depois dos headers da biblioteca padrão.
