@@ -20,7 +20,6 @@ struct FS {
 using Model = std::unordered_map<ecs::Entity, std::map<ecs::ComponentId, uint64_t>, ecs::EntityHash>;
 
 namespace fuzz {
-
   inline const std::string kFsPrefix = "fuzz-state-padding-0123456789abcdef-";
 
   inline FS makeFS(uint64_t v) {
@@ -33,10 +32,10 @@ namespace fuzz {
                                             ecs::componentId<Tag>(), ecs::componentId<LifeCounter>()};
     return ids;
   }
+
   inline bool isTag(ecs::ComponentId cid) {
     return cid == ecs::componentId<Tag>();
   }
-
 } // namespace fuzz
 
 // Mistura index, generation e contador (splitmix64): troca de linhas aparece como valor errado.
@@ -65,6 +64,7 @@ inline void addToWorld(ecs::World& w, ecs::Entity e, ecs::ComponentId cid, uint6
 inline bool readFromWorld(ecs::World& w, ecs::Entity e, ecs::ComponentId cid, uint64_t& out) {
   if (!w.hasRaw(e, cid))
     return false;
+
   if (cid == ecs::componentId<A>()) {
     out = w.get<A>(e).v;
   } else if (cid == ecs::componentId<B>()) {
@@ -78,6 +78,7 @@ inline bool readFromWorld(ecs::World& w, ecs::Entity e, ecs::ComponentId cid, ui
   } else {
     out = w.get<LifeCounter>(e).v;
   }
+
   return true;
 }
 
@@ -85,6 +86,7 @@ inline void requireEqual(ecs::World& w, const Model& model) {
   for (const auto& [e, comps] : model) {
     if (!w.isAlive(e))
       FAIL("entidade do modelo morta no World: e=" << e.index << ":" << e.generation);
+
     for (int i = 0; i < 5; ++i) {
       const ecs::ComponentId cid = fuzz::universe()[i];
       auto it = comps.find(cid);
@@ -103,6 +105,7 @@ inline uint64_t fuzzSeed() {
   const char* s = std::getenv("ECS_FUZZ_SEED");
   return s ? std::strtoull(s, nullptr, 0) : 0xEC5ull;
 }
+
 inline uint64_t fuzzOps() {
   const char* s = std::getenv("ECS_FUZZ_OPS");
   return s ? std::strtoull(s, nullptr, 0) : 1'000'000ull;

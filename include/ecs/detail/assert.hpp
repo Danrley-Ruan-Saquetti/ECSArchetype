@@ -9,7 +9,6 @@
 #endif
 
 namespace ecs {
-
   using AssertHandler = void (*)(const char* message) noexcept;
 
   // Instala o handler e devolve o anterior. Padrão: escreve em stderr e chama std::abort().
@@ -21,7 +20,6 @@ namespace ecs {
 #endif
     [[noreturn]] void assertFail(const char* expr, const char* file, int line, const char* fmt, ...) noexcept;
   } // namespace detail
-
 } // namespace ecs
 
 #if ECS_ENABLE_ASSERTS

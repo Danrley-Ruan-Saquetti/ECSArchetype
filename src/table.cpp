@@ -26,12 +26,15 @@ namespace ecs {
     for (Column& c : columns_) {
       if (!c.data)
         continue;
+
       if (!c.info->trivial)
         for (uint32_t r = 0; r < count_; ++r)
           c.info->destroy(c.at(r));
+
       alignedFree(c.data, columnAlign(*c.info));
       c.data = nullptr;
     }
+
     count_ = capacity_ = 0;
     entities_.clear();
   }
@@ -54,20 +57,24 @@ namespace ecs {
   Table& Table::operator=(Table&& o) noexcept {
     if (this != &o) {
       releaseAll();
+
       columns_ = std::move(o.columns_);
       columnTypes_ = std::move(o.columnTypes_);
       entities_ = std::move(o.entities_);
       count_ = o.count_;
       capacity_ = o.capacity_;
+
       o.columns_.clear();
       o.entities_.clear();
       o.count_ = o.capacity_ = 0;
     }
+
     return *this;
   }
 
   void Table::reserve(uint32_t newCap) {
     entities_.reserve(newCap); // NF-P4: push sem alocar até a capacidade
+
     // Aloca tudo antes de mover qualquer coisa: se uma alocação lançar, nada foi tocado.
     std::vector<std::byte*> fresh(columns_.size(), nullptr);
     try {
@@ -79,6 +86,7 @@ namespace ecs {
           alignedFree(fresh[i], columnAlign(*columns_[i].info));
       throw;
     }
+
     for (size_t i = 0; i < columns_.size(); ++i) {
       Column& c = columns_[i];
       if (c.data) {
@@ -92,16 +100,20 @@ namespace ecs {
             c.info->destroy(c.at(r));
           }
         }
+
         alignedFree(c.data, columnAlign(*c.info));
       }
+
       c.data = fresh[i];
     }
+
     capacity_ = newCap;
   }
 
   uint32_t Table::pushUninit(Entity e) {
     if (count_ == capacity_)
       reserve(std::max<uint32_t>(64, capacity_ * 2));
+
     entities_.push_back(e);
     return count_++;
   }
@@ -118,11 +130,12 @@ namespace ecs {
       entities_.pop_back();
       return std::nullopt;
     }
+
     for (Column& c : columns_)
       relocateValue(*c.info, c.at(r), c.at(last));
+
     entities_[r] = entities_.back();
     entities_.pop_back();
     return entities_[r];
   }
-
 } // namespace ecs

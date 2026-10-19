@@ -10,6 +10,7 @@ namespace {
   struct C {
     uint32_t v;
   };
+
   ecs::Signature sorted(ecs::Signature s) {
     std::sort(s.begin(), s.end());
     return s;
@@ -18,7 +19,9 @@ namespace {
 
 TEST_CASE("columnTypes exclui tags; signature ordenada inclui") {
   ecs::Signature sig = sorted({ecs::componentId<A>(), ecs::componentId<Tag>(), ecs::componentId<B>()});
+
   ecs::Archetype a(1, sig);
+
   CHECK(a.signature == sig);
   CHECK(a.columnTypes.size() == 2);
   CHECK(a.table.columnCount() == 2);
@@ -57,9 +60,11 @@ TEST_CASE("buildEdge mapeia colunas por merge") {
 
 TEST_CASE("SmallMap mantém ordem e encontra") {
   ecs::SmallMap<uint32_t, int> m;
+
   m.insert(5, 50);
   m.insert(1, 10);
   m.insert(3, 30);
+
   CHECK(m.size() == 3);
   CHECK(m.begin()->first == 1);
   REQUIRE(m.find(3) != nullptr);

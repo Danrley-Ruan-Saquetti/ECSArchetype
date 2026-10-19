@@ -12,7 +12,6 @@
 #include "ecs/type_info.hpp"
 
 namespace ecs {
-
   enum class CommandOp : uint8_t { Spawn,
                                    Destroy,
                                    Add,
@@ -50,6 +49,7 @@ namespace ecs {
     CommandPlan() = default;
     CommandPlan(CommandPlan&&) = default; // `entities` pode apontar para `owned` ou para os trechos do buffer
     CommandPlan(const CommandPlan&) = delete;
+
     std::vector<EntityPlan> owned;
     std::span<const EntityPlan> entities; // na ordem da primeira aparição
     // Vazio quando os comandos de cada entidade já são consecutivos no buffer (caso comum de lotes):
@@ -136,6 +136,7 @@ namespace ecs {
   void CommandBuffer::add(Entity e, T&& value) {
     using U = std::remove_cvref_t<T>;
     const ComponentId cid = componentId<U>();
+
     if constexpr (std::is_empty_v<U>) {
       pushRecord(CommandOp::Add, e, cid, 0, 1, true);
     } else {
@@ -144,5 +145,4 @@ namespace ecs {
       ::new (p) U(std::forward<T>(value));
     }
   }
-
 } // namespace ecs

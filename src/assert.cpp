@@ -11,6 +11,7 @@ namespace ecs {
       std::fflush(stderr);
       std::abort();
     }
+
     AssertHandler g_handler = &defaultHandler;
   } // namespace
 
@@ -27,8 +28,10 @@ namespace ecs {
       va_start(args, fmt);
       std::vsnprintf(msg, sizeof msg, fmt, args);
       va_end(args);
+
       char full[512];
       std::snprintf(full, sizeof full, "ECS_ASSERT failed: %s | %s (%s:%d)", expr, msg, file, line);
+
       g_handler(full);
       std::abort();
     }

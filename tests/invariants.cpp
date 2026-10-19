@@ -9,6 +9,7 @@
 TEST_CASE("sequência create/add/remove/destroy mantém invariantes") {
   ecs::World w;
   CHECK_INV(w);
+
   std::vector<ecs::Entity> es;
   for (uint64_t i = 0; i < 100; ++i) {
     es.push_back(w.create());
@@ -51,16 +52,19 @@ TEST_CASE("I-2: LifeCounter bate com linhas vivas") {
     };
     for (int i = 0; i < N; ++i)
       es.push_back(w.create(A{uint64_t(i)}));
+
     for (int i = 0; i < N; i += 2) {
       w.add(es[i], LifeCounter{uint64_t(i)});
       hasLC[i] = true;
     }
     CHECK(LifeCounter::alive == expected());
+
     for (int i = 0; i < N; i += 4) {
       w.remove<LifeCounter>(es[i]);
       hasLC[i] = false;
     }
     CHECK(LifeCounter::alive == expected());
+
     for (int i = 0; i < N; i += 3) {
       w.destroy(es[i]);
       dead[i] = true;

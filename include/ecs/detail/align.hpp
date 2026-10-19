@@ -4,7 +4,6 @@
 #include <new>
 
 namespace ecs {
-
   constexpr size_t alignUp(size_t v, size_t a) noexcept {
     return (v + a - 1) & ~(a - 1);
   }
@@ -15,5 +14,4 @@ namespace ecs {
   inline void alignedFree(std::byte* p, size_t align) noexcept {
     ::operator delete(p, std::align_val_t(align));
   }
-
 } // namespace ecs

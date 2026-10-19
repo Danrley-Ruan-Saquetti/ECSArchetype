@@ -15,7 +15,6 @@
 #include "ecs/type_info.hpp"
 
 namespace ecs {
-
   // Filtros: tags (ou componentes) que o arquétipo deve / não deve ter, sem entregá-los ao sistema.
   template <class... Us>
   struct With {};
@@ -27,6 +26,7 @@ namespace ecs {
     explicit QueryCacheBase(uint32_t* iterating)
       : iterating_(iterating) {}
     virtual ~QueryCacheBase() = default;
+
     virtual void onArchetypeCreated(Archetype& a) = 0;
     virtual bool matches(const Archetype& a) const = 0;
     virtual bool isMatched(const Archetype* a) const = 0;
@@ -47,6 +47,7 @@ namespace ecs {
       }
       IterationGuard(const IterationGuard&) = delete;
       IterationGuard& operator=(const IterationGuard&) = delete;
+
       uint32_t* p_;
     };
   } // namespace detail
@@ -96,6 +97,7 @@ namespace ecs {
       for (ComponentId c : without_)
         if (std::binary_search(a.signature.begin(), a.signature.end(), c))
           return false;
+
       return true;
     }
 
@@ -106,6 +108,7 @@ namespace ecs {
     void onArchetypeCreated(Archetype& a) override {
       if (!matches(a))
         return;
+
       MatchedTable<Ts...> m{&a, {}};
       for (size_t i = 0; i < tsIds_.size(); ++i)
         m.cols[i] = columnOf(a, tsIds_[i]); // resolvido no match (R-QY-4)
@@ -120,6 +123,7 @@ namespace ecs {
         Table& t = m.arch->table;
         if (t.count() == 0)
           continue;
+
         callBlock(f, t, m, std::index_sequence_for<Ts...>{});
       }
     }
@@ -133,6 +137,7 @@ namespace ecs {
         const uint32_t n = t.count();
         if (n == 0)
           continue;
+
         callRows(f, t, m, n, std::index_sequence_for<Ts...>{});
       }
     }
@@ -147,6 +152,7 @@ namespace ecs {
     static void callRows(F& f, Table& t, const MatchedTable<Ts...>& m, uint32_t n, std::index_sequence<Is...>) {
       std::tuple<Ts*...> cols{reinterpret_cast<Ts*>(t.column(m.cols[Is]).data)...};
       const Entity* ents = t.entities().data();
+
       if constexpr (std::is_invocable_v<F&, Entity, Ts&...>) {
         for (uint32_t r = 0; r < n; ++r)
           f(ents[r], std::get<Is>(cols)[r]...);
@@ -160,5 +166,4 @@ namespace ecs {
     std::array<ComponentId, sizeof...(Ts)> tsIds_;
     std::vector<MatchedTable<Ts...>> matched_;
   };
-
 } // namespace ecs

@@ -7,12 +7,12 @@
 #include <vector>
 
 namespace ecs {
-
   struct Archetype;
 
   struct Entity {
     uint32_t index;
     uint32_t generation;
+
     friend bool operator==(Entity, Entity) = default;
   };
   inline constexpr Entity NullEntity{UINT32_MAX, 0};
@@ -48,6 +48,7 @@ namespace ecs {
         idx = static_cast<uint32_t>(records_.size());
         records_.push_back(EntityRecord{nullptr, 0, 0});
       }
+
       records_[idx].arch = nullptr;
       return Entity{idx, records_[idx].generation};
     }
@@ -57,6 +58,7 @@ namespace ecs {
       EntityRecord& r = records_[index];
       r.arch = nullptr;
       ++r.generation;
+
       if (r.generation != UINT32_MAX)
         freeList_.push_back(index);
     }
@@ -90,5 +92,4 @@ namespace ecs {
     std::vector<EntityRecord> records_;
     std::vector<uint32_t> freeList_;
   };
-
 } // namespace ecs

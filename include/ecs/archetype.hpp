@@ -9,9 +9,9 @@
 #include "ecs/type_info.hpp"
 
 namespace ecs {
-
   using ArchetypeId = uint32_t;
   using Signature = std::vector<ComponentId>;
+
   inline constexpr uint16_t NoColumn = UINT16_MAX;
   inline constexpr ComponentId NoComponent = UINT32_MAX;
 
@@ -24,6 +24,7 @@ namespace ecs {
           h ^= (id >> (8 * i)) & 0xffu;
           h *= 1099511628211ull;
         }
+
       return static_cast<size_t>(h);
     }
   };
@@ -52,5 +53,4 @@ namespace ecs {
   // Merge O(k) das columnTypes de src e dst (R-AR-2). `added` = componente recém-adicionado
   // (NoComponent para remoção ou salto arbitrário).
   Edge buildEdge(const Archetype& src, Archetype& dst, ComponentId added);
-
 } // namespace ecs

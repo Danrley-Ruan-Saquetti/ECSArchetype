@@ -12,7 +12,6 @@
 #include "ecs/world.hpp"
 
 namespace {
-
   template <bool NT, int I>
   auto mk(uint64_t v) {
     if constexpr (NT)
@@ -35,17 +34,20 @@ namespace {
     std::vector<ecs::Entity> es;
     for (int i = 0; i < E; ++i)
       es.push_back(createK<NT>(w, i, std::make_index_sequence<K>{}));
+
     using X = decltype(mk<NT, kExtra>(0));
     for (auto e : es) { // aquece arestas e capacidades
       w.add(e, mk<NT, kExtra>(1));
       w.remove<X>(e);
     }
+
     for (auto _ : state) {
       for (auto e : es) {
         w.add(e, mk<NT, kExtra>(2));
         w.remove<X>(e);
       }
     }
+
     state.counters["ns_per_op"] = benchmark::Counter(2.0 * E, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
     state.counters["archetypes"] = w.archetypeCount();
     state.counters["entities_per_archetype"] = double(E) / w.archetypeCount();
@@ -66,7 +68,9 @@ namespace {
       auto w = std::make_unique<ecs::World>();
       auto e = w->create(Comp<0>{1}, Comp<1>{2}, Comp<2>{3}, Comp<3>{4});
       state.ResumeTiming();
+
       w->add(e, Comp<kExtra>{5});
+
       state.PauseTiming();
       w.reset();
       state.ResumeTiming();
@@ -96,12 +100,14 @@ namespace {
     for (uint32_t i = 0; i < kGetN; ++i)
       es.push_back(w.create(Comp<0>{i}, Comp<1>{i}, Comp<2>{i}, Comp<3>{i}));
     const auto perm = permutation(kGetN);
+
     for (auto _ : state) {
       uint64_t sum = 0;
       for (uint32_t i : perm)
         sum += w.get<Comp<2>>(es[i]).v;
       benchmark::DoNotOptimize(sum);
     }
+
     state.counters["per_get"] = benchmark::Counter(kGetN, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_RandomGet);
@@ -111,12 +117,14 @@ namespace {
     for (uint32_t i = 0; i < kGetN; ++i)
       v[i] = Rec4{i, i, i, i};
     const auto perm = permutation(kGetN);
+
     for (auto _ : state) {
       uint64_t sum = 0;
       for (uint32_t i : perm)
         sum += v[i].c;
       benchmark::DoNotOptimize(sum);
     }
+
     state.counters["per_get"] = benchmark::Counter(kGetN, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_RandomGet_VectorStruct);
@@ -129,6 +137,7 @@ namespace {
     es.reserve(N);
     for (uint32_t i = 0; i < N; ++i)
       es.push_back(w.create(Comp<0>{i}, Comp<1>{i}, Comp<2>{i}, Comp<3>{i}));
+
     std::mt19937 rng(99);
     for (auto _ : state) {
       for (uint32_t k = 0; k < K; ++k) {
@@ -137,10 +146,10 @@ namespace {
         es[i] = w.create(Comp<0>{k}, Comp<1>{k}, Comp<2>{k}, Comp<3>{k});
       }
     }
+
     state.counters["ns_per_op"] = benchmark::Counter(2.0 * K, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_CreateDestroyChurn);
-
 } // namespace
 
 BENCHMARK_MAIN();

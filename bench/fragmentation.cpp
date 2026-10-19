@@ -10,7 +10,6 @@
 #include "ecs/world.hpp"
 
 namespace {
-
   template <int I>
   struct Frag {}; // tag
 
@@ -28,6 +27,7 @@ namespace {
     const auto n = static_cast<size_t>(state.range(0));
     std::vector<float3> pos(n, float3{0.f, 0.f, 0.f});
     std::vector<float3> vel(n, float3{1.f, 2.f, 3.f});
+
     for (auto _ : state) {
       float3* p = pos.data();
       const float3* v = vel.data();
@@ -36,9 +36,11 @@ namespace {
         p[i].y += v[i].y * kDt;
         p[i].z += v[i].z * kDt;
       }
+
       benchmark::DoNotOptimize(pos.data());
       benchmark::ClobberMemory();
     }
+
     state.counters["per_entity"] = benchmark::Counter(
       static_cast<double>(n), benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
@@ -58,6 +60,7 @@ namespace {
           w.addRaw(e, tags[j], nullptr);
     }
     auto& q = w.query<Position, const Velocity>();
+
     for (auto _ : state) {
       q.eachBlock([](std::span<Position> pos, std::span<const Velocity> vel) {
         Position* p = pos.data();
@@ -71,13 +74,13 @@ namespace {
       });
       benchmark::ClobberMemory();
     }
+
     state.counters["archetypes"] = static_cast<double>(q.matchedCount());
     state.counters["entities_per_archetype"] = double(kN) / double(q.matchedCount());
     state.counters["per_entity"] = benchmark::Counter(
       static_cast<double>(kN), benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_IterateFragmented)->Arg(1)->Arg(8)->Arg(64)->Arg(512)->Arg(4096);
-
 } // namespace
 
 BENCHMARK_MAIN();

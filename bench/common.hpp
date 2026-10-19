@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct float3 {
   float x, y, z;
 };
@@ -12,13 +14,12 @@ struct Velocity {
 
 inline constexpr float kDt = 1.0f / 60.0f;
 
-#include <cstdint>
-
 // Mesmos bytes que T, mas com move-constructor e destrutor definidos pelo usuário:
 // força o caminho não trivial (moveConstruct + destroy) em vez do memcpy.
 template <class T>
 struct NonTrivial {
   T v;
+
   NonTrivial(T x) noexcept
     : v(x) {}
   NonTrivial(NonTrivial&& o) noexcept

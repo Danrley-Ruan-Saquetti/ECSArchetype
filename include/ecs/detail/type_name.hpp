@@ -3,7 +3,6 @@
 #include <string_view>
 
 namespace ecs::detail {
-
   // Nome legível de T extraído do nome da função (GCC/Clang: "T = X", MSVC: "typeName<X>").
   template <class T>
   constexpr std::string_view typeName() {
@@ -21,5 +20,4 @@ namespace ecs::detail {
     return s.substr(b, e - b);
 #endif
   }
-
 } // namespace ecs::detail

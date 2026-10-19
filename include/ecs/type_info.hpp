@@ -9,7 +9,6 @@
 #include "ecs/detail/type_name.hpp"
 
 namespace ecs {
-
   using ComponentId = uint32_t;
 
   struct TypeInfo {
@@ -26,7 +25,6 @@ namespace ecs {
   uint32_t registeredTypeCount() noexcept;
 
   namespace detail {
-
     ComponentId registerType(const TypeInfo& info);
 
     template <class U>
@@ -36,14 +34,15 @@ namespace ecs {
       ti.size = ti.tag ? 0 : static_cast<uint32_t>(sizeof(U));
       ti.align = static_cast<uint32_t>(alignof(U));
       ti.trivial = ti.tag || (std::is_trivially_copyable_v<U> && std::is_trivially_destructible_v<U>);
+
       if (!ti.trivial) {
         ti.moveConstruct = [](void* dst, void* src) noexcept { ::new (dst) U(std::move(*static_cast<U*>(src))); };
         ti.destroy = [](void* p) noexcept { static_cast<U*>(p)->~U(); };
       }
+
       ti.name = typeName<U>();
       return ti;
     }
-
   } // namespace detail
 
   namespace detail {
@@ -52,6 +51,7 @@ namespace ecs {
     ComponentId componentIdOf() {
       static_assert(std::is_nothrow_move_constructible_v<U>, "componente exige move-constructor noexcept (R-TI-3)");
       static_assert(alignof(U) <= 64, "componente exige alignof <= 64 (R-TI-3)");
+
       static const ComponentId id = registerType(makeTypeInfo<U>());
       return id;
     }
@@ -61,5 +61,4 @@ namespace ecs {
   ComponentId componentId() {
     return detail::componentIdOf<std::remove_cvref_t<T>>();
   }
-
 } // namespace ecs

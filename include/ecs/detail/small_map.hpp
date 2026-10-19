@@ -8,7 +8,6 @@
 #include "ecs/detail/assert.hpp"
 
 namespace ecs {
-
   // Mapa como vetor ordenado por chave: bom para poucos elementos e percursos em ordem.
   template <class K, class V>
   class SmallMap {
@@ -28,6 +27,7 @@ namespace ecs {
     V& insert(K k, V v) {
       auto it = lower(k);
       ECS_ASSERT(it == items_.end() || it->first != k, "SmallMap::insert chave repetida");
+
       it = items_.insert(it, value_type(k, std::move(v)));
       return it->second;
     }
@@ -58,7 +58,7 @@ namespace ecs {
     auto lower(K k) const noexcept {
       return std::lower_bound(items_.begin(), items_.end(), k, [](const value_type& p, K key) { return p.first < key; });
     }
+
     std::vector<value_type> items_;
   };
-
 } // namespace ecs

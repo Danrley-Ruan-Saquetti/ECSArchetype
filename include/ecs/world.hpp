@@ -21,7 +21,6 @@
 #include "ecs/type_info.hpp"
 
 namespace ecs {
-
   namespace detail {
     template <class...>
     inline constexpr bool distinctTypes = true;
@@ -95,14 +94,18 @@ namespace ecs {
     void* getRaw(Entity e, ComponentId cid) noexcept {
       if (!store_.isAlive(e))
         return nullptr;
+
       const EntityRecord& rec = store_.record(e.index);
       if (cid >= componentIndex_.size())
         return nullptr;
+
       const uint16_t* col = componentIndex_[cid].find(rec.arch->id);
       if (!col || *col == NoColumn)
         return nullptr;
+
       return rec.arch->table.column(*col).at(rec.row);
     }
+
     uint64_t signatureLookupCount() const noexcept {
       return sigLookups_;
     }
@@ -118,15 +121,18 @@ namespace ecs {
     bool hasRaw(Entity e, ComponentId cid) const noexcept {
       if (!store_.isAlive(e) || cid >= componentIndex_.size())
         return false;
+
       return componentIndex_[cid].find(store_.record(e.index).arch->id) != nullptr;
     }
 
    private:
     Archetype* findOrCreate(Signature sig);
     uint32_t moveEntity(Entity e, EntityRecord& rec, Archetype& dst, const Edge& edge);
+
     struct QueryKey {
       std::vector<uint64_t> ts; // (cid << 1) | isConst, na ordem de Ts
       Signature with, without;
+
       auto operator<=>(const QueryKey&) const = default;
     };
     QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> q);
@@ -152,10 +158,12 @@ namespace ecs {
   Entity World::create(Ts&&... comps) {
     static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "create<Ts...>: tipos repetidos");
     ECS_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
+
     Signature sig{componentId<Ts>()...};
     std::sort(sig.begin(), sig.end());
     Archetype* a = findOrCreate(std::move(sig));
     Entity e = place(*a);
+
     const uint32_t row = store_.record(e.index).row;
     (
       [&] {
@@ -166,6 +174,7 @@ namespace ecs {
         }
       }(),
       ...);
+
     return e;
   }
 
@@ -175,6 +184,7 @@ namespace ecs {
     const ComponentId cid = componentId<U>();
     ECS_ASSERT(isAlive(e) && iterating_ == 0, "add e=%u:%u type=%.*s", e.index, e.generation,
                int(typeInfo(cid).name.size()), typeInfo(cid).name.data());
+
     if constexpr (std::is_empty_v<U>) {
       addRaw(e, cid, nullptr);
     } else {
@@ -190,6 +200,7 @@ namespace ecs {
     const ComponentId cid = componentId<T>();
     ECS_ASSERT(isAlive(e), "remove e=%u:%u type=%.*s", e.index, e.generation, int(typeInfo(cid).name.size()),
                typeInfo(cid).name.data());
+
     removeRaw(e, cid);
   }
 
@@ -205,6 +216,7 @@ namespace ecs {
     const ComponentId cid = componentId<U>();
     ECS_ASSERT(isAlive(e) && hasRaw(e, cid), "get e=%u:%u type=%.*s", e.index, e.generation,
                int(typeInfo(cid).name.size()), typeInfo(cid).name.data());
+
     return *static_cast<U*>(getRaw(e, cid));
   }
 
@@ -233,19 +245,21 @@ namespace ecs {
   template <class... Ts, class... Filters>
   Query<Ts...>& World::query(Filters... filters) {
     using Q = Query<Ts...>;
+
     Signature with{componentId<std::remove_const_t<Ts>>()...}, without;
     (detail::addFilter(with, without, filters), ...);
     detail::sortUnique(with);
     detail::sortUnique(without);
+
     QueryKey key{std::vector<uint64_t>{(uint64_t(componentId<std::remove_const_t<Ts>>()) << 1 | uint64_t(std::is_const_v<Ts>))...},
                  with, without};
     if (auto it = queryCache_.find(key); it != queryCache_.end())
       return static_cast<Q&>(*it->second);
+
     auto q = std::make_unique<Q>(&iterating_, with, without);
     q->initialize(archetypes_, smallestIndex(with));
     Q& ref = *q;
     registerQuery(std::move(key), std::move(q));
     return ref;
   }
-
 } // namespace ecs

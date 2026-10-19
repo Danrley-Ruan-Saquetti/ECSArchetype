@@ -11,14 +11,18 @@ namespace {
     g_count.fetch_add(1, std::memory_order_relaxed);
     if (void* p = std::malloc(n ? n : 1))
       return p;
+
     throw std::bad_alloc();
   }
+
   void* allocateAligned(size_t n, std::align_val_t al) {
     g_count.fetch_add(1, std::memory_order_relaxed);
+
     const size_t a = static_cast<size_t>(al);
     n = (n + a - 1) / a * a; // aligned_alloc exige múltiplo do alinhamento
     if (void* p = std::aligned_alloc(a, n ? n : a))
       return p;
+
     throw std::bad_alloc();
   }
 } // namespace

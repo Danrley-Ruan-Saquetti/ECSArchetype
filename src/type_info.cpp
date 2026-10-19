@@ -24,5 +24,4 @@ namespace ecs {
     registry().push_back(info);
     return static_cast<ComponentId>(registry().size() - 1);
   }
-
 } // namespace ecs

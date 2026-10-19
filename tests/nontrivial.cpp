@@ -23,14 +23,17 @@ TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e 
       es.push_back(w.create(longStr(i), std::make_unique<int>(int(i)), std::vector<int>(i % 7 + 1, int(i)),
                             LifeCounter{i}));
     CHECK(LifeCounter::alive == 300);
+
     for (uint64_t i = 0; i < 300; i += 2)
       w.add(es[i], A{i});
     for (uint64_t i = 0; i < 300; i += 4)
       w.remove<A>(es[i]);
     CHECK_INV(w);
+
     for (uint64_t i = 1; i < 300; i += 2)
       w.destroy(es[i]);
     CHECK(LifeCounter::alive == 150);
+
     for (uint64_t i = 0; i < 300; i += 2) {
       CHECK(w.get<std::string>(es[i]) == longStr(i));
       CHECK(*w.get<std::unique_ptr<int>>(es[i]) == int(i));
@@ -53,9 +56,11 @@ TEST_CASE("remover componente não trivial destrói o valor") {
     ecs::World w;
     auto e = w.create(LifeCounter{1}, A{2});
     CHECK(LifeCounter::alive == 1);
+
     w.remove<LifeCounter>(e);
     CHECK(LifeCounter::alive == 0);
     CHECK(w.get<A>(e).v == 2);
+
     w.add(e, LifeCounter{3});
     w.add(e, LifeCounter{4}); // atribui sobre o existente
     CHECK(LifeCounter::alive == 1);

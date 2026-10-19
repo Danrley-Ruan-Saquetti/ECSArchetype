@@ -13,11 +13,11 @@
 #include "ecs/world.hpp"
 
 namespace {
-
   const std::vector<const char*>* g_required = nullptr;
 
   void handler(const char* message) noexcept {
     std::fprintf(stderr, "%s\n", message);
+
     if (g_required)
       for (const char* needle : *g_required)
         if (!std::strstr(message, needle)) {
@@ -25,6 +25,7 @@ namespace {
           std::fflush(stderr);
           std::_Exit(2);
         }
+
     std::fflush(stderr);
     std::_Exit(0);
   }
@@ -72,7 +73,6 @@ namespace {
     void (*run)();
     std::vector<const char*> required;
   };
-
 } // namespace
 
 int main(int argc, char** argv) {
@@ -83,19 +83,23 @@ int main(int argc, char** argv) {
     {"command_after_destroy", commandAfterDestroy, {"after destroy"}},
     {"destroy_during_each_block", destroyDuringEachBlock, {"destroy"}},
   };
+
   if (argc != 2) {
     std::fprintf(stderr, "uso: contract_death <caso>\n");
     return 64;
   }
+
   for (const Case& c : cases) {
     if (std::strcmp(c.name, argv[1]) != 0)
       continue;
+
     g_required = &c.required;
     ecs::setAssertHandler(&handler);
     c.run();
     std::fprintf(stderr, "assert não disparou\n");
     return 1;
   }
+
   std::fprintf(stderr, "caso desconhecido: %s\n", argv[1]);
   return 64;
 }

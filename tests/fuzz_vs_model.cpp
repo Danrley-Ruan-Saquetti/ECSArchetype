@@ -58,6 +58,7 @@ TEST_CASE("fuzz: World == modelo de referência") {
         comps[ecs::componentId<B>()] = v;
         break;
       }
+
       model[e] = std::move(comps);
       live.push_back(e);
     };
@@ -107,12 +108,14 @@ TEST_CASE("fuzz: World == modelo de referência") {
             FAIL("get diverge no op " << op << " e=" << e.index << ":" << e.generation);
         }
       }
+
       // Review Focus 4: handles obsoletos
       if (!dead.empty() && rng() % 100 == 0) {
         ecs::Entity old = dead[rng() % dead.size()];
         if (w.isAlive(old) || w.tryGet<A>(old) != nullptr)
           FAIL("handle obsoleto vivo: e=" << old.index);
       }
+
       if (op % 1000 == 0)
         requireEqual(w, model);
       if (op % 100000 == 0)
@@ -121,6 +124,7 @@ TEST_CASE("fuzz: World == modelo de referência") {
 
     requireEqual(w, model);
     CHECK_INV(w);
+
     int64_t lc = 0;
     for (auto& [e, comps] : model)
       lc += comps.count(ecs::componentId<LifeCounter>());

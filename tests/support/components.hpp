@@ -16,7 +16,9 @@ struct alignas(64) Wide {
 
 struct LifeCounter {
   static inline int64_t alive = 0;
+
   uint64_t v = 0;
+
   LifeCounter() noexcept {
     ++alive;
   }

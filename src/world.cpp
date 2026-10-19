@@ -4,18 +4,19 @@
 #include <cstring>
 
 namespace ecs {
-
   namespace {
     // srcToDst[i] deve apontar para a coluna de b com o mesmo ComponentId (ou -1 sse ausente em b).
     bool checkEdgeMapping(const Archetype& a, const Archetype& b, const Edge& edge) {
       if (edge.srcToDst.size() != a.columnTypes.size())
         return false;
+
       for (size_t i = 0; i < a.columnTypes.size(); ++i) {
         const uint16_t col = columnOf(b, a.columnTypes[i]);
         const int16_t want = col == NoColumn ? int16_t(-1) : static_cast<int16_t>(col);
         if (edge.srcToDst[i] != want)
           return false;
       }
+
       return true;
     }
   } // namespace
@@ -30,10 +31,12 @@ namespace ecs {
     ++sigLookups_;
     if (auto it = bySignature_.find(sig); it != bySignature_.end())
       return it->second;
+
     const auto id = static_cast<ArchetypeId>(archetypes_.size());
     archetypes_.push_back(std::make_unique<Archetype>(id, sig));
     Archetype* a = archetypes_.back().get();
     bySignature_.emplace(std::move(sig), a);
+
     for (ComponentId cid : a->signature) {
       if (cid >= componentIndex_.size())
         componentIndex_.resize(size_t(cid) + 1);
@@ -41,6 +44,7 @@ namespace ecs {
     }
     for (QueryCacheBase* q : queries_)
       q->onArchetypeCreated(*a);
+
     return a;
   }
 
@@ -59,12 +63,14 @@ namespace ecs {
 
   void World::destroy(Entity e) {
     ECS_ASSERT(isAlive(e) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", e.index, e.generation, iterating_);
+
     EntityRecord& rec = store_.record(e.index);
     Table& t = rec.arch->table;
     const uint32_t row = rec.row;
     t.destroyRow(row);
     if (auto moved = t.fillHole(row))
       store_.record(moved->index).row = row;
+
     store_.release(e.index);
   }
 
@@ -72,6 +78,7 @@ namespace ecs {
     Archetype& src = *rec.arch;
     const uint32_t srcRow = rec.row;
     const uint32_t dstRow = dst.table.pushUninit(e);
+
     for (uint16_t c = 0; c < src.table.columnCount(); ++c) {
       Column& sc = src.table.column(c);
       const int16_t d = edge.srcToDst[c];
@@ -80,8 +87,10 @@ namespace ecs {
       else
         destroyValue(*sc.info, sc.at(srcRow));
     }
+
     if (auto moved = src.table.fillHole(srcRow))
       store_.record(moved->index).row = srcRow;
+
     rec.arch = &dst;
     rec.row = dstRow;
     return dstRow;
@@ -91,11 +100,13 @@ namespace ecs {
     const TypeInfo& ti = typeInfo(cid);
     ECS_ASSERT(isAlive(e) && iterating_ == 0, "add e=%u:%u type=%.*s", e.index, e.generation, int(ti.name.size()),
                ti.name.data());
+
     EntityRecord& rec = store_.record(e.index);
     Archetype& src = *rec.arch;
     if (std::binary_search(src.signature.begin(), src.signature.end(), cid)) {
       if (ti.tag)
         return;
+
       void* p = src.table.column(columnOf(src, cid)).at(rec.row);
       destroyValue(ti, p);
       if (ti.trivial)
@@ -104,9 +115,11 @@ namespace ecs {
         ti.moveConstruct(p, value);
       return;
     }
+
     const Edge& edge = edgeFor(src, cid, true);
     Archetype& dst = *edge.target;
     const uint32_t dstRow = moveEntity(e, rec, dst, edge);
+
     if (edge.addedColumn >= 0) {
       void* p = dst.table.column(static_cast<uint16_t>(edge.addedColumn)).at(dstRow);
       if (ti.trivial)
@@ -119,10 +132,12 @@ namespace ecs {
   void World::removeRaw(Entity e, ComponentId cid) {
     ECS_ASSERT(isAlive(e) && iterating_ == 0, "remove e=%u:%u type=%.*s", e.index, e.generation,
                int(typeInfo(cid).name.size()), typeInfo(cid).name.data());
+
     EntityRecord& rec = store_.record(e.index);
     Archetype& src = *rec.arch;
     if (!std::binary_search(src.signature.begin(), src.signature.end(), cid))
       return;
+
     const Edge& edge = edgeFor(src, cid, false);
     moveEntity(e, rec, *edge.target, edge);
   }
@@ -131,20 +146,20 @@ namespace ecs {
     SmallMap<ComponentId, Edge>& edges = adding ? src.addEdges : src.removeEdges;
     if (const Edge* cached = edges.find(cid))
       return *cached;
+
     Signature sig = src.signature;
     auto pos = std::lower_bound(sig.begin(), sig.end(), cid);
     if (adding)
       sig.insert(pos, cid);
     else
       sig.erase(pos);
+
     Archetype* dst = findOrCreate(std::move(sig));
     return edges.insert(cid, buildEdge(src, *dst, adding ? cid : NoComponent));
   }
-
 } // namespace ecs
 
 namespace ecs {
-
   bool World::checkInvariants(std::string* why) const {
     auto fail = [&](const char* id, const std::string& what) {
       if (why)
@@ -161,6 +176,7 @@ namespace ecs {
     for (size_t i = 0; i < archetypes_.size(); ++i) {
       const Archetype& a = *archetypes_[i];
       const Table& t = a.table;
+
       // I-6 (metade): id == posição e lookup pela própria assinatura
       if (a.id != i)
         return fail("I-6", arch(a));
@@ -194,6 +210,7 @@ namespace ecs {
           return fail("I-4", ent(e.index, e.generation) + " " + arch(a) + " row=" + std::to_string(r));
       }
     }
+
     // I-6
     if (bySignature_.size() != archetypes_.size())
       return fail("I-6", "tamanhos diferentes");
@@ -203,6 +220,7 @@ namespace ecs {
       const EntityRecord& rec = store_.record(i);
       if (!rec.arch)
         continue;
+
       const Table& t = rec.arch->table;
       if (rec.row >= t.count() || t.entities()[rec.row] != Entity{i, rec.generation})
         return fail("I-3", ent(i, rec.generation));
@@ -212,6 +230,7 @@ namespace ecs {
       for (uint32_t i : fl)
         if (i >= store_.slotCount() || store_.record(i).arch != nullptr)
           return fail("I-10", "slot=" + std::to_string(i));
+
       std::sort(fl.begin(), fl.end());
       if (std::adjacent_find(fl.begin(), fl.end()) != fl.end())
         return fail("I-10", "repetido");
@@ -234,6 +253,7 @@ namespace ecs {
           return fail("I-7", "cid=" + std::to_string(c) + " " + arch(a));
       }
     }
+
     // I-8
     for (size_t qi = 0; qi < queries_.size(); ++qi)
       for (const auto& ap : archetypes_)
@@ -248,6 +268,7 @@ namespace ecs {
           const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(c) + " " + arch(a);
           if (!edge.target)
             return fail("I-9", where + " sem destino");
+
           const Archetype& b = *edge.target;
           Signature expected = a.signature;
           auto pos = std::lower_bound(expected.begin(), expected.end(), c);
@@ -257,8 +278,10 @@ namespace ecs {
             expected.erase(pos);
           if (b.signature != expected)
             return fail("I-9", where + " assinatura");
+
           if (!checkEdgeMapping(a, b, edge))
             return fail("I-9", where + " srcToDst");
+
           int16_t wantAdded = -1;
           if (adding && !typeInfo(c).tag)
             wantAdded = static_cast<int16_t>(columnOf(b, c));
@@ -267,6 +290,7 @@ namespace ecs {
         }
       }
     }
+
     // I-9 (arestas de salto do flush)
     for (const auto& [key, edge] : jumpEdges_) {
       const uint32_t sid = static_cast<uint32_t>(key >> 32), did = static_cast<uint32_t>(key);
@@ -280,13 +304,12 @@ namespace ecs {
       if (edge.addedColumn != -1)
         return fail("I-9", where + " addedColumn");
     }
+
     return true;
   }
-
 } // namespace ecs
 
 namespace ecs {
-
   QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> q) {
     QueryCacheBase* raw = q.get();
     queries_.push_back(raw);
@@ -297,19 +320,19 @@ namespace ecs {
   // c* = componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
   const SmallMap<ArchetypeId, uint16_t>* World::smallestIndex(const Signature& with) const {
     static const SmallMap<ArchetypeId, uint16_t> empty;
+
     const SmallMap<ArchetypeId, uint16_t>* best = nullptr;
     for (ComponentId c : with) {
       const auto* idx = c < componentIndex_.size() ? &componentIndex_[c] : &empty;
       if (!best || idx->size() < best->size())
         best = idx;
     }
+
     return best;
   }
-
 } // namespace ecs
 
 namespace ecs {
-
   void World::materialize(Entity e) {
     EntityRecord& rec = store_.record(e.index);
     Archetype& root = *archetypes_[0];
@@ -320,6 +343,7 @@ namespace ecs {
   void World::flushSequential(CommandBuffer& cb) {
     ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
     ECS_ASSERT(cb.store() == &store_, "flush de buffer criado por outro World");
+
     cb.forEach([&](const CommandView& v) {
       switch (v.op) {
       case CommandOp::Spawn:
@@ -342,23 +366,24 @@ namespace ecs {
         break;
       }
     });
+
     cb.clear();
   }
-
 } // namespace ecs
 
 namespace ecs {
-
   const Edge& World::jumpEdge(Archetype& src, Archetype& dst) {
     const uint64_t key = (uint64_t(src.id) << 32) | dst.id;
     if (auto it = jumpEdges_.find(key); it != jumpEdges_.end())
       return it->second;
+
     return jumpEdges_.emplace(key, buildEdge(src, dst, NoComponent)).first->second;
   }
 
   void World::flush(CommandBuffer& cb) {
     ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
     ECS_ASSERT(cb.store() == &store_, "flush de buffer criado por outro World");
+
     const CommandPlan plan = cb.plan();
     NetEffect net;
 
@@ -379,6 +404,7 @@ namespace ecs {
       for (size_t i = 0; i < ops.size(); ++i)
         if (memo.key[i].first != ops[i].cid || memo.key[i].second != ops[i].present)
           return false;
+
       return true;
     };
     auto memoBuild = [&](Archetype* src, std::span<const NetComponentOp> ops) {
@@ -391,6 +417,7 @@ namespace ecs {
         else if (!op.present && has)
           sig.erase(pos);
       }
+
       memo.dst = findOrCreate(std::move(sig));
       memo.edge = (src && memo.dst != src) ? &jumpEdge(*src, *memo.dst) : nullptr;
       memo.src = src;
@@ -408,6 +435,7 @@ namespace ecs {
     for (const EntityPlan& ep : plan.entities) {
       const Entity e = ep.e;
       cb.netEffect(plan, ep, net);
+
       const bool alive = store_.isAlive(e);
       const bool reserved = net.spawned && store_.isReserved(e);
       if (!alive && !reserved)
@@ -419,6 +447,7 @@ namespace ecs {
           store_.release(e.index);
         continue;
       }
+
       const std::span<const NetComponentOp> ops = net.ops;
       EntityRecord& rec = store_.record(e.index);
       Archetype* src = alive ? rec.arch : nullptr;
@@ -435,13 +464,16 @@ namespace ecs {
       } else {
         row = rec.row;
       }
+
       for (size_t i = 0; i < ops.size(); ++i) {
         if (!memo.col[i])
           continue;
+
         Column& c = *memo.col[i];
         void* p = c.at(row);
         if (memo.existed[i])
           destroyValue(*c.info, p);
+
         if (c.info->trivial) {
           // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
           switch (c.info->size) {
@@ -456,22 +488,23 @@ namespace ecs {
         }
       }
     }
+
     cb.clear();
   }
-
 } // namespace ecs
 
 namespace ecs {
-
   WorldStats World::stats() const {
     WorldStats st{};
     st.archetypeCount = archetypeCount();
     st.signatureLookups = sigLookups_;
+
     for (const auto& up : archetypes_) {
       const Archetype& a = *up;
       size_t rowBytes = sizeof(Entity);
       for (uint16_t i = 0; i < a.table.columnCount(); ++i)
         rowBytes += a.table.column(i).info->size;
+
       ArchetypeStats as{};
       as.id = a.id;
       as.signature = a.signature;
@@ -486,12 +519,13 @@ namespace ecs {
         as.edgeBytes += e.srcToDst.capacity() * sizeof(int16_t);
       for (const auto& [cid, e] : a.removeEdges)
         as.edgeBytes += e.srcToDst.capacity() * sizeof(int16_t);
+
       st.liveEntities += as.count;
       const uint32_t bucket = as.count == 0 ? 0 : 1 + (31 - static_cast<uint32_t>(__builtin_clz(as.count)));
       ++st.histogram[bucket];
       st.archetypes.push_back(std::move(as));
     }
+
     return st;
   }
-
 } // namespace ecs

@@ -11,7 +11,6 @@
 #include "model.hpp"
 
 namespace {
-
   void cbAdd(ecs::CommandBuffer& cb, ecs::Entity e, ecs::ComponentId cid, uint64_t v) {
     if (cid == ecs::componentId<A>())
       cb.add(e, A{v});
@@ -24,17 +23,19 @@ namespace {
     else
       cb.add(e, LifeCounter{v});
   }
-
 } // namespace
 
 TEST_CASE("spawn referenciado no mesmo buffer") {
   ecs::World w;
   auto cb = w.commands();
+
   auto e = cb.spawn();
   CHECK_FALSE(w.isAlive(e));
+
   cb.add(e, A{5});
   cb.add(e, FS{std::string(40, 'x')});
   w.flushSequential(cb);
+
   CHECK(w.get<A>(e).v == 5);
   CHECK(w.get<FS>(e).s == std::string(40, 'x'));
   CHECK_INV(w);
@@ -46,11 +47,13 @@ TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") { // Review
   auto eShort = w.create();
   auto cb = w.commands();
   std::string big = "payload-que-nao-cabe-no-sso-0123456789";
+
   cb.add(e, FS{big});
   cb.add(eShort, FS{"abc"}); // SSO: um memcpy deixaria o ponteiro interno apontando para o bloco antigo
   for (int i = 0; i < 500; ++i)
     cb.add(w.create(), A{uint64_t(i)}); // força várias realocações
   w.flushSequential(cb);
+
   CHECK(w.get<FS>(e).s == big);
   CHECK(w.get<FS>(eShort).s == "abc");
   CHECK_INV(w);
@@ -62,6 +65,7 @@ TEST_CASE("payload alignas(64) fica alinhado") {
   auto cb = w.commands();
   cb.add(e, A{1}); // desloca o offset do próximo registro
   cb.add(e, Wide{});
+
   int seen = 0;
   cb.forEach([&](const ecs::CommandView& v) {
     if (v.op == ecs::CommandOp::Add && v.cid == ecs::componentId<Wide>()) {
@@ -70,6 +74,7 @@ TEST_CASE("payload alignas(64) fica alinhado") {
     }
   });
   CHECK(seen == 1);
+
   w.flushSequential(cb);
   CHECK(w.has<Wide>(e));
 }
@@ -82,10 +87,12 @@ TEST_CASE("forEach reproduz a ordem de gravação") {
   cb.add(e, A{7});
   cb.remove<B>(e);
   cb.destroy(s);
-  CHECK(cb.commandCount() == 4);
-  CHECK_FALSE(cb.empty());
+
   std::vector<ecs::CommandOp> ops;
   cb.forEach([&](const ecs::CommandView& v) { ops.push_back(v.op); });
+
+  CHECK(cb.commandCount() == 4);
+  CHECK_FALSE(cb.empty());
   CHECK(ops == std::vector<ecs::CommandOp>{ecs::CommandOp::Spawn, ecs::CommandOp::Add, ecs::CommandOp::Remove, ecs::CommandOp::Destroy});
 }
 
@@ -100,6 +107,7 @@ TEST_CASE("buffer descartado sem flush não vaza") {
       cb.add(s, FS{std::string(64, 'y')});
     }
     CHECK(LifeCounter::alive == 0);
+
     auto e = w.create();
     CHECK(e.index == 0); // índice reservado voltou à freeList (geração + 1)
     CHECK(e.generation == 1);
@@ -114,7 +122,9 @@ TEST_CASE("flushSequential ignora handles que não estão vivos nem reservados")
   cb.add(e, B{0, 0});
   cb.destroy(e);
   cb.remove<A>(e);
+
   w.flushSequential(cb);
+
   CHECK_FALSE(w.isAlive(e));
   CHECK_INV(w);
 }
@@ -126,6 +136,7 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
   std::vector<ecs::Entity> live, dead;
   uint64_t counter = 0, total = 0;
   LifeCounter::alive = 0;
+
   while (total < 20000) {
     auto cb = w.commands();
     const unsigned n = 1 + unsigned(rng() % 64);
@@ -160,11 +171,13 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
         cb.removeRaw(old, ecs::componentId<B>());
       }
     }
+
     w.flushSequential(cb);
     CHECK(cb.empty());
     requireEqual(w, model);
     CHECK_INV(w);
   }
+
   int64_t lc = 0;
   for (auto& [e, comps] : model)
     lc += comps.count(ecs::componentId<LifeCounter>());
@@ -178,7 +191,9 @@ TEST_CASE("R-CB-4: add seguido de remove não deixa nada") {
   auto cb = w.commands();
   cb.add(e, A{1});
   cb.remove<A>(e);
+
   w.flush(cb);
+
   CHECK_FALSE(w.has<A>(e));
   CHECK(w.get<B>(e).v == 1);
   CHECK(w.archetypeCount() == before); // permaneceu no arquétipo original
@@ -191,7 +206,9 @@ TEST_CASE("R-CB-4: remove seguido de add atribui o valor novo") {
   auto cb = w.commands();
   cb.remove<A>(e);
   cb.add(e, A{9});
+
   w.flush(cb);
+
   CHECK(w.get<A>(e).v == 9);
   CHECK_INV(w);
 }
@@ -204,7 +221,9 @@ TEST_CASE("R-CB-4: add repetido mantém o último valor") {
   cb.add(e, A{2});
   cb.add(e, FS{std::string(40, 'a')});
   cb.add(e, FS{std::string(40, 'b')});
+
   w.flush(cb);
+
   CHECK(w.get<A>(e).v == 2);
   CHECK(w.get<FS>(e).s == std::string(40, 'b'));
   CHECK_INV(w);
@@ -217,7 +236,9 @@ TEST_CASE("R-CB-4: add sobre T existente atribui") {
     auto e = w.create(LifeCounter{1}, A{1});
     auto cb = w.commands();
     cb.add(e, LifeCounter{2});
+
     w.flush(cb);
+
     CHECK(w.get<LifeCounter>(e).v == 2);
     CHECK(LifeCounter::alive == 1);
     CHECK_INV(w);
@@ -237,10 +258,13 @@ TEST_CASE("R-CB-4: destroy descarta comandos anteriores; spawn+destroy libera o 
   auto s = cb.spawn();
   cb.add(s, LifeCounter{2});
   cb.destroy(s);
+
   w.flush(cb);
+
   CHECK_FALSE(w.isAlive(e));
   CHECK_FALSE(w.isAlive(s));
   CHECK(LifeCounter::alive == 0);
+
   auto n = w.create();
   CHECK(n.index == s.index);
   CHECK(n.generation == s.generation + 1);
@@ -255,7 +279,9 @@ TEST_CASE("R-CB-3: uma única transição por entidade") {
   cb.add(e, B{2, 3});
   cb.add(e, Tag{});
   auto before = w.archetypeCount();
+
   w.flush(cb);
+
   CHECK(w.archetypeCount() == before + 1); // só {A,B,Tag}; nenhum intermediário
   CHECK(w.get<B>(e).w == 3);
   CHECK(w.has<Tag>(e));
@@ -269,7 +295,9 @@ TEST_CASE("flush: entidade com dados nasce direto no arquétipo final") {
   cb.add(s, A{1});
   cb.add(s, B{2, 3});
   auto before = w.archetypeCount();
+
   w.flush(cb);
+
   CHECK(w.archetypeCount() == before + 1);
   CHECK(w.get<A>(s).v == 1);
   CHECK_INV(w);
@@ -283,7 +311,9 @@ TEST_CASE("comandos para handle destruído diretamente são ignorados") { // Rev
   w.destroy(e);
   auto reused = w.create(A{9}); // mesmo índice, geração nova
   CHECK(reused.index == e.index);
+
   w.flush(cb);
+
   CHECK_FALSE(w.has<B>(reused));
   CHECK(w.get<A>(reused).v == 9);
   CHECK_INV(w);
@@ -295,7 +325,9 @@ TEST_CASE("spawn+destroy no mesmo buffer devolve o índice com geração + 1") {
   auto s = cb.spawn();
   cb.destroy(s);
   w.flush(cb);
+
   auto again = w.create();
+
   CHECK(again.index == s.index);
   CHECK(again.generation == s.generation + 1);
 }
@@ -307,6 +339,7 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
     std::vector<std::pair<ecs::Entity, ecs::Entity>> live; // handles lógicos
     std::mt19937_64 rng(fuzzSeed() ^ 0xBADC0DE);
     uint64_t counter = 0, total = 0;
+
     auto compare = [&] {
       for (auto& [e1, e2] : live) {
         REQUIRE(w1.isAlive(e1));
@@ -320,6 +353,7 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
         }
       }
     };
+
     while (total < 30000) {
       auto cbA = w1.commands();
       auto cbB = w2.commands();
@@ -351,8 +385,10 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
           cbB.removeRaw(live[i].second, cid);
         }
       }
+
       w1.flush(cbA);
       w2.flushSequential(cbB);
+
       compare();
       CHECK_INV(w1);
       CHECK_INV(w2);
@@ -376,7 +412,9 @@ TEST_CASE("R-CB-3: comandos intercalados entre entidades ainda coalescem por ent
   cb.add(e2, B{5, 6});
   cb.add(e1, A{7});
   auto before = w.archetypeCount();
+
   w.flush(cb);
+
   CHECK(w.archetypeCount() == before + 1); // só {A,B}
   CHECK(w.get<A>(e1).v == 7);
   CHECK(w.get<B>(e1).w == 4);
@@ -394,9 +432,11 @@ TEST_CASE("buffer reutilizado depois do flush agrupa de novo") {
   cb.add(e2, A{2});
   cb.add(e1, B{0, 0}); // não consecutivo: o primeiro lote cai no caminho geral
   w.flush(cb);
+
   cb.add(e2, B{8, 9}); // segundo lote: o estado de agrupamento foi zerado pelo flush
   cb.add(e1, A{5});
   w.flush(cb);
+
   CHECK(w.get<A>(e1).v == 5);
   CHECK(w.get<B>(e2).w == 9);
   CHECK(w.get<A>(e2).v == 2);
