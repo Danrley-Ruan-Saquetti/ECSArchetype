@@ -13,24 +13,24 @@
 #include "ecs/type_info.hpp"
 
 namespace {
-  uint16_t colOf(const ecs::Table& t, ecs::ComponentId id) {
-    auto ct = t.columnTypes();
-    return static_cast<uint16_t>(std::lower_bound(ct.begin(), ct.end(), id) - ct.begin());
+  uint16_t columnIndexOf(const ecs::Table& table, ecs::ComponentId id) {
+    auto columnTypes = table.columnTypes();
+    return static_cast<uint16_t>(std::lower_bound(columnTypes.begin(), columnTypes.end(), id) - columnTypes.begin());
   }
 
-  void construct(ecs::Table& t, uint32_t row, uint64_t v) {
-    new (t.column(colOf(t, ecs::componentId<A>())).at(row)) A{v};
-    new (t.column(colOf(t, ecs::componentId<LifeCounter>())).at(row)) LifeCounter{v};
+  void construct(ecs::Table& table, uint32_t row, uint64_t value) {
+    new (table.column(columnIndexOf(table, ecs::componentId<A>())).at(row)) A{value};
+    new (table.column(columnIndexOf(table, ecs::componentId<LifeCounter>())).at(row)) LifeCounter{value};
   }
 
-  uint64_t valueA(ecs::Table& t, uint32_t row) {
-    return static_cast<A*>(t.column(colOf(t, ecs::componentId<A>())).at(row))->v;
+  uint64_t valueA(ecs::Table& table, uint32_t row) {
+    return static_cast<A*>(table.column(columnIndexOf(table, ecs::componentId<A>())).at(row))->value;
   }
 
-  void checkI1I2(const ecs::Table& t) {
-    CHECK(t.entities().size() == t.count());
-    CHECK(t.capacity() >= t.count());
-    CHECK(LifeCounter::alive == t.count());
+  void checkI1I2(const ecs::Table& table) {
+    CHECK(table.entities().size() == table.count());
+    CHECK(table.capacity() >= table.count());
+    CHECK(LifeCounter::alive == table.count());
   }
 }
 
@@ -48,26 +48,26 @@ TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
   {
     ecs::ComponentId ids[] = {ecs::componentId<A>(), ecs::componentId<LifeCounter>()};
     std::sort(std::begin(ids), std::end(ids));
-    ecs::Table t(ids);
+    ecs::Table table(ids);
 
     for (uint32_t i = 0; i < 200; ++i) {
-      auto r = t.pushUninit({i, 0});
-      construct(t, r, i);
-      checkI1I2(t);
+      auto row = table.pushUninitialized({i, 0});
+      construct(table, row, i);
+      checkI1I2(table);
     }
-    CHECK(t.capacity() == 256); // 64 → 128 → 256
+    CHECK(table.capacity() == 256); // 64 → 128 → 256
 
-    t.destroyRow(10);
-    auto moved = t.fillHole(10);
+    table.destroyRow(10);
+    auto moved = table.fillHole(10);
     REQUIRE(moved);
     CHECK(moved->index == 199);
-    CHECK(t.entities()[10].index == 199);
-    CHECK(valueA(t, 10) == 199); // valor acompanhou a entidade
-    checkI1I2(t);
+    CHECK(table.entities()[10].index == 199);
+    CHECK(valueA(table, 10) == 199); // valor acompanhou a entidade
+    checkI1I2(table);
 
-    t.destroyRow(t.count() - 1);
-    CHECK_FALSE(t.fillHole(t.count() - 1)); // última linha: nada deslocado
-    checkI1I2(t);
+    table.destroyRow(table.count() - 1);
+    CHECK_FALSE(table.fillHole(table.count() - 1)); // última linha: nada deslocado
+    checkI1I2(table);
   }
   CHECK(LifeCounter::alive == 0); // destrutor destrói linhas vivas
 }
@@ -75,25 +75,25 @@ TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
 TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
   ecs::ComponentId ids[] = {ecs::componentId<A>(), ecs::componentId<Wide>()};
   std::sort(std::begin(ids), std::end(ids));
-  ecs::Table t(ids);
+  ecs::Table table(ids);
 
-  t.pushUninit({0, 0});
+  table.pushUninitialized({0, 0});
 
-  for (uint16_t c = 0; c < t.columnCount(); ++c)
-    CHECK(reinterpret_cast<uintptr_t>(t.column(c).data) % 64 == 0);
+  for (uint16_t column = 0; column < table.columnCount(); ++column)
+    CHECK(reinterpret_cast<uintptr_t>(table.column(column).data) % 64 == 0);
 }
 
 TEST_CASE("std::string sobrevive à realocação") {
   ecs::ComponentId ids[] = {ecs::componentId<std::string>()};
-  ecs::Table t(ids);
+  ecs::Table table(ids);
   auto make = [](uint32_t i) { return std::string(40, 'a') + std::to_string(i); };
 
   for (uint32_t i = 0; i < 100; ++i) {
-    auto r = t.pushUninit({i, 0});
-    new (t.column(0).at(r)) std::string(make(i));
+    auto row = table.pushUninitialized({i, 0});
+    new (table.column(0).at(row)) std::string(make(i));
   }
 
-  CHECK(t.capacity() == 128); // cruzou 64
+  CHECK(table.capacity() == 128); // cruzou 64
   for (uint32_t i = 0; i < 100; ++i)
-    CHECK(*static_cast<std::string*>(t.column(0).at(i)) == make(i));
+    CHECK(*static_cast<std::string*>(table.column(0).at(i)) == make(i));
 }

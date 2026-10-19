@@ -15,19 +15,19 @@ namespace ecs {
   inline constexpr uint16_t NoColumn = UINT16_MAX;
   inline constexpr ComponentId NoComponent = UINT32_MAX;
 
-  struct SigHash {
+  struct SignatureHash {
     static constexpr uint64_t kFnv1aOffsetBasis = 1469598103934665603ull;
     static constexpr uint64_t kFnv1aPrime = 1099511628211ull;
 
-    size_t operator()(const Signature& s) const noexcept {
-      uint64_t h = kFnv1aOffsetBasis;
-      for (ComponentId id : s)
+    size_t operator()(const Signature& signature) const noexcept {
+      uint64_t hash = kFnv1aOffsetBasis;
+      for (ComponentId id : signature)
         for (int i = 0; i < 4; ++i) {
-          h ^= (id >> (8 * i)) & 0xffu;
-          h *= kFnv1aPrime;
+          hash ^= (id >> (8 * i)) & 0xffu;
+          hash *= kFnv1aPrime;
         }
 
-      return static_cast<size_t>(h);
+      return static_cast<size_t>(hash);
     }
   };
 
@@ -35,7 +35,7 @@ namespace ecs {
 
   struct Edge {
     Archetype* target = nullptr;
-    std::vector<int16_t> srcToDst; // por coluna da origem: coluna no destino, ou -1
+    std::vector<int16_t> sourceToDestination; // por coluna da origem: coluna no destino, ou -1
     int16_t addedColumn = -1; // add de componente com dados: coluna no destino
   };
 
@@ -46,12 +46,12 @@ namespace ecs {
     Table table;
     SmallMap<ComponentId, Edge> addEdges, removeEdges;
 
-    Archetype(ArchetypeId id, Signature sig);
+    Archetype(ArchetypeId id, Signature signature);
   };
 
-  // Coluna de `c` em `a`, ou NoColumn se ausente ou tag.
-  uint16_t columnOf(const Archetype& a, ComponentId c) noexcept;
+  // Coluna de `componentId` em `archetype`, ou NoColumn se ausente ou tag.
+  uint16_t columnOf(const Archetype& archetype, ComponentId componentId) noexcept;
 
   // `added` = componente recém-adicionado; NoComponent para remoção ou salto arbitrário.
-  Edge buildEdge(const Archetype& src, Archetype& dst, ComponentId added);
+  Edge buildEdge(const Archetype& source, Archetype& destination, ComponentId added);
 }

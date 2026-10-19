@@ -13,11 +13,11 @@ namespace ecs {
 
   struct TypeInfo {
     uint32_t size;
-    uint32_t align;
+    uint32_t alignment;
     bool trivial;
     bool tag;
-    void (*moveConstruct)(void* dst, void* src) noexcept; // nullptr se trivial
-    void (*destroy)(void* p) noexcept; // nullptr se trivial
+    void (*moveConstruct)(void* destination, void* source) noexcept; // nullptr se trivial
+    void (*destroy)(void* object) noexcept; // nullptr se trivial
     std::string_view name;
   };
 
@@ -29,19 +29,19 @@ namespace ecs {
 
     template <class U>
     TypeInfo makeTypeInfo() {
-      TypeInfo ti{};
-      ti.tag = std::is_empty_v<U>;
-      ti.size = ti.tag ? 0 : static_cast<uint32_t>(sizeof(U));
-      ti.align = static_cast<uint32_t>(alignof(U));
-      ti.trivial = ti.tag || (std::is_trivially_copyable_v<U> && std::is_trivially_destructible_v<U>);
+      TypeInfo info{};
+      info.tag = std::is_empty_v<U>;
+      info.size = info.tag ? 0 : static_cast<uint32_t>(sizeof(U));
+      info.alignment = static_cast<uint32_t>(alignof(U));
+      info.trivial = info.tag || (std::is_trivially_copyable_v<U> && std::is_trivially_destructible_v<U>);
 
-      if (!ti.trivial) {
-        ti.moveConstruct = [](void* dst, void* src) noexcept { ::new (dst) U(std::move(*static_cast<U*>(src))); };
-        ti.destroy = [](void* p) noexcept { static_cast<U*>(p)->~U(); };
+      if (!info.trivial) {
+        info.moveConstruct = [](void* destination, void* source) noexcept { ::new (destination) U(std::move(*static_cast<U*>(source))); };
+        info.destroy = [](void* object) noexcept { static_cast<U*>(object)->~U(); };
       }
 
-      ti.name = typeName<U>();
-      return ti;
+      info.name = typeName<U>();
+      return info;
     }
 
     // O static fica em U (já sem cvref) para que componentId<const A&> e componentId<A> compartilhem o ID.

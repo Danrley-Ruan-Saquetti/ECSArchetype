@@ -9,7 +9,7 @@
 #include "ecs/world.hpp"
 
 namespace {
-  std::string longStr(uint64_t i) {
+  std::string longString(uint64_t i) {
     return std::string(48, 'z') + std::to_string(i);
   }
 }
@@ -17,35 +17,35 @@ namespace {
 TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e transições") {
   LifeCounter::alive = 0;
   {
-    ecs::World w;
-    std::vector<ecs::Entity> es;
+    ecs::World world;
+    std::vector<ecs::Entity> entities;
     for (uint64_t i = 0; i < 300; ++i)
-      es.push_back(w.create(longStr(i), std::make_unique<int>(int(i)), std::vector<int>(i % 7 + 1, int(i)),
-                            LifeCounter{i}));
+      entities.push_back(world.create(longString(i), std::make_unique<int>(int(i)), std::vector<int>(i % 7 + 1, int(i)),
+                                      LifeCounter{i}));
     CHECK(LifeCounter::alive == 300);
 
     for (uint64_t i = 0; i < 300; i += 2)
-      w.add(es[i], A{i});
+      world.add(entities[i], A{i});
     for (uint64_t i = 0; i < 300; i += 4)
-      w.remove<A>(es[i]);
-    CHECK_INV(w);
+      world.remove<A>(entities[i]);
+    CHECK_INVARIANTS(world);
 
     for (uint64_t i = 1; i < 300; i += 2)
-      w.destroy(es[i]);
+      world.destroy(entities[i]);
     CHECK(LifeCounter::alive == 150);
 
     for (uint64_t i = 0; i < 300; i += 2) {
-      CHECK(w.get<std::string>(es[i]) == longStr(i));
-      CHECK(*w.get<std::unique_ptr<int>>(es[i]) == int(i));
-      CHECK(w.get<std::vector<int>>(es[i]).size() == i % 7 + 1);
-      CHECK(w.get<LifeCounter>(es[i]).v == i);
-      CHECK(w.has<A>(es[i]) == (i % 4 != 0));
+      CHECK(world.get<std::string>(entities[i]) == longString(i));
+      CHECK(*world.get<std::unique_ptr<int>>(entities[i]) == int(i));
+      CHECK(world.get<std::vector<int>>(entities[i]).size() == i % 7 + 1);
+      CHECK(world.get<LifeCounter>(entities[i]).value == i);
+      CHECK(world.has<A>(entities[i]) == (i % 4 != 0));
       if (i % 4 != 0)
-        CHECK(w.get<A>(es[i]).v == i);
+        CHECK(world.get<A>(entities[i]).value == i);
     }
     for (uint64_t i = 1; i < 300; i += 2)
-      CHECK_FALSE(w.isAlive(es[i]));
-    CHECK_INV(w);
+      CHECK_FALSE(world.isAlive(entities[i]));
+    CHECK_INVARIANTS(world);
   }
   CHECK(LifeCounter::alive == 0);
 }
@@ -53,18 +53,18 @@ TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e 
 TEST_CASE("remover componente não trivial destrói o valor") {
   LifeCounter::alive = 0;
   {
-    ecs::World w;
-    auto e = w.create(LifeCounter{1}, A{2});
+    ecs::World world;
+    auto entity = world.create(LifeCounter{1}, A{2});
     CHECK(LifeCounter::alive == 1);
 
-    w.remove<LifeCounter>(e);
+    world.remove<LifeCounter>(entity);
     CHECK(LifeCounter::alive == 0);
-    CHECK(w.get<A>(e).v == 2);
+    CHECK(world.get<A>(entity).value == 2);
 
-    w.add(e, LifeCounter{3});
-    w.add(e, LifeCounter{4}); // atribui sobre o existente
+    world.add(entity, LifeCounter{3});
+    world.add(entity, LifeCounter{4}); // atribui sobre o existente
     CHECK(LifeCounter::alive == 1);
-    CHECK(w.get<LifeCounter>(e).v == 4);
+    CHECK(world.get<LifeCounter>(entity).value == 4);
   }
   CHECK(LifeCounter::alive == 0);
 }

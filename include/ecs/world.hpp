@@ -35,7 +35,7 @@ namespace ecs {
     size_t columnBytes; // capacity × Σ size das colunas + capacity × sizeof(Entity)
     size_t idleBytes; // (capacity − count) × (Σ size + sizeof(Entity))
     size_t signatureBytes; // capacity() de signature + columnTypes, em bytes
-    size_t edgeBytes; // capacityBytes() de addEdges/removeEdges + srcToDst
+    size_t edgeBytes; // capacityBytes() de addEdges/removeEdges + sourceToDestination
   };
 
   struct WorldStats {
@@ -56,57 +56,57 @@ namespace ecs {
     Entity create();
     // Nasce direto no arquétipo final. Lvalues são copiados.
     template <class... Ts>
-    Entity create(Ts&&... comps);
-    void destroy(Entity e);
-    bool isAlive(Entity e) const noexcept {
-      return store_.isAlive(e);
+    Entity create(Ts&&... components);
+    void destroy(Entity entity);
+    bool isAlive(Entity entity) const noexcept {
+      return store_.isAlive(entity);
     }
     bool isIterating() const noexcept {
       return iterating_ > 0;
     }
 
     template <class T>
-    void add(Entity e, T&& value); // ou atribui, se já tiver T
+    void add(Entity entity, T&& value); // ou atribui, se já tiver T
     template <class T>
-    void remove(Entity e);
+    void remove(Entity entity);
     template <class T>
-    bool has(Entity e) const noexcept;
+    bool has(Entity entity) const noexcept;
     template <class T>
-    T& get(Entity e);
+    T& get(Entity entity);
     template <class T>
-    T* tryGet(Entity e) noexcept;
+    T* tryGet(Entity entity) noexcept;
 
-    void addRaw(Entity e, ComponentId cid, void* value); // move de `value`; ignorado para tags
-    void removeRaw(Entity e, ComponentId cid);
+    void addRaw(Entity entity, ComponentId componentId, void* value); // move de `value`; ignorado para tags
+    void removeRaw(Entity entity, ComponentId componentId);
 
     CommandBuffer commands() {
       return CommandBuffer(store_);
     }
     // Oráculo sem coalescing: aplica cada comando na ordem de gravação e limpa o buffer.
-    void flushSequential(CommandBuffer& cb);
+    void flushSequential(CommandBuffer& commandBuffer);
     // Duas passadas (R-CB-3): agrupa por entidade e faz uma única transição para o arquétipo final.
-    void flush(CommandBuffer& cb);
+    void flush(CommandBuffer& commandBuffer);
 
     // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação.
     template <class... Ts, class... Filters>
     Query<Ts...>& query(Filters... filters);
-    void* getRaw(Entity e, ComponentId cid) noexcept {
-      if (!store_.isAlive(e))
+    void* getRaw(Entity entity, ComponentId componentId) noexcept {
+      if (!store_.isAlive(entity))
         return nullptr;
 
-      const EntityRecord& rec = store_.record(e.index);
-      if (cid >= componentIndex_.size())
+      const EntityRecord& record = store_.record(entity.index);
+      if (componentId >= componentIndex_.size())
         return nullptr;
 
-      const uint16_t* col = componentIndex_[cid].find(rec.arch->id);
-      if (!col || *col == NoColumn)
+      const uint16_t* column = componentIndex_[componentId].find(record.archetype->id);
+      if (!column || *column == NoColumn)
         return nullptr;
 
-      return rec.arch->table.column(*col).at(rec.row);
+      return record.archetype->table.column(*column).at(record.row);
     }
 
     uint64_t signatureLookupCount() const noexcept {
-      return sigLookups_;
+      return signatureLookups_;
     }
     uint32_t archetypeCount() const noexcept {
       return static_cast<uint32_t>(archetypes_.size());
@@ -117,36 +117,36 @@ namespace ecs {
     // Em falha escreve em *why o ID e o objeto (ex.: "I-3 e=4:1") e devolve false.
     bool checkInvariants(std::string* why = nullptr) const;
 
-    bool hasRaw(Entity e, ComponentId cid) const noexcept {
-      if (!store_.isAlive(e) || cid >= componentIndex_.size())
+    bool hasRaw(Entity entity, ComponentId componentId) const noexcept {
+      if (!store_.isAlive(entity) || componentId >= componentIndex_.size())
         return false;
 
-      return componentIndex_[cid].find(store_.record(e.index).arch->id) != nullptr;
+      return componentIndex_[componentId].find(store_.record(entity.index).archetype->id) != nullptr;
     }
 
    private:
-    Archetype* findOrCreate(Signature sig);
-    uint32_t moveEntity(Entity e, EntityRecord& rec, Archetype& dst, const Edge& edge);
+    Archetype* findOrCreate(Signature signature);
+    uint32_t moveEntity(Entity entity, EntityRecord& record, Archetype& destination, const Edge& edge);
 
     struct QueryKey {
-      std::vector<uint64_t> ts; // (cid << 1) | isConst, na ordem de Ts
+      std::vector<uint64_t> components; // (componentId << 1) | isConst, na ordem de Ts
       Signature with, without;
 
       auto operator<=>(const QueryKey&) const = default;
     };
-    QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> q);
+    QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query);
     const SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
 
-    const Edge& edgeFor(Archetype& src, ComponentId cid, bool adding);
-    const Edge& jumpEdge(Archetype& src, Archetype& dst);
+    const Edge& edgeFor(Archetype& source, ComponentId componentId, bool adding);
+    const Edge& jumpEdge(Archetype& source, Archetype& destination);
     void materialize(Entity reserved);
-    Entity place(Archetype& a); // a linha nasce morta: o chamador constrói as colunas
+    Entity place(Archetype& archetype); // a linha nasce morta: o chamador constrói as colunas
     Archetype& root() noexcept {
       return *archetypes_[0];
     }
 
     bool checkArchetypes(std::string* why) const;
-    bool checkRows(const Archetype& a, std::string* why) const;
+    bool checkRows(const Archetype& archetype, std::string* why) const;
     bool checkRecords(std::string* why) const;
     bool checkFreeList(std::string* why) const;
     bool checkComponentIndex(std::string* why) const;
@@ -155,86 +155,86 @@ namespace ecs {
 
     EntityStore store_;
     std::vector<std::unique_ptr<Archetype>> archetypes_;
-    std::unordered_map<Signature, Archetype*, SigHash> bySignature_;
-    std::vector<SmallMap<ArchetypeId, uint16_t>> componentIndex_; // [cid]: arquétipo → coluna (NoColumn p/ tag)
+    std::unordered_map<Signature, Archetype*, SignatureHash> bySignature_;
+    std::vector<SmallMap<ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
     uint32_t iterating_ = 0;
-    mutable uint64_t sigLookups_ = 0;
+    mutable uint64_t signatureLookups_ = 0;
     std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
     std::vector<QueryCacheBase*> queries_;
-    std::unordered_map<uint64_t, Edge> jumpEdges_; // (src.id << 32) | dst.id
+    std::unordered_map<uint64_t, Edge> jumpEdges_; // (source.id << 32) | destination.id
   };
 
   template <class... Ts>
-  Entity World::create(Ts&&... comps) {
+  Entity World::create(Ts&&... components) {
     static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "create<Ts...>: tipos repetidos");
     ECS_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
 
-    Signature sig{componentId<Ts>()...};
-    std::sort(sig.begin(), sig.end());
-    Archetype* a = findOrCreate(std::move(sig));
-    Entity e = place(*a);
+    Signature signature{componentId<Ts>()...};
+    std::sort(signature.begin(), signature.end());
+    Archetype* archetype = findOrCreate(std::move(signature));
+    Entity entity = place(*archetype);
 
-    const uint32_t row = store_.record(e.index).row;
+    const uint32_t row = store_.record(entity.index).row;
     (
       [&] {
         using U = std::remove_cvref_t<Ts>;
         if constexpr (!std::is_empty_v<U>) {
-          void* p = a->table.column(columnOf(*a, componentId<U>())).at(row);
-          ::new (p) U(std::forward<Ts>(comps));
+          void* slot = archetype->table.column(columnOf(*archetype, componentId<U>())).at(row);
+          ::new (slot) U(std::forward<Ts>(components));
         }
       }(),
       ...);
 
-    return e;
+    return entity;
   }
 
   template <class T>
-  void World::add(Entity e, T&& value) {
+  void World::add(Entity entity, T&& value) {
     using U = std::remove_cvref_t<T>;
-    const ComponentId cid = componentId<U>();
-    ECS_ASSERT(isAlive(e) && iterating_ == 0, "add e=%u:%u type=%.*s", e.index, e.generation,
-               int(typeInfo(cid).name.size()), typeInfo(cid).name.data());
+    const ComponentId componentId = ecs::componentId<U>();
+    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation,
+               int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
     if constexpr (std::is_empty_v<U>) {
-      addRaw(e, cid, nullptr);
+      addRaw(entity, componentId, nullptr);
     } else {
       // Temporário construído ANTES de qualquer mudança estrutural: `value` pode apontar
       // para dentro do próprio World (ex.: get<B>(outra)).
-      U tmp(std::forward<T>(value));
-      addRaw(e, cid, &tmp);
+      U temporary(std::forward<T>(value));
+      addRaw(entity, componentId, &temporary);
     }
   }
 
   template <class T>
-  void World::remove(Entity e) {
-    const ComponentId cid = componentId<T>();
-    ECS_ASSERT(isAlive(e), "remove e=%u:%u type=%.*s", e.index, e.generation, int(typeInfo(cid).name.size()),
-               typeInfo(cid).name.data());
+  void World::remove(Entity entity) {
+    const ComponentId componentId = ecs::componentId<T>();
+    ECS_ASSERT(isAlive(entity), "remove e=%u:%u type=%.*s", entity.index, entity.generation, int(typeInfo(componentId).name.size()),
+               typeInfo(componentId).name.data());
 
-    removeRaw(e, cid);
+    removeRaw(entity, componentId);
   }
 
   template <class T>
-  bool World::has(Entity e) const noexcept {
-    return hasRaw(e, componentId<T>());
+  bool World::has(Entity entity) const noexcept {
+    return hasRaw(entity, componentId<T>());
   }
 
   template <class T>
-  T& World::get(Entity e) {
+  T& World::get(Entity entity) {
     using U = std::remove_cvref_t<T>;
     static_assert(!std::is_empty_v<U>, "get<Tag> não é permitido");
-    const ComponentId cid = componentId<U>();
-    ECS_ASSERT(isAlive(e) && hasRaw(e, cid), "get e=%u:%u type=%.*s", e.index, e.generation,
-               int(typeInfo(cid).name.size()), typeInfo(cid).name.data());
+    const ComponentId componentId = ecs::componentId<U>();
+    ECS_ASSERT(isAlive(entity) && hasRaw(entity, componentId), "get e=%u:%u type=%.*s", entity.index, entity.generation,
+               int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
-    return *static_cast<U*>(getRaw(e, cid));
+    return *static_cast<U*>(getRaw(entity, componentId));
   }
 
   template <class T>
-  T* World::tryGet(Entity e) noexcept {
+  T* World::tryGet(Entity entity) noexcept {
     using U = std::remove_cvref_t<T>;
     static_assert(!std::is_empty_v<U>, "tryGet<Tag> não é permitido");
-    return static_cast<U*>(getRaw(e, componentId<U>()));
+    return static_cast<U*>(getRaw(entity, componentId<U>()));
   }
 
   namespace detail {
@@ -246,9 +246,9 @@ namespace ecs {
     void addFilter(std::vector<ComponentId>&, std::vector<ComponentId>& without, Without<Us...>) {
       (without.push_back(componentId<Us>()), ...);
     }
-    inline void sortUnique(std::vector<ComponentId>& v) {
-      std::sort(v.begin(), v.end());
-      v.erase(std::unique(v.begin(), v.end()), v.end());
+    inline void sortUnique(std::vector<ComponentId>& ids) {
+      std::sort(ids.begin(), ids.end());
+      ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
     }
   }
 
@@ -266,10 +266,10 @@ namespace ecs {
     if (auto it = queryCache_.find(key); it != queryCache_.end())
       return static_cast<Q&>(*it->second);
 
-    auto q = std::make_unique<Q>(&iterating_, with, without);
-    q->initialize(archetypes_, smallestIndex(with));
-    Q& ref = *q;
-    registerQuery(std::move(key), std::move(q));
-    return ref;
+    auto created = std::make_unique<Q>(&iterating_, with, without);
+    created->initialize(archetypes_, smallestIndex(with));
+    Q& reference = *created;
+    registerQuery(std::move(key), std::move(created));
+    return reference;
   }
 }

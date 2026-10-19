@@ -11,325 +11,325 @@
 #include "model.hpp"
 
 namespace {
-  void cbAdd(ecs::CommandBuffer& cb, ecs::Entity e, ecs::ComponentId cid, uint64_t v) {
-    if (cid == ecs::componentId<A>())
-      cb.add(e, A{v});
-    else if (cid == ecs::componentId<B>())
-      cb.add(e, B{v, ~v});
-    else if (cid == ecs::componentId<FS>())
-      cb.add(e, fuzz::makeFS(v));
-    else if (cid == ecs::componentId<Tag>())
-      cb.add(e, Tag{});
+  void addToCommandBuffer(ecs::CommandBuffer& commandBuffer, ecs::Entity entity, ecs::ComponentId componentId, uint64_t value) {
+    if (componentId == ecs::componentId<A>())
+      commandBuffer.add(entity, A{value});
+    else if (componentId == ecs::componentId<B>())
+      commandBuffer.add(entity, B{value, ~value});
+    else if (componentId == ecs::componentId<FuzzState>())
+      commandBuffer.add(entity, fuzz::makeFuzzState(value));
+    else if (componentId == ecs::componentId<Tag>())
+      commandBuffer.add(entity, Tag{});
     else
-      cb.add(e, LifeCounter{v});
+      commandBuffer.add(entity, LifeCounter{value});
   }
 }
 
 TEST_CASE("spawn referenciado no mesmo buffer") {
-  ecs::World w;
-  auto cb = w.commands();
+  ecs::World world;
+  auto commandBuffer = world.commands();
 
-  auto e = cb.spawn();
-  CHECK_FALSE(w.isAlive(e));
+  auto entity = commandBuffer.spawn();
+  CHECK_FALSE(world.isAlive(entity));
 
-  cb.add(e, A{5});
-  cb.add(e, FS{std::string(40, 'x')});
-  w.flushSequential(cb);
+  commandBuffer.add(entity, A{5});
+  commandBuffer.add(entity, FuzzState{std::string(40, 'x')});
+  world.flushSequential(commandBuffer);
 
-  CHECK(w.get<A>(e).v == 5);
-  CHECK(w.get<FS>(e).s == std::string(40, 'x'));
-  CHECK_INV(w);
+  CHECK(world.get<A>(entity).value == 5);
+  CHECK(world.get<FuzzState>(entity).text == std::string(40, 'x'));
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") {
-  ecs::World w;
-  auto e = w.create();
-  auto eShort = w.create();
-  auto cb = w.commands();
+  ecs::World world;
+  auto entity = world.create();
+  auto shortEntity = world.create();
+  auto commandBuffer = world.commands();
   std::string big = "payload-que-nao-cabe-no-sso-0123456789";
 
-  cb.add(e, FS{big});
-  cb.add(eShort, FS{"abc"}); // SSO: um memcpy deixaria o ponteiro interno apontando para o bloco antigo
+  commandBuffer.add(entity, FuzzState{big});
+  commandBuffer.add(shortEntity, FuzzState{"abc"}); // SSO: um memcpy deixaria o ponteiro interno apontando para o bloco antigo
   for (int i = 0; i < 500; ++i)
-    cb.add(w.create(), A{uint64_t(i)}); // força várias realocações
-  w.flushSequential(cb);
+    commandBuffer.add(world.create(), A{uint64_t(i)}); // força várias realocações
+  world.flushSequential(commandBuffer);
 
-  CHECK(w.get<FS>(e).s == big);
-  CHECK(w.get<FS>(eShort).s == "abc");
-  CHECK_INV(w);
+  CHECK(world.get<FuzzState>(entity).text == big);
+  CHECK(world.get<FuzzState>(shortEntity).text == "abc");
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("payload alignas(64) fica alinhado") {
-  ecs::World w;
-  auto e = w.create();
-  auto cb = w.commands();
-  cb.add(e, A{1}); // desloca o offset do próximo registro
-  cb.add(e, Wide{});
+  ecs::World world;
+  auto entity = world.create();
+  auto commandBuffer = world.commands();
+  commandBuffer.add(entity, A{1}); // desloca o offset do próximo registro
+  commandBuffer.add(entity, Wide{});
 
   int seen = 0;
-  cb.forEach([&](const ecs::CommandView& v) {
-    if (v.op == ecs::CommandOp::Add && v.cid == ecs::componentId<Wide>()) {
+  commandBuffer.forEach([&](const ecs::CommandView& command) {
+    if (command.operation == ecs::CommandOperation::Add && command.componentId == ecs::componentId<Wide>()) {
       ++seen;
-      CHECK(reinterpret_cast<uintptr_t>(v.payload) % 64 == 0);
+      CHECK(reinterpret_cast<uintptr_t>(command.payload) % 64 == 0);
     }
   });
   CHECK(seen == 1);
 
-  w.flushSequential(cb);
-  CHECK(w.has<Wide>(e));
+  world.flushSequential(commandBuffer);
+  CHECK(world.has<Wide>(entity));
 }
 
 TEST_CASE("forEach reproduz a ordem de gravação") {
-  ecs::World w;
-  auto e = w.create();
-  auto cb = w.commands();
-  auto s = cb.spawn();
-  cb.add(e, A{7});
-  cb.remove<B>(e);
-  cb.destroy(s);
+  ecs::World world;
+  auto entity = world.create();
+  auto commandBuffer = world.commands();
+  auto spawned = commandBuffer.spawn();
+  commandBuffer.add(entity, A{7});
+  commandBuffer.remove<B>(entity);
+  commandBuffer.destroy(spawned);
 
-  std::vector<ecs::CommandOp> ops;
-  cb.forEach([&](const ecs::CommandView& v) { ops.push_back(v.op); });
+  std::vector<ecs::CommandOperation> operations;
+  commandBuffer.forEach([&](const ecs::CommandView& command) { operations.push_back(command.operation); });
 
-  CHECK(cb.commandCount() == 4);
-  CHECK_FALSE(cb.empty());
-  CHECK(ops == std::vector<ecs::CommandOp>{ecs::CommandOp::Spawn, ecs::CommandOp::Add, ecs::CommandOp::Remove, ecs::CommandOp::Destroy});
+  CHECK(commandBuffer.commandCount() == 4);
+  CHECK_FALSE(commandBuffer.empty());
+  CHECK(operations == std::vector<ecs::CommandOperation>{ecs::CommandOperation::Spawn, ecs::CommandOperation::Add, ecs::CommandOperation::Remove, ecs::CommandOperation::Destroy});
 }
 
 TEST_CASE("buffer descartado sem flush não vaza") {
   LifeCounter::alive = 0;
   {
-    ecs::World w;
+    ecs::World world;
     {
-      auto cb = w.commands();
-      auto s = cb.spawn();
-      cb.add(s, LifeCounter{});
-      cb.add(s, FS{std::string(64, 'y')});
+      auto commandBuffer = world.commands();
+      auto spawned = commandBuffer.spawn();
+      commandBuffer.add(spawned, LifeCounter{});
+      commandBuffer.add(spawned, FuzzState{std::string(64, 'y')});
     }
     CHECK(LifeCounter::alive == 0);
 
-    auto e = w.create();
-    CHECK(e.index == 0); // índice reservado voltou à freeList (geração + 1)
-    CHECK(e.generation == 1);
+    auto entity = world.create();
+    CHECK(entity.index == 0); // índice reservado voltou à freeList (geração + 1)
+    CHECK(entity.generation == 1);
   }
 }
 
 TEST_CASE("flushSequential ignora handles que não estão vivos nem reservados") {
-  ecs::World w;
-  auto e = w.create(A{1});
-  w.destroy(e);
-  auto cb = w.commands();
-  cb.add(e, B{0, 0});
-  cb.destroy(e);
-  cb.remove<A>(e);
+  ecs::World world;
+  auto entity = world.create(A{1});
+  world.destroy(entity);
+  auto commandBuffer = world.commands();
+  commandBuffer.add(entity, B{0, 0});
+  commandBuffer.destroy(entity);
+  commandBuffer.remove<A>(entity);
 
-  w.flushSequential(cb);
+  world.flushSequential(commandBuffer);
 
-  CHECK_FALSE(w.isAlive(e));
-  CHECK_INV(w);
+  CHECK_FALSE(world.isAlive(entity));
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("fuzz sequencial == aplicar direto") {
-  ecs::World w;
+  ecs::World world;
   Model model;
-  std::mt19937_64 rng(fuzzSeed() ^ 0xC0FFEE);
+  std::mt19937_64 generator(fuzzSeed() ^ 0xC0FFEE);
   std::vector<ecs::Entity> live, dead;
   uint64_t counter = 0, total = 0;
   LifeCounter::alive = 0;
 
   while (total < 20000) {
-    auto cb = w.commands();
-    const unsigned n = 1 + unsigned(rng() % 64);
-    for (unsigned k = 0; k < n; ++k, ++total) {
-      const unsigned r = unsigned(rng() % 100);
-      if (r < 15 || live.empty()) {
-        ecs::Entity e = cb.spawn();
-        model[e];
-        live.push_back(e);
-      } else if (r < 25) {
-        size_t i = rng() % live.size();
-        ecs::Entity e = live[i];
-        cb.destroy(e);
-        model.erase(e);
+    auto commandBuffer = world.commands();
+    const unsigned batchSize = 1 + unsigned(generator() % 64);
+    for (unsigned commandIndex = 0; commandIndex < batchSize; ++commandIndex, ++total) {
+      const unsigned roll = unsigned(generator() % 100);
+      if (roll < 15 || live.empty()) {
+        ecs::Entity entity = commandBuffer.spawn();
+        model[entity];
+        live.push_back(entity);
+      } else if (roll < 25) {
+        size_t i = generator() % live.size();
+        ecs::Entity entity = live[i];
+        commandBuffer.destroy(entity);
+        model.erase(entity);
         live[i] = live.back();
         live.pop_back();
-        dead.push_back(e);
-      } else if (r < 70) {
-        ecs::Entity e = live[rng() % live.size()];
-        ecs::ComponentId cid = fuzz::universe()[rng() % 5];
-        uint64_t v = fuzz::isTag(cid) ? 0 : makeValue(e, ++counter);
-        cbAdd(cb, e, cid, v);
-        model[e][cid] = v;
-      } else if (r < 95) {
-        ecs::Entity e = live[rng() % live.size()];
-        ecs::ComponentId cid = fuzz::universe()[rng() % 5];
-        cb.removeRaw(e, cid);
-        model[e].erase(cid);
+        dead.push_back(entity);
+      } else if (roll < 70) {
+        ecs::Entity entity = live[generator() % live.size()];
+        ecs::ComponentId componentId = fuzz::universe()[generator() % 5];
+        uint64_t value = fuzz::isTag(componentId) ? 0 : makeValue(entity, ++counter);
+        addToCommandBuffer(commandBuffer, entity, componentId, value);
+        model[entity][componentId] = value;
+      } else if (roll < 95) {
+        ecs::Entity entity = live[generator() % live.size()];
+        ecs::ComponentId componentId = fuzz::universe()[generator() % 5];
+        commandBuffer.removeRaw(entity, componentId);
+        model[entity].erase(componentId);
       } else if (!dead.empty()) {
-        ecs::Entity old = dead[rng() % dead.size()]; // obsoleto: ignorado no flush
-        cbAdd(cb, old, ecs::componentId<A>(), 1);
-        cb.removeRaw(old, ecs::componentId<B>());
+        ecs::Entity old = dead[generator() % dead.size()]; // obsoleto: ignorado no flush
+        addToCommandBuffer(commandBuffer, old, ecs::componentId<A>(), 1);
+        commandBuffer.removeRaw(old, ecs::componentId<B>());
       }
     }
 
-    w.flushSequential(cb);
-    CHECK(cb.empty());
-    requireEqual(w, model);
-    CHECK_INV(w);
+    world.flushSequential(commandBuffer);
+    CHECK(commandBuffer.empty());
+    requireEqual(world, model);
+    CHECK_INVARIANTS(world);
   }
 
-  int64_t lc = 0;
-  for (auto& [e, comps] : model)
-    lc += comps.count(ecs::componentId<LifeCounter>());
-  CHECK(LifeCounter::alive == lc);
+  int64_t lifeCounters = 0;
+  for (auto& [entity, components] : model)
+    lifeCounters += components.count(ecs::componentId<LifeCounter>());
+  CHECK(LifeCounter::alive == lifeCounters);
 }
 
 TEST_CASE("R-CB-4: add seguido de remove não deixa nada") {
-  ecs::World w;
-  auto e = w.create(B{1, 2});
-  auto before = w.archetypeCount();
-  auto cb = w.commands();
-  cb.add(e, A{1});
-  cb.remove<A>(e);
+  ecs::World world;
+  auto entity = world.create(B{1, 2});
+  auto before = world.archetypeCount();
+  auto commandBuffer = world.commands();
+  commandBuffer.add(entity, A{1});
+  commandBuffer.remove<A>(entity);
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK_FALSE(w.has<A>(e));
-  CHECK(w.get<B>(e).v == 1);
-  CHECK(w.archetypeCount() == before); // permaneceu no arquétipo original
-  CHECK_INV(w);
+  CHECK_FALSE(world.has<A>(entity));
+  CHECK(world.get<B>(entity).first == 1);
+  CHECK(world.archetypeCount() == before); // permaneceu no arquétipo original
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("R-CB-4: remove seguido de add atribui o valor novo") {
-  ecs::World w;
-  auto e = w.create(A{1});
-  auto cb = w.commands();
-  cb.remove<A>(e);
-  cb.add(e, A{9});
+  ecs::World world;
+  auto entity = world.create(A{1});
+  auto commandBuffer = world.commands();
+  commandBuffer.remove<A>(entity);
+  commandBuffer.add(entity, A{9});
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK(w.get<A>(e).v == 9);
-  CHECK_INV(w);
+  CHECK(world.get<A>(entity).value == 9);
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("R-CB-4: add repetido mantém o último valor") {
-  ecs::World w;
-  auto e = w.create();
-  auto cb = w.commands();
-  cb.add(e, A{1});
-  cb.add(e, A{2});
-  cb.add(e, FS{std::string(40, 'a')});
-  cb.add(e, FS{std::string(40, 'b')});
+  ecs::World world;
+  auto entity = world.create();
+  auto commandBuffer = world.commands();
+  commandBuffer.add(entity, A{1});
+  commandBuffer.add(entity, A{2});
+  commandBuffer.add(entity, FuzzState{std::string(40, 'a')});
+  commandBuffer.add(entity, FuzzState{std::string(40, 'b')});
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK(w.get<A>(e).v == 2);
-  CHECK(w.get<FS>(e).s == std::string(40, 'b'));
-  CHECK_INV(w);
+  CHECK(world.get<A>(entity).value == 2);
+  CHECK(world.get<FuzzState>(entity).text == std::string(40, 'b'));
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("R-CB-4: add sobre T existente atribui") {
   LifeCounter::alive = 0;
   {
-    ecs::World w;
-    auto e = w.create(LifeCounter{1}, A{1});
-    auto cb = w.commands();
-    cb.add(e, LifeCounter{2});
+    ecs::World world;
+    auto entity = world.create(LifeCounter{1}, A{1});
+    auto commandBuffer = world.commands();
+    commandBuffer.add(entity, LifeCounter{2});
 
-    w.flush(cb);
+    world.flush(commandBuffer);
 
-    CHECK(w.get<LifeCounter>(e).v == 2);
+    CHECK(world.get<LifeCounter>(entity).value == 2);
     CHECK(LifeCounter::alive == 1);
-    CHECK_INV(w);
+    CHECK_INVARIANTS(world);
   }
   CHECK(LifeCounter::alive == 0);
 }
 
 TEST_CASE("R-CB-4: destroy descarta comandos anteriores; spawn+destroy libera o índice") {
   LifeCounter::alive = 0;
-  ecs::World w;
-  w.create();
-  auto e = w.create(A{1});
-  auto cb = w.commands();
-  cb.add(e, B{0, 0});
-  cb.add(e, LifeCounter{1});
-  cb.destroy(e);
-  auto s = cb.spawn();
-  cb.add(s, LifeCounter{2});
-  cb.destroy(s);
+  ecs::World world;
+  world.create();
+  auto entity = world.create(A{1});
+  auto commandBuffer = world.commands();
+  commandBuffer.add(entity, B{0, 0});
+  commandBuffer.add(entity, LifeCounter{1});
+  commandBuffer.destroy(entity);
+  auto spawned = commandBuffer.spawn();
+  commandBuffer.add(spawned, LifeCounter{2});
+  commandBuffer.destroy(spawned);
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK_FALSE(w.isAlive(e));
-  CHECK_FALSE(w.isAlive(s));
+  CHECK_FALSE(world.isAlive(entity));
+  CHECK_FALSE(world.isAlive(spawned));
   CHECK(LifeCounter::alive == 0);
 
-  auto n = w.create();
-  CHECK(n.index == s.index);
-  CHECK(n.generation == s.generation + 1);
-  CHECK_INV(w);
+  auto created = world.create();
+  CHECK(created.index == spawned.index);
+  CHECK(created.generation == spawned.generation + 1);
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("R-CB-3: uma única transição por entidade") {
-  ecs::World w;
-  auto e = w.create();
-  auto cb = w.commands();
-  cb.add(e, A{1});
-  cb.add(e, B{2, 3});
-  cb.add(e, Tag{});
-  auto before = w.archetypeCount();
+  ecs::World world;
+  auto entity = world.create();
+  auto commandBuffer = world.commands();
+  commandBuffer.add(entity, A{1});
+  commandBuffer.add(entity, B{2, 3});
+  commandBuffer.add(entity, Tag{});
+  auto before = world.archetypeCount();
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK(w.archetypeCount() == before + 1); // só {A,B,Tag}; nenhum intermediário
-  CHECK(w.get<B>(e).w == 3);
-  CHECK(w.has<Tag>(e));
-  CHECK_INV(w);
+  CHECK(world.archetypeCount() == before + 1); // só {A,B,Tag}; nenhum intermediário
+  CHECK(world.get<B>(entity).second == 3);
+  CHECK(world.has<Tag>(entity));
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("flush: entidade com dados nasce direto no arquétipo final") {
-  ecs::World w;
-  auto cb = w.commands();
-  auto s = cb.spawn();
-  cb.add(s, A{1});
-  cb.add(s, B{2, 3});
-  auto before = w.archetypeCount();
+  ecs::World world;
+  auto commandBuffer = world.commands();
+  auto spawned = commandBuffer.spawn();
+  commandBuffer.add(spawned, A{1});
+  commandBuffer.add(spawned, B{2, 3});
+  auto before = world.archetypeCount();
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK(w.archetypeCount() == before + 1);
-  CHECK(w.get<A>(s).v == 1);
-  CHECK_INV(w);
+  CHECK(world.archetypeCount() == before + 1);
+  CHECK(world.get<A>(spawned).value == 1);
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("comandos para handle destruído diretamente são ignorados") {
-  ecs::World w;
-  auto e = w.create(A{1});
-  auto cb = w.commands();
-  cb.add(e, B{0, 0});
-  w.destroy(e);
-  auto reused = w.create(A{9}); // mesmo índice, geração nova
-  CHECK(reused.index == e.index);
+  ecs::World world;
+  auto entity = world.create(A{1});
+  auto commandBuffer = world.commands();
+  commandBuffer.add(entity, B{0, 0});
+  world.destroy(entity);
+  auto reused = world.create(A{9}); // mesmo índice, geração nova
+  CHECK(reused.index == entity.index);
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK_FALSE(w.has<B>(reused));
-  CHECK(w.get<A>(reused).v == 9);
-  CHECK_INV(w);
+  CHECK_FALSE(world.has<B>(reused));
+  CHECK(world.get<A>(reused).value == 9);
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("spawn+destroy no mesmo buffer devolve o índice com geração + 1") {
-  ecs::World w;
-  auto cb = w.commands();
-  auto s = cb.spawn();
-  cb.destroy(s);
-  w.flush(cb);
+  ecs::World world;
+  auto commandBuffer = world.commands();
+  auto spawned = commandBuffer.spawn();
+  commandBuffer.destroy(spawned);
+  world.flush(commandBuffer);
 
-  auto again = w.create();
+  auto again = world.create();
 
-  CHECK(again.index == s.index);
-  CHECK(again.generation == s.generation + 1);
+  CHECK(again.index == spawned.index);
+  CHECK(again.generation == spawned.generation + 1);
 }
 
 TEST_CASE("fuzz: flush coalescido == flushSequential") {
@@ -337,64 +337,64 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
   {
     ecs::World coalesced, sequential;
     std::vector<std::pair<ecs::Entity, ecs::Entity>> live; // handles lógicos
-    std::mt19937_64 rng(fuzzSeed() ^ 0xBADC0DE);
+    std::mt19937_64 generator(fuzzSeed() ^ 0xBADC0DE);
     uint64_t counter = 0, total = 0;
 
     auto compare = [&] {
-      for (auto& [e1, e2] : live) {
-        REQUIRE(coalesced.isAlive(e1));
-        REQUIRE(sequential.isAlive(e2));
+      for (auto& [coalescedEntity, sequentialEntity] : live) {
+        REQUIRE(coalesced.isAlive(coalescedEntity));
+        REQUIRE(sequential.isAlive(sequentialEntity));
         for (int i = 0; i < 5; ++i) {
-          const auto cid = fuzz::universe()[i];
-          uint64_t v1 = 0, v2 = 0;
-          bool h1 = readFromWorld(coalesced, e1, cid, v1), h2 = readFromWorld(sequential, e2, cid, v2);
-          if (h1 != h2 || v1 != v2)
-            FAIL("divergência em " << ecs::typeInfo(cid).name << " e1=" << e1.index);
+          const auto componentId = fuzz::universe()[i];
+          uint64_t coalescedValue = 0, sequentialValue = 0;
+          bool coalescedHas = readFromWorld(coalesced, coalescedEntity, componentId, coalescedValue), sequentialHas = readFromWorld(sequential, sequentialEntity, componentId, sequentialValue);
+          if (coalescedHas != sequentialHas || coalescedValue != sequentialValue)
+            FAIL("divergência em " << ecs::typeInfo(componentId).name << " e1=" << coalescedEntity.index);
         }
       }
     };
 
     while (total < 30000) {
-      auto cbA = coalesced.commands();
-      auto cbB = sequential.commands();
-      const unsigned n = 1 + unsigned(rng() % 64);
+      auto coalescedCommands = coalesced.commands();
+      auto sequentialCommands = sequential.commands();
+      const unsigned batchSize = 1 + unsigned(generator() % 64);
       std::vector<std::pair<ecs::Entity, ecs::Entity>> destroyedNow;
-      for (unsigned k = 0; k < n; ++k, ++total) {
-        const unsigned r = unsigned(rng() % 100);
-        if (r < 15 || live.empty()) {
-          live.emplace_back(cbA.spawn(), cbB.spawn());
-        } else if (r < 25) {
-          size_t i = rng() % live.size();
-          auto [e1, e2] = live[i];
-          cbA.destroy(e1);
-          cbB.destroy(e2);
+      for (unsigned commandIndex = 0; commandIndex < batchSize; ++commandIndex, ++total) {
+        const unsigned roll = unsigned(generator() % 100);
+        if (roll < 15 || live.empty()) {
+          live.emplace_back(coalescedCommands.spawn(), sequentialCommands.spawn());
+        } else if (roll < 25) {
+          size_t i = generator() % live.size();
+          auto [coalescedEntity, sequentialEntity] = live[i];
+          coalescedCommands.destroy(coalescedEntity);
+          sequentialCommands.destroy(sequentialEntity);
           destroyedNow.push_back(live[i]);
           live[i] = live.back(); // sem comandos depois de destroy
           live.pop_back();
-        } else if (r < 70) {
-          size_t i = rng() % live.size();
-          auto [e1, e2] = live[i];
-          ecs::ComponentId cid = fuzz::universe()[rng() % 5];
-          uint64_t v = fuzz::isTag(cid) ? 0 : makeValue(ecs::Entity{uint32_t(i), 0}, ++counter);
-          cbAdd(cbA, e1, cid, v);
-          cbAdd(cbB, e2, cid, v);
+        } else if (roll < 70) {
+          size_t i = generator() % live.size();
+          auto [coalescedEntity, sequentialEntity] = live[i];
+          ecs::ComponentId componentId = fuzz::universe()[generator() % 5];
+          uint64_t value = fuzz::isTag(componentId) ? 0 : makeValue(ecs::Entity{uint32_t(i), 0}, ++counter);
+          addToCommandBuffer(coalescedCommands, coalescedEntity, componentId, value);
+          addToCommandBuffer(sequentialCommands, sequentialEntity, componentId, value);
         } else {
-          size_t i = rng() % live.size();
-          ecs::ComponentId cid = fuzz::universe()[rng() % 5];
-          cbA.removeRaw(live[i].first, cid);
-          cbB.removeRaw(live[i].second, cid);
+          size_t i = generator() % live.size();
+          ecs::ComponentId componentId = fuzz::universe()[generator() % 5];
+          coalescedCommands.removeRaw(live[i].first, componentId);
+          sequentialCommands.removeRaw(live[i].second, componentId);
         }
       }
 
-      coalesced.flush(cbA);
-      sequential.flushSequential(cbB);
+      coalesced.flush(coalescedCommands);
+      sequential.flushSequential(sequentialCommands);
 
       compare();
-      CHECK_INV(coalesced);
-      CHECK_INV(sequential);
-      for (auto& [e1, e2] : destroyedNow) {
-        CHECK_FALSE(coalesced.isAlive(e1));
-        CHECK_FALSE(sequential.isAlive(e2));
+      CHECK_INVARIANTS(coalesced);
+      CHECK_INVARIANTS(sequential);
+      for (auto& [coalescedEntity, sequentialEntity] : destroyedNow) {
+        CHECK_FALSE(coalesced.isAlive(coalescedEntity));
+        CHECK_FALSE(sequential.isAlive(sequentialEntity));
       }
     }
   }
@@ -402,43 +402,43 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
 }
 
 TEST_CASE("R-CB-3: comandos intercalados entre entidades ainda coalescem por entidade") {
-  ecs::World w;
-  auto e1 = w.create();
-  auto e2 = w.create();
-  auto cb = w.commands();
-  cb.add(e1, A{1});
-  cb.add(e2, A{2});
-  cb.add(e1, B{3, 4}); // e1 volta fora do trecho consecutivo
-  cb.add(e2, B{5, 6});
-  cb.add(e1, A{7});
-  auto before = w.archetypeCount();
+  ecs::World world;
+  auto first = world.create();
+  auto second = world.create();
+  auto commandBuffer = world.commands();
+  commandBuffer.add(first, A{1});
+  commandBuffer.add(second, A{2});
+  commandBuffer.add(first, B{3, 4}); // first volta fora do trecho consecutivo
+  commandBuffer.add(second, B{5, 6});
+  commandBuffer.add(first, A{7});
+  auto before = world.archetypeCount();
 
-  w.flush(cb);
+  world.flush(commandBuffer);
 
-  CHECK(w.archetypeCount() == before + 1); // só {A,B}
-  CHECK(w.get<A>(e1).v == 7);
-  CHECK(w.get<B>(e1).w == 4);
-  CHECK(w.get<A>(e2).v == 2);
-  CHECK(w.get<B>(e2).w == 6);
-  CHECK_INV(w);
+  CHECK(world.archetypeCount() == before + 1); // só {A,B}
+  CHECK(world.get<A>(first).value == 7);
+  CHECK(world.get<B>(first).second == 4);
+  CHECK(world.get<A>(second).value == 2);
+  CHECK(world.get<B>(second).second == 6);
+  CHECK_INVARIANTS(world);
 }
 
 TEST_CASE("buffer reutilizado depois do flush agrupa de novo") {
-  ecs::World w;
-  auto e1 = w.create();
-  auto e2 = w.create();
-  auto cb = w.commands();
-  cb.add(e1, A{1});
-  cb.add(e2, A{2});
-  cb.add(e1, B{0, 0}); // não consecutivo: o primeiro lote cai no caminho geral
-  w.flush(cb);
+  ecs::World world;
+  auto first = world.create();
+  auto second = world.create();
+  auto commandBuffer = world.commands();
+  commandBuffer.add(first, A{1});
+  commandBuffer.add(second, A{2});
+  commandBuffer.add(first, B{0, 0}); // não consecutivo: o primeiro lote cai no caminho geral
+  world.flush(commandBuffer);
 
-  cb.add(e2, B{8, 9}); // segundo lote: o estado de agrupamento foi zerado pelo flush
-  cb.add(e1, A{5});
-  w.flush(cb);
+  commandBuffer.add(second, B{8, 9}); // segundo lote: o estado de agrupamento foi zerado pelo flush
+  commandBuffer.add(first, A{5});
+  world.flush(commandBuffer);
 
-  CHECK(w.get<A>(e1).v == 5);
-  CHECK(w.get<B>(e2).w == 9);
-  CHECK(w.get<A>(e2).v == 2);
-  CHECK_INV(w);
+  CHECK(world.get<A>(first).value == 5);
+  CHECK(world.get<B>(second).second == 9);
+  CHECK(world.get<A>(second).value == 2);
+  CHECK_INVARIANTS(world);
 }

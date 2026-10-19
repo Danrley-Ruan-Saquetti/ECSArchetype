@@ -7,8 +7,8 @@ namespace ecs {
     // Função com static local: evita problemas de ordem de inicialização (R-TI-4).
     // std::deque mantém referências estáveis a cada TypeInfo.
     std::deque<TypeInfo>& registry() {
-      static std::deque<TypeInfo> r;
-      return r;
+      static std::deque<TypeInfo> entries;
+      return entries;
     }
   }
 

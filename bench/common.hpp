@@ -6,32 +6,32 @@ struct float3 {
   float x, y, z;
 };
 struct Position {
-  float3 v;
+  float3 value;
 };
 struct Velocity {
-  float3 v;
+  float3 value;
 };
 
-inline constexpr float kDt = 1.0f / 60.0f;
+inline constexpr float kDeltaTime = 1.0f / 60.0f;
 
 // Mesmos bytes que T, mas com move-constructor e destrutor definidos pelo usuário:
 // força o caminho não trivial (moveConstruct + destroy) em vez do memcpy.
 template <class T>
 struct NonTrivial {
-  T v;
+  T value;
 
-  NonTrivial(T x) noexcept
-    : v(x) {}
-  NonTrivial(NonTrivial&& o) noexcept
-    : v(o.v) {}
-  NonTrivial& operator=(NonTrivial&& o) noexcept {
-    v = o.v;
+  NonTrivial(T initialValue) noexcept
+    : value(initialValue) {}
+  NonTrivial(NonTrivial&& other) noexcept
+    : value(other.value) {}
+  NonTrivial& operator=(NonTrivial&& other) noexcept {
+    value = other.value;
     return *this;
   }
   ~NonTrivial() {}
 };
 
 template <int I>
-struct Comp {
-  uint64_t v;
+struct Component {
+  uint64_t value;
 };

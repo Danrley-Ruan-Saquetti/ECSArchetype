@@ -5,40 +5,40 @@
 #include "ecs/entity.hpp"
 
 TEST_CASE("reciclagem incrementa geração e invalida handle antigo") {
-  ecs::EntityStore s;
+  ecs::EntityStore store;
   ecs::Archetype* fake = reinterpret_cast<ecs::Archetype*>(0x10);
 
-  auto e = s.allocate();
-  CHECK(s.isReserved(e));
-  CHECK_FALSE(s.isAlive(e));
+  auto entity = store.allocate();
+  CHECK(store.isReserved(entity));
+  CHECK_FALSE(store.isAlive(entity));
 
-  s.record(e.index).arch = fake;
-  CHECK(s.isAlive(e));
+  store.record(entity.index).archetype = fake;
+  CHECK(store.isAlive(entity));
 
-  s.release(e.index);
-  CHECK_FALSE(s.isAlive(e));
+  store.release(entity.index);
+  CHECK_FALSE(store.isAlive(entity));
 
-  auto e2 = s.allocate();
-  CHECK(e2.index == e.index);
-  CHECK(e2.generation == e.generation + 1);
+  auto recycled = store.allocate();
+  CHECK(recycled.index == entity.index);
+  CHECK(recycled.generation == entity.generation + 1);
 
-  s.record(e2.index).arch = fake;
-  CHECK_FALSE(s.isAlive(e));
-  CHECK(s.isAlive(e2));
+  store.record(recycled.index).archetype = fake;
+  CHECK_FALSE(store.isAlive(entity));
+  CHECK(store.isAlive(recycled));
 }
 
 TEST_CASE("slot com geração UINT32_MAX é aposentado") {
-  ecs::EntityStore s;
-  auto e = s.allocate();
-  s.setGenerationForTest(e.index, UINT32_MAX - 1);
+  ecs::EntityStore store;
+  auto entity = store.allocate();
+  store.setGenerationForTest(entity.index, UINT32_MAX - 1);
 
-  s.release(e.index);
+  store.release(entity.index);
 
-  CHECK(s.freeList().empty());
-  CHECK(s.allocate().index != e.index);
+  CHECK(store.freeList().empty());
+  CHECK(store.allocate().index != entity.index);
 }
 
 TEST_CASE("NullEntity nunca está vivo") {
-  ecs::EntityStore s;
-  CHECK_FALSE(s.isAlive(ecs::NullEntity));
+  ecs::EntityStore store;
+  CHECK_FALSE(store.isAlive(ecs::NullEntity));
 }

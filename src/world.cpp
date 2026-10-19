@@ -5,23 +5,23 @@
 
 namespace ecs {
   namespace {
-    bool checkEdgeMapping(const Archetype& a, const Archetype& b, const Edge& edge) {
-      if (edge.srcToDst.size() != a.columnTypes.size())
+    bool checkEdgeMapping(const Archetype& source, const Archetype& destination, const Edge& edge) {
+      if (edge.sourceToDestination.size() != source.columnTypes.size())
         return false;
 
-      for (size_t i = 0; i < a.columnTypes.size(); ++i) {
-        const uint16_t col = columnOf(b, a.columnTypes[i]);
-        const int16_t want = col == NoColumn ? int16_t(-1) : static_cast<int16_t>(col);
-        if (edge.srcToDst[i] != want)
+      for (size_t i = 0; i < source.columnTypes.size(); ++i) {
+        const uint16_t column = columnOf(destination, source.columnTypes[i]);
+        const int16_t expected = column == NoColumn ? int16_t(-1) : static_cast<int16_t>(column);
+        if (edge.sourceToDestination[i] != expected)
           return false;
       }
 
       return true;
     }
 
-    bool fail(std::string* why, const char* id, const std::string& what) {
+    bool fail(std::string* why, const char* invariantId, const std::string& what) {
       if (why)
-        *why = std::string(id) + " " + what;
+        *why = std::string(invariantId) + " " + what;
       return false;
     }
 
@@ -29,60 +29,60 @@ namespace ecs {
       return "e=" + std::to_string(index) + ":" + std::to_string(generation);
     }
 
-    std::string archLabel(const Archetype& a) {
-      return "arch=" + std::to_string(a.id);
+    std::string archetypeLabel(const Archetype& archetype) {
+      return "arch=" + std::to_string(archetype.id);
     }
 
-    bool checkTableShape(const Archetype& a, std::string* why) {
-      const Table& t = a.table;
-      if (t.entities().size() != t.count() || t.capacity() < t.count())
-        return fail(why, "I-1", archLabel(a));
+    bool checkTableShape(const Archetype& archetype, std::string* why) {
+      const Table& table = archetype.table;
+      if (table.entities().size() != table.count() || table.capacity() < table.count())
+        return fail(why, "I-1", archetypeLabel(archetype));
 
       return true;
     }
 
-    bool checkColumnTypes(const Archetype& a, std::string* why) {
-      if (!std::is_sorted(a.signature.begin(), a.signature.end()) || std::adjacent_find(a.signature.begin(), a.signature.end()) != a.signature.end())
-        return fail(why, "I-5", archLabel(a) + " signature");
+    bool checkColumnTypes(const Archetype& archetype, std::string* why) {
+      if (!std::is_sorted(archetype.signature.begin(), archetype.signature.end()) || std::adjacent_find(archetype.signature.begin(), archetype.signature.end()) != archetype.signature.end())
+        return fail(why, "I-5", archetypeLabel(archetype) + " signature");
 
       std::vector<ComponentId> data;
-      for (ComponentId c : a.signature)
-        if (!typeInfo(c).tag)
-          data.push_back(c);
-      if (data != a.columnTypes)
-        return fail(why, "I-5", archLabel(a) + " columnTypes");
+      for (ComponentId componentId : archetype.signature)
+        if (!typeInfo(componentId).tag)
+          data.push_back(componentId);
+      if (data != archetype.columnTypes)
+        return fail(why, "I-5", archetypeLabel(archetype) + " columnTypes");
 
-      const Table& t = a.table;
-      if (t.columnCount() != a.columnTypes.size() || !std::equal(t.columnTypes().begin(), t.columnTypes().end(), a.columnTypes.begin(), a.columnTypes.end()))
-        return fail(why, "I-5", archLabel(a) + " table");
+      const Table& table = archetype.table;
+      if (table.columnCount() != archetype.columnTypes.size() || !std::equal(table.columnTypes().begin(), table.columnTypes().end(), archetype.columnTypes.begin(), archetype.columnTypes.end()))
+        return fail(why, "I-5", archetypeLabel(archetype) + " table");
 
       return true;
     }
 
-    Signature edgeSignature(Signature sig, ComponentId c, bool adding) {
-      auto pos = std::lower_bound(sig.begin(), sig.end(), c);
+    Signature edgeSignature(Signature signature, ComponentId componentId, bool adding) {
+      auto position = std::lower_bound(signature.begin(), signature.end(), componentId);
       if (adding)
-        sig.insert(pos, c);
-      else if (pos != sig.end() && *pos == c)
-        sig.erase(pos);
-      return sig;
+        signature.insert(position, componentId);
+      else if (position != signature.end() && *position == componentId)
+        signature.erase(position);
+      return signature;
     }
 
-    bool checkCachedEdges(const Archetype& a, std::string* why) {
+    bool checkCachedEdges(const Archetype& archetype, std::string* why) {
       for (int adding = 1; adding >= 0; --adding) {
-        for (const auto& [c, edge] : adding ? a.addEdges : a.removeEdges) {
-          const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(c) + " " + archLabel(a);
+        for (const auto& [componentId, edge] : adding ? archetype.addEdges : archetype.removeEdges) {
+          const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(componentId) + " " + archetypeLabel(archetype);
           if (!edge.target)
             return fail(why, "I-9", where + " sem destino");
 
-          const Archetype& b = *edge.target;
-          if (b.signature != edgeSignature(a.signature, c, adding))
+          const Archetype& target = *edge.target;
+          if (target.signature != edgeSignature(archetype.signature, componentId, adding))
             return fail(why, "I-9", where + " assinatura");
-          if (!checkEdgeMapping(a, b, edge))
-            return fail(why, "I-9", where + " srcToDst");
+          if (!checkEdgeMapping(archetype, target, edge))
+            return fail(why, "I-9", where + " sourceToDestination");
 
-          const int16_t wantAdded = adding && !typeInfo(c).tag ? static_cast<int16_t>(columnOf(b, c)) : int16_t(-1);
-          if (edge.addedColumn != wantAdded)
+          const int16_t expectedAddedColumn = adding && !typeInfo(componentId).tag ? static_cast<int16_t>(columnOf(target, componentId)) : int16_t(-1);
+          if (edge.addedColumn != expectedAddedColumn)
             return fail(why, "I-9", where + " addedColumn");
         }
       }
@@ -90,78 +90,78 @@ namespace ecs {
       return true;
     }
 
-    // Memo do último resultado do flush: entidades de um lote costumam ter o mesmo (origem, ops),
+    // Memo do último resultado do flush: entidades de um lote costumam ter o mesmo (origem, operações),
     // então a assinatura final, a aresta e as colunas são calculadas uma vez só.
     struct FlushMemo {
       bool valid = false;
-      const Archetype* src = nullptr;
+      const Archetype* source = nullptr;
       std::vector<std::pair<ComponentId, bool>> key;
-      Archetype* dst = nullptr;
-      const Edge* edge = nullptr; // nullptr se src == dst ou entidade reservada
-      std::vector<Column*> col; // por op: coluna no destino (nullptr: sem valor a construir)
-      std::vector<uint8_t> existed; // por op: o componente já existia na origem
+      Archetype* destination = nullptr;
+      const Edge* edge = nullptr; // nullptr se source == destination ou entidade reservada
+      std::vector<Column*> columns; // por operação: coluna no destino (nullptr: sem valor a construir)
+      std::vector<uint8_t> existed; // por operação: o componente já existia na origem
 
-      bool matches(const Archetype* s, std::span<const NetComponentOp> ops) const {
-        if (!valid || src != s || key.size() != ops.size())
+      bool matches(const Archetype* candidateSource, std::span<const NetComponentOperation> operations) const {
+        if (!valid || source != candidateSource || key.size() != operations.size())
           return false;
-        for (size_t i = 0; i < ops.size(); ++i)
-          if (key[i].first != ops[i].cid || key[i].second != ops[i].present)
+        for (size_t i = 0; i < operations.size(); ++i)
+          if (key[i].first != operations[i].componentId || key[i].second != operations[i].present)
             return false;
 
         return true;
       }
 
-      void assign(const Archetype* s, std::span<const NetComponentOp> ops, Archetype* d, const Edge* e) {
-        src = s;
-        dst = d;
-        edge = e;
+      void assign(const Archetype* newSource, std::span<const NetComponentOperation> operations, Archetype* newDestination, const Edge* newEdge) {
+        source = newSource;
+        destination = newDestination;
+        edge = newEdge;
 
         key.clear();
-        col.clear();
+        columns.clear();
         existed.clear();
-        for (const NetComponentOp& op : ops) {
-          key.emplace_back(op.cid, op.present);
-          col.push_back(op.present && !typeInfo(op.cid).tag ? &dst->table.column(columnOf(*dst, op.cid)) : nullptr);
-          existed.push_back(src && std::binary_search(src->signature.begin(), src->signature.end(), op.cid));
+        for (const NetComponentOperation& operation : operations) {
+          key.emplace_back(operation.componentId, operation.present);
+          columns.push_back(operation.present && !typeInfo(operation.componentId).tag ? &destination->table.column(columnOf(*destination, operation.componentId)) : nullptr);
+          existed.push_back(source && std::binary_search(source->signature.begin(), source->signature.end(), operation.componentId));
         }
 
         valid = true;
       }
     };
 
-    Signature applyOps(Signature sig, std::span<const NetComponentOp> ops) {
-      for (const NetComponentOp& op : ops) {
-        auto pos = std::lower_bound(sig.begin(), sig.end(), op.cid);
-        const bool has = pos != sig.end() && *pos == op.cid;
-        if (op.present && !has)
-          sig.insert(pos, op.cid);
-        else if (!op.present && has)
-          sig.erase(pos);
+    Signature applyOperations(Signature signature, std::span<const NetComponentOperation> operations) {
+      for (const NetComponentOperation& operation : operations) {
+        auto position = std::lower_bound(signature.begin(), signature.end(), operation.componentId);
+        const bool has = position != signature.end() && *position == operation.componentId;
+        if (operation.present && !has)
+          signature.insert(position, operation.componentId);
+        else if (!operation.present && has)
+          signature.erase(position);
       }
-      return sig;
+      return signature;
     }
 
-    void writeValues(const FlushMemo& memo, std::span<const NetComponentOp> ops, uint32_t row) {
-      for (size_t i = 0; i < ops.size(); ++i) {
-        if (!memo.col[i])
+    void writeValues(const FlushMemo& memo, std::span<const NetComponentOperation> operations, uint32_t row) {
+      for (size_t i = 0; i < operations.size(); ++i) {
+        if (!memo.columns[i])
           continue;
 
-        Column& c = *memo.col[i];
-        void* p = c.at(row);
+        Column& column = *memo.columns[i];
+        void* slot = column.at(row);
         if (memo.existed[i])
-          destroyValue(*c.info, p);
+          destroyValue(*column.info, slot);
 
-        if (c.info->trivial) {
+        if (column.info->trivial) {
           // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
-          switch (c.info->size) {
-          case 4: std::memcpy(p, ops[i].payload, 4); break;
-          case 8: std::memcpy(p, ops[i].payload, 8); break;
-          case 12: std::memcpy(p, ops[i].payload, 12); break;
-          case 16: std::memcpy(p, ops[i].payload, 16); break;
-          default: std::memcpy(p, ops[i].payload, c.info->size);
+          switch (column.info->size) {
+          case 4: std::memcpy(slot, operations[i].payload, 4); break;
+          case 8: std::memcpy(slot, operations[i].payload, 8); break;
+          case 12: std::memcpy(slot, operations[i].payload, 12); break;
+          case 16: std::memcpy(slot, operations[i].payload, 16); break;
+          default: std::memcpy(slot, operations[i].payload, column.info->size);
           }
         } else {
-          c.info->moveConstruct(p, ops[i].payload);
+          column.info->moveConstruct(slot, operations[i].payload);
         }
       }
     }
@@ -173,33 +173,33 @@ namespace ecs {
 
   World::~World() = default;
 
-  Archetype* World::findOrCreate(Signature sig) {
-    ++sigLookups_;
-    if (auto it = bySignature_.find(sig); it != bySignature_.end())
+  Archetype* World::findOrCreate(Signature signature) {
+    ++signatureLookups_;
+    if (auto it = bySignature_.find(signature); it != bySignature_.end())
       return it->second;
 
     const auto id = static_cast<ArchetypeId>(archetypes_.size());
-    archetypes_.push_back(std::make_unique<Archetype>(id, sig));
-    Archetype* a = archetypes_.back().get();
-    bySignature_.emplace(std::move(sig), a);
+    archetypes_.push_back(std::make_unique<Archetype>(id, signature));
+    Archetype* archetype = archetypes_.back().get();
+    bySignature_.emplace(std::move(signature), archetype);
 
-    for (ComponentId cid : a->signature) {
-      if (cid >= componentIndex_.size())
-        componentIndex_.resize(size_t(cid) + 1);
-      componentIndex_[cid].insert(id, columnOf(*a, cid));
+    for (ComponentId componentId : archetype->signature) {
+      if (componentId >= componentIndex_.size())
+        componentIndex_.resize(size_t(componentId) + 1);
+      componentIndex_[componentId].insert(id, columnOf(*archetype, componentId));
     }
-    for (QueryCacheBase* q : queries_)
-      q->onArchetypeCreated(*a);
+    for (QueryCacheBase* query : queries_)
+      query->onArchetypeCreated(*archetype);
 
-    return a;
+    return archetype;
   }
 
-  Entity World::place(Archetype& a) {
-    Entity e = store_.allocate();
-    EntityRecord& rec = store_.record(e.index);
-    rec.row = a.table.pushUninit(e);
-    rec.arch = &a;
-    return e;
+  Entity World::place(Archetype& archetype) {
+    Entity entity = store_.allocate();
+    EntityRecord& record = store_.record(entity.index);
+    record.row = archetype.table.pushUninitialized(entity);
+    record.archetype = &archetype;
+    return entity;
   }
 
   Entity World::create() {
@@ -207,101 +207,101 @@ namespace ecs {
     return place(root());
   }
 
-  void World::destroy(Entity e) {
-    ECS_ASSERT(isAlive(e) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", e.index, e.generation, iterating_);
+  void World::destroy(Entity entity) {
+    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", entity.index, entity.generation, iterating_);
 
-    EntityRecord& rec = store_.record(e.index);
-    Table& t = rec.arch->table;
-    const uint32_t row = rec.row;
-    t.destroyRow(row);
-    if (auto moved = t.fillHole(row))
+    EntityRecord& record = store_.record(entity.index);
+    Table& table = record.archetype->table;
+    const uint32_t row = record.row;
+    table.destroyRow(row);
+    if (auto moved = table.fillHole(row))
       store_.record(moved->index).row = row;
 
-    store_.release(e.index);
+    store_.release(entity.index);
   }
 
-  uint32_t World::moveEntity(Entity e, EntityRecord& rec, Archetype& dst, const Edge& edge) {
-    Archetype& src = *rec.arch;
-    const uint32_t srcRow = rec.row;
-    const uint32_t dstRow = dst.table.pushUninit(e);
+  uint32_t World::moveEntity(Entity entity, EntityRecord& record, Archetype& destination, const Edge& edge) {
+    Archetype& source = *record.archetype;
+    const uint32_t sourceRow = record.row;
+    const uint32_t destinationRow = destination.table.pushUninitialized(entity);
 
-    for (uint16_t c = 0; c < src.table.columnCount(); ++c) {
-      Column& sc = src.table.column(c);
-      const int16_t d = edge.srcToDst[c];
-      if (d >= 0)
-        relocateValue(*sc.info, dst.table.column(static_cast<uint16_t>(d)).at(dstRow), sc.at(srcRow));
+    for (uint16_t columnIndex = 0; columnIndex < source.table.columnCount(); ++columnIndex) {
+      Column& sourceColumn = source.table.column(columnIndex);
+      const int16_t destinationColumn = edge.sourceToDestination[columnIndex];
+      if (destinationColumn >= 0)
+        relocateValue(*sourceColumn.info, destination.table.column(static_cast<uint16_t>(destinationColumn)).at(destinationRow), sourceColumn.at(sourceRow));
       else
-        destroyValue(*sc.info, sc.at(srcRow));
+        destroyValue(*sourceColumn.info, sourceColumn.at(sourceRow));
     }
 
-    if (auto moved = src.table.fillHole(srcRow))
-      store_.record(moved->index).row = srcRow;
+    if (auto moved = source.table.fillHole(sourceRow))
+      store_.record(moved->index).row = sourceRow;
 
-    rec.arch = &dst;
-    rec.row = dstRow;
-    return dstRow;
+    record.archetype = &destination;
+    record.row = destinationRow;
+    return destinationRow;
   }
 
-  void World::addRaw(Entity e, ComponentId cid, void* value) {
-    const TypeInfo& ti = typeInfo(cid);
-    ECS_ASSERT(isAlive(e) && iterating_ == 0, "add e=%u:%u type=%.*s", e.index, e.generation, int(ti.name.size()),
-               ti.name.data());
+  void World::addRaw(Entity entity, ComponentId componentId, void* value) {
+    const TypeInfo& info = typeInfo(componentId);
+    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation, int(info.name.size()),
+               info.name.data());
 
-    EntityRecord& rec = store_.record(e.index);
-    Archetype& src = *rec.arch;
-    if (std::binary_search(src.signature.begin(), src.signature.end(), cid)) {
-      if (ti.tag)
+    EntityRecord& record = store_.record(entity.index);
+    Archetype& source = *record.archetype;
+    if (std::binary_search(source.signature.begin(), source.signature.end(), componentId)) {
+      if (info.tag)
         return;
 
-      void* p = src.table.column(columnOf(src, cid)).at(rec.row);
-      destroyValue(ti, p);
-      if (ti.trivial)
-        std::memcpy(p, value, ti.size);
+      void* slot = source.table.column(columnOf(source, componentId)).at(record.row);
+      destroyValue(info, slot);
+      if (info.trivial)
+        std::memcpy(slot, value, info.size);
       else
-        ti.moveConstruct(p, value);
+        info.moveConstruct(slot, value);
       return;
     }
 
-    const Edge& edge = edgeFor(src, cid, true);
-    Archetype& dst = *edge.target;
-    const uint32_t dstRow = moveEntity(e, rec, dst, edge);
+    const Edge& edge = edgeFor(source, componentId, true);
+    Archetype& destination = *edge.target;
+    const uint32_t destinationRow = moveEntity(entity, record, destination, edge);
 
     if (edge.addedColumn >= 0) {
-      void* p = dst.table.column(static_cast<uint16_t>(edge.addedColumn)).at(dstRow);
-      if (ti.trivial)
-        std::memcpy(p, value, ti.size);
+      void* slot = destination.table.column(static_cast<uint16_t>(edge.addedColumn)).at(destinationRow);
+      if (info.trivial)
+        std::memcpy(slot, value, info.size);
       else
-        ti.moveConstruct(p, value);
+        info.moveConstruct(slot, value);
     }
   }
 
-  void World::removeRaw(Entity e, ComponentId cid) {
-    ECS_ASSERT(isAlive(e) && iterating_ == 0, "remove e=%u:%u type=%.*s", e.index, e.generation,
-               int(typeInfo(cid).name.size()), typeInfo(cid).name.data());
+  void World::removeRaw(Entity entity, ComponentId componentId) {
+    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "remove e=%u:%u type=%.*s", entity.index, entity.generation,
+               int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
-    EntityRecord& rec = store_.record(e.index);
-    Archetype& src = *rec.arch;
-    if (!std::binary_search(src.signature.begin(), src.signature.end(), cid))
+    EntityRecord& record = store_.record(entity.index);
+    Archetype& source = *record.archetype;
+    if (!std::binary_search(source.signature.begin(), source.signature.end(), componentId))
       return;
 
-    const Edge& edge = edgeFor(src, cid, false);
-    moveEntity(e, rec, *edge.target, edge);
+    const Edge& edge = edgeFor(source, componentId, false);
+    moveEntity(entity, record, *edge.target, edge);
   }
 
-  const Edge& World::edgeFor(Archetype& src, ComponentId cid, bool adding) {
-    SmallMap<ComponentId, Edge>& edges = adding ? src.addEdges : src.removeEdges;
-    if (const Edge* cached = edges.find(cid))
+  const Edge& World::edgeFor(Archetype& source, ComponentId componentId, bool adding) {
+    SmallMap<ComponentId, Edge>& edges = adding ? source.addEdges : source.removeEdges;
+    if (const Edge* cached = edges.find(componentId))
       return *cached;
 
-    Signature sig = src.signature;
-    auto pos = std::lower_bound(sig.begin(), sig.end(), cid);
+    Signature signature = source.signature;
+    auto position = std::lower_bound(signature.begin(), signature.end(), componentId);
     if (adding)
-      sig.insert(pos, cid);
+      signature.insert(position, componentId);
     else
-      sig.erase(pos);
+      signature.erase(position);
 
-    Archetype* dst = findOrCreate(std::move(sig));
-    return edges.insert(cid, buildEdge(src, *dst, adding ? cid : NoComponent));
+    Archetype* destination = findOrCreate(std::move(signature));
+    return edges.insert(componentId, buildEdge(source, *destination, adding ? componentId : NoComponent));
   }
 
   bool World::checkInvariants(std::string* why) const {
@@ -314,13 +314,13 @@ namespace ecs {
 
   bool World::checkArchetypes(std::string* why) const {
     for (size_t i = 0; i < archetypes_.size(); ++i) {
-      const Archetype& a = *archetypes_[i];
+      const Archetype& archetype = *archetypes_[i];
 
-      auto it = bySignature_.find(a.signature);
-      if (a.id != i || it == bySignature_.end() || it->second != &a)
-        return fail(why, "I-6", archLabel(a));
+      auto it = bySignature_.find(archetype.signature);
+      if (archetype.id != i || it == bySignature_.end() || it->second != &archetype)
+        return fail(why, "I-6", archetypeLabel(archetype));
 
-      if (!checkTableShape(a, why) || !checkColumnTypes(a, why) || !checkRows(a, why))
+      if (!checkTableShape(archetype, why) || !checkColumnTypes(archetype, why) || !checkRows(archetype, why))
         return false;
     }
 
@@ -330,16 +330,16 @@ namespace ecs {
     return true;
   }
 
-  bool World::checkRows(const Archetype& a, std::string* why) const {
-    const Table& t = a.table;
-    for (uint32_t r = 0; r < t.count(); ++r) {
-      Entity e = t.entities()[r];
-      if (e.index >= store_.slotCount())
-        return fail(why, "I-4", archLabel(a) + " row=" + std::to_string(r));
+  bool World::checkRows(const Archetype& archetype, std::string* why) const {
+    const Table& table = archetype.table;
+    for (uint32_t row = 0; row < table.count(); ++row) {
+      Entity entity = table.entities()[row];
+      if (entity.index >= store_.slotCount())
+        return fail(why, "I-4", archetypeLabel(archetype) + " row=" + std::to_string(row));
 
-      const EntityRecord& rec = store_.record(e.index);
-      if (rec.arch != &a || rec.row != r || rec.generation != e.generation)
-        return fail(why, "I-4", entityLabel(e.index, e.generation) + " " + archLabel(a) + " row=" + std::to_string(r));
+      const EntityRecord& record = store_.record(entity.index);
+      if (record.archetype != &archetype || record.row != row || record.generation != entity.generation)
+        return fail(why, "I-4", entityLabel(entity.index, entity.generation) + " " + archetypeLabel(archetype) + " row=" + std::to_string(row));
     }
 
     return true;
@@ -347,48 +347,48 @@ namespace ecs {
 
   bool World::checkRecords(std::string* why) const {
     for (uint32_t i = 0; i < store_.slotCount(); ++i) {
-      const EntityRecord& rec = store_.record(i);
-      if (!rec.arch)
+      const EntityRecord& record = store_.record(i);
+      if (!record.archetype)
         continue;
 
-      const Table& t = rec.arch->table;
-      if (rec.row >= t.count() || t.entities()[rec.row] != Entity{i, rec.generation})
-        return fail(why, "I-3", entityLabel(i, rec.generation));
+      const Table& table = record.archetype->table;
+      if (record.row >= table.count() || table.entities()[record.row] != Entity{i, record.generation})
+        return fail(why, "I-3", entityLabel(i, record.generation));
     }
 
     return true;
   }
 
   bool World::checkFreeList(std::string* why) const {
-    std::vector<uint32_t> fl(store_.freeList().begin(), store_.freeList().end());
-    for (uint32_t i : fl)
-      if (i >= store_.slotCount() || store_.record(i).arch != nullptr)
-        return fail(why, "I-10", "slot=" + std::to_string(i));
+    std::vector<uint32_t> freeList(store_.freeList().begin(), store_.freeList().end());
+    for (uint32_t slot : freeList)
+      if (slot >= store_.slotCount() || store_.record(slot).archetype != nullptr)
+        return fail(why, "I-10", "slot=" + std::to_string(slot));
 
-    std::sort(fl.begin(), fl.end());
-    if (std::adjacent_find(fl.begin(), fl.end()) != fl.end())
+    std::sort(freeList.begin(), freeList.end());
+    if (std::adjacent_find(freeList.begin(), freeList.end()) != freeList.end())
       return fail(why, "I-10", "repetido");
 
     return true;
   }
 
   bool World::checkComponentIndex(std::string* why) const {
-    for (const auto& ap : archetypes_) {
-      for (ComponentId c : ap->signature) {
-        const uint16_t* col = c < componentIndex_.size() ? componentIndex_[c].find(ap->id) : nullptr;
-        if (!col || *col != columnOf(*ap, c))
-          return fail(why, "I-7", "cid=" + std::to_string(c) + " " + archLabel(*ap));
+    for (const auto& owned : archetypes_) {
+      for (ComponentId componentId : owned->signature) {
+        const uint16_t* column = componentId < componentIndex_.size() ? componentIndex_[componentId].find(owned->id) : nullptr;
+        if (!column || *column != columnOf(*owned, componentId))
+          return fail(why, "I-7", "cid=" + std::to_string(componentId) + " " + archetypeLabel(*owned));
       }
     }
 
-    for (size_t c = 0; c < componentIndex_.size(); ++c) {
-      for (const auto& [aid, col] : componentIndex_[c]) {
-        if (aid >= archetypes_.size())
-          return fail(why, "I-7", "cid=" + std::to_string(c));
+    for (size_t componentId = 0; componentId < componentIndex_.size(); ++componentId) {
+      for (const auto& [archetypeId, column] : componentIndex_[componentId]) {
+        if (archetypeId >= archetypes_.size())
+          return fail(why, "I-7", "cid=" + std::to_string(componentId));
 
-        const Archetype& a = *archetypes_[aid];
-        if (!std::binary_search(a.signature.begin(), a.signature.end(), ComponentId(c)) || col != columnOf(a, ComponentId(c)))
-          return fail(why, "I-7", "cid=" + std::to_string(c) + " " + archLabel(a));
+        const Archetype& archetype = *archetypes_[archetypeId];
+        if (!std::binary_search(archetype.signature.begin(), archetype.signature.end(), ComponentId(componentId)) || column != columnOf(archetype, ComponentId(componentId)))
+          return fail(why, "I-7", "cid=" + std::to_string(componentId) + " " + archetypeLabel(archetype));
       }
     }
 
@@ -396,28 +396,28 @@ namespace ecs {
   }
 
   bool World::checkQueries(std::string* why) const {
-    for (size_t qi = 0; qi < queries_.size(); ++qi)
-      for (const auto& ap : archetypes_)
-        if (queries_[qi]->isMatched(ap.get()) != queries_[qi]->matches(*ap))
-          return fail(why, "I-8", "query=" + std::to_string(qi) + " " + archLabel(*ap));
+    for (size_t queryIndex = 0; queryIndex < queries_.size(); ++queryIndex)
+      for (const auto& owned : archetypes_)
+        if (queries_[queryIndex]->isMatched(owned.get()) != queries_[queryIndex]->matches(*owned))
+          return fail(why, "I-8", "query=" + std::to_string(queryIndex) + " " + archetypeLabel(*owned));
 
     return true;
   }
 
   bool World::checkEdges(std::string* why) const {
-    for (const auto& ap : archetypes_)
-      if (!checkCachedEdges(*ap, why))
+    for (const auto& owned : archetypes_)
+      if (!checkCachedEdges(*owned, why))
         return false;
 
     for (const auto& [key, edge] : jumpEdges_) {
-      const uint32_t sid = static_cast<uint32_t>(key >> 32), did = static_cast<uint32_t>(key);
-      const std::string where = "jump " + std::to_string(sid) + "->" + std::to_string(did);
-      if (sid >= archetypes_.size() || did >= archetypes_.size())
+      const uint32_t sourceId = static_cast<uint32_t>(key >> 32), destinationId = static_cast<uint32_t>(key);
+      const std::string where = "jump " + std::to_string(sourceId) + "->" + std::to_string(destinationId);
+      if (sourceId >= archetypes_.size() || destinationId >= archetypes_.size())
         return fail(why, "I-9", where + " id");
-      if (edge.target != archetypes_[did].get())
+      if (edge.target != archetypes_[destinationId].get())
         return fail(why, "I-9", where + " destino");
-      if (!checkEdgeMapping(*archetypes_[sid], *archetypes_[did], edge))
-        return fail(why, "I-9", where + " srcToDst");
+      if (!checkEdgeMapping(*archetypes_[sourceId], *archetypes_[destinationId], edge))
+        return fail(why, "I-9", where + " sourceToDestination");
       if (edge.addedColumn != -1)
         return fail(why, "I-9", where + " addedColumn");
     }
@@ -425,11 +425,11 @@ namespace ecs {
     return true;
   }
 
-  QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> q) {
-    QueryCacheBase* raw = q.get();
-    queries_.push_back(raw);
-    queryCache_.emplace(std::move(key), std::move(q));
-    return raw;
+  QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query) {
+    QueryCacheBase* registered = query.get();
+    queries_.push_back(registered);
+    queryCache_.emplace(std::move(key), std::move(query));
+    return registered;
   }
 
   // Índice do componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
@@ -437,141 +437,141 @@ namespace ecs {
     static const SmallMap<ArchetypeId, uint16_t> empty;
 
     const SmallMap<ArchetypeId, uint16_t>* best = nullptr;
-    for (ComponentId c : with) {
-      const auto* idx = c < componentIndex_.size() ? &componentIndex_[c] : &empty;
-      if (!best || idx->size() < best->size())
-        best = idx;
+    for (ComponentId componentId : with) {
+      const auto* index = componentId < componentIndex_.size() ? &componentIndex_[componentId] : &empty;
+      if (!best || index->size() < best->size())
+        best = index;
     }
 
     return best;
   }
 
   void World::materialize(Entity reserved) {
-    EntityRecord& rec = store_.record(reserved.index);
-    Archetype& r = root();
-    rec.row = r.table.pushUninit(reserved);
-    rec.arch = &r;
+    EntityRecord& record = store_.record(reserved.index);
+    Archetype& rootArchetype = root();
+    record.row = rootArchetype.table.pushUninitialized(reserved);
+    record.archetype = &rootArchetype;
   }
 
-  void World::flushSequential(CommandBuffer& cb) {
+  void World::flushSequential(CommandBuffer& commandBuffer) {
     ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
-    ECS_ASSERT(cb.store() == &store_, "flush de buffer criado por outro World");
+    ECS_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
 
-    cb.forEach([&](const CommandView& v) {
-      switch (v.op) {
-      case CommandOp::Spawn:
-        if (store_.isReserved(v.e))
-          materialize(v.e);
+    commandBuffer.forEach([&](const CommandView& command) {
+      switch (command.operation) {
+      case CommandOperation::Spawn:
+        if (store_.isReserved(command.entity))
+          materialize(command.entity);
         break;
-      case CommandOp::Destroy:
-        if (store_.isAlive(v.e))
-          destroy(v.e);
-        else if (store_.isReserved(v.e))
-          store_.release(v.e.index);
+      case CommandOperation::Destroy:
+        if (store_.isAlive(command.entity))
+          destroy(command.entity);
+        else if (store_.isReserved(command.entity))
+          store_.release(command.entity.index);
         break;
-      case CommandOp::Add:
-        if (store_.isAlive(v.e))
-          addRaw(v.e, v.cid, v.payload);
+      case CommandOperation::Add:
+        if (store_.isAlive(command.entity))
+          addRaw(command.entity, command.componentId, command.payload);
         break;
-      case CommandOp::Remove:
-        if (store_.isAlive(v.e))
-          removeRaw(v.e, v.cid);
+      case CommandOperation::Remove:
+        if (store_.isAlive(command.entity))
+          removeRaw(command.entity, command.componentId);
         break;
       }
     });
 
-    cb.clear();
+    commandBuffer.clear();
   }
 
-  const Edge& World::jumpEdge(Archetype& src, Archetype& dst) {
-    const uint64_t key = (uint64_t(src.id) << 32) | dst.id;
+  const Edge& World::jumpEdge(Archetype& source, Archetype& destination) {
+    const uint64_t key = (uint64_t(source.id) << 32) | destination.id;
     if (auto it = jumpEdges_.find(key); it != jumpEdges_.end())
       return it->second;
 
-    return jumpEdges_.emplace(key, buildEdge(src, dst, NoComponent)).first->second;
+    return jumpEdges_.emplace(key, buildEdge(source, destination, NoComponent)).first->second;
   }
 
-  void World::flush(CommandBuffer& cb) {
+  void World::flush(CommandBuffer& commandBuffer) {
     ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
-    ECS_ASSERT(cb.store() == &store_, "flush de buffer criado por outro World");
+    ECS_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
 
-    const CommandPlan plan = cb.plan();
+    const CommandPlan plan = commandBuffer.plan();
     NetEffect net;
     FlushMemo memo;
 
-    for (const EntityPlan& ep : plan.entities) {
-      const Entity e = ep.e;
-      cb.netEffect(plan, ep, net);
+    for (const EntityPlan& entityPlan : plan.entities) {
+      const Entity entity = entityPlan.entity;
+      commandBuffer.netEffect(plan, entityPlan, net);
 
-      const bool alive = store_.isAlive(e);
-      const bool reserved = net.spawned && store_.isReserved(e);
+      const bool alive = store_.isAlive(entity);
+      const bool reserved = net.spawned && store_.isReserved(entity);
       if (!alive && !reserved)
         continue; // handle obsoleto: ignorado em vez de cancelar os comandos no destroy (spec §10, questão 3)
       if (net.destroyed) {
         if (alive)
-          destroy(e);
+          destroy(entity);
         else
-          store_.release(e.index);
+          store_.release(entity.index);
         continue;
       }
 
-      const std::span<const NetComponentOp> ops = net.ops;
-      EntityRecord& rec = store_.record(e.index);
-      Archetype* src = alive ? rec.arch : nullptr;
-      if (!memo.matches(src, ops)) {
-        Archetype* dst = findOrCreate(applyOps(src ? src->signature : Signature{}, ops));
-        memo.assign(src, ops, dst, (src && dst != src) ? &jumpEdge(*src, *dst) : nullptr);
+      const std::span<const NetComponentOperation> operations = net.operations;
+      EntityRecord& record = store_.record(entity.index);
+      Archetype* source = alive ? record.archetype : nullptr;
+      if (!memo.matches(source, operations)) {
+        Archetype* destination = findOrCreate(applyOperations(source ? source->signature : Signature{}, operations));
+        memo.assign(source, operations, destination, (source && destination != source) ? &jumpEdge(*source, *destination) : nullptr);
       }
 
       uint32_t row;
-      if (!src) {
-        row = memo.dst->table.pushUninit(e);
-        rec.arch = memo.dst;
-        rec.row = row;
+      if (!source) {
+        row = memo.destination->table.pushUninitialized(entity);
+        record.archetype = memo.destination;
+        record.row = row;
       } else if (memo.edge) {
-        row = moveEntity(e, rec, *memo.dst, *memo.edge);
+        row = moveEntity(entity, record, *memo.destination, *memo.edge);
       } else {
-        row = rec.row;
+        row = record.row;
       }
 
-      writeValues(memo, ops, row);
+      writeValues(memo, operations, row);
     }
 
-    cb.clear();
+    commandBuffer.clear();
   }
 
   WorldStats World::stats() const {
-    WorldStats st{};
-    st.archetypeCount = archetypeCount();
-    st.signatureLookups = sigLookups_;
+    WorldStats worldStats{};
+    worldStats.archetypeCount = archetypeCount();
+    worldStats.signatureLookups = signatureLookups_;
 
-    for (const auto& up : archetypes_) {
-      const Archetype& a = *up;
+    for (const auto& owned : archetypes_) {
+      const Archetype& archetype = *owned;
       size_t rowBytes = sizeof(Entity);
-      for (uint16_t i = 0; i < a.table.columnCount(); ++i)
-        rowBytes += a.table.column(i).info->size;
+      for (uint16_t i = 0; i < archetype.table.columnCount(); ++i)
+        rowBytes += archetype.table.column(i).info->size;
 
-      ArchetypeStats as{};
-      as.id = a.id;
-      as.signature = a.signature;
-      as.count = a.table.count();
-      as.capacity = a.table.capacity();
-      as.edgeCount = static_cast<uint32_t>(a.addEdges.size() + a.removeEdges.size());
-      as.columnBytes = size_t(as.capacity) * rowBytes;
-      as.idleBytes = size_t(as.capacity - as.count) * rowBytes;
-      as.signatureBytes = (a.signature.capacity() + a.columnTypes.capacity()) * sizeof(ComponentId);
-      as.edgeBytes = a.addEdges.capacityBytes() + a.removeEdges.capacityBytes();
-      for (const auto& [cid, e] : a.addEdges)
-        as.edgeBytes += e.srcToDst.capacity() * sizeof(int16_t);
-      for (const auto& [cid, e] : a.removeEdges)
-        as.edgeBytes += e.srcToDst.capacity() * sizeof(int16_t);
+      ArchetypeStats archetypeStats{};
+      archetypeStats.id = archetype.id;
+      archetypeStats.signature = archetype.signature;
+      archetypeStats.count = archetype.table.count();
+      archetypeStats.capacity = archetype.table.capacity();
+      archetypeStats.edgeCount = static_cast<uint32_t>(archetype.addEdges.size() + archetype.removeEdges.size());
+      archetypeStats.columnBytes = size_t(archetypeStats.capacity) * rowBytes;
+      archetypeStats.idleBytes = size_t(archetypeStats.capacity - archetypeStats.count) * rowBytes;
+      archetypeStats.signatureBytes = (archetype.signature.capacity() + archetype.columnTypes.capacity()) * sizeof(ComponentId);
+      archetypeStats.edgeBytes = archetype.addEdges.capacityBytes() + archetype.removeEdges.capacityBytes();
+      for (const auto& [componentId, edge] : archetype.addEdges)
+        archetypeStats.edgeBytes += edge.sourceToDestination.capacity() * sizeof(int16_t);
+      for (const auto& [componentId, edge] : archetype.removeEdges)
+        archetypeStats.edgeBytes += edge.sourceToDestination.capacity() * sizeof(int16_t);
 
-      st.liveEntities += as.count;
-      const uint32_t bucket = as.count == 0 ? 0 : 1 + (31 - static_cast<uint32_t>(__builtin_clz(as.count)));
-      ++st.histogram[bucket];
-      st.archetypes.push_back(std::move(as));
+      worldStats.liveEntities += archetypeStats.count;
+      const uint32_t bucket = archetypeStats.count == 0 ? 0 : 1 + (31 - static_cast<uint32_t>(__builtin_clz(archetypeStats.count)));
+      ++worldStats.histogram[bucket];
+      worldStats.archetypes.push_back(std::move(archetypeStats));
     }
 
-    return st;
+    return worldStats;
   }
 }

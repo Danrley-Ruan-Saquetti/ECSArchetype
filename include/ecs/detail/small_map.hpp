@@ -14,21 +14,21 @@ namespace ecs {
    public:
     using value_type = std::pair<K, V>;
 
-    V* find(K k) noexcept {
-      auto it = lower(k);
-      return (it != items_.end() && it->first == k) ? &it->second : nullptr;
+    V* find(K key) noexcept {
+      auto it = lowerBound(key);
+      return (it != items_.end() && it->first == key) ? &it->second : nullptr;
     }
-    const V* find(K k) const noexcept {
-      auto it = lower(k);
-      return (it != items_.end() && it->first == k) ? &it->second : nullptr;
+    const V* find(K key) const noexcept {
+      auto it = lowerBound(key);
+      return (it != items_.end() && it->first == key) ? &it->second : nullptr;
     }
 
     // Pode invalidar referências anteriores.
-    V& insert(K k, V v) {
-      auto it = lower(k);
-      ECS_ASSERT(it == items_.end() || it->first != k, "SmallMap::insert chave repetida");
+    V& insert(K key, V value) {
+      auto it = lowerBound(key);
+      ECS_ASSERT(it == items_.end() || it->first != key, "SmallMap::insert chave repetida");
 
-      it = items_.insert(it, value_type(k, std::move(v)));
+      it = items_.insert(it, value_type(key, std::move(value)));
       return it->second;
     }
 
@@ -52,11 +52,11 @@ namespace ecs {
     }
 
    private:
-    auto lower(K k) noexcept {
-      return std::lower_bound(items_.begin(), items_.end(), k, [](const value_type& p, K key) { return p.first < key; });
+    auto lowerBound(K key) noexcept {
+      return std::lower_bound(items_.begin(), items_.end(), key, [](const value_type& item, K target) { return item.first < target; });
     }
-    auto lower(K k) const noexcept {
-      return std::lower_bound(items_.begin(), items_.end(), k, [](const value_type& p, K key) { return p.first < key; });
+    auto lowerBound(K key) const noexcept {
+      return std::lower_bound(items_.begin(), items_.end(), key, [](const value_type& item, K target) { return item.first < target; });
     }
 
     std::vector<value_type> items_;

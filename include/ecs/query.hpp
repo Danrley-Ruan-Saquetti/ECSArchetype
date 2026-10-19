@@ -27,9 +27,9 @@ namespace ecs {
       : iterating_(iterating) {}
     virtual ~QueryCacheBase() = default;
 
-    virtual void onArchetypeCreated(Archetype& a) = 0;
-    virtual bool matches(const Archetype& a) const = 0;
-    virtual bool isMatched(const Archetype* a) const = 0;
+    virtual void onArchetypeCreated(Archetype& archetype) = 0;
+    virtual bool matches(const Archetype& archetype) const = 0;
+    virtual bool isMatched(const Archetype* archetype) const = 0;
 
    protected:
     uint32_t* iterating_;
@@ -37,24 +37,24 @@ namespace ecs {
 
   namespace detail {
     struct IterationGuard {
-      explicit IterationGuard(uint32_t* p) noexcept
-        : p_(p) {
-        ++*p_;
+      explicit IterationGuard(uint32_t* counter) noexcept
+        : counter_(counter) {
+        ++*counter_;
       }
       ~IterationGuard() {
-        --*p_;
+        --*counter_;
       }
       IterationGuard(const IterationGuard&) = delete;
       IterationGuard& operator=(const IterationGuard&) = delete;
 
-      uint32_t* p_;
+      uint32_t* counter_;
     };
   }
 
   template <class... Ts>
   struct MatchedTable {
-    Archetype* arch;
-    std::array<uint16_t, sizeof...(Ts)> cols;
+    Archetype* archetype;
+    std::array<uint16_t, sizeof...(Ts)> columns;
   };
 
   template <class... Ts>
@@ -73,16 +73,16 @@ namespace ecs {
       : QueryCacheBase(iterating),
         with_(std::move(with)),
         without_(std::move(without)),
-        tsIds_{componentId<std::remove_const_t<Ts>>()...} {}
+        componentIds_{componentId<std::remove_const_t<Ts>>()...} {}
 
     // Com `smallest`, percorre só os arquétipos do menor componentIndex (R-QY-3).
     void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const SmallMap<ArchetypeId, uint16_t>* smallest) {
       if (smallest) {
-        for (const auto& [aid, col] : *smallest)
-          onArchetypeCreated(*all[aid]);
+        for (const auto& [archetypeId, column] : *smallest)
+          onArchetypeCreated(*all[archetypeId]);
       } else {
-        for (const auto& a : all)
-          onArchetypeCreated(*a);
+        for (const auto& archetype : all)
+          onArchetypeCreated(*archetype);
       }
     }
 
@@ -90,79 +90,79 @@ namespace ecs {
       return matched_.size();
     }
 
-    bool matches(const Archetype& a) const override {
-      if (!std::includes(a.signature.begin(), a.signature.end(), with_.begin(), with_.end()))
+    bool matches(const Archetype& archetype) const override {
+      if (!std::includes(archetype.signature.begin(), archetype.signature.end(), with_.begin(), with_.end()))
         return false;
-      for (ComponentId c : without_)
-        if (std::binary_search(a.signature.begin(), a.signature.end(), c))
+      for (ComponentId componentId : without_)
+        if (std::binary_search(archetype.signature.begin(), archetype.signature.end(), componentId))
           return false;
 
       return true;
     }
 
-    bool isMatched(const Archetype* a) const override {
-      return std::any_of(matched_.begin(), matched_.end(), [a](const MatchedTable<Ts...>& m) { return m.arch == a; });
+    bool isMatched(const Archetype* archetype) const override {
+      return std::any_of(matched_.begin(), matched_.end(), [archetype](const MatchedTable<Ts...>& matched) { return matched.archetype == archetype; });
     }
 
-    void onArchetypeCreated(Archetype& a) override {
-      if (!matches(a))
+    void onArchetypeCreated(Archetype& archetype) override {
+      if (!matches(archetype))
         return;
 
-      MatchedTable<Ts...> m{&a, {}};
-      for (size_t i = 0; i < tsIds_.size(); ++i)
-        m.cols[i] = columnOf(a, tsIds_[i]);
-      matched_.push_back(m);
+      MatchedTable<Ts...> matched{&archetype, {}};
+      for (size_t i = 0; i < componentIds_.size(); ++i)
+        matched.columns[i] = columnOf(archetype, componentIds_[i]);
+      matched_.push_back(matched);
     }
 
-    // f(std::span<Ts>...) uma vez por tabela não vazia. Ts const → std::span<const T>.
+    // callback(std::span<Ts>...) uma vez por tabela não vazia. Ts const → std::span<const T>.
     template <class F>
-    void eachBlock(F&& f) {
+    void eachBlock(F&& callback) {
       detail::IterationGuard guard(iterating_);
-      for (const MatchedTable<Ts...>& m : matched_) {
-        Table& t = m.arch->table;
-        if (t.count() == 0)
+      for (const MatchedTable<Ts...>& matched : matched_) {
+        Table& table = matched.archetype->table;
+        if (table.count() == 0)
           continue;
 
-        callBlock(f, t, m, std::index_sequence_for<Ts...>{});
+        callBlock(callback, table, matched, std::index_sequence_for<Ts...>{});
       }
     }
 
-    // f(Ts&...) ou f(Entity, Ts&...).
+    // callback(Ts&...) ou callback(Entity, Ts&...).
     template <class F>
-    void each(F&& f) {
+    void each(F&& callback) {
       detail::IterationGuard guard(iterating_);
-      for (const MatchedTable<Ts...>& m : matched_) {
-        Table& t = m.arch->table;
-        const uint32_t n = t.count();
-        if (n == 0)
+      for (const MatchedTable<Ts...>& matched : matched_) {
+        Table& table = matched.archetype->table;
+        const uint32_t rowCount = table.count();
+        if (rowCount == 0)
           continue;
 
-        callRows(f, t, m, n, std::index_sequence_for<Ts...>{});
+        callRows(callback, table, matched, rowCount, std::index_sequence_for<Ts...>{});
       }
     }
 
    private:
     template <class F, size_t... Is>
-    static void callBlock(F& f, Table& t, const MatchedTable<Ts...>& m, std::index_sequence<Is...>) {
-      f(std::span<Ts>(reinterpret_cast<Ts*>(t.column(m.cols[Is]).data), t.count())...);
+    static void callBlock(F& callback, Table& table, const MatchedTable<Ts...>& matched, std::index_sequence<Is...>) {
+      callback(std::span<Ts>(reinterpret_cast<Ts*>(table.column(matched.columns[Is]).data), table.count())...);
     }
 
     template <class F, size_t... Is>
-    static void callRows(F& f, Table& t, const MatchedTable<Ts...>& m, uint32_t n, std::index_sequence<Is...>) {
-      std::tuple<Ts*...> cols{reinterpret_cast<Ts*>(t.column(m.cols[Is]).data)...};
-      const Entity* ents = t.entities().data();
+    static void callRows(F& callback, Table& table, const MatchedTable<Ts...>& matched, uint32_t rowCount, std::index_sequence<Is...>) {
+      std::tuple<Ts*...> columns{reinterpret_cast<Ts*>(table.column(matched.columns[Is]).data)...};
+      const Entity* entities = table.entities().data();
 
       if constexpr (std::is_invocable_v<F&, Entity, Ts&...>) {
-        for (uint32_t r = 0; r < n; ++r)
-          f(ents[r], std::get<Is>(cols)[r]...);
+        for (uint32_t row = 0; row < rowCount; ++row)
+          callback(entities[row], std::get<Is>(columns)[row]...);
       } else {
-        for (uint32_t r = 0; r < n; ++r)
-          f(std::get<Is>(cols)[r]...);
+        for (uint32_t row = 0; row < rowCount; ++row)
+          callback(std::get<Is>(columns)[row]...);
       }
     }
 
     std::vector<ComponentId> with_, without_;
-    std::array<ComponentId, sizeof...(Ts)> tsIds_;
+    std::array<ComponentId, sizeof...(Ts)> componentIds_;
     std::vector<MatchedTable<Ts...>> matched_;
   };
 }

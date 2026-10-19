@@ -7,32 +7,32 @@
 #include "ecs/type_info.hpp"
 
 TEST_CASE("componentId é estável, denso e ignora cvref") {
-  auto a = ecs::componentId<A>();
-  auto b = ecs::componentId<B>();
+  auto idA = ecs::componentId<A>();
+  auto idB = ecs::componentId<B>();
 
-  CHECK(ecs::componentId<A>() == a);
-  CHECK(ecs::componentId<const A&>() == a);
-  CHECK(b != a);
-  CHECK(std::max(a, b) < ecs::registeredTypeCount());
+  CHECK(ecs::componentId<A>() == idA);
+  CHECK(ecs::componentId<const A&>() == idA);
+  CHECK(idB != idA);
+  CHECK(std::max(idA, idB) < ecs::registeredTypeCount());
 }
 
 TEST_CASE("TypeInfo de trivial, não trivial e tag") {
-  auto& ia = ecs::typeInfo(ecs::componentId<A>());
-  CHECK(ia.size == sizeof(A));
-  CHECK(ia.trivial);
-  CHECK_FALSE(ia.tag);
-  CHECK(ia.moveConstruct == nullptr);
-  CHECK(ia.destroy == nullptr);
-  CHECK(ia.name == "A");
+  auto& infoA = ecs::typeInfo(ecs::componentId<A>());
+  CHECK(infoA.size == sizeof(A));
+  CHECK(infoA.trivial);
+  CHECK_FALSE(infoA.tag);
+  CHECK(infoA.moveConstruct == nullptr);
+  CHECK(infoA.destroy == nullptr);
+  CHECK(infoA.name == "A");
 
-  auto& is = ecs::typeInfo(ecs::componentId<std::string>());
-  CHECK_FALSE(is.trivial);
-  CHECK(is.moveConstruct != nullptr);
-  CHECK(is.destroy != nullptr);
+  auto& infoString = ecs::typeInfo(ecs::componentId<std::string>());
+  CHECK_FALSE(infoString.trivial);
+  CHECK(infoString.moveConstruct != nullptr);
+  CHECK(infoString.destroy != nullptr);
 
-  auto& it = ecs::typeInfo(ecs::componentId<Tag>());
-  CHECK(it.tag);
-  CHECK(it.size == 0);
+  auto& infoTag = ecs::typeInfo(ecs::componentId<Tag>());
+  CHECK(infoTag.tag);
+  CHECK(infoTag.size == 0);
 
-  CHECK(ecs::typeInfo(ecs::componentId<Wide>()).align == 64);
+  CHECK(ecs::typeInfo(ecs::componentId<Wide>()).alignment == 64);
 }

@@ -11,100 +11,100 @@
 #include "components.hpp"
 #include "ecs/world.hpp"
 
-struct FS {
-  std::string s; // não trivial; valor sempre > 32 chars para sair do SSO
+struct FuzzState {
+  std::string text; // não trivial; valor sempre > 32 chars para sair do SSO
 };
 
 // tag guarda 0
 using Model = std::unordered_map<ecs::Entity, std::map<ecs::ComponentId, uint64_t>, ecs::EntityHash>;
 
 namespace fuzz {
-  inline const std::string kFsPrefix = "fuzz-state-padding-0123456789abcdef-";
+  inline const std::string kFuzzStatePrefix = "fuzz-state-padding-0123456789abcdef-";
 
-  inline FS makeFS(uint64_t v) {
-    return FS{kFsPrefix + std::to_string(v)};
+  inline FuzzState makeFuzzState(uint64_t value) {
+    return FuzzState{kFuzzStatePrefix + std::to_string(value)};
   }
 
   inline const ecs::ComponentId* universe() {
-    static const ecs::ComponentId ids[5] = {ecs::componentId<A>(), ecs::componentId<B>(), ecs::componentId<FS>(),
+    static const ecs::ComponentId ids[5] = {ecs::componentId<A>(), ecs::componentId<B>(), ecs::componentId<FuzzState>(),
                                             ecs::componentId<Tag>(), ecs::componentId<LifeCounter>()};
     return ids;
   }
 
-  inline bool isTag(ecs::ComponentId cid) {
-    return cid == ecs::componentId<Tag>();
+  inline bool isTag(ecs::ComponentId componentId) {
+    return componentId == ecs::componentId<Tag>();
   }
 }
 
 // Mistura index, generation e contador (splitmix64): troca de linhas aparece como valor errado.
-inline uint64_t makeValue(ecs::Entity e, uint64_t counter) {
-  uint64_t x = (uint64_t(e.index) << 32 | e.generation) ^ (counter * 0x9e3779b97f4a7c15ull);
-  x += 0x9e3779b97f4a7c15ull;
-  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ull;
-  x = (x ^ (x >> 27)) * 0x94d049bb133111ebull;
-  return x ^ (x >> 31);
+inline uint64_t makeValue(ecs::Entity entity, uint64_t counter) {
+  uint64_t hash = (uint64_t(entity.index) << 32 | entity.generation) ^ (counter * 0x9e3779b97f4a7c15ull);
+  hash += 0x9e3779b97f4a7c15ull;
+  hash = (hash ^ (hash >> 30)) * 0xbf58476d1ce4e5b9ull;
+  hash = (hash ^ (hash >> 27)) * 0x94d049bb133111ebull;
+  return hash ^ (hash >> 31);
 }
 
-inline void addToWorld(ecs::World& w, ecs::Entity e, ecs::ComponentId cid, uint64_t v) {
-  if (cid == ecs::componentId<A>())
-    w.add(e, A{v});
-  else if (cid == ecs::componentId<B>())
-    w.add(e, B{v, ~v});
-  else if (cid == ecs::componentId<FS>())
-    w.add(e, fuzz::makeFS(v));
-  else if (cid == ecs::componentId<Tag>())
-    w.add(e, Tag{});
+inline void addToWorld(ecs::World& world, ecs::Entity entity, ecs::ComponentId componentId, uint64_t value) {
+  if (componentId == ecs::componentId<A>())
+    world.add(entity, A{value});
+  else if (componentId == ecs::componentId<B>())
+    world.add(entity, B{value, ~value});
+  else if (componentId == ecs::componentId<FuzzState>())
+    world.add(entity, fuzz::makeFuzzState(value));
+  else if (componentId == ecs::componentId<Tag>())
+    world.add(entity, Tag{});
   else
-    w.add(e, LifeCounter{v});
+    world.add(entity, LifeCounter{value});
 }
 
 // Devolve false se a entidade não tem o componente. Tag devolve 0.
-inline bool readFromWorld(ecs::World& w, ecs::Entity e, ecs::ComponentId cid, uint64_t& out) {
-  if (!w.hasRaw(e, cid))
+inline bool readFromWorld(ecs::World& world, ecs::Entity entity, ecs::ComponentId componentId, uint64_t& out) {
+  if (!world.hasRaw(entity, componentId))
     return false;
 
-  if (cid == ecs::componentId<A>()) {
-    out = w.get<A>(e).v;
-  } else if (cid == ecs::componentId<B>()) {
-    auto& b = w.get<B>(e);
-    out = (b.w == ~b.v) ? b.v : ~uint64_t(0); // w corrompido vira valor impossível de casar
-  } else if (cid == ecs::componentId<FS>()) {
-    const std::string& s = w.get<FS>(e).s;
-    out = s.compare(0, fuzz::kFsPrefix.size(), fuzz::kFsPrefix) == 0 ? std::strtoull(s.c_str() + fuzz::kFsPrefix.size(), nullptr, 10) : ~uint64_t(0);
-  } else if (cid == ecs::componentId<Tag>()) {
+  if (componentId == ecs::componentId<A>()) {
+    out = world.get<A>(entity).value;
+  } else if (componentId == ecs::componentId<B>()) {
+    auto& componentB = world.get<B>(entity);
+    out = (componentB.second == ~componentB.first) ? componentB.first : ~uint64_t(0); // second corrompido vira valor impossível de casar
+  } else if (componentId == ecs::componentId<FuzzState>()) {
+    const std::string& text = world.get<FuzzState>(entity).text;
+    out = text.compare(0, fuzz::kFuzzStatePrefix.size(), fuzz::kFuzzStatePrefix) == 0 ? std::strtoull(text.c_str() + fuzz::kFuzzStatePrefix.size(), nullptr, 10) : ~uint64_t(0);
+  } else if (componentId == ecs::componentId<Tag>()) {
     out = 0;
   } else {
-    out = w.get<LifeCounter>(e).v;
+    out = world.get<LifeCounter>(entity).value;
   }
 
   return true;
 }
 
-inline void requireEqual(ecs::World& w, const Model& model) {
-  for (const auto& [e, comps] : model) {
-    if (!w.isAlive(e))
-      FAIL("entidade do modelo morta no World: e=" << e.index << ":" << e.generation);
+inline void requireEqual(ecs::World& world, const Model& model) {
+  for (const auto& [entity, components] : model) {
+    if (!world.isAlive(entity))
+      FAIL("entidade do modelo morta no World: e=" << entity.index << ":" << entity.generation);
 
     for (int i = 0; i < 5; ++i) {
-      const ecs::ComponentId cid = fuzz::universe()[i];
-      auto it = comps.find(cid);
+      const ecs::ComponentId componentId = fuzz::universe()[i];
+      auto it = components.find(componentId);
       uint64_t got = 0;
-      const bool has = readFromWorld(w, e, cid, got);
-      if (has != (it != comps.end()))
-        FAIL("presença diverge: e=" << e.index << ":" << e.generation << " tipo=" << ecs::typeInfo(cid).name);
+      const bool has = readFromWorld(world, entity, componentId, got);
+      if (has != (it != components.end()))
+        FAIL("presença diverge: e=" << entity.index << ":" << entity.generation << " tipo=" << ecs::typeInfo(componentId).name);
       if (has && got != it->second)
-        FAIL("valor diverge: e=" << e.index << ":" << e.generation << " tipo=" << ecs::typeInfo(cid).name
+        FAIL("valor diverge: e=" << entity.index << ":" << entity.generation << " tipo=" << ecs::typeInfo(componentId).name
                                  << " esperado=" << it->second << " obtido=" << got);
     }
   }
 }
 
 inline uint64_t fuzzSeed() {
-  const char* s = std::getenv("ECS_FUZZ_SEED");
-  return s ? std::strtoull(s, nullptr, 0) : 0xEC5ull;
+  const char* environmentValue = std::getenv("ECS_FUZZ_SEED");
+  return environmentValue ? std::strtoull(environmentValue, nullptr, 0) : 0xEC5ull;
 }
 
-inline uint64_t fuzzOps() {
-  const char* s = std::getenv("ECS_FUZZ_OPS");
-  return s ? std::strtoull(s, nullptr, 0) : 1'000'000ull;
+inline uint64_t fuzzOperationCount() {
+  const char* environmentValue = std::getenv("ECS_FUZZ_OPS");
+  return environmentValue ? std::strtoull(environmentValue, nullptr, 0) : 1'000'000ull;
 }

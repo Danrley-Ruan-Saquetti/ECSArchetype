@@ -11,29 +11,29 @@
 #include "ecs/type_info.hpp"
 
 namespace ecs {
-  // `dst` não pode estar construído; `src` termina destruído.
-  inline void relocateValue(const TypeInfo& ti, void* dst, void* src) noexcept {
-    if (ti.trivial) {
-      std::memcpy(dst, src, ti.size);
+  // `destination` não pode estar construído; `source` termina destruído.
+  inline void relocateValue(const TypeInfo& info, void* destination, void* source) noexcept {
+    if (info.trivial) {
+      std::memcpy(destination, source, info.size);
     } else {
-      ti.moveConstruct(dst, src);
-      ti.destroy(src);
+      info.moveConstruct(destination, source);
+      info.destroy(source);
     }
   }
-  inline void destroyValue(const TypeInfo& ti, void* p) noexcept {
-    if (!ti.trivial)
-      ti.destroy(p);
+  inline void destroyValue(const TypeInfo& info, void* value) noexcept {
+    if (!info.trivial)
+      info.destroy(value);
   }
 
   struct Column {
     const TypeInfo* info;
     std::byte* data = nullptr;
 
-    void* at(uint32_t r) noexcept {
-      return data + size_t(r) * info->size;
+    void* at(uint32_t row) noexcept {
+      return data + size_t(row) * info->size;
     }
-    const void* at(uint32_t r) const noexcept {
-      return data + size_t(r) * info->size;
+    const void* at(uint32_t row) const noexcept {
+      return data + size_t(row) * info->size;
     }
   };
 
@@ -53,18 +53,18 @@ namespace ecs {
       return capacity_;
     }
 
-    uint32_t pushUninit(Entity e); // linha nova MORTA no fim; pode realocar
-    void destroyRow(uint32_t r) noexcept; // linha viva → morta
-    std::optional<Entity> fillHole(uint32_t r) noexcept; // tapa linha morta com a última
+    uint32_t pushUninitialized(Entity entity); // linha nova MORTA no fim; pode realocar
+    void destroyRow(uint32_t row) noexcept; // linha viva → morta
+    std::optional<Entity> fillHole(uint32_t row) noexcept; // tapa linha morta com a última
 
     std::span<const Entity> entities() const noexcept {
       return entities_;
     }
-    Column& column(uint16_t c) noexcept {
-      return columns_[c];
+    Column& column(uint16_t index) noexcept {
+      return columns_[index];
     }
-    const Column& column(uint16_t c) const noexcept {
-      return columns_[c];
+    const Column& column(uint16_t index) const noexcept {
+      return columns_[index];
     }
     uint16_t columnCount() const noexcept {
       return static_cast<uint16_t>(columns_.size());
@@ -74,7 +74,7 @@ namespace ecs {
     }
 
    private:
-    void reserve(uint32_t newCap);
+    void reserve(uint32_t newCapacity);
     void releaseAll() noexcept;
 
     std::vector<Column> columns_;

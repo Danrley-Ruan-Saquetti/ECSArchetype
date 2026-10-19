@@ -4,34 +4,34 @@
 #include <string>
 
 struct A {
-  uint64_t v;
+  uint64_t value;
 };
 struct B {
-  uint64_t v, w;
+  uint64_t first, second;
 };
 struct Tag {};
 struct alignas(64) Wide {
-  float f[16];
+  float values[16];
 };
 
 struct LifeCounter {
   static inline int64_t alive = 0;
 
-  uint64_t v = 0;
+  uint64_t value = 0;
 
   LifeCounter() noexcept {
     ++alive;
   }
-  explicit LifeCounter(uint64_t x) noexcept
-    : v(x) {
+  explicit LifeCounter(uint64_t initialValue) noexcept
+    : value(initialValue) {
     ++alive;
   }
-  LifeCounter(const LifeCounter& o) noexcept
-    : v(o.v) {
+  LifeCounter(const LifeCounter& other) noexcept
+    : value(other.value) {
     ++alive;
   }
-  LifeCounter(LifeCounter&& o) noexcept
-    : v(o.v) {
+  LifeCounter(LifeCounter&& other) noexcept
+    : value(other.value) {
     ++alive;
   }
   LifeCounter& operator=(const LifeCounter&) noexcept = default;
@@ -42,8 +42,8 @@ struct LifeCounter {
 };
 
 // Requer doctest incluído antes do uso.
-#define CHECK_INV(w)                                 \
-  do {                                               \
-    std::string why_;                                \
-    CHECK_MESSAGE((w).checkInvariants(&why_), why_); \
+#define CHECK_INVARIANTS(world)                          \
+  do {                                                   \
+    std::string why_;                                    \
+    CHECK_MESSAGE((world).checkInvariants(&why_), why_); \
   } while (0)

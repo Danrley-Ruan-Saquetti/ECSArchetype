@@ -7,17 +7,17 @@ namespace ecs::detail {
   template <class T>
   constexpr std::string_view typeName() {
 #if defined(_MSC_VER)
-    std::string_view s = __FUNCSIG__;
+    std::string_view functionSignature = __FUNCSIG__;
     constexpr std::string_view prefix = "typeName<";
-    auto b = s.find(prefix) + prefix.size();
-    auto e = s.rfind(">(void)");
-    return s.substr(b, e - b);
+    auto begin = functionSignature.find(prefix) + prefix.size();
+    auto end = functionSignature.rfind(">(void)");
+    return functionSignature.substr(begin, end - begin);
 #else
-    std::string_view s = __PRETTY_FUNCTION__;
+    std::string_view functionSignature = __PRETTY_FUNCTION__;
     constexpr std::string_view marker = "T = ";
-    auto b = s.find(marker) + marker.size();
-    auto e = s.find_first_of(";]", b);
-    return s.substr(b, e - b);
+    auto begin = functionSignature.find(marker) + marker.size();
+    auto end = functionSignature.find_first_of(";]", begin);
+    return functionSignature.substr(begin, end - begin);
 #endif
   }
 }

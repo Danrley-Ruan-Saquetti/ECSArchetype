@@ -13,44 +13,44 @@
 
 namespace {
   template <bool NT, int I>
-  auto mk(uint64_t v) {
+  auto makeComponent(uint64_t value) {
     if constexpr (NT)
-      return NonTrivial<Comp<I>>{Comp<I>{v}};
+      return NonTrivial<Component<I>>{Component<I>{value}};
     else
-      return Comp<I>{v};
+      return Component<I>{value};
   }
 
   template <bool NT, size_t... Is>
-  ecs::Entity createK(ecs::World& w, uint64_t v, std::index_sequence<Is...>) {
-    return w.create(mk<NT, int(Is)>(v)...);
+  ecs::Entity createWithComponents(ecs::World& world, uint64_t value, std::index_sequence<Is...>) {
+    return world.create(makeComponent<NT, int(Is)>(value)...);
   }
 
   constexpr int kExtra = 31; // componente que entra e sai
 
   template <bool NT, int K>
   void BM_Transition(benchmark::State& state) {
-    constexpr int E = 1024;
-    ecs::World w;
-    std::vector<ecs::Entity> es;
-    for (int i = 0; i < E; ++i)
-      es.push_back(createK<NT>(w, i, std::make_index_sequence<K>{}));
+    constexpr int kEntityCount = 1024;
+    ecs::World world;
+    std::vector<ecs::Entity> entities;
+    for (int i = 0; i < kEntityCount; ++i)
+      entities.push_back(createWithComponents<NT>(world, i, std::make_index_sequence<K>{}));
 
-    using X = decltype(mk<NT, kExtra>(0));
-    for (auto e : es) { // aquece arestas e capacidades
-      w.add(e, mk<NT, kExtra>(1));
-      w.remove<X>(e);
+    using X = decltype(makeComponent<NT, kExtra>(0));
+    for (auto entity : entities) { // aquece arestas e capacidades
+      world.add(entity, makeComponent<NT, kExtra>(1));
+      world.remove<X>(entity);
     }
 
     for (auto _ : state) {
-      for (auto e : es) {
-        w.add(e, mk<NT, kExtra>(2));
-        w.remove<X>(e);
+      for (auto entity : entities) {
+        world.add(entity, makeComponent<NT, kExtra>(2));
+        world.remove<X>(entity);
       }
     }
 
-    state.counters["ns_per_op"] = benchmark::Counter(2.0 * E, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
-    state.counters["archetypes"] = w.archetypeCount();
-    state.counters["entities_per_archetype"] = double(E) / w.archetypeCount();
+    state.counters["ns_per_op"] = benchmark::Counter(2.0 * kEntityCount, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
+    state.counters["archetypes"] = world.archetypeCount();
+    state.counters["entities_per_archetype"] = double(kEntityCount) / world.archetypeCount();
   }
   BENCHMARK_TEMPLATE2(BM_Transition, false, 2)->Name("BM_Transition_Trivial/2");
   BENCHMARK_TEMPLATE2(BM_Transition, false, 4)->Name("BM_Transition_Trivial/4");
@@ -65,89 +65,89 @@ namespace {
   void BM_TransitionCold(benchmark::State& state) {
     for (auto _ : state) {
       state.PauseTiming();
-      auto w = std::make_unique<ecs::World>();
-      auto e = w->create(Comp<0>{1}, Comp<1>{2}, Comp<2>{3}, Comp<3>{4});
+      auto world = std::make_unique<ecs::World>();
+      auto entity = world->create(Component<0>{1}, Component<1>{2}, Component<2>{3}, Component<3>{4});
       state.ResumeTiming();
 
-      w->add(e, Comp<kExtra>{5});
+      world->add(entity, Component<kExtra>{5});
 
       state.PauseTiming();
-      w.reset();
+      world.reset();
       state.ResumeTiming();
     }
   }
   BENCHMARK(BM_TransitionCold);
 
-  struct Rec4 {
-    uint64_t a, b, c, d;
+  struct Record4 {
+    uint64_t first, second, third, fourth;
   };
 
-  std::vector<uint32_t> permutation(uint32_t n) {
-    std::vector<uint32_t> p(n);
-    std::iota(p.begin(), p.end(), 0u);
-    std::mt19937 rng(1234);
-    std::shuffle(p.begin(), p.end(), rng);
-    return p;
+  std::vector<uint32_t> permutation(uint32_t count) {
+    std::vector<uint32_t> indices(count);
+    std::iota(indices.begin(), indices.end(), 0u);
+    std::mt19937 generator(1234);
+    std::shuffle(indices.begin(), indices.end(), generator);
+    return indices;
   }
 
-  constexpr uint32_t kGetN = 1'000'000;
+  constexpr uint32_t kGetCount = 1'000'000;
 
   // NF-P6: sem meta.
   void BM_RandomGet(benchmark::State& state) {
-    ecs::World w;
-    std::vector<ecs::Entity> es;
-    es.reserve(kGetN);
-    for (uint32_t i = 0; i < kGetN; ++i)
-      es.push_back(w.create(Comp<0>{i}, Comp<1>{i}, Comp<2>{i}, Comp<3>{i}));
-    const auto perm = permutation(kGetN);
+    ecs::World world;
+    std::vector<ecs::Entity> entities;
+    entities.reserve(kGetCount);
+    for (uint32_t i = 0; i < kGetCount; ++i)
+      entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
+    const auto shuffledIndices = permutation(kGetCount);
 
     for (auto _ : state) {
       uint64_t sum = 0;
-      for (uint32_t i : perm)
-        sum += w.get<Comp<2>>(es[i]).v;
+      for (uint32_t i : shuffledIndices)
+        sum += world.get<Component<2>>(entities[i]).value;
       benchmark::DoNotOptimize(sum);
     }
 
-    state.counters["per_get"] = benchmark::Counter(kGetN, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
+    state.counters["per_get"] = benchmark::Counter(kGetCount, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_RandomGet);
 
   void BM_RandomGet_VectorStruct(benchmark::State& state) {
-    std::vector<Rec4> v(kGetN);
-    for (uint32_t i = 0; i < kGetN; ++i)
-      v[i] = Rec4{i, i, i, i};
-    const auto perm = permutation(kGetN);
+    std::vector<Record4> records(kGetCount);
+    for (uint32_t i = 0; i < kGetCount; ++i)
+      records[i] = Record4{i, i, i, i};
+    const auto shuffledIndices = permutation(kGetCount);
 
     for (auto _ : state) {
       uint64_t sum = 0;
-      for (uint32_t i : perm)
-        sum += v[i].c;
+      for (uint32_t i : shuffledIndices)
+        sum += records[i].third;
       benchmark::DoNotOptimize(sum);
     }
 
-    state.counters["per_get"] = benchmark::Counter(kGetN, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
+    state.counters["per_get"] = benchmark::Counter(kGetCount, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_RandomGet_VectorStruct);
 
   // Churn: 10% das entidades destruídas e 10% novas por iteração.
   void BM_CreateDestroyChurn(benchmark::State& state) {
-    constexpr uint32_t N = 100'000, K = N / 10;
-    ecs::World w;
-    std::vector<ecs::Entity> es;
-    es.reserve(N);
-    for (uint32_t i = 0; i < N; ++i)
-      es.push_back(w.create(Comp<0>{i}, Comp<1>{i}, Comp<2>{i}, Comp<3>{i}));
+    constexpr uint32_t kEntityCount = 100'000, kChurnPerIteration = kEntityCount / 10;
+    ecs::World world;
+    std::vector<ecs::Entity> entities;
+    entities.reserve(kEntityCount);
+    for (uint32_t i = 0; i < kEntityCount; ++i)
+      entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
 
-    std::mt19937 rng(99);
+    std::mt19937 generator(99);
     for (auto _ : state) {
-      for (uint32_t k = 0; k < K; ++k) {
-        const uint32_t i = rng() % N;
-        w.destroy(es[i]);
-        es[i] = w.create(Comp<0>{k}, Comp<1>{k}, Comp<2>{k}, Comp<3>{k});
+      for (uint32_t churn = 0; churn < kChurnPerIteration; ++churn) {
+        const uint32_t i = generator() % kEntityCount;
+        world.destroy(entities[i]);
+        entities[i] = world.create(Component<0>{churn}, Component<1>{churn}, Component<2>{churn}, Component<3>{churn});
       }
     }
 
-    state.counters["ns_per_op"] = benchmark::Counter(2.0 * K, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
+    state.counters["ns_per_op"] = benchmark::Counter(2.0 * kChurnPerIteration, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
   }
   BENCHMARK(BM_CreateDestroyChurn);
 }

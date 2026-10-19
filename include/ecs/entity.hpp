@@ -18,17 +18,17 @@ namespace ecs {
   inline constexpr Entity NullEntity{UINT32_MAX, 0};
 
   struct EntityHash {
-    size_t operator()(Entity e) const noexcept {
-      uint64_t x = (uint64_t(e.index) << 32) | e.generation;
-      x += 0x9e3779b97f4a7c15ull;
-      x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ull;
-      x = (x ^ (x >> 27)) * 0x94d049bb133111ebull;
-      return static_cast<size_t>(x ^ (x >> 31));
+    size_t operator()(Entity entity) const noexcept {
+      uint64_t hash = (uint64_t(entity.index) << 32) | entity.generation;
+      hash += 0x9e3779b97f4a7c15ull;
+      hash = (hash ^ (hash >> 30)) * 0xbf58476d1ce4e5b9ull;
+      hash = (hash ^ (hash >> 27)) * 0x94d049bb133111ebull;
+      return static_cast<size_t>(hash ^ (hash >> 31));
     }
   };
 
   struct EntityRecord {
-    Archetype* arch; // nullptr = morto ou reservado (pendente)
+    Archetype* archetype; // nullptr = morto ou reservado (pendente)
     uint32_t row;
     uint32_t generation;
   };
@@ -38,36 +38,36 @@ namespace ecs {
   // uma camada abaixo do World, possa reservar índices (R-CB-1) sem conhecê-lo.
   class EntityStore {
    public:
-    // Pega do fim da freeList (LIFO) ou cria um slot novo. Deixa arch = nullptr (reservado, R-EN-3).
+    // Pega do fim da freeList (LIFO) ou cria um slot novo. Deixa archetype = nullptr (reservado, R-EN-3).
     Entity allocate() {
-      uint32_t idx;
+      uint32_t index;
       if (!freeList_.empty()) {
-        idx = freeList_.back();
+        index = freeList_.back();
         freeList_.pop_back();
       } else {
-        idx = static_cast<uint32_t>(records_.size());
+        index = static_cast<uint32_t>(records_.size());
         records_.push_back(EntityRecord{nullptr, 0, 0});
       }
 
-      records_[idx].arch = nullptr;
-      return Entity{idx, records_[idx].generation};
+      records_[index].archetype = nullptr;
+      return Entity{index, records_[index].generation};
     }
 
     // Invalida o handle (geração + 1). Slot com geração UINT32_MAX é aposentado (R-EN-1).
     void release(uint32_t index) noexcept {
-      EntityRecord& r = records_[index];
-      r.arch = nullptr;
-      ++r.generation;
+      EntityRecord& record = records_[index];
+      record.archetype = nullptr;
+      ++record.generation;
 
-      if (r.generation != UINT32_MAX)
+      if (record.generation != UINT32_MAX)
         freeList_.push_back(index);
     }
 
-    bool isAlive(Entity e) const noexcept {
-      return e.index < records_.size() && records_[e.index].generation == e.generation && records_[e.index].arch != nullptr;
+    bool isAlive(Entity entity) const noexcept {
+      return entity.index < records_.size() && records_[entity.index].generation == entity.generation && records_[entity.index].archetype != nullptr;
     }
-    bool isReserved(Entity e) const noexcept {
-      return e.index < records_.size() && records_[e.index].generation == e.generation && records_[e.index].arch == nullptr;
+    bool isReserved(Entity entity) const noexcept {
+      return entity.index < records_.size() && records_[entity.index].generation == entity.generation && records_[entity.index].archetype == nullptr;
     }
 
     EntityRecord& record(uint32_t index) noexcept {
@@ -84,8 +84,8 @@ namespace ecs {
       return freeList_;
     }
 
-    void setGenerationForTest(uint32_t index, uint32_t gen) noexcept {
-      records_[index].generation = gen;
+    void setGenerationForTest(uint32_t index, uint32_t generation) noexcept {
+      records_[index].generation = generation;
     }
 
    private:

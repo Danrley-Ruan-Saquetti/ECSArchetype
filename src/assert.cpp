@@ -22,17 +22,17 @@ namespace ecs {
   }
 
   namespace detail {
-    void assertFail(const char* expr, const char* file, int line, const char* fmt, ...) noexcept {
-      char msg[256];
-      va_list args;
-      va_start(args, fmt);
-      std::vsnprintf(msg, sizeof msg, fmt, args);
-      va_end(args);
+    void assertFail(const char* expression, const char* file, int line, const char* format, ...) noexcept {
+      char message[256];
+      va_list arguments;
+      va_start(arguments, format);
+      std::vsnprintf(message, sizeof message, format, arguments);
+      va_end(arguments);
 
-      char full[512];
-      std::snprintf(full, sizeof full, "ECS_ASSERT failed: %s | %s (%s:%d)", expr, msg, file, line);
+      char fullMessage[512];
+      std::snprintf(fullMessage, sizeof fullMessage, "ECS_ASSERT failed: %s | %s (%s:%d)", expression, message, file, line);
 
-      g_handler(full);
+      g_handler(fullMessage);
       std::abort();
     }
   }
