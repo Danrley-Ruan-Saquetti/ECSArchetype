@@ -3,6 +3,7 @@ import { formatEntity, type Entity } from "./entity.js";
 import { EngineContractError } from "./errors.js";
 import type { EngineRuntime } from "./runtime.js";
 import type { ComponentType, Fields, SchemaType, ValueOf } from "./schema.js";
+import { Query, type QuerySpec } from "./query.js";
 
 export type SpawnValues<Ts extends readonly SchemaType[]> = {
   [C in Extract<Ts[number], ComponentType> as C["name"]]?: Partial<ValueOf<C["fields"]>>;
@@ -16,6 +17,7 @@ export class World {
   private readonly runtime: EngineRuntime;
   private readonly bridge: Bridge;
   private disposed = false;
+  private readonly queries = new Map<string, Query>();
 
   constructor(runtime: EngineRuntime, handle: number) {
     this.runtime = runtime;
@@ -112,6 +114,51 @@ export class World {
     }
   }
 
+  // Memoizada por spec: a mesma combinação (com a ordem de read/write) devolve a mesma Query.
+  query(spec: QuerySpec): Query {
+    this.assertUsable("query");
+
+    const read = spec.read ?? [];
+    const write = spec.write ?? [];
+    const withTypes = spec.with ?? [];
+    const withoutTypes = spec.without ?? [];
+
+    const seen = new Set<SchemaType>();
+    for (const type of [...read, ...write] as SchemaType[]) {
+      this.runtime.componentId(type);
+      if (type.kind === "tag") {
+        throw new EngineContractError(`query type=${type.name}: tag não pode ir em read nem write; use with/without`);
+      }
+      if (seen.has(type)) {
+        throw new EngineContractError(`query type=${type.name}: tipo repetido em read/write`);
+      }
+      seen.add(type);
+    }
+
+    const filterIndexes = (types: readonly SchemaType[]): number[] => {
+      types.forEach((type) => this.runtime.componentId(type));
+
+      return [...new Set(types.map((type) => type.schemaIndex))].sort((first, second) => first - second);
+    };
+    const withIndexes = filterIndexes(withTypes);
+    const withoutIndexes = filterIndexes(withoutTypes);
+
+    const key = [read, write].map((types) => types.map((type) => type.schemaIndex).join(",")).join("|") + `|${withIndexes}|${withoutIndexes}`;
+    const cached = this.queries.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const ids = [...read, ...write, ...withIndexes.map((index) => this.runtime.schema.types[index]!), ...withoutIndexes.map((index) => this.runtime.schema.types[index]!)].map(
+      (type) => this.runtime.componentId(type),
+    );
+    const handle = this.bridge.query(this.handle, ids, read.length, write.length, withIndexes.length, withoutIndexes.length);
+    const query = new Query(this, this.bridge, handle, read, write);
+    this.queries.set(key, query);
+
+    return query;
+  }
+
   checkInvariants(): string | null {
     this.assertUsable("checkInvariants");
 
@@ -168,7 +215,7 @@ export class World {
     }
   }
 
-  private assertUsable(operation: string): void {
+  assertUsable(operation: string): void {
     if (this.disposed) {
       throw new EngineContractError(`${operation}: World já liberado`);
     }

@@ -6,3 +6,5 @@ export * from "./schema_hash.js";
 export * from "./module.js";
 export * from "./runtime.js";
 export * from "./world.js";
+export * from "./fields.js";
+export * from "./query.js";
