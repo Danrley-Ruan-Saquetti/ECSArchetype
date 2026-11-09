@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/clang-format.sh\"",
+            "timeout": 60,
+            "statusMessage": "clang-format (docker)"
+          }
+        ]
+      }
+    ]
+  }
+}
