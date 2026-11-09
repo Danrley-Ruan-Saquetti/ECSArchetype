@@ -352,7 +352,7 @@ As metas de desempenho são relativas a uma linha de base medida na mesma máqui
 
 ### Memória
 
-- **NF-M1.** Overhead por entidade: 16 bytes de `EntityRecord` mais 8 bytes de `Entity` na tabela. Não há alocação por entidade.
+- **NF-M1.** Overhead por entidade: um ponteiro + 8 bytes por `EntityRecord` (16 B em 64 bits, 12 B em 32 bits) mais 8 bytes de `Entity` na tabela. Não há alocação por entidade.
 - **NF-M2.** Overhead por arquétipo deve ser reportado por `stats()`: assinatura, arestas, colunas e capacidade ociosa.
 - **NF-M3.** As colunas estão alinhadas a 64 bytes (R-TB-3).
 

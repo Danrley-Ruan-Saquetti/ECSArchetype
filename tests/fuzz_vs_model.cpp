@@ -26,7 +26,8 @@ TEST_CASE("fuzz: World == modelo de referência") {
     auto pickComponentId = [&] { return fuzz::universe()[generator() % 5]; };
 
     auto createOne = [&] {
-      const uint64_t value = makeValue(ecs::Entity{uint32_t(counter), 0}, ++counter);
+      ++counter;
+      const uint64_t value = makeValue(ecs::Entity{uint32_t(counter), 0}, counter);
       ecs::Entity entity;
       std::map<ecs::ComponentId, uint64_t> components;
       switch (generator() % 6) {

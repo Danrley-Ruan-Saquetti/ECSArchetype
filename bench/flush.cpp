@@ -63,7 +63,8 @@ namespace {
 
       state.PauseTiming();
       commandBuffer.reset();
-      benchmark::DoNotOptimize(setup.world.get());
+      auto* worldPointer = setup.world.get();
+      benchmark::DoNotOptimize(worldPointer);
       state.ResumeTiming();
     }
 
@@ -87,7 +88,8 @@ namespace {
 
       state.PauseTiming();
       commandBuffer.reset();
-      benchmark::DoNotOptimize(setup.world.get());
+      auto* worldPointer = setup.world.get();
+      benchmark::DoNotOptimize(worldPointer);
       state.ResumeTiming();
     }
 
@@ -111,7 +113,8 @@ namespace {
       }
 
       state.PauseTiming();
-      benchmark::DoNotOptimize(setup.world.get());
+      auto* worldPointer = setup.world.get();
+      benchmark::DoNotOptimize(worldPointer);
       state.ResumeTiming();
     }
 

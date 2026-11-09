@@ -32,7 +32,7 @@ namespace ecs {
     uint32_t row;
     uint32_t generation;
   };
-  static_assert(sizeof(EntityRecord) == 16, "NF-M1: 16 bytes por EntityRecord");
+  static_assert(sizeof(EntityRecord) == sizeof(void*) + 8, "NF-M1: um ponteiro + 8 bytes por EntityRecord");
 
   // Dono dos records e da freeList. Fica aqui (e não no World) para que o CommandBuffer,
   // uma camada abaixo do World, possa reservar índices (R-CB-1) sem conhecê-lo.

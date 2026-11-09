@@ -37,7 +37,8 @@ namespace {
         positionData[i].z += velocityData[i].z * kDeltaTime;
       }
 
-      benchmark::DoNotOptimize(positions.data());
+      auto* positionPointer = positions.data();
+      benchmark::DoNotOptimize(positionPointer);
       benchmark::ClobberMemory();
     }
 

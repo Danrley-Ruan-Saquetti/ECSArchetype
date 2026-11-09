@@ -21,7 +21,8 @@ static void BM_IterateSingle_SoA(benchmark::State& state) {
       positionData[i].z += velocityData[i].z * kDeltaTime;
     }
 
-    benchmark::DoNotOptimize(positions.data());
+    auto* positionPointer = positions.data();
+    benchmark::DoNotOptimize(positionPointer);
     benchmark::ClobberMemory();
   }
 

@@ -15,10 +15,11 @@ namespace ecs {
   AssertHandler setAssertHandler(AssertHandler handler) noexcept;
 
   namespace detail {
+    [[noreturn]]
 #if defined(__GNUC__) || defined(__clang__)
     __attribute__((format(printf, 4, 5)))
 #endif
-    [[noreturn]] void assertFail(const char* expression, const char* file, int line, const char* format, ...) noexcept;
+    void assertFail(const char* expression, const char* file, int line, const char* format, ...) noexcept;
   }
 }
 
