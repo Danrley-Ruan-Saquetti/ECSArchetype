@@ -27,15 +27,79 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ECS_SANITIZE": "OFF",
         "ECS_BUILD_TESTS": "OFF", "ECS_BUILD_BENCH": "ON", "ECS_ENABLE_ASSERTS": "0"
       }
+    },
+    {
+      "name": "variant", "hidden": true, "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release", "ECS_SANITIZE": "OFF",
+        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "ON", "ECS_ENABLE_ASSERTS": "0",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "variant-clang", "hidden": true, "inherits": "variant",
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "clang++" }
+    },
+    {
+      "name": "variant-wasm", "hidden": true, "inherits": "variant",
+      "toolchainFile": "/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": { "CMAKE_EXE_LINKER_FLAGS": "--profiling-funcs" }
+    },
+    {
+      "name": "native-clang", "inherits": "variant-clang"
+    },
+    {
+      "name": "native-clang-32", "inherits": "variant-clang",
+      "cacheVariables": { "CMAKE_CXX_FLAGS": "-m32", "CMAKE_EXE_LINKER_FLAGS": "-m32" }
+    },
+    {
+      "name": "native-clang-32-scalar", "inherits": "variant-clang",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-m32 -fno-vectorize -fno-slp-vectorize",
+        "CMAKE_EXE_LINKER_FLAGS": "-m32"
+      }
+    },
+    {
+      "name": "native-clang-avx2", "inherits": "variant-clang",
+      "cacheVariables": { "CMAKE_CXX_FLAGS": "-mavx2 -mfma" }
+    },
+    {
+      "name": "wasm-scalar", "inherits": "variant-wasm"
+    },
+    {
+      "name": "wasm-simd", "inherits": "variant-wasm",
+      "cacheVariables": { "CMAKE_CXX_FLAGS": "-msimd128" }
+    },
+    {
+      "name": "wasm-debug", "inherits": "base",
+      "toolchainFile": "/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug", "ECS_SANITIZE": "OFF",
+        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "OFF"
+      }
     }
   ],
   "buildPresets": [
     { "name": "debug-asan", "configurePreset": "debug-asan" },
     { "name": "release", "configurePreset": "release" },
-    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" }
+    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" },
+    { "name": "native-clang", "configurePreset": "native-clang" },
+    { "name": "native-clang-32", "configurePreset": "native-clang-32" },
+    { "name": "native-clang-32-scalar", "configurePreset": "native-clang-32-scalar" },
+    { "name": "native-clang-avx2", "configurePreset": "native-clang-avx2" },
+    { "name": "wasm-scalar", "configurePreset": "wasm-scalar" },
+    { "name": "wasm-simd", "configurePreset": "wasm-simd" },
+    { "name": "wasm-debug", "configurePreset": "wasm-debug" }
   ],
   "testPresets": [
     { "name": "debug-asan", "configurePreset": "debug-asan", "output": { "outputOnFailure": true } },
-    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } }
+    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
+    { "name": "native-clang", "configurePreset": "native-clang", "output": { "outputOnFailure": true } },
+    { "name": "native-clang-32", "configurePreset": "native-clang-32", "output": { "outputOnFailure": true } },
+    { "name": "native-clang-32-scalar", "configurePreset": "native-clang-32-scalar", "output": { "outputOnFailure": true } },
+    { "name": "native-clang-avx2", "configurePreset": "native-clang-avx2", "output": { "outputOnFailure": true } },
+    { "name": "wasm-scalar", "configurePreset": "wasm-scalar", "output": { "outputOnFailure": true } },
+    { "name": "wasm-simd", "configurePreset": "wasm-simd", "output": { "outputOnFailure": true } },
+    { "name": "wasm-debug", "configurePreset": "wasm-debug", "output": { "outputOnFailure": true } }
   ]
 }

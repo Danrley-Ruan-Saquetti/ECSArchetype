@@ -29,3 +29,12 @@ services:
       - .:/app
       - ./build:/app/build
     command: bash
+
+  wasm:
+    build:
+      context: .
+      dockerfile: Dockerfile.wasm
+    volumes:
+      - .:/app
+      - ./build:/app/build
+    command: bash

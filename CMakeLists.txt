@@ -12,6 +12,10 @@ option(ECS_WERROR "Avisos viram erros" ON)
 option(ECS_VEC_REPORT "Relatório de vetorização nos benchmarks" OFF)
 set(ECS_ENABLE_ASSERTS "" CACHE STRING "0/1; vazio = 0 com NDEBUG, senão 1")
 
+if(EMSCRIPTEN)
+  add_link_options(-sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1)
+endif()
+
 if(ECS_ENABLE_ASSERTS STREQUAL "")
   if(CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
     set(_ecs_asserts 0)

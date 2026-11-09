@@ -1,0 +1,12 @@
+FROM emscripten/emsdk:3.1.74
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends make g++ g++-multilib binutils python3-pip \
+  && rm -rf /var/lib/apt/lists/* \
+  && pip install --no-cache-dir cmake==3.30.5
+
+WORKDIR /app
+
+# O LLVM do emsdk é o mesmo do Emscripten e já tem o alvo x86-64: serve de Clang nativo (V1/V2/VX).
+RUN /emsdk/upstream/bin/clang++ --print-targets | grep -q x86-64 \
+  && ln -s /emsdk/upstream/bin/clang++ /usr/local/bin/clang++
