@@ -1,0 +1,22 @@
+file(GLOB ENGINE_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+add_library(engine_core OBJECT ${ENGINE_SOURCES})
+target_include_directories(engine_core PUBLIC include)
+target_link_libraries(engine_core PUBLIC ecs)
+ecs_warnings(engine_core)
+
+if(ECS_BUILD_TESTS)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/engine/tests)
+
+  # engine_add_test(<nome> <fontes...>)
+  function(engine_add_test name)
+    add_executable(${name} ${ARGN} ${PROJECT_SOURCE_DIR}/tests/support/doctest_main.cpp)
+    target_link_libraries(${name} PRIVATE engine_core doctest::doctest)
+    target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/tests/support)
+    ecs_warnings(${name})
+    ecs_wasm_exceptions(${name})
+    ecs_wasm_node_env(${name})
+    add_test(NAME ${name} COMMAND ${name})
+  endfunction()
+
+  engine_add_test(engine_c_api tests/c_api.cpp tests/test_schema_registry.cpp)
+endif()

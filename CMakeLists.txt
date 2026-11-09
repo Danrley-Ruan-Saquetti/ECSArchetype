@@ -88,3 +88,6 @@ if(ECS_BUILD_BENCH)
   FetchContent_MakeAvailable(benchmark)
   add_subdirectory(bench)
 endif()
+
+option(ENGINE_BUILD_FIXTURE "Compila o jogo fixture da engine (exige make engine-ts antes)" OFF)
+add_subdirectory(engine)
