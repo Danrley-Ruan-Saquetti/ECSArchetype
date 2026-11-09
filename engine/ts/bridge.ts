@@ -218,7 +218,9 @@ export class Bridge {
 
   checkInvariants(world: number): string | null {
     const message = this.scratch + ValueOffset + this.valueCapacity;
-    if (this.module._engineCheckInvariants(world, message, MessageCapacity) === 1) {
+    const consistent = this.module._engineCheckInvariants(world, message, MessageCapacity) === 1;
+    this.sync();
+    if (consistent) {
       return null;
     }
 

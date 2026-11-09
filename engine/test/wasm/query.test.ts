@@ -264,3 +264,30 @@ test("crescimento da memória durante eachBlock", () => {
     assert.equal(fixture.fixtureSumPositionX(world.handle), 42 * count);
   });
 });
+
+test("dispose dentro de eachBlock é erro e o World segue usável", () => {
+  withWorld((world) => {
+    world.spawn([Position, Velocity]);
+    world.query({ read: [Velocity], write: [Position] }).eachBlock(() => {
+      assert.throws(() => world.dispose(), EngineContractError);
+    });
+    world.spawn([Position]);
+  });
+});
+
+test("checkInvariants sincroniza o heap da Bridge depois de chamar o C++", () => {
+  withWorld((world) => {
+    const bridge = runtime.bridge;
+    const pointers: number[] = [];
+    const before = runtime.module.HEAPU8.buffer;
+    while (runtime.module.HEAPU8.buffer === before) {
+      pointers.push(runtime.module._malloc(8 * 1024 * 1024));
+    }
+    assert.notEqual(bridge.heap.buffer, runtime.module.HEAPU8.buffer);
+
+    assert.equal(world.checkInvariants(), null);
+
+    assert.equal(bridge.heap.buffer, runtime.module.HEAPU8.buffer);
+    pointers.forEach((pointer) => runtime.module._free(pointer));
+  });
+});

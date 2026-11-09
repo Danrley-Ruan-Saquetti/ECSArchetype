@@ -170,6 +170,10 @@ export class World {
       return;
     }
 
+    if (this.iterationDepth > 0) {
+      throw new EngineContractError("dispose: World em iteração (eachBlock); libere depois do laço");
+    }
+
     this.disposed = true;
     this.bridge.worldDestroy(this.handle);
   }
