@@ -1,0 +1,796 @@
+0000000000013a10 <ecs::World::flush(ecs::CommandBuffer&)>:
+   13a10:	push   rbp
+   13a11:	push   r15
+   13a13:	push   r14
+   13a15:	push   r13
+   13a17:	push   r12
+   13a19:	push   rbx
+   13a1a:	sub    rsp,0x1a8
+   13a21:	mov    r15,rsi
+   13a24:	mov    rbp,rdi
+   13a27:	lea    rdi,[rsp+0x160]
+   13a2f:	call   a610 <ecs::CommandBuffer::plan() const>
+   13a34:	mov    WORD PTR [rsp+0x110],0x0
+   13a3e:	pxor   xmm0,xmm0
+   13a42:	movdqu XMMWORD PTR [rsp+0x118],xmm0
+   13a4b:	mov    QWORD PTR [rsp+0x128],0x0
+   13a57:	mov    BYTE PTR [rsp+0x88],0x0
+   13a5f:	movdqu XMMWORD PTR [rsp+0x90],xmm0
+   13a68:	movdqu XMMWORD PTR [rsp+0xa0],xmm0
+   13a71:	movdqu XMMWORD PTR [rsp+0xb0],xmm0
+   13a7a:	movdqu XMMWORD PTR [rsp+0xc0],xmm0
+   13a83:	movdqu XMMWORD PTR [rsp+0xd0],xmm0
+   13a8c:	movdqu XMMWORD PTR [rsp+0xe0],xmm0
+   13a95:	mov    r12,QWORD PTR [rsp+0x180]
+   13a9d:	test   r12,r12
+   13aa0:	je     146c1 <ecs::World::flush(ecs::CommandBuffer&)+0xcb1>
+   13aa6:	mov    rdx,QWORD PTR [rsp+0x178]
+   13aae:	shl    r12,0x4
+   13ab2:	add    r12,rdx
+   13ab5:	mov    QWORD PTR [rsp+0x40],0x0
+   13abe:	mov    QWORD PTR [rsp+0x8],0x0
+   13ac7:	xor    r13d,r13d
+   13aca:	mov    QWORD PTR [rsp+0x38],0x0
+   13ad3:	mov    QWORD PTR [rsp+0xf8],r15
+   13adb:	mov    QWORD PTR [rsp+0x100],rbp
+   13ae3:	mov    QWORD PTR [rsp+0xf0],r12
+   13aeb:	jmp    13b12 <ecs::World::flush(ecs::CommandBuffer&)+0x102>
+   13aed:	nop    DWORD PTR [rax]
+   13af0:	mov    rdi,rbp
+   13af3:	mov    rsi,QWORD PTR [rsp+0x70]
+   13af8:	call   b130 <ecs::EntityStore::release(unsigned int)>
+   13afd:	mov    rdx,QWORD PTR [rsp+0x150]
+   13b05:	add    rdx,0x10
+   13b09:	cmp    rdx,r12
+   13b0c:	je     145f6 <ecs::World::flush(ecs::CommandBuffer&)+0xbe6>
+   13b12:	mov    ebx,DWORD PTR [rdx]
+   13b14:	mov    eax,DWORD PTR [rdx+0x4]
+   13b17:	mov    QWORD PTR [rsp+0x68],rax
+   13b1c:	mov    rdi,r15
+   13b1f:	lea    rsi,[rsp+0x160]
+   13b27:	mov    QWORD PTR [rsp+0x150],rdx
+   13b2f:	lea    rcx,[rsp+0x110]
+   13b37:	call   ae00 <ecs::CommandBuffer::netEffect(ecs::CommandPlan const&, ecs::EntityPlan const&, ecs::NetEffect&) const>
+   13b3c:	mov    rax,QWORD PTR [rbp+0x0]
+   13b40:	mov    rcx,QWORD PTR [rbp+0x8]
+   13b44:	sub    rcx,rax
+   13b47:	sar    rcx,0x4
+   13b4b:	cmp    rcx,rbx
+   13b4e:	mov    QWORD PTR [rsp+0x70],rbx
+   13b53:	jbe    13b90 <ecs::World::flush(ecs::CommandBuffer&)+0x180>
+   13b55:	mov    rdx,rbx
+   13b58:	shl    rdx,0x4
+   13b5c:	mov    rcx,QWORD PTR [rsp+0x68]
+   13b61:	cmp    DWORD PTR [rax+rdx*1+0xc],ecx
+   13b65:	jne    13b90 <ecs::World::flush(ecs::CommandBuffer&)+0x180>
+   13b67:	add    rdx,rax
+   13b6a:	cmp    QWORD PTR [rdx],0x0
+   13b6e:	setne  cl
+   13b71:	cmp    BYTE PTR [rsp+0x110],0x1
+   13b79:	jne    13d13 <ecs::World::flush(ecs::CommandBuffer&)+0x303>
+   13b7f:	cmp    QWORD PTR [rdx],0x0
+   13b83:	sete   dl
+   13b86:	test   cl,cl
+   13b88:	je     13b98 <ecs::World::flush(ecs::CommandBuffer&)+0x188>
+   13b8a:	jmp    13ba0 <ecs::World::flush(ecs::CommandBuffer&)+0x190>
+   13b8c:	nop    DWORD PTR [rax+0x0]
+   13b90:	xor    ecx,ecx
+   13b92:	xor    edx,edx
+   13b94:	test   cl,cl
+   13b96:	jne    13ba0 <ecs::World::flush(ecs::CommandBuffer&)+0x190>
+   13b98:	test   dl,dl
+   13b9a:	je     13afd <ecs::World::flush(ecs::CommandBuffer&)+0xed>
+   13ba0:	cmp    BYTE PTR [rsp+0x111],0x1
+   13ba8:	jne    13c00 <ecs::World::flush(ecs::CommandBuffer&)+0x1f0>
+   13baa:	test   cl,cl
+   13bac:	je     13af0 <ecs::World::flush(ecs::CommandBuffer&)+0xe0>
+   13bb2:	mov    rcx,QWORD PTR [rsp+0x70]
+   13bb7:	shl    rcx,0x4
+   13bbb:	mov    r14,QWORD PTR [rax+rcx*1]
+   13bbf:	add    r14,0x38
+   13bc3:	mov    ebx,DWORD PTR [rax+rcx*1+0x8]
+   13bc7:	mov    rdi,r14
+   13bca:	mov    esi,ebx
+   13bcc:	call   191d0 <ecs::Table::destroyRow(unsigned int)>
+   13bd1:	mov    rdi,r14
+   13bd4:	mov    esi,ebx
+   13bd6:	call   19220 <ecs::Table::fillHole(unsigned int)>
+   13bdb:	test   dl,0x1
+   13bde:	je     13af0 <ecs::World::flush(ecs::CommandBuffer&)+0xe0>
+   13be4:	mov    eax,eax
+   13be6:	mov    rcx,QWORD PTR [rbp+0x0]
+   13bea:	shl    rax,0x4
+   13bee:	mov    DWORD PTR [rcx+rax*1+0x8],ebx
+   13bf2:	jmp    13af0 <ecs::World::flush(ecs::CommandBuffer&)+0xe0>
+   13bf7:	nop    WORD PTR [rax+rax*1+0x0]
+   13c00:	mov    r12,QWORD PTR [rsp+0x118]
+   13c08:	mov    rcx,QWORD PTR [rsp+0x120]
+   13c10:	mov    QWORD PTR [rsp+0x48],rcx
+   13c15:	sub    rcx,r12
+   13c18:	sar    rcx,0x4
+   13c1c:	mov    QWORD PTR [rsp+0x80],rcx
+   13c24:	mov    rcx,QWORD PTR [rsp+0x70]
+   13c29:	shl    rcx,0x4
+   13c2d:	lea    rdx,[rax+rcx*1]
+   13c31:	mov    QWORD PTR [rsp+0x60],rdx
+   13c36:	mov    rdi,QWORD PTR [rax+rcx*1]
+   13c3a:	test   BYTE PTR [rsp+0x38],0x1
+   13c3f:	je     13cc0 <ecs::World::flush(ecs::CommandBuffer&)+0x2b0>
+   13c41:	cmp    QWORD PTR [rsp+0x90],rdi
+   13c49:	jne    13cc0 <ecs::World::flush(ecs::CommandBuffer&)+0x2b0>
+   13c4b:	mov    rax,r13
+   13c4e:	sub    rax,QWORD PTR [rsp+0x8]
+   13c53:	sar    rax,0x3
+   13c57:	cmp    rax,QWORD PTR [rsp+0x80]
+   13c5f:	jne    13cc0 <ecs::World::flush(ecs::CommandBuffer&)+0x2b0>
+   13c61:	cmp    QWORD PTR [rsp+0x48],r12
+   13c66:	je     14490 <ecs::World::flush(ecs::CommandBuffer&)+0xa80>
+   13c6c:	lea    rax,[r12+0x4]
+   13c71:	xor    ecx,ecx
+   13c73:	data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+   13c80:	mov    rdx,QWORD PTR [rsp+0x8]
+   13c85:	mov    edx,DWORD PTR [rdx+rcx*8]
+   13c88:	cmp    edx,DWORD PTR [rax-0x4]
+   13c8b:	jne    13cc0 <ecs::World::flush(ecs::CommandBuffer&)+0x2b0>
+   13c8d:	mov    rdx,QWORD PTR [rsp+0x8]
+   13c92:	movzx  edx,BYTE PTR [rdx+rcx*8+0x4]
+   13c97:	cmp    dl,BYTE PTR [rax]
+   13c99:	jne    13cc0 <ecs::World::flush(ecs::CommandBuffer&)+0x2b0>
+   13c9b:	inc    rcx
+   13c9e:	add    rax,0x10
+   13ca2:	cmp    QWORD PTR [rsp+0x80],rcx
+   13caa:	jne    13c80 <ecs::World::flush(ecs::CommandBuffer&)+0x270>
+   13cac:	jmp    14490 <ecs::World::flush(ecs::CommandBuffer&)+0xa80>
+   13cb1:	data16 data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+   13cc0:	test   rdi,rdi
+   13cc3:	mov    QWORD PTR [rsp+0x18],rdi
+   13cc8:	je     13d22 <ecs::World::flush(ecs::CommandBuffer&)+0x312>
+   13cca:	mov    rbx,QWORD PTR [rdi+0x10]
+   13cce:	sub    rbx,QWORD PTR [rdi+0x8]
+   13cd2:	pxor   xmm0,xmm0
+   13cd6:	movdqa XMMWORD PTR [rsp+0x20],xmm0
+   13cdc:	mov    QWORD PTR [rsp+0x30],0x0
+   13ce5:	lea    r15,[rsp+0x20]
+   13cea:	je     13d48 <ecs::World::flush(ecs::CommandBuffer&)+0x338>
+   13cec:	movabs rax,0x7ffffffffffffff8
+   13cf6:	add    rax,0x4
+   13cfa:	cmp    rbx,rax
+   13cfd:	ja     146df <ecs::World::flush(ecs::CommandBuffer&)+0xccf>
+   13d03:	mov    rdi,rbx
+   13d06:	call   6480 <operator new(unsigned long)@plt>
+   13d0b:	mov    r14,rax
+   13d0e:	mov    r13,r12
+   13d11:	jmp    13d4e <ecs::World::flush(ecs::CommandBuffer&)+0x33e>
+   13d13:	xor    edx,edx
+   13d15:	test   cl,cl
+   13d17:	je     13b98 <ecs::World::flush(ecs::CommandBuffer&)+0x188>
+   13d1d:	jmp    13ba0 <ecs::World::flush(ecs::CommandBuffer&)+0x190>
+   13d22:	pxor   xmm0,xmm0
+   13d26:	movdqa XMMWORD PTR [rsp+0x20],xmm0
+   13d2c:	mov    QWORD PTR [rsp+0x30],0x0
+   13d35:	xor    ebx,ebx
+   13d37:	lea    r15,[rsp+0x20]
+   13d3c:	cmp    QWORD PTR [rsp+0x48],r12
+   13d41:	jne    13da1 <ecs::World::flush(ecs::CommandBuffer&)+0x391>
+   13d43:	jmp    13e88 <ecs::World::flush(ecs::CommandBuffer&)+0x478>
+   13d48:	mov    r13,r12
+   13d4b:	xor    r14d,r14d
+   13d4e:	mov    QWORD PTR [rsp+0x20],r14
+   13d53:	mov    QWORD PTR [rsp+0x28],r14
+   13d58:	add    rbx,r14
+   13d5b:	mov    QWORD PTR [rsp+0x30],rbx
+   13d60:	mov    rax,QWORD PTR [rsp+0x18]
+   13d65:	mov    rsi,QWORD PTR [rax+0x8]
+   13d69:	mov    r12,QWORD PTR [rax+0x10]
+   13d6d:	sub    r12,rsi
+   13d70:	je     13d7d <ecs::World::flush(ecs::CommandBuffer&)+0x36d>
+   13d72:	mov    rdi,r14
+   13d75:	mov    rdx,r12
+   13d78:	call   6760 <memmove@plt>
+   13d7d:	add    r12,r14
+   13d80:	mov    QWORD PTR [rsp+0x28],r12
+   13d85:	movq   xmm1,r12
+   13d8a:	movq   xmm0,r14
+   13d8f:	punpcklqdq xmm0,xmm1
+   13d93:	mov    r12,r13
+   13d96:	cmp    QWORD PTR [rsp+0x48],r12
+   13d9b:	je     13e88 <ecs::World::flush(ecs::CommandBuffer&)+0x478>
+   13da1:	mov    rbx,r12
+   13da4:	jmp    13dca <ecs::World::flush(ecs::CommandBuffer&)+0x3ba>
+   13da6:	cs nop WORD PTR [rax+rax*1+0x0]
+   13db0:	mov    rdi,r15
+   13db3:	mov    rdx,rbx
+   13db6:	call   15220 <std::vector<unsigned int, std::allocator<unsigned int> >::insert(__gnu_cxx::__normal_iterator<unsigned int const*, std::vector<unsigned int, std::allocator<unsigned int> > >, unsigned int const&)>
+   13dbb:	add    rbx,0x10
+   13dbf:	cmp    rbx,QWORD PTR [rsp+0x48]
+   13dc4:	je     13e7d <ecs::World::flush(ecs::CommandBuffer&)+0x46d>
+   13dca:	mov    rsi,QWORD PTR [rsp+0x20]
+   13dcf:	mov    rdx,QWORD PTR [rsp+0x28]
+   13dd4:	mov    rcx,rdx
+   13dd7:	sub    rcx,rsi
+   13dda:	sar    rcx,0x2
+   13dde:	test   rcx,rcx
+   13de1:	jle    13e17 <ecs::World::flush(ecs::CommandBuffer&)+0x407>
+   13de3:	mov    eax,DWORD PTR [rbx]
+   13de5:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+   13df0:	mov    rdi,rcx
+   13df3:	shr    rdi,1
+   13df6:	mov    r8,rdi
+   13df9:	not    r8
+   13dfc:	add    r8,rcx
+   13dff:	cmp    DWORD PTR [rsi+rdi*4],eax
+   13e02:	lea    rcx,[rsi+rdi*4+0x4]
+   13e07:	cmovb  rsi,rcx
+   13e0b:	cmovae r8,rdi
+   13e0f:	mov    rcx,r8
+   13e12:	test   r8,r8
+   13e15:	jg     13df0 <ecs::World::flush(ecs::CommandBuffer&)+0x3e0>
+   13e17:	cmp    rsi,rdx
+   13e1a:	je     13e30 <ecs::World::flush(ecs::CommandBuffer&)+0x420>
+   13e1c:	mov    eax,DWORD PTR [rsi]
+   13e1e:	cmp    eax,DWORD PTR [rbx]
+   13e20:	sete   al
+   13e23:	movzx  ecx,BYTE PTR [rbx+0x4]
+   13e27:	cmp    cl,0x1
+   13e2a:	je     13e3b <ecs::World::flush(ecs::CommandBuffer&)+0x42b>
+   13e2c:	jmp    13e43 <ecs::World::flush(ecs::CommandBuffer&)+0x433>
+   13e2e:	xchg   ax,ax
+   13e30:	xor    eax,eax
+   13e32:	movzx  ecx,BYTE PTR [rbx+0x4]
+   13e36:	cmp    cl,0x1
+   13e39:	jne    13e43 <ecs::World::flush(ecs::CommandBuffer&)+0x433>
+   13e3b:	test   al,al
+   13e3d:	je     13db0 <ecs::World::flush(ecs::CommandBuffer&)+0x3a0>
+   13e43:	test   cl,cl
+   13e45:	jne    13dbb <ecs::World::flush(ecs::CommandBuffer&)+0x3ab>
+   13e4b:	xor    al,0x1
+   13e4d:	jne    13dbb <ecs::World::flush(ecs::CommandBuffer&)+0x3ab>
+   13e53:	lea    rax,[rsi+0x4]
+   13e57:	cmp    rax,rdx
+   13e5a:	je     13e6f <ecs::World::flush(ecs::CommandBuffer&)+0x45f>
+   13e5c:	sub    rdx,rax
+   13e5f:	mov    rdi,rsi
+   13e62:	mov    rsi,rax
+   13e65:	call   6760 <memmove@plt>
+   13e6a:	mov    rdx,QWORD PTR [rsp+0x28]
+   13e6f:	add    rdx,0xfffffffffffffffc
+   13e73:	mov    QWORD PTR [rsp+0x28],rdx
+   13e78:	jmp    13dbb <ecs::World::flush(ecs::CommandBuffer&)+0x3ab>
+   13e7d:	movdqa xmm0,XMMWORD PTR [rsp+0x20]
+   13e83:	mov    rbx,QWORD PTR [rsp+0x30]
+   13e88:	movdqa XMMWORD PTR [rsp+0x130],xmm0
+   13e91:	mov    QWORD PTR [rsp+0x140],rbx
+   13e99:	pxor   xmm0,xmm0
+   13e9d:	movdqa XMMWORD PTR [rsp+0x20],xmm0
+   13ea3:	mov    QWORD PTR [rsp+0x30],0x0
+   13eac:	mov    rdi,rbp
+   13eaf:	lea    rsi,[rsp+0x130]
+   13eb7:	call   c650 <ecs::World::findOrCreate(std::vector<unsigned int, std::allocator<unsigned int> >)>
+   13ebc:	mov    rbx,rax
+   13ebf:	mov    rdi,QWORD PTR [rsp+0x130]
+   13ec7:	test   rdi,rdi
+   13eca:	je     13edc <ecs::World::flush(ecs::CommandBuffer&)+0x4cc>
+   13ecc:	mov    rsi,QWORD PTR [rsp+0x140]
+   13ed4:	sub    rsi,rdi
+   13ed7:	call   6490 <operator delete(void*, unsigned long)@plt>
+   13edc:	mov    rdi,QWORD PTR [rsp+0x20]
+   13ee1:	cmp    QWORD PTR [rsp+0x18],0x0
+   13ee7:	je     13f12 <ecs::World::flush(ecs::CommandBuffer&)+0x502>
+   13ee9:	test   rdi,rdi
+   13eec:	je     13efb <ecs::World::flush(ecs::CommandBuffer&)+0x4eb>
+   13eee:	mov    rsi,QWORD PTR [rsp+0x30]
+   13ef3:	sub    rsi,rdi
+   13ef6:	call   6490 <operator delete(void*, unsigned long)@plt>
+   13efb:	mov    rsi,QWORD PTR [rsp+0x18]
+   13f00:	cmp    rbx,rsi
+   13f03:	je     13f24 <ecs::World::flush(ecs::CommandBuffer&)+0x514>
+   13f05:	mov    rdi,rbp
+   13f08:	mov    rdx,rbx
+   13f0b:	call   138e0 <ecs::World::jumpEdge(ecs::Archetype&, ecs::Archetype&)>
+   13f10:	jmp    13f26 <ecs::World::flush(ecs::CommandBuffer&)+0x516>
+   13f12:	test   rdi,rdi
+   13f15:	je     13f24 <ecs::World::flush(ecs::CommandBuffer&)+0x514>
+   13f17:	mov    rsi,QWORD PTR [rsp+0x30]
+   13f1c:	sub    rsi,rdi
+   13f1f:	call   6490 <operator delete(void*, unsigned long)@plt>
+   13f24:	xor    eax,eax
+   13f26:	mov    rcx,QWORD PTR [rsp+0x18]
+   13f2b:	mov    QWORD PTR [rsp+0x90],rcx
+   13f33:	mov    QWORD PTR [rsp+0x40],rbx
+   13f38:	mov    QWORD PTR [rsp+0xb0],rbx
+   13f40:	mov    QWORD PTR [rsp+0xb8],rax
+   13f48:	mov    r13,QWORD PTR [rsp+0x98]
+   13f50:	mov    rax,QWORD PTR [rsp+0xc0]
+   13f58:	mov    QWORD PTR [rsp+0xa0],r13
+   13f60:	mov    QWORD PTR [rsp+0xc8],rax
+   13f68:	mov    rdx,QWORD PTR [rsp+0xd8]
+   13f70:	mov    QWORD PTR [rsp+0xe0],rdx
+   13f78:	cmp    QWORD PTR [rsp+0x48],r12
+   13f7d:	mov    QWORD PTR [rsp+0x8],r13
+   13f82:	je     14479 <ecs::World::flush(ecs::CommandBuffer&)+0xa69>
+   13f88:	mov    r14,QWORD PTR [rsp+0xa8]
+   13f90:	mov    rcx,QWORD PTR [rsp+0xd0]
+   13f98:	mov    QWORD PTR [rsp+0x108],rcx
+   13fa0:	mov    rbp,r12
+   13fa3:	mov    r12,QWORD PTR [rsp+0xe8]
+   13fab:	mov    QWORD PTR [rsp+0x50],rdx
+   13fb0:	mov    QWORD PTR [rsp+0x78],rax
+   13fb5:	mov    QWORD PTR [rsp+0x38],rax
+   13fba:	mov    QWORD PTR [rsp+0x148],rbp
+   13fc2:	mov    r9,QWORD PTR [rsp+0x18]
+   13fc7:	jmp    14008 <ecs::World::flush(ecs::CommandBuffer&)+0x5f8>
+   13fc9:	nop    DWORD PTR [rax+0x0]
+   13fd0:	xor    r15d,r15d
+   13fd3:	mov    rax,QWORD PTR [rsp+0x50]
+   13fd8:	cmp    rax,r12
+   13fdb:	je     14366 <ecs::World::flush(ecs::CommandBuffer&)+0x956>
+   13fe1:	mov    BYTE PTR [rax],r15b
+   13fe4:	inc    rax
+   13fe7:	mov    QWORD PTR [rsp+0x50],rax
+   13fec:	mov    QWORD PTR [rsp+0xe0],rax
+   13ff4:	mov    rdx,QWORD PTR [rsp+0x58]
+   13ff9:	add    rbp,0x10
+   13ffd:	cmp    rbp,QWORD PTR [rsp+0x48]
+   14002:	je     1443f <ecs::World::flush(ecs::CommandBuffer&)+0xa2f>
+   14008:	cmp    r13,r14
+   1400b:	mov    QWORD PTR [rsp+0x58],rdx
+   14010:	je     14030 <ecs::World::flush(ecs::CommandBuffer&)+0x620>
+   14012:	mov    eax,DWORD PTR [rbp+0x0]
+   14015:	mov    DWORD PTR [r13+0x0],eax
+   14019:	movzx  eax,BYTE PTR [rbp+0x4]
+   1401d:	mov    BYTE PTR [r13+0x4],al
+   14021:	jmp    14168 <ecs::World::flush(ecs::CommandBuffer&)+0x758>
+   14026:	cs nop WORD PTR [rax+rax*1+0x0]
+   14030:	mov    QWORD PTR [rsp+0x10],r14
+   14035:	sub    r14,QWORD PTR [rsp+0x8]
+   1403a:	movabs rax,0x7ffffffffffffff8
+   14044:	cmp    r14,rax
+   14047:	je     146e4 <ecs::World::flush(ecs::CommandBuffer&)+0xcd4>
+   1404d:	mov    rax,r14
+   14050:	sar    rax,0x3
+   14054:	cmp    rax,0x1
+   14058:	mov    rcx,rax
+   1405b:	adc    rcx,0x0
+   1405f:	lea    r15,[rcx+rax*1]
+   14063:	movabs rdx,0xfffffffffffffff
+   1406d:	cmp    r15,rdx
+   14070:	cmovae r15,rdx
+   14074:	add    rcx,rax
+   14077:	cmovb  r15,rdx
+   1407b:	lea    rdi,[r15*8+0x0]
+   14083:	call   6480 <operator new(unsigned long)@plt>
+   14088:	mov    rbx,rax
+   1408b:	mov    eax,DWORD PTR [rbp+0x0]
+   1408e:	mov    DWORD PTR [rbx+r14*1],eax
+   14092:	movzx  eax,BYTE PTR [rbp+0x4]
+   14096:	mov    BYTE PTR [rbx+r14*1+0x4],al
+   1409b:	mov    r13,rbx
+   1409e:	mov    rdx,QWORD PTR [rsp+0x10]
+   140a3:	cmp    QWORD PTR [rsp+0x8],rdx
+   140a8:	je     14144 <ecs::World::flush(ecs::CommandBuffer&)+0x734>
+   140ae:	lea    rcx,[r14-0x8]
+   140b2:	mov    r13,rbx
+   140b5:	mov    rax,QWORD PTR [rsp+0x8]
+   140ba:	cmp    rcx,0x18
+   140be:	jb     14130 <ecs::World::flush(ecs::CommandBuffer&)+0x720>
+   140c0:	mov    rdx,rbx
+   140c3:	mov    rax,QWORD PTR [rsp+0x8]
+   140c8:	sub    rdx,rax
+   140cb:	mov    r13,rbx
+   140ce:	cmp    rdx,0x20
+   140d2:	mov    rdx,QWORD PTR [rsp+0x10]
+   140d7:	jb     14130 <ecs::World::flush(ecs::CommandBuffer&)+0x720>
+   140d9:	shr    rcx,0x3
+   140dd:	inc    rcx
+   140e0:	mov    rdx,rcx
+   140e3:	and    rdx,0xfffffffffffffffc
+   140e7:	lea    r13,[rbx+rdx*8]
+   140eb:	mov    rdi,QWORD PTR [rsp+0x8]
+   140f0:	lea    rax,[rdi+rdx*8]
+   140f4:	xor    esi,esi
+   140f6:	cs nop WORD PTR [rax+rax*1+0x0]
+   14100:	movdqu xmm0,XMMWORD PTR [rdi+rsi*8]
+   14105:	movdqu xmm1,XMMWORD PTR [rdi+rsi*8+0x10]
+   1410b:	movdqu XMMWORD PTR [rbx+rsi*8],xmm0
+   14110:	movdqu XMMWORD PTR [rbx+rsi*8+0x10],xmm1
+   14116:	add    rsi,0x4
+   1411a:	cmp    rdx,rsi
+   1411d:	jne    14100 <ecs::World::flush(ecs::CommandBuffer&)+0x6f0>
+   1411f:	cmp    rcx,rdx
+   14122:	mov    rdx,QWORD PTR [rsp+0x10]
+   14127:	je     14144 <ecs::World::flush(ecs::CommandBuffer&)+0x734>
+   14129:	nop    DWORD PTR [rax+0x0]
+   14130:	mov    rcx,QWORD PTR [rax]
+   14133:	mov    QWORD PTR [r13+0x0],rcx
+   14137:	add    rax,0x8
+   1413b:	add    r13,0x8
+   1413f:	cmp    rax,rdx
+   14142:	jne    14130 <ecs::World::flush(ecs::CommandBuffer&)+0x720>
+   14144:	mov    rdi,QWORD PTR [rsp+0x8]
+   14149:	test   rdi,rdi
+   1414c:	je     14156 <ecs::World::flush(ecs::CommandBuffer&)+0x746>
+   1414e:	mov    rsi,r14
+   14151:	call   6490 <operator delete(void*, unsigned long)@plt>
+   14156:	lea    r14,[rbx+r15*8]
+   1415a:	movzx  eax,BYTE PTR [rbp+0x4]
+   1415e:	mov    QWORD PTR [rsp+0x8],rbx
+   14163:	mov    r9,QWORD PTR [rsp+0x18]
+   14168:	mov    QWORD PTR [rsp+0x158],r12
+   14170:	add    r13,0x8
+   14174:	test   al,0x1
+   14176:	mov    QWORD PTR [rsp+0x10],r14
+   1417b:	je     14190 <ecs::World::flush(ecs::CommandBuffer&)+0x780>
+   1417d:	mov    edi,DWORD PTR [rbp+0x0]
+   14180:	call   bca0 <ecs::typeInfo(unsigned int)>
+   14185:	cmp    BYTE PTR [rax+0x9],0x0
+   14189:	je     141d0 <ecs::World::flush(ecs::CommandBuffer&)+0x7c0>
+   1418b:	xor    r15d,r15d
+   1418e:	jmp    141ec <ecs::World::flush(ecs::CommandBuffer&)+0x7dc>
+   14190:	xor    r15d,r15d
+   14193:	mov    rdx,QWORD PTR [rsp+0x38]
+   14198:	mov    rcx,QWORD PTR [rsp+0x108]
+   141a0:	cmp    rdx,rcx
+   141a3:	je     14208 <ecs::World::flush(ecs::CommandBuffer&)+0x7f8>
+   141a5:	mov    QWORD PTR [rdx],r15
+   141a8:	add    rdx,0x8
+   141ac:	mov    QWORD PTR [rsp+0xc8],rdx
+   141b4:	mov    QWORD PTR [rsp+0x38],rdx
+   141b9:	test   r9,r9
+   141bc:	mov    r12,QWORD PTR [rsp+0x158]
+   141c4:	jne    142e5 <ecs::World::flush(ecs::CommandBuffer&)+0x8d5>
+   141ca:	jmp    13fd0 <ecs::World::flush(ecs::CommandBuffer&)+0x5c0>
+   141cf:	nop
+   141d0:	mov    esi,DWORD PTR [rbp+0x0]
+   141d3:	mov    rbx,QWORD PTR [rsp+0x40]
+   141d8:	mov    rdi,rbx
+   141db:	call   18120 <ecs::columnOf(ecs::Archetype const&, unsigned int)>
+   141e0:	movzx  r15d,ax
+   141e4:	shl    r15d,0x4
+   141e8:	add    r15,QWORD PTR [rbx+0x38]
+   141ec:	mov    r9,QWORD PTR [rsp+0x18]
+   141f1:	mov    r14,QWORD PTR [rsp+0x10]
+   141f6:	mov    rdx,QWORD PTR [rsp+0x38]
+   141fb:	mov    rcx,QWORD PTR [rsp+0x108]
+   14203:	cmp    rdx,rcx
+   14206:	jne    141a5 <ecs::World::flush(ecs::CommandBuffer&)+0x795>
+   14208:	sub    rcx,QWORD PTR [rsp+0x78]
+   1420d:	movabs rax,0x7ffffffffffffff8
+   14217:	cmp    rcx,rax
+   1421a:	je     146e4 <ecs::World::flush(ecs::CommandBuffer&)+0xcd4>
+   14220:	mov    r12,rcx
+   14223:	mov    rax,rcx
+   14226:	sar    rax,0x3
+   1422a:	cmp    rax,0x1
+   1422e:	mov    rcx,rax
+   14231:	adc    rcx,0x0
+   14235:	lea    r14,[rcx+rax*1]
+   14239:	movabs rdx,0xfffffffffffffff
+   14243:	cmp    r14,rdx
+   14246:	cmovae r14,rdx
+   1424a:	add    rcx,rax
+   1424d:	cmovb  r14,rdx
+   14251:	lea    rdi,[r14*8+0x0]
+   14259:	call   6480 <operator new(unsigned long)@plt>
+   1425e:	mov    rbx,rax
+   14261:	mov    rdx,r12
+   14264:	mov    QWORD PTR [rax+r12*1],r15
+   14268:	test   r12,r12
+   1426b:	mov    rsi,QWORD PTR [rsp+0x78]
+   14270:	jle    14282 <ecs::World::flush(ecs::CommandBuffer&)+0x872>
+   14272:	mov    rdi,rbx
+   14275:	call   6760 <memmove@plt>
+   1427a:	mov    rdx,r12
+   1427d:	mov    rsi,QWORD PTR [rsp+0x78]
+   14282:	test   rsi,rsi
+   14285:	je     14295 <ecs::World::flush(ecs::CommandBuffer&)+0x885>
+   14287:	mov    rdi,rsi
+   1428a:	mov    rsi,rdx
+   1428d:	call   6490 <operator delete(void*, unsigned long)@plt>
+   14292:	mov    rdx,r12
+   14295:	add    rdx,rbx
+   14298:	add    rdx,0x8
+   1429c:	mov    QWORD PTR [rsp+0xc0],rbx
+   142a4:	mov    QWORD PTR [rsp+0xc8],rdx
+   142ac:	lea    rax,[rbx+r14*8]
+   142b0:	mov    QWORD PTR [rsp+0x108],rax
+   142b8:	mov    QWORD PTR [rsp+0xd0],rax
+   142c0:	mov    QWORD PTR [rsp+0x78],rbx
+   142c5:	mov    r9,QWORD PTR [rsp+0x18]
+   142ca:	mov    r14,QWORD PTR [rsp+0x10]
+   142cf:	mov    QWORD PTR [rsp+0x38],rdx
+   142d4:	test   r9,r9
+   142d7:	mov    r12,QWORD PTR [rsp+0x158]
+   142df:	je     13fd0 <ecs::World::flush(ecs::CommandBuffer&)+0x5c0>
+   142e5:	mov    rax,QWORD PTR [r9+0x8]
+   142e9:	mov    rcx,QWORD PTR [r9+0x10]
+   142ed:	mov    rsi,rcx
+   142f0:	sub    rsi,rax
+   142f3:	sar    rsi,0x2
+   142f7:	test   rsi,rsi
+   142fa:	jle    14327 <ecs::World::flush(ecs::CommandBuffer&)+0x917>
+   142fc:	mov    edx,DWORD PTR [rbp+0x0]
+   142ff:	nop
+   14300:	mov    rdi,rsi
+   14303:	shr    rdi,1
+   14306:	mov    r8,rdi
+   14309:	not    r8
+   1430c:	add    r8,rsi
+   1430f:	cmp    DWORD PTR [rax+rdi*4],edx
+   14312:	lea    rsi,[rax+rdi*4+0x4]
+   14317:	cmovb  rax,rsi
+   1431b:	cmovae r8,rdi
+   1431f:	mov    rsi,r8
+   14322:	test   r8,r8
+   14325:	jg     14300 <ecs::World::flush(ecs::CommandBuffer&)+0x8f0>
+   14327:	cmp    rax,rcx
+   1432a:	je     14350 <ecs::World::flush(ecs::CommandBuffer&)+0x940>
+   1432c:	mov    ecx,DWORD PTR [rbp+0x0]
+   1432f:	cmp    ecx,DWORD PTR [rax]
+   14331:	setae  r15b
+   14335:	mov    r14,QWORD PTR [rsp+0x10]
+   1433a:	mov    rax,QWORD PTR [rsp+0x50]
+   1433f:	cmp    rax,r12
+   14342:	jne    13fe1 <ecs::World::flush(ecs::CommandBuffer&)+0x5d1>
+   14348:	jmp    14366 <ecs::World::flush(ecs::CommandBuffer&)+0x956>
+   1434a:	nop    WORD PTR [rax+rax*1+0x0]
+   14350:	xor    r15d,r15d
+   14353:	mov    r14,QWORD PTR [rsp+0x10]
+   14358:	mov    rax,QWORD PTR [rsp+0x50]
+   1435d:	cmp    rax,r12
+   14360:	jne    13fe1 <ecs::World::flush(ecs::CommandBuffer&)+0x5d1>
+   14366:	sub    r12,QWORD PTR [rsp+0x58]
+   1436b:	movabs rax,0x7ffffffffffffff8
+   14375:	add    rax,0x7
+   14379:	cmp    r12,rax
+   1437c:	je     146e4 <ecs::World::flush(ecs::CommandBuffer&)+0xcd4>
+   14382:	cmp    r12,0x1
+   14386:	mov    rcx,r12
+   14389:	adc    rcx,0x0
+   1438d:	lea    rbx,[rcx+r12*1]
+   14391:	movabs rdx,0x7fffffffffffffff
+   1439b:	cmp    rbx,rdx
+   1439e:	cmovae rbx,rdx
+   143a2:	add    rcx,r12
+   143a5:	cmovb  rbx,rax
+   143a9:	test   rbx,rbx
+   143ac:	je     1442c <ecs::World::flush(ecs::CommandBuffer&)+0xa1c>
+   143ae:	mov    rdi,rbx
+   143b1:	call   6480 <operator new(unsigned long)@plt>
+   143b6:	mov    r14,rax
+   143b9:	mov    BYTE PTR [r14+r12*1],r15b
+   143bd:	test   r12,r12
+   143c0:	mov    r15,QWORD PTR [rsp+0x58]
+   143c5:	jle    143d5 <ecs::World::flush(ecs::CommandBuffer&)+0x9c5>
+   143c7:	mov    rdi,r14
+   143ca:	mov    rsi,r15
+   143cd:	mov    rdx,r12
+   143d0:	call   6760 <memmove@plt>
+   143d5:	test   r15,r15
+   143d8:	je     143e5 <ecs::World::flush(ecs::CommandBuffer&)+0x9d5>
+   143da:	mov    rdi,r15
+   143dd:	mov    rsi,r12
+   143e0:	call   6490 <operator delete(void*, unsigned long)@plt>
+   143e5:	add    r12,r14
+   143e8:	inc    r12
+   143eb:	mov    QWORD PTR [rsp+0xd8],r14
+   143f3:	mov    QWORD PTR [rsp+0x50],r12
+   143f8:	mov    QWORD PTR [rsp+0xe0],r12
+   14400:	add    rbx,r14
+   14403:	mov    QWORD PTR [rsp+0xe8],rbx
+   1440b:	mov    r12,rbx
+   1440e:	mov    rdx,r14
+   14411:	mov    r9,QWORD PTR [rsp+0x18]
+   14416:	mov    r14,QWORD PTR [rsp+0x10]
+   1441b:	add    rbp,0x10
+   1441f:	cmp    rbp,QWORD PTR [rsp+0x48]
+   14424:	jne    14008 <ecs::World::flush(ecs::CommandBuffer&)+0x5f8>
+   1442a:	jmp    1443f <ecs::World::flush(ecs::CommandBuffer&)+0xa2f>
+   1442c:	xor    r14d,r14d
+   1442f:	mov    BYTE PTR [r14+r12*1],r15b
+   14433:	test   r12,r12
+   14436:	mov    r15,QWORD PTR [rsp+0x58]
+   1443b:	jg     143c7 <ecs::World::flush(ecs::CommandBuffer&)+0x9b7>
+   1443d:	jmp    143d5 <ecs::World::flush(ecs::CommandBuffer&)+0x9c5>
+   1443f:	mov    QWORD PTR [rsp+0xa0],r13
+   14447:	mov    QWORD PTR [rsp+0xa8],r14
+   1444f:	mov    rax,QWORD PTR [rsp+0x8]
+   14454:	mov    QWORD PTR [rsp+0x98],rax
+   1445c:	mov    rax,QWORD PTR [rsp+0xb0]
+   14464:	mov    QWORD PTR [rsp+0x40],rax
+   14469:	mov    rbp,QWORD PTR [rsp+0x100]
+   14471:	mov    r12,QWORD PTR [rsp+0x148]
+   14479:	mov    BYTE PTR [rsp+0x88],0x1
+   14481:	mov    rax,QWORD PTR [rsp+0x60]
+   14486:	mov    rdi,QWORD PTR [rax]
+   14489:	mov    al,0x1
+   1448b:	mov    QWORD PTR [rsp+0x38],rax
+   14490:	mov    rsi,QWORD PTR [rsp+0x68]
+   14495:	shl    rsi,0x20
+   14499:	add    rsi,QWORD PTR [rsp+0x70]
+   1449e:	test   rdi,rdi
+   144a1:	je     145b8 <ecs::World::flush(ecs::CommandBuffer&)+0xba8>
+   144a7:	mov    r8,QWORD PTR [rsp+0xb8]
+   144af:	test   r8,r8
+   144b2:	je     144c6 <ecs::World::flush(ecs::CommandBuffer&)+0xab6>
+   144b4:	mov    rdi,rbp
+   144b7:	mov    rdx,QWORD PTR [rsp+0x60]
+   144bc:	mov    rcx,QWORD PTR [rsp+0x40]
+   144c1:	call   cde0 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)>
+   144c6:	cmp    QWORD PTR [rsp+0x48],r12
+   144cb:	je     145e1 <ecs::World::flush(ecs::CommandBuffer&)+0xbd1>
+   144d1:	mov    rax,QWORD PTR [rsp+0x60]
+   144d6:	mov    eax,DWORD PTR [rax+0x8]
+   144d9:	mov    QWORD PTR [rsp+0x10],rax
+   144de:	mov    rbp,r12
+   144e1:	mov    r12,QWORD PTR [rsp+0xc0]
+   144e9:	mov    rax,QWORD PTR [rsp+0xd8]
+   144f1:	mov    QWORD PTR [rsp+0x58],rax
+   144f6:	add    rbp,0x8
+   144fa:	xor    r15d,r15d
+   144fd:	jmp    1451b <ecs::World::flush(ecs::CommandBuffer&)+0xb0b>
+   144ff:	nop
+   14500:	mov    rdi,rbx
+   14503:	call   QWORD PTR [rax+0x10]
+   14506:	inc    r15
+   14509:	add    rbp,0x10
+   1450d:	cmp    QWORD PTR [rsp+0x80],r15
+   14515:	je     145a6 <ecs::World::flush(ecs::CommandBuffer&)+0xb96>
+   1451b:	mov    r14,QWORD PTR [r12+r15*8]
+   1451f:	test   r14,r14
+   14522:	je     14506 <ecs::World::flush(ecs::CommandBuffer&)+0xaf6>
+   14524:	mov    rax,QWORD PTR [r14]
+   14527:	mov    ebx,DWORD PTR [rax]
+   14529:	imul   rbx,QWORD PTR [rsp+0x10]
+   1452f:	add    rbx,QWORD PTR [r14+0x8]
+   14533:	mov    rcx,QWORD PTR [rsp+0x58]
+   14538:	cmp    BYTE PTR [rcx+r15*1],0x0
+   1453d:	je     1454e <ecs::World::flush(ecs::CommandBuffer&)+0xb3e>
+   1453f:	cmp    BYTE PTR [rax+0x8],0x0
+   14543:	jne    1454e <ecs::World::flush(ecs::CommandBuffer&)+0xb3e>
+   14545:	mov    rdi,rbx
+   14548:	call   QWORD PTR [rax+0x18]
+   1454b:	mov    rax,QWORD PTR [r14]
+   1454e:	mov    rsi,QWORD PTR [rbp+0x0]
+   14552:	cmp    BYTE PTR [rax+0x8],0x0
+   14556:	je     14500 <ecs::World::flush(ecs::CommandBuffer&)+0xaf0>
+   14558:	mov    edx,DWORD PTR [rax]
+   1455a:	lea    eax,[rdx-0x4]
+   1455d:	rol    eax,0x1e
+   14560:	cmp    eax,0x3
+   14563:	ja     14599 <ecs::World::flush(ecs::CommandBuffer&)+0xb89>
+   14565:	lea    rcx,[rip+0x3cca4]        # 51210 <std::piecewise_construct+0x94>
+   1456c:	movsxd rax,DWORD PTR [rcx+rax*4]
+   14570:	add    rax,rcx
+   14573:	jmp    rax
+   14575:	mov    eax,DWORD PTR [rsi]
+   14577:	mov    DWORD PTR [rbx],eax
+   14579:	jmp    14506 <ecs::World::flush(ecs::CommandBuffer&)+0xaf6>
+   1457b:	mov    eax,DWORD PTR [rsi+0x8]
+   1457e:	mov    DWORD PTR [rbx+0x8],eax
+   14581:	mov    rax,QWORD PTR [rsi]
+   14584:	mov    QWORD PTR [rbx],rax
+   14587:	jmp    14506 <ecs::World::flush(ecs::CommandBuffer&)+0xaf6>
+   1458c:	movdqu xmm0,XMMWORD PTR [rsi]
+   14590:	movdqu XMMWORD PTR [rbx],xmm0
+   14594:	jmp    14506 <ecs::World::flush(ecs::CommandBuffer&)+0xaf6>
+   14599:	mov    rdi,rbx
+   1459c:	call   63b0 <memcpy@plt>
+   145a1:	jmp    14506 <ecs::World::flush(ecs::CommandBuffer&)+0xaf6>
+   145a6:	mov    r15,QWORD PTR [rsp+0xf8]
+   145ae:	mov    rbp,QWORD PTR [rsp+0x100]
+   145b6:	jmp    145e9 <ecs::World::flush(ecs::CommandBuffer&)+0xbd9>
+   145b8:	mov    rax,QWORD PTR [rsp+0x40]
+   145bd:	lea    rdi,[rax+0x38]
+   145c1:	call   190b0 <ecs::Table::pushUninitialized(ecs::Entity)>
+   145c6:	mov    rcx,QWORD PTR [rsp+0x60]
+   145cb:	mov    DWORD PTR [rcx+0x8],eax
+   145ce:	mov    rax,QWORD PTR [rsp+0x40]
+   145d3:	mov    QWORD PTR [rcx],rax
+   145d6:	cmp    QWORD PTR [rsp+0x48],r12
+   145db:	jne    144d1 <ecs::World::flush(ecs::CommandBuffer&)+0xac1>
+   145e1:	mov    r15,QWORD PTR [rsp+0xf8]
+   145e9:	mov    r12,QWORD PTR [rsp+0xf0]
+   145f1:	jmp    13afd <ecs::World::flush(ecs::CommandBuffer&)+0xed>
+   145f6:	mov    rbx,QWORD PTR [rsp+0xd8]
+   145fe:	mov    rdi,r15
+   14601:	call   9ba0 <ecs::CommandBuffer::clear()>
+   14606:	test   rbx,rbx
+   14609:	je     1461e <ecs::World::flush(ecs::CommandBuffer&)+0xc0e>
+   1460b:	mov    rsi,QWORD PTR [rsp+0xe8]
+   14613:	sub    rsi,rbx
+   14616:	mov    rdi,rbx
+   14619:	call   6490 <operator delete(void*, unsigned long)@plt>
+   1461e:	mov    rdi,QWORD PTR [rsp+0xc0]
+   14626:	test   rdi,rdi
+   14629:	je     1463b <ecs::World::flush(ecs::CommandBuffer&)+0xc2b>
+   1462b:	mov    rsi,QWORD PTR [rsp+0xd0]
+   14633:	sub    rsi,rdi
+   14636:	call   6490 <operator delete(void*, unsigned long)@plt>
+   1463b:	mov    rdi,QWORD PTR [rsp+0x98]
+   14643:	test   rdi,rdi
+   14646:	je     14658 <ecs::World::flush(ecs::CommandBuffer&)+0xc48>
+   14648:	mov    rsi,QWORD PTR [rsp+0xa8]
+   14650:	sub    rsi,rdi
+   14653:	call   6490 <operator delete(void*, unsigned long)@plt>
+   14658:	mov    rdi,QWORD PTR [rsp+0x118]
+   14660:	test   rdi,rdi
+   14663:	je     14675 <ecs::World::flush(ecs::CommandBuffer&)+0xc65>
+   14665:	mov    rsi,QWORD PTR [rsp+0x128]
+   1466d:	sub    rsi,rdi
+   14670:	call   6490 <operator delete(void*, unsigned long)@plt>
+   14675:	mov    rdi,QWORD PTR [rsp+0x188]
+   1467d:	test   rdi,rdi
+   14680:	je     14692 <ecs::World::flush(ecs::CommandBuffer&)+0xc82>
+   14682:	mov    rsi,QWORD PTR [rsp+0x198]
+   1468a:	sub    rsi,rdi
+   1468d:	call   6490 <operator delete(void*, unsigned long)@plt>
+   14692:	mov    rdi,QWORD PTR [rsp+0x160]
+   1469a:	test   rdi,rdi
+   1469d:	je     146af <ecs::World::flush(ecs::CommandBuffer&)+0xc9f>
+   1469f:	mov    rsi,QWORD PTR [rsp+0x170]
+   146a7:	sub    rsi,rdi
+   146aa:	call   6490 <operator delete(void*, unsigned long)@plt>
+   146af:	add    rsp,0x1a8
+   146b6:	pop    rbx
+   146b7:	pop    r12
+   146b9:	pop    r13
+   146bb:	pop    r14
+   146bd:	pop    r15
+   146bf:	pop    rbp
+   146c0:	ret    
+   146c1:	mov    rdi,r15
+   146c4:	call   9ba0 <ecs::CommandBuffer::clear()>
+   146c9:	mov    rdi,QWORD PTR [rsp+0xc0]
+   146d1:	test   rdi,rdi
+   146d4:	jne    1462b <ecs::World::flush(ecs::CommandBuffer&)+0xc1b>
+   146da:	jmp    1463b <ecs::World::flush(ecs::CommandBuffer&)+0xc2b>
+   146df:	call   6370 <std::__throw_bad_array_new_length()@plt>
+   146e4:	mov    QWORD PTR [rsp+0xa0],r13
+   146ec:	mov    rax,QWORD PTR [rsp+0x10]
+   146f1:	mov    QWORD PTR [rsp+0xa8],rax
+   146f9:	mov    rax,QWORD PTR [rsp+0x8]
+   146fe:	mov    QWORD PTR [rsp+0x98],rax
+   14706:	lea    rdi,[rip+0x3ca55]        # 51162 <_IO_stdin_used+0x162>
+   1470d:	call   6220 <std::__throw_length_error(char const*)@plt>
+   14712:	jmp    14783 <ecs::World::flush(ecs::CommandBuffer&)+0xd73>
+   14714:	jmp    14783 <ecs::World::flush(ecs::CommandBuffer&)+0xd73>
+   14716:	mov    r14,rax
+   14719:	mov    rdi,QWORD PTR [rsp+0x130]
+   14721:	test   rdi,rdi
+   14724:	je     1473d <ecs::World::flush(ecs::CommandBuffer&)+0xd2d>
+   14726:	mov    rsi,QWORD PTR [rsp+0x140]
+   1472e:	sub    rsi,rdi
+   14731:	call   6490 <operator delete(void*, unsigned long)@plt>
+   14736:	jmp    1473d <ecs::World::flush(ecs::CommandBuffer&)+0xd2d>
+   14738:	jmp    14783 <ecs::World::flush(ecs::CommandBuffer&)+0xd73>
+   1473a:	mov    r14,rax
+   1473d:	mov    rdi,QWORD PTR [rsp+0x20]
+   14742:	cmp    QWORD PTR [rsp+0x18],0x0
+   14748:	test   rdi,rdi
+   1474b:	je     14786 <ecs::World::flush(ecs::CommandBuffer&)+0xd76>
+   1474d:	mov    rsi,QWORD PTR [rsp+0x30]
+   14752:	sub    rsi,rdi
+   14755:	call   6490 <operator delete(void*, unsigned long)@plt>
+   1475a:	jmp    14786 <ecs::World::flush(ecs::CommandBuffer&)+0xd76>
+   1475c:	mov    r14,rax
+   1475f:	mov    QWORD PTR [rsp+0xa0],r13
+   14767:	mov    rax,QWORD PTR [rsp+0x10]
+   1476c:	mov    QWORD PTR [rsp+0xa8],rax
+   14774:	mov    rax,QWORD PTR [rsp+0x8]
+   14779:	mov    QWORD PTR [rsp+0x98],rax
+   14781:	jmp    14786 <ecs::World::flush(ecs::CommandBuffer&)+0xd76>
+   14783:	mov    r14,rax
+   14786:	lea    rdi,[rsp+0x88]
+   1478e:	call   147d0 <ecs::(anonymous namespace)::FlushMemo::~FlushMemo()>
+   14793:	mov    rdi,QWORD PTR [rsp+0x118]
+   1479b:	test   rdi,rdi
+   1479e:	je     147b0 <ecs::World::flush(ecs::CommandBuffer&)+0xda0>
+   147a0:	mov    rsi,QWORD PTR [rsp+0x128]
+   147a8:	sub    rsi,rdi
+   147ab:	call   6490 <operator delete(void*, unsigned long)@plt>
+   147b0:	lea    rdi,[rsp+0x160]
+   147b8:	call   b400 <ecs::CommandPlan::~CommandPlan()>
+   147bd:	mov    rdi,r14
+   147c0:	call   6840 <_Unwind_Resume@plt>
+   147c5:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+

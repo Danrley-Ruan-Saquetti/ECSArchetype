@@ -1,0 +1,842 @@
+000000000041b4a0 <ecs::World::flush(ecs::CommandBuffer&)>:
+  41b4a0:	push   r15
+  41b4a2:	push   r14
+  41b4a4:	push   r13
+  41b4a6:	push   r12
+  41b4a8:	push   rbp
+  41b4a9:	push   rbx
+  41b4aa:	sub    rsp,0x138
+  41b4b1:	mov    QWORD PTR [rsp+0x40],rdi
+  41b4b6:	lea    rdi,[rsp+0xe0]
+  41b4be:	mov    QWORD PTR [rsp+0x78],rsi
+  41b4c3:	call   40d9f0 <ecs::CommandBuffer::plan() const>
+  41b4c8:	mov    rax,QWORD PTR [rsp+0x100]
+  41b4d0:	pxor   xmm0,xmm0
+  41b4d4:	mov    r12,QWORD PTR [rsp+0xf8]
+  41b4dc:	movaps XMMWORD PTR [rsp+0xc0],xmm0
+  41b4e4:	shl    rax,0x4
+  41b4e8:	movaps XMMWORD PTR [rsp+0xd0],xmm0
+  41b4f0:	add    rax,r12
+  41b4f3:	mov    QWORD PTR [rsp+0x88],rax
+  41b4fb:	cmp    r12,rax
+  41b4fe:	je     41c238 <ecs::World::flush(ecs::CommandBuffer&)+0xd98>
+  41b504:	mov    QWORD PTR [rsp],r12
+  41b508:	xor    ebx,ebx
+  41b50a:	mov    QWORD PTR [rsp+0x20],0x0
+  41b513:	mov    QWORD PTR [rsp+0x38],0x0
+  41b51c:	mov    QWORD PTR [rsp+0x10],0x0
+  41b525:	mov    QWORD PTR [rsp+0x30],0x0
+  41b52e:	mov    QWORD PTR [rsp+0x90],0x0
+  41b53a:	mov    QWORD PTR [rsp+0x80],0x0
+  41b546:	mov    QWORD PTR [rsp+0x18],0x0
+  41b54f:	mov    QWORD PTR [rsp+0x28],0x0
+  41b558:	mov    QWORD PTR [rsp+0x60],0x0
+  41b561:	mov    BYTE PTR [rsp+0x98],0x0
+  41b569:	jmp    41b587 <ecs::World::flush(ecs::CommandBuffer&)+0xe7>
+  41b56b:	nop    DWORD PTR [rax+rax*1+0x0]
+  41b570:	add    QWORD PTR [rsp],0x10
+  41b575:	mov    rax,QWORD PTR [rsp]
+  41b579:	cmp    QWORD PTR [rsp+0x88],rax
+  41b581:	je     41bf10 <ecs::World::flush(ecs::CommandBuffer&)+0xa70>
+  41b587:	mov    rdx,QWORD PTR [rsp]
+  41b58b:	mov    rdi,QWORD PTR [rsp+0x78]
+  41b590:	lea    rcx,[rsp+0xc0]
+  41b598:	lea    rsi,[rsp+0xe0]
+  41b5a0:	mov    r15d,DWORD PTR [rdx+0x4]
+  41b5a4:	mov    r13d,DWORD PTR [rdx]
+  41b5a7:	mov    DWORD PTR [rsp+0x48],r15d
+  41b5ac:	call   40d360 <ecs::CommandBuffer::netEffect(ecs::CommandPlan const&, ecs::EntityPlan const&, ecs::NetEffect&) const>
+  41b5b1:	mov    rax,QWORD PTR [rsp+0x40]
+  41b5b6:	mov    edi,r13d
+  41b5b9:	mov    QWORD PTR [rsp+0x58],rdi
+  41b5be:	mov    rdx,QWORD PTR [rax]
+  41b5c1:	mov    rax,QWORD PTR [rax+0x8]
+  41b5c5:	mov    QWORD PTR [rsp+0x8],rax
+  41b5ca:	sub    rax,rdx
+  41b5cd:	sar    rax,0x4
+  41b5d1:	cmp    rdi,rax
+  41b5d4:	jae    41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41b5d6:	mov    rax,rdi
+  41b5d9:	shl    rax,0x4
+  41b5dd:	add    rax,rdx
+  41b5e0:	mov    QWORD PTR [rsp+0x70],rax
+  41b5e5:	cmp    DWORD PTR [rax+0xc],r15d
+  41b5e9:	jne    41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41b5eb:	mov    rbp,QWORD PTR [rax]
+  41b5ee:	test   rbp,rbp
+  41b5f1:	je     41c10e <ecs::World::flush(ecs::CommandBuffer&)+0xc6e>
+  41b5f7:	cmp    BYTE PTR [rsp+0xc1],0x0
+  41b5ff:	jne    41be5a <ecs::World::flush(ecs::CommandBuffer&)+0x9ba>
+  41b605:	mov    r9,QWORD PTR [rsp+0xd0]
+  41b60d:	mov    rax,QWORD PTR [rsp+0xc8]
+  41b615:	mov    r13,r9
+  41b618:	mov    QWORD PTR [rsp+0x68],rax
+  41b61d:	sub    r13,rax
+  41b620:	mov    rdi,r13
+  41b623:	sar    rdi,0x4
+  41b627:	cmp    BYTE PTR [rsp+0x98],0x0
+  41b62f:	mov    QWORD PTR [rsp+0x50],rdi
+  41b634:	je     41b644 <ecs::World::flush(ecs::CommandBuffer&)+0x1a4>
+  41b636:	mov    rax,QWORD PTR [rsp+0x60]
+  41b63b:	cmp    rbp,rax
+  41b63e:	je     41be99 <ecs::World::flush(ecs::CommandBuffer&)+0x9f9>
+  41b644:	mov    rax,QWORD PTR [rbp+0x10]
+  41b648:	sub    rax,QWORD PTR [rbp+0x8]
+  41b64c:	mov    rbx,rax
+  41b64f:	je     41bfeb <ecs::World::flush(ecs::CommandBuffer&)+0xb4b>
+  41b655:	movabs rax,0x7ffffffffffffffc
+  41b65f:	cmp    rax,rbx
+  41b662:	jb     41c30b <ecs::World::flush(ecs::CommandBuffer&)+0xe6b>
+  41b668:	mov    rdi,rbx
+  41b66b:	mov    QWORD PTR [rsp+0x60],r9
+  41b670:	call   405430 <operator new(unsigned long)@plt>
+  41b675:	mov    rsi,QWORD PTR [rbp+0x8]
+  41b679:	mov    r12,QWORD PTR [rbp+0x10]
+  41b67d:	mov    r14,rax
+  41b680:	lea    rax,[rax+rbx*1]
+  41b684:	mov    QWORD PTR [rsp+0x8],rax
+  41b689:	mov    r9,QWORD PTR [rsp+0x60]
+  41b68e:	sub    r12,rsi
+  41b691:	cmp    r12,0x4
+  41b695:	jle    41c31a <ecs::World::flush(ecs::CommandBuffer&)+0xe7a>
+  41b69b:	mov    rdx,r12
+  41b69e:	mov    rdi,r14
+  41b6a1:	call   405760 <memmove@plt>
+  41b6a6:	mov    r9,QWORD PTR [rsp+0x60]
+  41b6ab:	add    r12,r14
+  41b6ae:	mov    rax,QWORD PTR [rsp+0x68]
+  41b6b3:	mov    r13,rax
+  41b6b6:	cmp    rax,r9
+  41b6b9:	je     41b78d <ecs::World::flush(ecs::CommandBuffer&)+0x2ed>
+  41b6bf:	nop
+  41b6c0:	mov    rdx,r12
+  41b6c3:	mov    rbx,r14
+  41b6c6:	sub    rdx,r14
+  41b6c9:	sar    rdx,0x2
+  41b6cd:	mov    rax,rdx
+  41b6d0:	test   rax,rax
+  41b6d3:	jle    41b6fb <ecs::World::flush(ecs::CommandBuffer&)+0x25b>
+  41b6d5:	mov    rcx,rax
+  41b6d8:	mov    edi,DWORD PTR [r13+0x0]
+  41b6dc:	sar    rcx,1
+  41b6df:	lea    rsi,[rbx+rcx*4]
+  41b6e3:	cmp    DWORD PTR [rsi],edi
+  41b6e5:	jae    41bb80 <ecs::World::flush(ecs::CommandBuffer&)+0x6e0>
+  41b6eb:	sub    rax,rcx
+  41b6ee:	lea    rbx,[rsi+0x4]
+  41b6f2:	sub    rax,0x1
+  41b6f6:	test   rax,rax
+  41b6f9:	jg     41b6d5 <ecs::World::flush(ecs::CommandBuffer&)+0x235>
+  41b6fb:	movzx  eax,BYTE PTR [r13+0x4]
+  41b700:	cmp    rbx,r12
+  41b703:	je     41bbc0 <ecs::World::flush(ecs::CommandBuffer&)+0x720>
+  41b709:	mov    r10d,DWORD PTR [r13+0x0]
+  41b70d:	cmp    DWORD PTR [rbx],r10d
+  41b710:	je     41bc08 <ecs::World::flush(ecs::CommandBuffer&)+0x768>
+  41b716:	test   al,al
+  41b718:	je     41b780 <ecs::World::flush(ecs::CommandBuffer&)+0x2e0>
+  41b71a:	mov    rax,QWORD PTR [rsp+0x8]
+  41b71f:	cmp    r12,rax
+  41b722:	je     41bfff <ecs::World::flush(ecs::CommandBuffer&)+0xb5f>
+  41b728:	mov    eax,DWORD PTR [r12-0x4]
+  41b72d:	lea    rdx,[r12-0x4]
+  41b732:	lea    r15,[r12+0x4]
+  41b737:	sub    rdx,rbx
+  41b73a:	mov    DWORD PTR [r12],eax
+  41b73e:	cmp    rdx,0x4
+  41b742:	jle    41c216 <ecs::World::flush(ecs::CommandBuffer&)+0xd76>
+  41b748:	mov    rdi,r12
+  41b74b:	mov    rsi,rbx
+  41b74e:	mov    QWORD PTR [rsp+0x60],r9
+  41b753:	sub    rdi,rdx
+  41b756:	mov    DWORD PTR [rsp+0x80],r10d
+  41b75e:	call   405760 <memmove@plt>
+  41b763:	mov    r9,QWORD PTR [rsp+0x60]
+  41b768:	mov    r10d,DWORD PTR [rsp+0x80]
+  41b770:	mov    DWORD PTR [rbx],r10d
+  41b773:	mov    r12,r15
+  41b776:	cs nop WORD PTR [rax+rax*1+0x0]
+  41b780:	add    r13,0x10
+  41b784:	cmp    r9,r13
+  41b787:	jne    41b6c0 <ecs::World::flush(ecs::CommandBuffer&)+0x220>
+  41b78d:	mov    rax,QWORD PTR [rsp+0x8]
+  41b792:	mov    rdi,QWORD PTR [rsp+0x40]
+  41b797:	lea    rsi,[rsp+0xa0]
+  41b79f:	mov    QWORD PTR [rsp+0xa8],r12
+  41b7a7:	mov    QWORD PTR [rsp+0xa0],r14
+  41b7af:	mov    QWORD PTR [rsp+0xb0],rax
+  41b7b7:	call   410930 <ecs::World::findOrCreate(std::vector<unsigned int, std::allocator<unsigned int> >)>
+  41b7bc:	mov    rdi,QWORD PTR [rsp+0xa0]
+  41b7c4:	mov    QWORD PTR [rsp+0x80],rax
+  41b7cc:	test   rdi,rdi
+  41b7cf:	je     41b7e1 <ecs::World::flush(ecs::CommandBuffer&)+0x341>
+  41b7d1:	mov    rsi,QWORD PTR [rsp+0xb0]
+  41b7d9:	sub    rsi,rdi
+  41b7dc:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41b7e1:	test   rbp,rbp
+  41b7e4:	je     41be88 <ecs::World::flush(ecs::CommandBuffer&)+0x9e8>
+  41b7ea:	mov    rdx,QWORD PTR [rsp+0x80]
+  41b7f2:	cmp    rdx,rbp
+  41b7f5:	je     41be88 <ecs::World::flush(ecs::CommandBuffer&)+0x9e8>
+  41b7fb:	mov    rdi,QWORD PTR [rsp+0x40]
+  41b800:	mov    rsi,rbp
+  41b803:	call   41b210 <ecs::World::jumpEdge(ecs::Archetype&, ecs::Archetype&)>
+  41b808:	mov    QWORD PTR [rsp+0x90],rax
+  41b810:	mov    rbx,QWORD PTR [rsp+0x50]
+  41b815:	mov    rax,QWORD PTR [rsp+0x68]
+  41b81a:	shl    rbx,0x4
+  41b81e:	add    rbx,rax
+  41b821:	mov    QWORD PTR [rsp+0x8],rbx
+  41b826:	cmp    rbx,rax
+  41b829:	je     41c1c9 <ecs::World::flush(ecs::CommandBuffer&)+0xd29>
+  41b82f:	mov    r13,QWORD PTR [rsp+0x38]
+  41b834:	mov    r15,QWORD PTR [rsp+0x30]
+  41b839:	mov    r12,rax
+  41b83c:	mov    rbx,QWORD PTR [rsp+0x28]
+  41b841:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  41b84c:	nop    DWORD PTR [rax+0x0]
+  41b850:	cmp    QWORD PTR [rsp+0x18],rbx
+  41b855:	je     41bce8 <ecs::World::flush(ecs::CommandBuffer&)+0x848>
+  41b85b:	mov    eax,DWORD PTR [r12]
+  41b85f:	movzx  edi,BYTE PTR [r12+0x4]
+  41b865:	add    rbx,0x8
+  41b869:	mov    DWORD PTR [rbx-0x8],eax
+  41b86c:	mov    BYTE PTR [rbx-0x4],dil
+  41b870:	test   dil,dil
+  41b873:	jne    41ba90 <ecs::World::flush(ecs::CommandBuffer&)+0x5f0>
+  41b879:	xor    edx,edx
+  41b87b:	cmp    QWORD PTR [rsp+0x10],r15
+  41b880:	je     41bad0 <ecs::World::flush(ecs::CommandBuffer&)+0x630>
+  41b886:	mov    QWORD PTR [r15],rdx
+  41b889:	add    r15,0x8
+  41b88d:	xor    edx,edx
+  41b88f:	test   rbp,rbp
+  41b892:	je     41b8e3 <ecs::World::flush(ecs::CommandBuffer&)+0x443>
+  41b894:	mov    r11,QWORD PTR [rbp+0x10]
+  41b898:	mov    rsi,QWORD PTR [rbp+0x8]
+  41b89c:	mov    edi,DWORD PTR [r12]
+  41b8a0:	mov    rax,r11
+  41b8a3:	sub    rax,rsi
+  41b8a6:	sar    rax,0x2
+  41b8aa:	nop    WORD PTR [rax+rax*1+0x0]
+  41b8b0:	test   rax,rax
+  41b8b3:	jle    41b8d7 <ecs::World::flush(ecs::CommandBuffer&)+0x437>
+  41b8b5:	mov    rdx,rax
+  41b8b8:	sar    rdx,1
+  41b8bb:	lea    rcx,[rsi+rdx*4]
+  41b8bf:	cmp    DWORD PTR [rcx],edi
+  41b8c1:	jae    41bb90 <ecs::World::flush(ecs::CommandBuffer&)+0x6f0>
+  41b8c7:	sub    rax,rdx
+  41b8ca:	lea    rsi,[rcx+0x4]
+  41b8ce:	sub    rax,0x1
+  41b8d2:	test   rax,rax
+  41b8d5:	jg     41b8b5 <ecs::World::flush(ecs::CommandBuffer&)+0x415>
+  41b8d7:	xor    edx,edx
+  41b8d9:	cmp    r11,rsi
+  41b8dc:	je     41b8e3 <ecs::World::flush(ecs::CommandBuffer&)+0x443>
+  41b8de:	cmp    edi,DWORD PTR [rsi]
+  41b8e0:	setae  dl
+  41b8e3:	mov    rax,QWORD PTR [rsp+0x20]
+  41b8e8:	cmp    r13,rax
+  41b8eb:	je     41bc48 <ecs::World::flush(ecs::CommandBuffer&)+0x7a8>
+  41b8f1:	mov    BYTE PTR [r13+0x0],dl
+  41b8f5:	add    r13,0x1
+  41b8f9:	add    r12,0x10
+  41b8fd:	cmp    QWORD PTR [rsp+0x8],r12
+  41b902:	jne    41b850 <ecs::World::flush(ecs::CommandBuffer&)+0x3b0>
+  41b908:	mov    rax,QWORD PTR [rsp+0x70]
+  41b90d:	mov    BYTE PTR [rsp+0x98],0x1
+  41b915:	mov    rax,QWORD PTR [rax]
+  41b918:	mov    QWORD PTR [rsp+0x60],rax
+  41b91d:	mov    rsi,QWORD PTR [rsp+0x48]
+  41b922:	mov    rax,QWORD PTR [rsp+0x58]
+  41b927:	shl    rsi,0x20
+  41b92b:	or     rax,rsi
+  41b92e:	cmp    QWORD PTR [rsp+0x60],0x0
+  41b934:	mov    rsi,rax
+  41b937:	je     41bfc8 <ecs::World::flush(ecs::CommandBuffer&)+0xb28>
+  41b93d:	cmp    QWORD PTR [rsp+0x90],0x0
+  41b946:	je     41be7b <ecs::World::flush(ecs::CommandBuffer&)+0x9db>
+  41b94c:	mov    r15,QWORD PTR [rsp+0x70]
+  41b951:	mov    r8,QWORD PTR [rsp+0x90]
+  41b959:	mov    rcx,QWORD PTR [rsp+0x80]
+  41b961:	mov    rdi,QWORD PTR [rsp+0x40]
+  41b966:	mov    rdx,r15
+  41b969:	call   40ff90 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)>
+  41b96e:	mov    esi,DWORD PTR [r15+0x8]
+  41b972:	mov    r8,QWORD PTR [rsp+0x68]
+  41b977:	xor    r14d,r14d
+  41b97a:	mov    r13d,esi
+  41b97d:	add    r8,0x8
+  41b981:	cmp    QWORD PTR [rsp+0x50],0x0
+  41b987:	je     41ba7f <ecs::World::flush(ecs::CommandBuffer&)+0x5df>
+  41b98d:	mov    r12,QWORD PTR [rsp+0x30]
+  41b992:	mov    r15,QWORD PTR [rsp+0x50]
+  41b997:	mov    QWORD PTR [rsp+0x58],rbp
+  41b99c:	mov    rbp,r8
+  41b99f:	mov    QWORD PTR [rsp+0x60],rbx
+  41b9a4:	mov    rbx,r14
+  41b9a7:	mov    r14,r13
+  41b9aa:	mov    r13,QWORD PTR [rsp+0x38]
+  41b9af:	jmp    41ba0d <ecs::World::flush(ecs::CommandBuffer&)+0x56d>
+  41b9b1:	nop    DWORD PTR [rax+0x0]
+  41b9b8:	mov    edx,DWORD PTR [r9]
+  41b9bb:	cmp    edx,0xc
+  41b9be:	je     41bbad <ecs::World::flush(ecs::CommandBuffer&)+0x70d>
+  41b9c4:	ja     41bbf0 <ecs::World::flush(ecs::CommandBuffer&)+0x750>
+  41b9ca:	cmp    edx,0x4
+  41b9cd:	je     41bdd8 <ecs::World::flush(ecs::CommandBuffer&)+0x938>
+  41b9d3:	cmp    edx,0x8
+  41b9d6:	jne    41bde8 <ecs::World::flush(ecs::CommandBuffer&)+0x948>
+  41b9dc:	mov    rax,QWORD PTR [rsi]
+  41b9df:	mov    QWORD PTR [rdi],rax
+  41b9e2:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  41b9ed:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  41b9f8:	nop    DWORD PTR [rax+rax*1+0x0]
+  41ba00:	add    rbx,0x1
+  41ba04:	add    rbp,0x10
+  41ba08:	cmp    rbx,r15
+  41ba0b:	je     41ba75 <ecs::World::flush(ecs::CommandBuffer&)+0x5d5>
+  41ba0d:	mov    rax,QWORD PTR [r12+rbx*8]
+  41ba11:	test   rax,rax
+  41ba14:	je     41ba00 <ecs::World::flush(ecs::CommandBuffer&)+0x560>
+  41ba16:	mov    r9,QWORD PTR [rax]
+  41ba19:	mov    QWORD PTR [rsp+0x8],rax
+  41ba1e:	mov    edi,DWORD PTR [r9]
+  41ba21:	mov    rdx,rdi
+  41ba24:	imul   rdi,r14
+  41ba28:	add    rdi,QWORD PTR [rax+0x8]
+  41ba2c:	cmp    BYTE PTR [r13+rbx*1+0x0],0x0
+  41ba32:	je     41ba55 <ecs::World::flush(ecs::CommandBuffer&)+0x5b5>
+  41ba34:	cmp    BYTE PTR [r9+0x8],0x0
+  41ba39:	jne    41bba0 <ecs::World::flush(ecs::CommandBuffer&)+0x700>
+  41ba3f:	mov    QWORD PTR [rsp+0x48],rdi
+  41ba44:	call   QWORD PTR [r9+0x18]
+  41ba48:	mov    rax,QWORD PTR [rsp+0x8]
+  41ba4d:	mov    rdi,QWORD PTR [rsp+0x48]
+  41ba52:	mov    r9,QWORD PTR [rax]
+  41ba55:	cmp    BYTE PTR [r9+0x8],0x0
+  41ba5a:	mov    rsi,QWORD PTR [rbp+0x0]
+  41ba5e:	jne    41b9b8 <ecs::World::flush(ecs::CommandBuffer&)+0x518>
+  41ba64:	call   QWORD PTR [r9+0x10]
+  41ba68:	add    rbx,0x1
+  41ba6c:	add    rbp,0x10
+  41ba70:	cmp    rbx,r15
+  41ba73:	jne    41ba0d <ecs::World::flush(ecs::CommandBuffer&)+0x56d>
+  41ba75:	mov    rbp,QWORD PTR [rsp+0x58]
+  41ba7a:	mov    rbx,QWORD PTR [rsp+0x60]
+  41ba7f:	mov    QWORD PTR [rsp+0x60],rbp
+  41ba84:	jmp    41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41ba89:	nop    DWORD PTR [rax+0x0]
+  41ba90:	mov    edi,DWORD PTR [r12]
+  41ba94:	call   40ea50 <ecs::typeInfo(unsigned int)>
+  41ba99:	cmp    BYTE PTR [rax+0x9],0x0
+  41ba9d:	jne    41b879 <ecs::World::flush(ecs::CommandBuffer&)+0x3d9>
+  41baa3:	mov    r14,QWORD PTR [rsp+0x80]
+  41baab:	mov    esi,DWORD PTR [r12]
+  41baaf:	mov    rdi,r14
+  41bab2:	call   41d9e0 <ecs::columnOf(ecs::Archetype const&, unsigned int)>
+  41bab7:	movzx  edx,ax
+  41baba:	shl    rdx,0x4
+  41babe:	add    rdx,QWORD PTR [r14+0x38]
+  41bac2:	cmp    QWORD PTR [rsp+0x10],r15
+  41bac7:	jne    41b886 <ecs::World::flush(ecs::CommandBuffer&)+0x3e6>
+  41bacd:	nop    DWORD PTR [rax]
+  41bad0:	mov    rax,QWORD PTR [rsp+0x30]
+  41bad5:	mov    rsi,QWORD PTR [rsp+0x10]
+  41bada:	sub    rsi,rax
+  41badd:	movabs rax,0xfffffffffffffff
+  41bae7:	mov    r14,rsi
+  41baea:	sar    r14,0x3
+  41baee:	cmp    r14,rax
+  41baf1:	je     406ca0 <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]+0xde>
+  41baf7:	test   r14,r14
+  41bafa:	mov    eax,0x1
+  41baff:	cmovne rax,r14
+  41bb03:	add    r14,rax
+  41bb06:	jb     41c35e <ecs::World::flush(ecs::CommandBuffer&)+0xebe>
+  41bb0c:	movabs rax,0xfffffffffffffff
+  41bb16:	cmp    r14,rax
+  41bb19:	cmova  r14,rax
+  41bb1d:	shl    r14,0x3
+  41bb21:	mov    rdi,r14
+  41bb24:	mov    QWORD PTR [rsp+0x98],rsi
+  41bb2c:	mov    QWORD PTR [rsp+0x60],rdx
+  41bb31:	call   405430 <operator new(unsigned long)@plt>
+  41bb36:	mov    rsi,QWORD PTR [rsp+0x98]
+  41bb3e:	mov    rdx,QWORD PTR [rsp+0x60]
+  41bb43:	mov    r11,rax
+  41bb46:	mov    QWORD PTR [rax+rsi*1],rdx
+  41bb4a:	lea    r15,[rax+rsi*1+0x8]
+  41bb4f:	test   rsi,rsi
+  41bb52:	jg     41be26 <ecs::World::flush(ecs::CommandBuffer&)+0x986>
+  41bb58:	cmp    QWORD PTR [rsp+0x30],0x0
+  41bb5e:	jne    41be39 <ecs::World::flush(ecs::CommandBuffer&)+0x999>
+  41bb64:	lea    rax,[r11+r14*1]
+  41bb68:	mov    QWORD PTR [rsp+0x30],r11
+  41bb6d:	mov    QWORD PTR [rsp+0x10],rax
+  41bb72:	jmp    41b88d <ecs::World::flush(ecs::CommandBuffer&)+0x3ed>
+  41bb77:	nop    WORD PTR [rax+rax*1+0x0]
+  41bb80:	mov    rax,rcx
+  41bb83:	jmp    41b6d0 <ecs::World::flush(ecs::CommandBuffer&)+0x230>
+  41bb88:	nop    DWORD PTR [rax+rax*1+0x0]
+  41bb90:	mov    rax,rdx
+  41bb93:	jmp    41b8b0 <ecs::World::flush(ecs::CommandBuffer&)+0x410>
+  41bb98:	nop    DWORD PTR [rax+rax*1+0x0]
+  41bba0:	mov    rsi,QWORD PTR [rbp+0x0]
+  41bba4:	cmp    edx,0xc
+  41bba7:	jne    41b9c4 <ecs::World::flush(ecs::CommandBuffer&)+0x524>
+  41bbad:	mov    rax,QWORD PTR [rsi]
+  41bbb0:	mov    QWORD PTR [rdi],rax
+  41bbb3:	mov    eax,DWORD PTR [rsi+0x8]
+  41bbb6:	mov    DWORD PTR [rdi+0x8],eax
+  41bbb9:	jmp    41ba00 <ecs::World::flush(ecs::CommandBuffer&)+0x560>
+  41bbbe:	xchg   ax,ax
+  41bbc0:	test   al,al
+  41bbc2:	je     41b780 <ecs::World::flush(ecs::CommandBuffer&)+0x2e0>
+  41bbc8:	mov    rax,QWORD PTR [rsp+0x8]
+  41bbcd:	mov    rsi,r12
+  41bbd0:	sub    rsi,r14
+  41bbd3:	cmp    r12,rax
+  41bbd6:	je     41c005 <ecs::World::flush(ecs::CommandBuffer&)+0xb65>
+  41bbdc:	mov    eax,DWORD PTR [r13+0x0]
+  41bbe0:	add    r12,0x4
+  41bbe4:	mov    DWORD PTR [r12-0x4],eax
+  41bbe9:	jmp    41b780 <ecs::World::flush(ecs::CommandBuffer&)+0x2e0>
+  41bbee:	xchg   ax,ax
+  41bbf0:	cmp    edx,0x10
+  41bbf3:	jne    41bde8 <ecs::World::flush(ecs::CommandBuffer&)+0x948>
+  41bbf9:	movdqu xmm0,XMMWORD PTR [rsi]
+  41bbfd:	movups XMMWORD PTR [rdi],xmm0
+  41bc00:	jmp    41ba00 <ecs::World::flush(ecs::CommandBuffer&)+0x560>
+  41bc05:	nop    DWORD PTR [rax]
+  41bc08:	test   al,al
+  41bc0a:	jne    41b780 <ecs::World::flush(ecs::CommandBuffer&)+0x2e0>
+  41bc10:	lea    rsi,[rbx+0x4]
+  41bc14:	cmp    rsi,r12
+  41bc17:	je     41bc3b <ecs::World::flush(ecs::CommandBuffer&)+0x79b>
+  41bc19:	mov    rdx,r12
+  41bc1c:	sub    rdx,rsi
+  41bc1f:	cmp    rdx,0x4
+  41bc23:	jle    41c228 <ecs::World::flush(ecs::CommandBuffer&)+0xd88>
+  41bc29:	mov    rdi,rbx
+  41bc2c:	mov    QWORD PTR [rsp+0x60],r9
+  41bc31:	call   405760 <memmove@plt>
+  41bc36:	mov    r9,QWORD PTR [rsp+0x60]
+  41bc3b:	sub    r12,0x4
+  41bc3f:	jmp    41b780 <ecs::World::flush(ecs::CommandBuffer&)+0x2e0>
+  41bc44:	nop    DWORD PTR [rax+0x0]
+  41bc48:	mov    rsi,rax
+  41bc4b:	mov    rax,QWORD PTR [rsp+0x38]
+  41bc50:	sub    rsi,rax
+  41bc53:	movabs rax,0x7fffffffffffffff
+  41bc5d:	cmp    rsi,rax
+  41bc60:	je     406cb2 <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]+0xf0>
+  41bc66:	test   rsi,rsi
+  41bc69:	mov    r14d,0x1
+  41bc6f:	cmovne r14,rsi
+  41bc73:	add    r14,rsi
+  41bc76:	jb     41c34f <ecs::World::flush(ecs::CommandBuffer&)+0xeaf>
+  41bc7c:	movabs rax,0x7fffffffffffffff
+  41bc86:	cmp    r14,rax
+  41bc89:	cmova  r14,rax
+  41bc8d:	mov    rdi,r14
+  41bc90:	mov    BYTE PTR [rsp+0x98],dl
+  41bc97:	mov    QWORD PTR [rsp+0x60],rsi
+  41bc9c:	call   405430 <operator new(unsigned long)@plt>
+  41bca1:	mov    rsi,QWORD PTR [rsp+0x60]
+  41bca6:	movzx  edx,BYTE PTR [rsp+0x98]
+  41bcae:	mov    r11,rax
+  41bcb1:	mov    BYTE PTR [rax+rsi*1],dl
+  41bcb4:	lea    r13,[rax+rsi*1+0x1]
+  41bcb9:	test   rsi,rsi
+  41bcbc:	jg     41bdf2 <ecs::World::flush(ecs::CommandBuffer&)+0x952>
+  41bcc2:	cmp    QWORD PTR [rsp+0x38],0x0
+  41bcc8:	jne    41be05 <ecs::World::flush(ecs::CommandBuffer&)+0x965>
+  41bcce:	lea    rax,[r11+r14*1]
+  41bcd2:	mov    QWORD PTR [rsp+0x38],r11
+  41bcd7:	mov    QWORD PTR [rsp+0x20],rax
+  41bcdc:	jmp    41b8f9 <ecs::World::flush(ecs::CommandBuffer&)+0x459>
+  41bce1:	nop    DWORD PTR [rax+0x0]
+  41bce8:	mov    rax,QWORD PTR [rsp+0x28]
+  41bced:	mov    rsi,QWORD PTR [rsp+0x18]
+  41bcf2:	sub    rsi,rax
+  41bcf5:	movabs rax,0xfffffffffffffff
+  41bcff:	mov    r14,rsi
+  41bd02:	sar    r14,0x3
+  41bd06:	cmp    r14,rax
+  41bd09:	je     406c96 <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]+0xd4>
+  41bd0f:	test   r14,r14
+  41bd12:	mov    eax,0x1
+  41bd17:	cmovne rax,r14
+  41bd1b:	add    r14,rax
+  41bd1e:	jb     41c340 <ecs::World::flush(ecs::CommandBuffer&)+0xea0>
+  41bd24:	movabs rax,0xfffffffffffffff
+  41bd2e:	cmp    r14,rax
+  41bd31:	cmova  r14,rax
+  41bd35:	shl    r14,0x3
+  41bd39:	mov    rdi,r14
+  41bd3c:	mov    QWORD PTR [rsp+0x60],rsi
+  41bd41:	call   405430 <operator new(unsigned long)@plt>
+  41bd46:	mov    rsi,QWORD PTR [rsp+0x60]
+  41bd4b:	movzx  edi,BYTE PTR [r12+0x4]
+  41bd51:	mov    rdx,rax
+  41bd54:	add    rsi,rax
+  41bd57:	mov    eax,DWORD PTR [r12]
+  41bd5b:	mov    BYTE PTR [rsi+0x4],dil
+  41bd5f:	mov    DWORD PTR [rsi],eax
+  41bd61:	mov    rsi,QWORD PTR [rsp+0x28]
+  41bd66:	cmp    rsi,rbx
+  41bd69:	je     41c1c1 <ecs::World::flush(ecs::CommandBuffer&)+0xd21>
+  41bd6f:	sub    rbx,rsi
+  41bd72:	mov    rax,rdx
+  41bd75:	mov    r10,rbx
+  41bd78:	add    r10,rdx
+  41bd7b:	nop    DWORD PTR [rax+rax*1+0x0]
+  41bd80:	mov    rcx,QWORD PTR [rsi]
+  41bd83:	add    rax,0x8
+  41bd87:	add    rsi,0x8
+  41bd8b:	mov    QWORD PTR [rax-0x8],rcx
+  41bd8f:	cmp    rax,r10
+  41bd92:	jne    41bd80 <ecs::World::flush(ecs::CommandBuffer&)+0x8e0>
+  41bd94:	lea    rbx,[rax+0x8]
+  41bd98:	mov    rax,QWORD PTR [rsp+0x28]
+  41bd9d:	test   rax,rax
+  41bda0:	je     41bdc2 <ecs::World::flush(ecs::CommandBuffer&)+0x922>
+  41bda2:	mov    rsi,QWORD PTR [rsp+0x18]
+  41bda7:	mov    rdi,rax
+  41bdaa:	mov    QWORD PTR [rsp+0x28],rdx
+  41bdaf:	sub    rsi,rax
+  41bdb2:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41bdb7:	movzx  edi,BYTE PTR [r12+0x4]
+  41bdbd:	mov    rdx,QWORD PTR [rsp+0x28]
+  41bdc2:	lea    rax,[rdx+r14*1]
+  41bdc6:	mov    QWORD PTR [rsp+0x28],rdx
+  41bdcb:	mov    QWORD PTR [rsp+0x18],rax
+  41bdd0:	jmp    41b870 <ecs::World::flush(ecs::CommandBuffer&)+0x3d0>
+  41bdd5:	nop    DWORD PTR [rax]
+  41bdd8:	mov    eax,DWORD PTR [rsi]
+  41bdda:	mov    DWORD PTR [rdi],eax
+  41bddc:	jmp    41ba00 <ecs::World::flush(ecs::CommandBuffer&)+0x560>
+  41bde1:	nop    DWORD PTR [rax+0x0]
+  41bde8:	call   405390 <memcpy@plt>
+  41bded:	jmp    41ba00 <ecs::World::flush(ecs::CommandBuffer&)+0x560>
+  41bdf2:	mov    rdx,rsi
+  41bdf5:	mov    rsi,QWORD PTR [rsp+0x38]
+  41bdfa:	mov    rdi,rax
+  41bdfd:	call   405390 <memcpy@plt>
+  41be02:	mov    r11,rax
+  41be05:	mov    rsi,QWORD PTR [rsp+0x20]
+  41be0a:	mov    rdi,QWORD PTR [rsp+0x38]
+  41be0f:	mov    QWORD PTR [rsp+0x60],r11
+  41be14:	sub    rsi,rdi
+  41be17:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41be1c:	mov    r11,QWORD PTR [rsp+0x60]
+  41be21:	jmp    41bcce <ecs::World::flush(ecs::CommandBuffer&)+0x82e>
+  41be26:	mov    rdx,rsi
+  41be29:	mov    rsi,QWORD PTR [rsp+0x30]
+  41be2e:	mov    rdi,rax
+  41be31:	call   405390 <memcpy@plt>
+  41be36:	mov    r11,rax
+  41be39:	mov    rsi,QWORD PTR [rsp+0x10]
+  41be3e:	mov    rdi,QWORD PTR [rsp+0x30]
+  41be43:	mov    QWORD PTR [rsp+0x60],r11
+  41be48:	sub    rsi,rdi
+  41be4b:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41be50:	mov    r11,QWORD PTR [rsp+0x60]
+  41be55:	jmp    41bb64 <ecs::World::flush(ecs::CommandBuffer&)+0x6c4>
+  41be5a:	mov    rsi,QWORD PTR [rsp+0x48]
+  41be5f:	mov    rax,rdi
+  41be62:	mov    rdi,QWORD PTR [rsp+0x40]
+  41be67:	shl    rsi,0x20
+  41be6b:	or     rax,rsi
+  41be6e:	mov    rsi,rax
+  41be71:	call   40fe20 <ecs::World::destroy(ecs::Entity)>
+  41be76:	jmp    41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41be7b:	mov    rax,QWORD PTR [rsp+0x70]
+  41be80:	mov    esi,DWORD PTR [rax+0x8]
+  41be83:	jmp    41b972 <ecs::World::flush(ecs::CommandBuffer&)+0x4d2>
+  41be88:	mov    QWORD PTR [rsp+0x90],0x0
+  41be94:	jmp    41b810 <ecs::World::flush(ecs::CommandBuffer&)+0x370>
+  41be99:	mov    rsi,QWORD PTR [rsp+0x28]
+  41be9e:	mov    rax,rbx
+  41bea1:	sub    rax,rsi
+  41bea4:	sar    rax,0x3
+  41bea8:	cmp    rdi,rax
+  41beab:	jne    41b644 <ecs::World::flush(ecs::CommandBuffer&)+0x1a4>
+  41beb1:	mov    rdx,QWORD PTR [rsp+0x68]
+  41beb6:	cmp    rdx,r9
+  41beb9:	je     41b91d <ecs::World::flush(ecs::CommandBuffer&)+0x47d>
+  41bebf:	mov    rcx,QWORD PTR [rsp+0x28]
+  41bec4:	mov    rsi,QWORD PTR [rsp+0x50]
+  41bec9:	xor    eax,eax
+  41becb:	jmp    41beec <ecs::World::flush(ecs::CommandBuffer&)+0xa4c>
+  41becd:	nop    DWORD PTR [rax]
+  41bed0:	movzx  edi,BYTE PTR [rdx+0x4]
+  41bed4:	cmp    BYTE PTR [rcx+rax*8+0x4],dil
+  41bed9:	jne    41bef3 <ecs::World::flush(ecs::CommandBuffer&)+0xa53>
+  41bedb:	add    rax,0x1
+  41bedf:	add    rdx,0x10
+  41bee3:	cmp    rax,rsi
+  41bee6:	jae    41b91d <ecs::World::flush(ecs::CommandBuffer&)+0x47d>
+  41beec:	mov    edi,DWORD PTR [rdx]
+  41beee:	cmp    DWORD PTR [rcx+rax*8],edi
+  41bef1:	je     41bed0 <ecs::World::flush(ecs::CommandBuffer&)+0xa30>
+  41bef3:	test   rbp,rbp
+  41bef6:	jne    41b644 <ecs::World::flush(ecs::CommandBuffer&)+0x1a4>
+  41befc:	mov    QWORD PTR [rsp+0x8],0x0
+  41bf05:	xor    r12d,r12d
+  41bf08:	xor    r14d,r14d
+  41bf0b:	jmp    41b6ae <ecs::World::flush(ecs::CommandBuffer&)+0x20e>
+  41bf10:	mov    rdi,QWORD PTR [rsp+0x78]
+  41bf15:	call   40d080 <ecs::CommandBuffer::clear()>
+  41bf1a:	mov    rdi,QWORD PTR [rsp+0x38]
+  41bf1f:	test   rdi,rdi
+  41bf22:	je     41bf31 <ecs::World::flush(ecs::CommandBuffer&)+0xa91>
+  41bf24:	mov    rsi,QWORD PTR [rsp+0x20]
+  41bf29:	sub    rsi,rdi
+  41bf2c:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41bf31:	mov    rdi,QWORD PTR [rsp+0x30]
+  41bf36:	test   rdi,rdi
+  41bf39:	je     41bf48 <ecs::World::flush(ecs::CommandBuffer&)+0xaa8>
+  41bf3b:	mov    rsi,QWORD PTR [rsp+0x10]
+  41bf40:	sub    rsi,rdi
+  41bf43:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41bf48:	mov    rdi,QWORD PTR [rsp+0x28]
+  41bf4d:	test   rdi,rdi
+  41bf50:	je     41bf5f <ecs::World::flush(ecs::CommandBuffer&)+0xabf>
+  41bf52:	mov    rsi,QWORD PTR [rsp+0x18]
+  41bf57:	sub    rsi,rdi
+  41bf5a:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41bf5f:	mov    rdi,QWORD PTR [rsp+0xc8]
+  41bf67:	test   rdi,rdi
+  41bf6a:	je     41bf7c <ecs::World::flush(ecs::CommandBuffer&)+0xadc>
+  41bf6c:	mov    rsi,QWORD PTR [rsp+0xd8]
+  41bf74:	sub    rsi,rdi
+  41bf77:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41bf7c:	mov    rdi,QWORD PTR [rsp+0x108]
+  41bf84:	test   rdi,rdi
+  41bf87:	je     41bf99 <ecs::World::flush(ecs::CommandBuffer&)+0xaf9>
+  41bf89:	mov    rsi,QWORD PTR [rsp+0x118]
+  41bf91:	sub    rsi,rdi
+  41bf94:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41bf99:	mov    rdi,QWORD PTR [rsp+0xe0]
+  41bfa1:	test   rdi,rdi
+  41bfa4:	je     41bfb6 <ecs::World::flush(ecs::CommandBuffer&)+0xb16>
+  41bfa6:	mov    rsi,QWORD PTR [rsp+0xf0]
+  41bfae:	sub    rsi,rdi
+  41bfb1:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41bfb6:	add    rsp,0x138
+  41bfbd:	pop    rbx
+  41bfbe:	pop    rbp
+  41bfbf:	pop    r12
+  41bfc1:	pop    r13
+  41bfc3:	pop    r14
+  41bfc5:	pop    r15
+  41bfc7:	ret
+  41bfc8:	mov    r15,QWORD PTR [rsp+0x80]
+  41bfd0:	lea    rdi,[r15+0x38]
+  41bfd4:	call   41e490 <ecs::Table::pushUninitialized(ecs::Entity)>
+  41bfd9:	mov    esi,eax
+  41bfdb:	mov    rax,QWORD PTR [rsp+0x70]
+  41bfe0:	mov    DWORD PTR [rax+0x8],esi
+  41bfe3:	mov    QWORD PTR [rax],r15
+  41bfe6:	jmp    41b972 <ecs::World::flush(ecs::CommandBuffer&)+0x4d2>
+  41bfeb:	mov    QWORD PTR [rsp+0x8],0x0
+  41bff4:	xor    r12d,r12d
+  41bff7:	xor    r14d,r14d
+  41bffa:	jmp    41b6ab <ecs::World::flush(ecs::CommandBuffer&)+0x20b>
+  41bfff:	mov    rsi,rbx
+  41c002:	sub    rsi,r14
+  41c005:	movabs rax,0x1fffffffffffffff
+  41c00f:	cmp    rdx,rax
+  41c012:	je     406cbc <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]+0xfa>
+  41c018:	test   rdx,rdx
+  41c01b:	mov    eax,0x1
+  41c020:	cmovne rax,rdx
+  41c024:	add    rdx,rax
+  41c027:	jb     41c36d <ecs::World::flush(ecs::CommandBuffer&)+0xecd>
+  41c02d:	movabs rax,0x1fffffffffffffff
+  41c037:	cmp    rdx,rax
+  41c03a:	cmova  rdx,rax
+  41c03e:	lea    rax,[rdx*4+0x0]
+  41c046:	mov    QWORD PTR [rsp+0x60],rax
+  41c04b:	mov    rdi,rax
+  41c04e:	mov    QWORD PTR [rsp+0x90],rsi
+  41c056:	mov    QWORD PTR [rsp+0x80],r9
+  41c05e:	call   405430 <operator new(unsigned long)@plt>
+  41c063:	mov    rsi,QWORD PTR [rsp+0x90]
+  41c06b:	mov    r15,rax
+  41c06e:	mov    r11,r12
+  41c071:	mov    eax,DWORD PTR [r13+0x0]
+  41c075:	sub    r11,rbx
+  41c078:	mov    r9,QWORD PTR [rsp+0x80]
+  41c080:	lea    rcx,[r15+rsi*1+0x4]
+  41c085:	test   rsi,rsi
+  41c088:	mov    DWORD PTR [r15+rsi*1],eax
+  41c08c:	lea    r12,[rcx+r11*1]
+  41c090:	jg     41c0b5 <ecs::World::flush(ecs::CommandBuffer&)+0xc15>
+  41c092:	test   r11,r11
+  41c095:	jg     41c1d3 <ecs::World::flush(ecs::CommandBuffer&)+0xd33>
+  41c09b:	test   r14,r14
+  41c09e:	jne    41c0ec <ecs::World::flush(ecs::CommandBuffer&)+0xc4c>
+  41c0a0:	mov    rax,QWORD PTR [rsp+0x60]
+  41c0a5:	mov    r14,r15
+  41c0a8:	add    rax,r15
+  41c0ab:	mov    QWORD PTR [rsp+0x8],rax
+  41c0b0:	jmp    41b780 <ecs::World::flush(ecs::CommandBuffer&)+0x2e0>
+  41c0b5:	mov    rdx,rsi
+  41c0b8:	mov    rdi,r15
+  41c0bb:	mov    rsi,r14
+  41c0be:	mov    QWORD PTR [rsp+0x98],r11
+  41c0c6:	mov    QWORD PTR [rsp+0x90],rcx
+  41c0ce:	call   405390 <memcpy@plt>
+  41c0d3:	mov    r11,QWORD PTR [rsp+0x98]
+  41c0db:	mov    r9,QWORD PTR [rsp+0x80]
+  41c0e3:	test   r11,r11
+  41c0e6:	jg     41c1f6 <ecs::World::flush(ecs::CommandBuffer&)+0xd56>
+  41c0ec:	mov    rsi,QWORD PTR [rsp+0x8]
+  41c0f1:	mov    rdi,r14
+  41c0f4:	mov    QWORD PTR [rsp+0x80],r9
+  41c0fc:	sub    rsi,r14
+  41c0ff:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41c104:	mov    r9,QWORD PTR [rsp+0x80]
+  41c10c:	jmp    41c0a0 <ecs::World::flush(ecs::CommandBuffer&)+0xc00>
+  41c10e:	cmp    BYTE PTR [rsp+0xc0],0x0
+  41c116:	je     41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41c11c:	cmp    BYTE PTR [rsp+0xc1],0x0
+  41c124:	jne    41c188 <ecs::World::flush(ecs::CommandBuffer&)+0xce8>
+  41c126:	mov    r9,QWORD PTR [rsp+0xd0]
+  41c12e:	mov    rax,QWORD PTR [rsp+0xc8]
+  41c136:	mov    r13,r9
+  41c139:	mov    QWORD PTR [rsp+0x68],rax
+  41c13e:	sub    r13,rax
+  41c141:	sar    r13,0x4
+  41c145:	cmp    BYTE PTR [rsp+0x98],0x0
+  41c14d:	mov    QWORD PTR [rsp+0x50],r13
+  41c152:	je     41befc <ecs::World::flush(ecs::CommandBuffer&)+0xa5c>
+  41c158:	cmp    QWORD PTR [rsp+0x60],0x0
+  41c15e:	jne    41befc <ecs::World::flush(ecs::CommandBuffer&)+0xa5c>
+  41c164:	mov    rdi,QWORD PTR [rsp+0x28]
+  41c169:	mov    rax,rbx
+  41c16c:	sub    rax,rdi
+  41c16f:	sar    rax,0x3
+  41c173:	cmp    QWORD PTR [rsp+0x50],rax
+  41c178:	jne    41befc <ecs::World::flush(ecs::CommandBuffer&)+0xa5c>
+  41c17e:	jmp    41beb1 <ecs::World::flush(ecs::CommandBuffer&)+0xa11>
+  41c183:	nop    DWORD PTR [rax+rax*1+0x0]
+  41c188:	mov    rdi,rax
+  41c18b:	mov    eax,DWORD PTR [rsp+0x48]
+  41c18f:	add    eax,0x1
+  41c192:	mov    DWORD PTR [rdi+0xc],eax
+  41c195:	cmp    eax,0xffffffff
+  41c198:	je     41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41c19e:	mov    rdi,QWORD PTR [rsp+0x40]
+  41c1a3:	mov    rax,QWORD PTR [rdi+0x20]
+  41c1a7:	cmp    rax,QWORD PTR [rdi+0x28]
+  41c1ab:	je     41c258 <ecs::World::flush(ecs::CommandBuffer&)+0xdb8>
+  41c1b1:	mov    DWORD PTR [rax],r13d
+  41c1b4:	add    rax,0x4
+  41c1b8:	mov    QWORD PTR [rdi+0x20],rax
+  41c1bc:	jmp    41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41c1c1:	mov    rax,rdx
+  41c1c4:	jmp    41bd94 <ecs::World::flush(ecs::CommandBuffer&)+0x8f4>
+  41c1c9:	mov    rbx,QWORD PTR [rsp+0x28]
+  41c1ce:	jmp    41b908 <ecs::World::flush(ecs::CommandBuffer&)+0x468>
+  41c1d3:	mov    rdx,r11
+  41c1d6:	mov    rsi,rbx
+  41c1d9:	mov    rdi,rcx
+  41c1dc:	mov    QWORD PTR [rsp+0x80],r9
+  41c1e4:	call   405390 <memcpy@plt>
+  41c1e9:	mov    r9,QWORD PTR [rsp+0x80]
+  41c1f1:	jmp    41c09b <ecs::World::flush(ecs::CommandBuffer&)+0xbfb>
+  41c1f6:	mov    rdi,QWORD PTR [rsp+0x90]
+  41c1fe:	mov    rdx,r11
+  41c201:	mov    rsi,rbx
+  41c204:	call   405390 <memcpy@plt>
+  41c209:	mov    r9,QWORD PTR [rsp+0x80]
+  41c211:	jmp    41c0ec <ecs::World::flush(ecs::CommandBuffer&)+0xc4c>
+  41c216:	jne    41b770 <ecs::World::flush(ecs::CommandBuffer&)+0x2d0>
+  41c21c:	mov    eax,DWORD PTR [rbx]
+  41c21e:	mov    DWORD PTR [r12-0x4],eax
+  41c223:	jmp    41b770 <ecs::World::flush(ecs::CommandBuffer&)+0x2d0>
+  41c228:	jne    41bc3b <ecs::World::flush(ecs::CommandBuffer&)+0x79b>
+  41c22e:	mov    eax,DWORD PTR [rbx+0x4]
+  41c231:	mov    DWORD PTR [rbx],eax
+  41c233:	jmp    41bc3b <ecs::World::flush(ecs::CommandBuffer&)+0x79b>
+  41c238:	mov    rdi,QWORD PTR [rsp+0x78]
+  41c23d:	call   40d080 <ecs::CommandBuffer::clear()>
+  41c242:	mov    rdi,QWORD PTR [rsp+0xc8]
+  41c24a:	test   rdi,rdi
+  41c24d:	jne    41bf6c <ecs::World::flush(ecs::CommandBuffer&)+0xacc>
+  41c253:	jmp    41bf7c <ecs::World::flush(ecs::CommandBuffer&)+0xadc>
+  41c258:	movabs rsi,0x1fffffffffffffff
+  41c262:	mov    r14,QWORD PTR [rdi+0x18]
+  41c266:	sub    rax,r14
+  41c269:	mov    r15,rax
+  41c26c:	sar    rax,0x2
+  41c270:	cmp    rax,rsi
+  41c273:	je     406bc2 <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]>
+  41c279:	test   rax,rax
+  41c27c:	mov    esi,0x1
+  41c281:	cmovne rsi,rax
+  41c285:	add    rax,rsi
+  41c288:	jb     41c32a <ecs::World::flush(ecs::CommandBuffer&)+0xe8a>
+  41c28e:	movabs rsi,0x1fffffffffffffff
+  41c298:	cmp    rax,rsi
+  41c29b:	cmova  rax,rsi
+  41c29f:	lea    rbp,[rax*4+0x0]
+  41c2a7:	mov    rdi,rbp
+  41c2aa:	call   405430 <operator new(unsigned long)@plt>
+  41c2af:	mov    DWORD PTR [rax+r15*1],r13d
+  41c2b3:	mov    r12,rax
+  41c2b6:	lea    r13,[rax+r15*1+0x4]
+  41c2bb:	test   r15,r15
+  41c2be:	jg     41c2df <ecs::World::flush(ecs::CommandBuffer&)+0xe3f>
+  41c2c0:	test   r14,r14
+  41c2c3:	jne    41c2ed <ecs::World::flush(ecs::CommandBuffer&)+0xe4d>
+  41c2c5:	mov    rax,QWORD PTR [rsp+0x40]
+  41c2ca:	lea    r8,[r12+rbp*1]
+  41c2ce:	mov    QWORD PTR [rax+0x18],r12
+  41c2d2:	mov    QWORD PTR [rax+0x20],r13
+  41c2d6:	mov    QWORD PTR [rax+0x28],r8
+  41c2da:	jmp    41b570 <ecs::World::flush(ecs::CommandBuffer&)+0xd0>
+  41c2df:	mov    rdx,r15
+  41c2e2:	mov    rsi,r14
+  41c2e5:	mov    rdi,rax
+  41c2e8:	call   405390 <memcpy@plt>
+  41c2ed:	mov    rax,QWORD PTR [rsp+0x40]
+  41c2f2:	mov    rdi,r14
+  41c2f5:	mov    rax,QWORD PTR [rax+0x28]
+  41c2f9:	mov    rsi,rax
+  41c2fc:	mov    QWORD PTR [rsp+0x8],rax
+  41c301:	sub    rsi,r14
+  41c304:	call   405440 <operator delete(void*, unsigned long)@plt>
+  41c309:	jmp    41c2c5 <ecs::World::flush(ecs::CommandBuffer&)+0xe25>
+  41c30b:	test   rbx,rbx
+  41c30e:	jns    41c315 <ecs::World::flush(ecs::CommandBuffer&)+0xe75>
+  41c310:	call   405350 <std::__throw_bad_array_new_length()@plt>
+  41c315:	call   405130 <std::__throw_bad_alloc()@plt>
+  41c31a:	jne    41b6ab <ecs::World::flush(ecs::CommandBuffer&)+0x20b>
+  41c320:	mov    eax,DWORD PTR [rsi]
+  41c322:	mov    DWORD PTR [r14],eax
+  41c325:	jmp    41b6ab <ecs::World::flush(ecs::CommandBuffer&)+0x20b>
+  41c32a:	movabs rbp,0x7ffffffffffffffc
+  41c334:	jmp    41c2a7 <ecs::World::flush(ecs::CommandBuffer&)+0xe07>
+  41c339:	nop    DWORD PTR [rax+0x0]
+  41c340:	movabs r14,0x7ffffffffffffff8
+  41c34a:	jmp    41bd39 <ecs::World::flush(ecs::CommandBuffer&)+0x899>
+  41c34f:	movabs r14,0x7fffffffffffffff
+  41c359:	jmp    41bc8d <ecs::World::flush(ecs::CommandBuffer&)+0x7ed>
+  41c35e:	movabs r14,0x7ffffffffffffff8
+  41c368:	jmp    41bb21 <ecs::World::flush(ecs::CommandBuffer&)+0x681>
+  41c36d:	movabs rax,0x7ffffffffffffffc
+  41c377:	mov    QWORD PTR [rsp+0x60],rax
+  41c37c:	mov    rdi,rax
+  41c37f:	jmp    41c04e <ecs::World::flush(ecs::CommandBuffer&)+0xbae>
+  41c384:	mov    rbx,rax
+  41c387:	jmp    406bcc <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]+0xa>
+  41c38c:	jmp    406cc6 <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]+0x104>
+  41c391:	jmp    406caa <ecs::World::flush(ecs::CommandBuffer&) [clone .cold]+0xe8>
+  41c396:	cs nop WORD PTR [rax+rax*1+0x0]
+

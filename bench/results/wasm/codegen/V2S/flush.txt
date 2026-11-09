@@ -1,0 +1,887 @@
+000120f0 <ecs::World::flush(ecs::CommandBuffer&)>:
+   120f0:	push   ebp
+   120f1:	push   ebx
+   120f2:	push   edi
+   120f3:	push   esi
+   120f4:	sub    esp,0x10c
+   120fa:	call   120ff <ecs::World::flush(ecs::CommandBuffer&)+0xf>
+   120ff:	pop    ebx
+   12100:	add    ebx,0x58f01
+   12106:	mov    esi,DWORD PTR [esp+0x124]
+   1210d:	mov    DWORD PTR [esp+0x4],esi
+   12111:	lea    eax,[esp+0xe4]
+   12118:	mov    DWORD PTR [esp],eax
+   1211b:	call   9250 <ecs::CommandBuffer::plan() const>
+   12120:	sub    esp,0x4
+   12123:	mov    WORD PTR [esp+0xc0],0x0
+   1212d:	mov    DWORD PTR [esp+0xc4],0x0
+   12138:	mov    DWORD PTR [esp+0xc8],0x0
+   12143:	mov    DWORD PTR [esp+0xcc],0x0
+   1214e:	mov    BYTE PTR [esp+0x8c],0x0
+   12156:	xorps  xmm0,xmm0
+   12159:	movups XMMWORD PTR [esp+0x90],xmm0
+   12161:	movups XMMWORD PTR [esp+0xa0],xmm0
+   12169:	movups XMMWORD PTR [esp+0xb0],xmm0
+   12171:	mov    eax,DWORD PTR [esp+0xf4]
+   12178:	test   eax,eax
+   1217a:	je     12d60 <ecs::World::flush(ecs::CommandBuffer&)+0xc70>
+   12180:	mov    ecx,DWORD PTR [esp+0xf0]
+   12187:	shl    eax,0x4
+   1218a:	add    eax,ecx
+   1218c:	mov    DWORD PTR [esp+0xe0],eax
+   12193:	mov    eax,ecx
+   12195:	mov    DWORD PTR [esp+0x2c],0x0
+   1219d:	mov    DWORD PTR [esp+0x48],0x0
+   121a5:	mov    DWORD PTR [esp+0x30],0x0
+   121ad:	mov    DWORD PTR [esp+0x40],0x0
+   121b5:	mov    DWORD PTR [esp+0x60],0x0
+   121bd:	mov    DWORD PTR [esp+0x24],ebx
+   121c1:	mov    ecx,esi
+   121c3:	jmp    121fe <ecs::World::flush(ecs::CommandBuffer&)+0x10e>
+   121c5:	data16 nop WORD PTR cs:[eax+eax*1+0x0]
+   121d0:	mov    DWORD PTR [esp+0x4],ebp
+   121d4:	mov    eax,DWORD PTR [esp+0x120]
+   121db:	mov    DWORD PTR [esp],eax
+   121de:	call   9df0 <ecs::EntityStore::release(unsigned int)>
+   121e3:	mov    ecx,DWORD PTR [esp+0x124]
+   121ea:	mov    eax,DWORD PTR [esp+0x3c]
+   121ee:	add    eax,0x10
+   121f1:	cmp    eax,DWORD PTR [esp+0xe0]
+   121f8:	je     12c8d <ecs::World::flush(ecs::CommandBuffer&)+0xb9d>
+   121fe:	mov    ebp,DWORD PTR [eax]
+   12200:	mov    edx,DWORD PTR [eax+0x4]
+   12203:	mov    DWORD PTR [esp+0x70],edx
+   12207:	lea    edx,[esp+0xc0]
+   1220e:	mov    DWORD PTR [esp+0xc],edx
+   12212:	mov    DWORD PTR [esp+0x3c],eax
+   12216:	mov    DWORD PTR [esp+0x8],eax
+   1221a:	lea    eax,[esp+0xe4]
+   12221:	mov    DWORD PTR [esp+0x4],eax
+   12225:	mov    DWORD PTR [esp],ecx
+   12228:	call   9a70 <ecs::CommandBuffer::netEffect(ecs::CommandPlan const&, ecs::EntityPlan const&, ecs::NetEffect&) const>
+   1222d:	mov    ecx,DWORD PTR [esp+0x120]
+   12234:	mov    eax,DWORD PTR [ecx]
+   12236:	mov    ecx,DWORD PTR [ecx+0x4]
+   12239:	sub    ecx,eax
+   1223b:	sar    ecx,0x2
+   1223e:	imul   ecx,ecx,0xaaaaaaab
+   12244:	cmp    ebp,ecx
+   12246:	jae    12280 <ecs::World::flush(ecs::CommandBuffer&)+0x190>
+   12248:	lea    ecx,[ebp*2+0x0]
+   1224f:	add    ecx,ebp
+   12251:	mov    edx,DWORD PTR [esp+0x70]
+   12255:	cmp    DWORD PTR [eax+ecx*4+0x8],edx
+   12259:	jne    12280 <ecs::World::flush(ecs::CommandBuffer&)+0x190>
+   1225b:	lea    edx,[eax+ecx*4]
+   1225e:	cmp    DWORD PTR [edx],0x0
+   12261:	setne  cl
+   12264:	cmp    BYTE PTR [esp+0xc0],0x1
+   1226c:	jne    1245c <ecs::World::flush(ecs::CommandBuffer&)+0x36c>
+   12272:	cmp    DWORD PTR [edx],0x0
+   12275:	sete   dl
+   12278:	test   cl,cl
+   1227a:	je     12288 <ecs::World::flush(ecs::CommandBuffer&)+0x198>
+   1227c:	jmp    12290 <ecs::World::flush(ecs::CommandBuffer&)+0x1a0>
+   1227e:	xchg   ax,ax
+   12280:	xor    ecx,ecx
+   12282:	xor    edx,edx
+   12284:	test   cl,cl
+   12286:	jne    12290 <ecs::World::flush(ecs::CommandBuffer&)+0x1a0>
+   12288:	test   dl,dl
+   1228a:	je     121e3 <ecs::World::flush(ecs::CommandBuffer&)+0xf3>
+   12290:	cmp    BYTE PTR [esp+0xc1],0x1
+   12298:	jne    12310 <ecs::World::flush(ecs::CommandBuffer&)+0x220>
+   1229a:	test   cl,cl
+   1229c:	je     121d0 <ecs::World::flush(ecs::CommandBuffer&)+0xe0>
+   122a2:	lea    ecx,[ebp*2+0x0]
+   122a9:	add    ecx,ebp
+   122ab:	mov    edi,DWORD PTR [eax+ecx*4]
+   122ae:	mov    esi,DWORD PTR [eax+ecx*4+0x4]
+   122b2:	add    edi,0x1c
+   122b5:	mov    DWORD PTR [esp+0x4],esi
+   122b9:	mov    DWORD PTR [esp],edi
+   122bc:	mov    ebx,DWORD PTR [esp+0x24]
+   122c0:	call   179c0 <ecs::Table::destroyRow(unsigned int)>
+   122c5:	mov    DWORD PTR [esp+0x8],esi
+   122c9:	mov    DWORD PTR [esp+0x4],edi
+   122cd:	mov    ebx,DWORD PTR [esp+0x24]
+   122d1:	lea    eax,[esp+0x80]
+   122d8:	mov    DWORD PTR [esp],eax
+   122db:	call   17a20 <ecs::Table::fillHole(unsigned int)>
+   122e0:	sub    esp,0x4
+   122e3:	cmp    BYTE PTR [esp+0x88],0x1
+   122eb:	jne    121d0 <ecs::World::flush(ecs::CommandBuffer&)+0xe0>
+   122f1:	mov    eax,DWORD PTR [esp+0x80]
+   122f8:	mov    ecx,DWORD PTR [esp+0x120]
+   122ff:	mov    ecx,DWORD PTR [ecx]
+   12301:	lea    eax,[eax+eax*2]
+   12304:	mov    DWORD PTR [ecx+eax*4+0x4],esi
+   12308:	jmp    121d0 <ecs::World::flush(ecs::CommandBuffer&)+0xe0>
+   1230d:	nop    DWORD PTR [eax]
+   12310:	mov    ecx,ebp
+   12312:	mov    ebp,DWORD PTR [esp+0xc4]
+   12319:	mov    edx,DWORD PTR [esp+0xc8]
+   12320:	mov    DWORD PTR [esp+0xd0],ecx
+   12327:	lea    ecx,[ecx+ecx*2]
+   1232a:	lea    esi,[eax+ecx*4]
+   1232d:	mov    DWORD PTR [esp+0x68],esi
+   12331:	mov    eax,DWORD PTR [eax+ecx*4]
+   12334:	mov    DWORD PTR [esp+0x38],eax
+   12338:	mov    DWORD PTR [esp+0x58],edx
+   1233c:	mov    eax,edx
+   1233e:	sub    eax,ebp
+   12340:	sar    eax,0x2
+   12343:	imul   eax,eax,0xaaaaaaab
+   12349:	mov    DWORD PTR [esp+0x78],eax
+   1234d:	test   BYTE PTR [esp+0x60],0x1
+   12352:	je     12410 <ecs::World::flush(ecs::CommandBuffer&)+0x320>
+   12358:	mov    eax,DWORD PTR [esp+0x38]
+   1235c:	cmp    DWORD PTR [esp+0x90],eax
+   12363:	jne    12410 <ecs::World::flush(ecs::CommandBuffer&)+0x320>
+   12369:	mov    eax,DWORD PTR [esp+0x40]
+   1236d:	sub    eax,DWORD PTR [esp+0x30]
+   12371:	sar    eax,0x3
+   12374:	cmp    eax,DWORD PTR [esp+0x78]
+   12378:	jne    12410 <ecs::World::flush(ecs::CommandBuffer&)+0x320>
+   1237e:	cmp    DWORD PTR [esp+0x58],ebp
+   12382:	je     123b3 <ecs::World::flush(ecs::CommandBuffer&)+0x2c3>
+   12384:	lea    eax,[ebp+0x4]
+   12387:	xor    ecx,ecx
+   12389:	nop    DWORD PTR [eax+0x0]
+   12390:	mov    edx,DWORD PTR [esp+0x30]
+   12394:	mov    edx,DWORD PTR [edx+ecx*8]
+   12397:	cmp    edx,DWORD PTR [eax-0x4]
+   1239a:	jne    12410 <ecs::World::flush(ecs::CommandBuffer&)+0x320>
+   1239c:	mov    edx,DWORD PTR [esp+0x30]
+   123a0:	movzx  edx,BYTE PTR [edx+ecx*8+0x4]
+   123a5:	cmp    dl,BYTE PTR [eax]
+   123a7:	jne    12410 <ecs::World::flush(ecs::CommandBuffer&)+0x320>
+   123a9:	inc    ecx
+   123aa:	add    eax,0xc
+   123ad:	cmp    DWORD PTR [esp+0x78],ecx
+   123b1:	jne    12390 <ecs::World::flush(ecs::CommandBuffer&)+0x2a0>
+   123b3:	mov    eax,DWORD PTR [esp+0x2c]
+   123b7:	mov    ecx,DWORD PTR [esp+0x38]
+   123bb:	test   ecx,ecx
+   123bd:	mov    DWORD PTR [esp+0x2c],eax
+   123c1:	jne    12b1b <ecs::World::flush(ecs::CommandBuffer&)+0xa2b>
+   123c7:	add    eax,0x1c
+   123ca:	mov    ecx,DWORD PTR [esp+0x70]
+   123ce:	mov    DWORD PTR [esp+0x84],ecx
+   123d5:	mov    ecx,DWORD PTR [esp+0xd0]
+   123dc:	mov    DWORD PTR [esp+0x80],ecx
+   123e3:	movsd  xmm0,QWORD PTR [esp+0x80]
+   123ec:	movsd  QWORD PTR [esp+0x4],xmm0
+   123f2:	mov    DWORD PTR [esp],eax
+   123f5:	call   17890 <ecs::Table::pushUninitialized(ecs::Entity)>
+   123fa:	mov    ecx,DWORD PTR [esp+0x68]
+   123fe:	mov    DWORD PTR [ecx+0x4],eax
+   12401:	mov    eax,DWORD PTR [esp+0x2c]
+   12405:	mov    DWORD PTR [ecx],eax
+   12407:	jmp    12b71 <ecs::World::flush(ecs::CommandBuffer&)+0xa81>
+   1240c:	nop    DWORD PTR [eax+0x0]
+   12410:	mov    ecx,DWORD PTR [esp+0x38]
+   12414:	test   ecx,ecx
+   12416:	mov    DWORD PTR [esp+0x34],ebp
+   1241a:	je     1246b <ecs::World::flush(ecs::CommandBuffer&)+0x37b>
+   1241c:	mov    edi,DWORD PTR [ecx+0x8]
+   1241f:	sub    edi,DWORD PTR [ecx+0x4]
+   12422:	mov    DWORD PTR [esp+0x4c],0x0
+   1242a:	mov    DWORD PTR [esp+0x50],0x0
+   12432:	mov    DWORD PTR [esp+0x54],0x0
+   1243a:	je     12491 <ecs::World::flush(ecs::CommandBuffer&)+0x3a1>
+   1243c:	cmp    edi,0x7ffffffd
+   12442:	jae    12d7c <ecs::World::flush(ecs::CommandBuffer&)+0xc8c>
+   12448:	mov    DWORD PTR [esp],edi
+   1244b:	mov    ebx,DWORD PTR [esp+0x24]
+   1244f:	call   4050 <operator new(unsigned int)@plt>
+   12454:	mov    esi,eax
+   12456:	mov    ecx,DWORD PTR [esp+0x38]
+   1245a:	jmp    12493 <ecs::World::flush(ecs::CommandBuffer&)+0x3a3>
+   1245c:	xor    edx,edx
+   1245e:	test   cl,cl
+   12460:	je     12288 <ecs::World::flush(ecs::CommandBuffer&)+0x198>
+   12466:	jmp    12290 <ecs::World::flush(ecs::CommandBuffer&)+0x1a0>
+   1246b:	xorps  xmm0,xmm0
+   1246e:	movsd  QWORD PTR [esp+0x4c],xmm0
+   12474:	mov    DWORD PTR [esp+0x54],0x0
+   1247c:	xor    edi,edi
+   1247e:	xor    ebp,ebp
+   12480:	xor    esi,esi
+   12482:	mov    eax,DWORD PTR [esp+0x58]
+   12486:	cmp    eax,DWORD PTR [esp+0x34]
+   1248a:	jne    124d3 <ecs::World::flush(ecs::CommandBuffer&)+0x3e3>
+   1248c:	jmp    125dc <ecs::World::flush(ecs::CommandBuffer&)+0x4ec>
+   12491:	xor    esi,esi
+   12493:	mov    DWORD PTR [esp+0x4c],esi
+   12497:	mov    DWORD PTR [esp+0x50],esi
+   1249b:	add    edi,esi
+   1249d:	mov    DWORD PTR [esp+0x54],edi
+   124a1:	mov    eax,DWORD PTR [ecx+0x4]
+   124a4:	mov    ebp,DWORD PTR [ecx+0x8]
+   124a7:	sub    ebp,eax
+   124a9:	je     124bf <ecs::World::flush(ecs::CommandBuffer&)+0x3cf>
+   124ab:	mov    DWORD PTR [esp+0x8],ebp
+   124af:	mov    DWORD PTR [esp+0x4],eax
+   124b3:	mov    DWORD PTR [esp],esi
+   124b6:	mov    ebx,DWORD PTR [esp+0x24]
+   124ba:	call   48c0 <memmove@plt>
+   124bf:	add    ebp,esi
+   124c1:	mov    DWORD PTR [esp+0x50],ebp
+   124c5:	mov    eax,DWORD PTR [esp+0x58]
+   124c9:	cmp    eax,DWORD PTR [esp+0x34]
+   124cd:	je     125dc <ecs::World::flush(ecs::CommandBuffer&)+0x4ec>
+   124d3:	mov    esi,DWORD PTR [esp+0x34]
+   124d7:	jmp    1251d <ecs::World::flush(ecs::CommandBuffer&)+0x42d>
+   124d9:	nop    DWORD PTR [eax+0x0]
+   124e0:	mov    DWORD PTR [esp+0x80],ecx
+   124e7:	mov    eax,DWORD PTR [esp+0x80]
+   124ee:	mov    DWORD PTR [esp+0x8],eax
+   124f2:	mov    DWORD PTR [esp+0xc],esi
+   124f6:	lea    eax,[esp+0x4c]
+   124fa:	mov    DWORD PTR [esp+0x4],eax
+   124fe:	lea    eax,[esp+0x108]
+   12505:	mov    DWORD PTR [esp],eax
+   12508:	call   13730 <std::vector<unsigned int, std::allocator<unsigned int> >::insert(__gnu_cxx::__normal_iterator<unsigned int const*, std::vector<unsigned int, std::allocator<unsigned int> > >, unsigned int const&)>
+   1250d:	sub    esp,0x4
+   12510:	add    esi,0xc
+   12513:	cmp    esi,DWORD PTR [esp+0x58]
+   12517:	je     125d0 <ecs::World::flush(ecs::CommandBuffer&)+0x4e0>
+   1251d:	mov    ecx,DWORD PTR [esp+0x4c]
+   12521:	mov    ebx,DWORD PTR [esp+0x50]
+   12525:	mov    DWORD PTR [esp+0x28],ebx
+   12529:	sub    ebx,ecx
+   1252b:	sar    ebx,0x2
+   1252e:	test   ebx,ebx
+   12530:	jle    12560 <ecs::World::flush(ecs::CommandBuffer&)+0x470>
+   12532:	mov    edx,DWORD PTR [esi]
+   12534:	mov    edi,ecx
+   12536:	nop    WORD PTR cs:[eax+eax*1+0x0]
+   12540:	mov    eax,ebx
+   12542:	shr    eax,1
+   12544:	mov    ebp,eax
+   12546:	not    ebp
+   12548:	add    ebp,ebx
+   1254a:	cmp    DWORD PTR [edi+eax*4],edx
+   1254d:	lea    ebx,[edi+eax*4+0x4]
+   12551:	cmovb  ecx,ebx
+   12554:	cmovb  edi,ebx
+   12557:	cmovae ebp,eax
+   1255a:	mov    ebx,ebp
+   1255c:	test   ebp,ebp
+   1255e:	jg     12540 <ecs::World::flush(ecs::CommandBuffer&)+0x450>
+   12560:	mov    edi,DWORD PTR [esp+0x28]
+   12564:	cmp    edi,ecx
+   12566:	je     12580 <ecs::World::flush(ecs::CommandBuffer&)+0x490>
+   12568:	mov    eax,DWORD PTR [ecx]
+   1256a:	cmp    eax,DWORD PTR [esi]
+   1256c:	sete   dl
+   1256f:	mov    ebx,DWORD PTR [esp+0x24]
+   12573:	movzx  eax,BYTE PTR [esi+0x4]
+   12577:	cmp    al,0x1
+   12579:	je     1258e <ecs::World::flush(ecs::CommandBuffer&)+0x49e>
+   1257b:	jmp    12596 <ecs::World::flush(ecs::CommandBuffer&)+0x4a6>
+   1257d:	nop    DWORD PTR [eax]
+   12580:	xor    edx,edx
+   12582:	mov    ebx,DWORD PTR [esp+0x24]
+   12586:	movzx  eax,BYTE PTR [esi+0x4]
+   1258a:	cmp    al,0x1
+   1258c:	jne    12596 <ecs::World::flush(ecs::CommandBuffer&)+0x4a6>
+   1258e:	test   dl,dl
+   12590:	je     124e0 <ecs::World::flush(ecs::CommandBuffer&)+0x3f0>
+   12596:	test   al,al
+   12598:	jne    12510 <ecs::World::flush(ecs::CommandBuffer&)+0x420>
+   1259e:	xor    dl,0x1
+   125a1:	jne    12510 <ecs::World::flush(ecs::CommandBuffer&)+0x420>
+   125a7:	lea    eax,[ecx+0x4]
+   125aa:	cmp    eax,edi
+   125ac:	je     125c4 <ecs::World::flush(ecs::CommandBuffer&)+0x4d4>
+   125ae:	sub    edi,eax
+   125b0:	mov    DWORD PTR [esp+0x8],edi
+   125b4:	mov    DWORD PTR [esp+0x4],eax
+   125b8:	mov    DWORD PTR [esp],ecx
+   125bb:	call   48c0 <memmove@plt>
+   125c0:	mov    edi,DWORD PTR [esp+0x50]
+   125c4:	add    edi,0xfffffffc
+   125c7:	mov    DWORD PTR [esp+0x50],edi
+   125cb:	jmp    12510 <ecs::World::flush(ecs::CommandBuffer&)+0x420>
+   125d0:	mov    esi,DWORD PTR [esp+0x4c]
+   125d4:	mov    ebp,DWORD PTR [esp+0x50]
+   125d8:	mov    edi,DWORD PTR [esp+0x54]
+   125dc:	mov    DWORD PTR [esp+0xd4],esi
+   125e3:	mov    DWORD PTR [esp+0xd8],ebp
+   125ea:	mov    DWORD PTR [esp+0xdc],edi
+   125f1:	mov    DWORD PTR [esp+0x54],0x0
+   125f9:	mov    DWORD PTR [esp+0x50],0x0
+   12601:	mov    DWORD PTR [esp+0x4c],0x0
+   12609:	lea    eax,[esp+0xd4]
+   12610:	mov    DWORD PTR [esp+0x4],eax
+   12614:	mov    eax,DWORD PTR [esp+0x120]
+   1261b:	mov    DWORD PTR [esp],eax
+   1261e:	mov    ebx,DWORD PTR [esp+0x24]
+   12622:	call   b2f0 <ecs::World::findOrCreate(std::vector<unsigned int, std::allocator<unsigned int> >)>
+   12627:	mov    DWORD PTR [esp+0x2c],eax
+   1262b:	mov    eax,DWORD PTR [esp+0xd4]
+   12632:	test   eax,eax
+   12634:	mov    ebp,DWORD PTR [esp+0x34]
+   12638:	je     1264f <ecs::World::flush(ecs::CommandBuffer&)+0x55f>
+   1263a:	mov    ecx,DWORD PTR [esp+0xdc]
+   12641:	sub    ecx,eax
+   12643:	mov    DWORD PTR [esp+0x4],ecx
+   12647:	mov    DWORD PTR [esp],eax
+   1264a:	call   4320 <operator delete(void*, unsigned int)@plt>
+   1264f:	mov    eax,DWORD PTR [esp+0x4c]
+   12653:	cmp    DWORD PTR [esp+0x38],0x0
+   12658:	je     12697 <ecs::World::flush(ecs::CommandBuffer&)+0x5a7>
+   1265a:	test   eax,eax
+   1265c:	je     12670 <ecs::World::flush(ecs::CommandBuffer&)+0x580>
+   1265e:	mov    ecx,DWORD PTR [esp+0x54]
+   12662:	sub    ecx,eax
+   12664:	mov    DWORD PTR [esp+0x4],ecx
+   12668:	mov    DWORD PTR [esp],eax
+   1266b:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12670:	mov    eax,DWORD PTR [esp+0x2c]
+   12674:	mov    ecx,DWORD PTR [esp+0x38]
+   12678:	cmp    eax,ecx
+   1267a:	je     126b9 <ecs::World::flush(ecs::CommandBuffer&)+0x5c9>
+   1267c:	mov    DWORD PTR [esp+0x8],eax
+   12680:	mov    DWORD PTR [esp+0x4],ecx
+   12684:	mov    eax,DWORD PTR [esp+0x120]
+   1268b:	mov    DWORD PTR [esp],eax
+   1268e:	call   11fd0 <ecs::World::jumpEdge(ecs::Archetype&, ecs::Archetype&)>
+   12693:	mov    edi,eax
+   12695:	jmp    126b3 <ecs::World::flush(ecs::CommandBuffer&)+0x5c3>
+   12697:	xor    edi,edi
+   12699:	test   eax,eax
+   1269b:	je     126b3 <ecs::World::flush(ecs::CommandBuffer&)+0x5c3>
+   1269d:	mov    ecx,DWORD PTR [esp+0x54]
+   126a1:	sub    ecx,eax
+   126a3:	mov    DWORD PTR [esp+0x4],ecx
+   126a7:	mov    DWORD PTR [esp],eax
+   126aa:	mov    ebx,DWORD PTR [esp+0x24]
+   126ae:	call   4320 <operator delete(void*, unsigned int)@plt>
+   126b3:	mov    eax,DWORD PTR [esp+0x2c]
+   126b7:	jmp    126bb <ecs::World::flush(ecs::CommandBuffer&)+0x5cb>
+   126b9:	xor    edi,edi
+   126bb:	mov    ecx,DWORD PTR [esp+0x38]
+   126bf:	mov    DWORD PTR [esp+0x90],ecx
+   126c6:	mov    DWORD PTR [esp+0xa0],eax
+   126cd:	mov    DWORD PTR [esp+0xa4],edi
+   126d4:	mov    eax,DWORD PTR [esp+0x30]
+   126d8:	mov    DWORD PTR [esp+0x98],eax
+   126df:	mov    edx,DWORD PTR [esp+0xa8]
+   126e6:	mov    esi,DWORD PTR [esp+0xb4]
+   126ed:	mov    DWORD PTR [esp+0xac],edx
+   126f4:	mov    DWORD PTR [esp+0xb8],esi
+   126fb:	cmp    DWORD PTR [esp+0x58],ebp
+   126ff:	je     12aef <ecs::World::flush(ecs::CommandBuffer&)+0x9ff>
+   12705:	mov    ecx,DWORD PTR [esp+0xb0]
+   1270c:	mov    DWORD PTR [esp+0x44],ecx
+   12710:	mov    ecx,esi
+   12712:	mov    esi,DWORD PTR [esp+0xbc]
+   12719:	mov    DWORD PTR [esp+0x5c],ecx
+   1271d:	mov    DWORD PTR [esp+0x74],edx
+   12721:	mov    DWORD PTR [esp+0x60],edx
+   12725:	mov    DWORD PTR [esp+0x40],eax
+   12729:	mov    DWORD PTR [esp+0x28],ebp
+   1272d:	mov    ebx,DWORD PTR [esp+0x24]
+   12731:	mov    ebp,DWORD PTR [esp+0x48]
+   12735:	jmp    1277b <ecs::World::flush(ecs::CommandBuffer&)+0x68b>
+   12737:	nop    WORD PTR [eax+eax*1+0x0]
+   12740:	mov    DWORD PTR [esp+0x6c],0x0
+   12748:	mov    ecx,DWORD PTR [esp+0x7c]
+   1274c:	cmp    ecx,esi
+   1274e:	mov    ebp,DWORD PTR [esp+0x48]
+   12752:	je     12a17 <ecs::World::flush(ecs::CommandBuffer&)+0x927>
+   12758:	mov    eax,DWORD PTR [esp+0x6c]
+   1275c:	mov    BYTE PTR [ecx],al
+   1275e:	inc    ecx
+   1275f:	mov    DWORD PTR [esp+0xb8],ecx
+   12766:	mov    eax,DWORD PTR [esp+0x28]
+   1276a:	add    eax,0xc
+   1276d:	mov    DWORD PTR [esp+0x28],eax
+   12771:	cmp    eax,DWORD PTR [esp+0x58]
+   12775:	je     12ac5 <ecs::World::flush(ecs::CommandBuffer&)+0x9d5>
+   1277b:	mov    DWORD PTR [esp+0x7c],ecx
+   1277f:	mov    DWORD PTR [esp+0x64],esi
+   12783:	mov    ecx,DWORD PTR [esp+0x40]
+   12787:	cmp    ecx,ebp
+   12789:	mov    DWORD PTR [esp+0x48],ebp
+   1278d:	je     127b0 <ecs::World::flush(ecs::CommandBuffer&)+0x6c0>
+   1278f:	mov    edx,DWORD PTR [esp+0x28]
+   12793:	mov    eax,DWORD PTR [edx]
+   12795:	mov    DWORD PTR [ecx],eax
+   12797:	movzx  eax,BYTE PTR [edx+0x4]
+   1279b:	mov    BYTE PTR [ecx+0x4],al
+   1279e:	jmp    12869 <ecs::World::flush(ecs::CommandBuffer&)+0x779>
+   127a3:	data16 data16 data16 nop WORD PTR cs:[eax+eax*1+0x0]
+   127b0:	sub    ebp,DWORD PTR [esp+0x30]
+   127b4:	cmp    ebp,0x7ffffff8
+   127ba:	je     12d85 <ecs::World::flush(ecs::CommandBuffer&)+0xc95>
+   127c0:	mov    eax,ebp
+   127c2:	sar    eax,0x3
+   127c5:	cmp    eax,0x1
+   127c8:	mov    ecx,eax
+   127ca:	adc    ecx,0x0
+   127cd:	lea    esi,[ecx+eax*1]
+   127d0:	cmp    esi,0xfffffff
+   127d6:	mov    edx,0xfffffff
+   127db:	cmovae esi,edx
+   127de:	add    ecx,eax
+   127e0:	cmovb  esi,edx
+   127e3:	lea    eax,[esi*8+0x0]
+   127ea:	mov    DWORD PTR [esp],eax
+   127ed:	call   4050 <operator new(unsigned int)@plt>
+   127f2:	mov    edi,eax
+   127f4:	mov    ecx,DWORD PTR [esp+0x28]
+   127f8:	mov    eax,DWORD PTR [ecx]
+   127fa:	mov    DWORD PTR [edi+ebp*1],eax
+   127fd:	movzx  eax,BYTE PTR [ecx+0x4]
+   12801:	mov    BYTE PTR [edi+ebp*1+0x4],al
+   12805:	mov    edx,edi
+   12807:	mov    ecx,DWORD PTR [esp+0x48]
+   1280b:	cmp    DWORD PTR [esp+0x30],ecx
+   1280f:	je     12832 <ecs::World::flush(ecs::CommandBuffer&)+0x742>
+   12811:	mov    edx,edi
+   12813:	mov    eax,DWORD PTR [esp+0x30]
+   12817:	nop    WORD PTR [eax+eax*1+0x0]
+   12820:	movsd  xmm0,QWORD PTR [eax]
+   12824:	movsd  QWORD PTR [edx],xmm0
+   12828:	add    eax,0x8
+   1282b:	add    edx,0x8
+   1282e:	cmp    eax,ecx
+   12830:	jne    12820 <ecs::World::flush(ecs::CommandBuffer&)+0x730>
+   12832:	mov    DWORD PTR [esp+0x40],edx
+   12836:	mov    eax,DWORD PTR [esp+0x30]
+   1283a:	test   eax,eax
+   1283c:	je     1284e <ecs::World::flush(ecs::CommandBuffer&)+0x75e>
+   1283e:	mov    DWORD PTR [esp+0x4],ebp
+   12842:	mov    DWORD PTR [esp],eax
+   12845:	mov    ebx,DWORD PTR [esp+0x24]
+   12849:	call   4320 <operator delete(void*, unsigned int)@plt>
+   1284e:	lea    eax,[edi+esi*8]
+   12851:	mov    DWORD PTR [esp+0x48],eax
+   12855:	mov    eax,DWORD PTR [esp+0x28]
+   12859:	movzx  eax,BYTE PTR [eax+0x4]
+   1285d:	mov    DWORD PTR [esp+0x30],edi
+   12861:	mov    ebx,DWORD PTR [esp+0x24]
+   12865:	mov    ecx,DWORD PTR [esp+0x40]
+   12869:	add    ecx,0x8
+   1286c:	mov    DWORD PTR [esp+0x40],ecx
+   12870:	xor    ebp,ebp
+   12872:	test   al,0x1
+   12874:	je     128ad <ecs::World::flush(ecs::CommandBuffer&)+0x7bd>
+   12876:	mov    eax,DWORD PTR [esp+0x28]
+   1287a:	mov    eax,DWORD PTR [eax]
+   1287c:	mov    DWORD PTR [esp],eax
+   1287f:	call   a9a0 <ecs::typeInfo(unsigned int)>
+   12884:	cmp    BYTE PTR [eax+0x9],0x0
+   12888:	mov    ebx,DWORD PTR [esp+0x24]
+   1288c:	jne    128ad <ecs::World::flush(ecs::CommandBuffer&)+0x7bd>
+   1288e:	mov    eax,DWORD PTR [esp+0x28]
+   12892:	mov    eax,DWORD PTR [eax]
+   12894:	mov    DWORD PTR [esp+0x4],eax
+   12898:	mov    esi,DWORD PTR [esp+0x2c]
+   1289c:	mov    DWORD PTR [esp],esi
+   1289f:	call   16a40 <ecs::columnOf(ecs::Archetype const&, unsigned int)>
+   128a4:	movzx  ebp,ax
+   128a7:	shl    ebp,0x3
+   128aa:	add    ebp,DWORD PTR [esi+0x1c]
+   128ad:	mov    eax,DWORD PTR [esp+0x44]
+   128b1:	mov    ecx,DWORD PTR [esp+0x60]
+   128b5:	cmp    ecx,eax
+   128b7:	je     128e0 <ecs::World::flush(ecs::CommandBuffer&)+0x7f0>
+   128b9:	mov    DWORD PTR [ecx],ebp
+   128bb:	add    ecx,0x4
+   128be:	mov    DWORD PTR [esp+0xac],ecx
+   128c5:	mov    ebp,DWORD PTR [esp+0x38]
+   128c9:	mov    DWORD PTR [esp+0x60],ecx
+   128cd:	test   ebp,ebp
+   128cf:	mov    esi,DWORD PTR [esp+0x64]
+   128d3:	jne    129a5 <ecs::World::flush(ecs::CommandBuffer&)+0x8b5>
+   128d9:	jmp    12740 <ecs::World::flush(ecs::CommandBuffer&)+0x650>
+   128de:	xchg   ax,ax
+   128e0:	sub    eax,DWORD PTR [esp+0x74]
+   128e4:	cmp    eax,0x7ffffffc
+   128e9:	je     12d85 <ecs::World::flush(ecs::CommandBuffer&)+0xc95>
+   128ef:	mov    DWORD PTR [esp+0x44],eax
+   128f3:	sar    eax,0x2
+   128f6:	cmp    eax,0x1
+   128f9:	mov    ecx,eax
+   128fb:	adc    ecx,0x0
+   128fe:	lea    esi,[ecx+eax*1]
+   12901:	cmp    esi,0x1fffffff
+   12907:	mov    edx,0x1fffffff
+   1290c:	cmovae esi,edx
+   1290f:	add    ecx,eax
+   12911:	cmovb  esi,edx
+   12914:	lea    eax,[esi*4+0x0]
+   1291b:	mov    DWORD PTR [esp],eax
+   1291e:	call   4050 <operator new(unsigned int)@plt>
+   12923:	mov    edi,eax
+   12925:	mov    eax,DWORD PTR [esp+0x44]
+   12929:	mov    DWORD PTR [edi+eax*1],ebp
+   1292c:	test   eax,eax
+   1292e:	mov    ebp,DWORD PTR [esp+0x74]
+   12932:	jle    1294c <ecs::World::flush(ecs::CommandBuffer&)+0x85c>
+   12934:	mov    DWORD PTR [esp+0x8],eax
+   12938:	mov    DWORD PTR [esp+0x4],ebp
+   1293c:	mov    DWORD PTR [esp],edi
+   1293f:	mov    ebx,DWORD PTR [esp+0x24]
+   12943:	call   48c0 <memmove@plt>
+   12948:	mov    eax,DWORD PTR [esp+0x44]
+   1294c:	test   ebp,ebp
+   1294e:	mov    ecx,ebp
+   12950:	mov    ebp,DWORD PTR [esp+0x38]
+   12954:	je     1296a <ecs::World::flush(ecs::CommandBuffer&)+0x87a>
+   12956:	mov    DWORD PTR [esp+0x4],eax
+   1295a:	mov    DWORD PTR [esp],ecx
+   1295d:	mov    ebx,DWORD PTR [esp+0x24]
+   12961:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12966:	mov    eax,DWORD PTR [esp+0x44]
+   1296a:	add    eax,edi
+   1296c:	mov    ecx,eax
+   1296e:	add    ecx,0x4
+   12971:	mov    DWORD PTR [esp+0xa8],edi
+   12978:	mov    DWORD PTR [esp+0xac],ecx
+   1297f:	lea    eax,[edi+esi*4]
+   12982:	mov    DWORD PTR [esp+0x44],eax
+   12986:	mov    DWORD PTR [esp+0xb0],eax
+   1298d:	mov    DWORD PTR [esp+0x74],edi
+   12991:	mov    ebx,DWORD PTR [esp+0x24]
+   12995:	mov    DWORD PTR [esp+0x60],ecx
+   12999:	test   ebp,ebp
+   1299b:	mov    esi,DWORD PTR [esp+0x64]
+   1299f:	je     12740 <ecs::World::flush(ecs::CommandBuffer&)+0x650>
+   129a5:	mov    eax,DWORD PTR [ebp+0x4]
+   129a8:	mov    ecx,DWORD PTR [ebp+0x8]
+   129ab:	mov    edi,ecx
+   129ad:	sub    edi,eax
+   129af:	sar    edi,0x2
+   129b2:	test   edi,edi
+   129b4:	jle    129e0 <ecs::World::flush(ecs::CommandBuffer&)+0x8f0>
+   129b6:	mov    edx,DWORD PTR [esp+0x28]
+   129ba:	mov    edx,DWORD PTR [edx]
+   129bc:	mov    esi,eax
+   129be:	xchg   ax,ax
+   129c0:	mov    ebp,edi
+   129c2:	shr    ebp,1
+   129c4:	mov    ebx,ebp
+   129c6:	not    ebx
+   129c8:	add    ebx,edi
+   129ca:	cmp    DWORD PTR [esi+ebp*4],edx
+   129cd:	lea    edi,[esi+ebp*4+0x4]
+   129d1:	cmovb  eax,edi
+   129d4:	cmovb  esi,edi
+   129d7:	cmovae ebx,ebp
+   129da:	mov    edi,ebx
+   129dc:	test   ebx,ebx
+   129de:	jg     129c0 <ecs::World::flush(ecs::CommandBuffer&)+0x8d0>
+   129e0:	cmp    eax,ecx
+   129e2:	jne    129f0 <ecs::World::flush(ecs::CommandBuffer&)+0x900>
+   129e4:	mov    DWORD PTR [esp+0x6c],0x0
+   129ec:	jmp    129ff <ecs::World::flush(ecs::CommandBuffer&)+0x90f>
+   129ee:	xchg   ax,ax
+   129f0:	mov    ecx,DWORD PTR [esp+0x28]
+   129f4:	mov    ecx,DWORD PTR [ecx]
+   129f6:	cmp    ecx,DWORD PTR [eax]
+   129f8:	setae  al
+   129fb:	mov    DWORD PTR [esp+0x6c],eax
+   129ff:	mov    ebx,DWORD PTR [esp+0x24]
+   12a03:	mov    esi,DWORD PTR [esp+0x64]
+   12a07:	mov    ecx,DWORD PTR [esp+0x7c]
+   12a0b:	cmp    ecx,esi
+   12a0d:	mov    ebp,DWORD PTR [esp+0x48]
+   12a11:	jne    12758 <ecs::World::flush(ecs::CommandBuffer&)+0x668>
+   12a17:	sub    esi,DWORD PTR [esp+0x5c]
+   12a1b:	cmp    esi,0x7fffffff
+   12a21:	je     12d85 <ecs::World::flush(ecs::CommandBuffer&)+0xc95>
+   12a27:	cmp    esi,0x1
+   12a2a:	mov    eax,esi
+   12a2c:	adc    eax,0x0
+   12a2f:	lea    ebp,[eax+esi*1]
+   12a32:	cmp    ebp,0x7fffffff
+   12a38:	mov    ecx,0x7fffffff
+   12a3d:	cmovae ebp,ecx
+   12a40:	add    eax,esi
+   12a42:	cmovb  ebp,ecx
+   12a45:	test   ebp,ebp
+   12a47:	je     12a55 <ecs::World::flush(ecs::CommandBuffer&)+0x965>
+   12a49:	mov    DWORD PTR [esp],ebp
+   12a4c:	call   4050 <operator new(unsigned int)@plt>
+   12a51:	mov    edi,eax
+   12a53:	jmp    12a57 <ecs::World::flush(ecs::CommandBuffer&)+0x967>
+   12a55:	xor    edi,edi
+   12a57:	mov    eax,DWORD PTR [esp+0x6c]
+   12a5b:	mov    BYTE PTR [edi+esi*1],al
+   12a5e:	test   esi,esi
+   12a60:	mov    eax,DWORD PTR [esp+0x5c]
+   12a64:	jle    12a82 <ecs::World::flush(ecs::CommandBuffer&)+0x992>
+   12a66:	mov    DWORD PTR [esp+0x8],esi
+   12a6a:	mov    DWORD PTR [esp+0x4],eax
+   12a6e:	mov    DWORD PTR [esp],edi
+   12a71:	mov    ebx,DWORD PTR [esp+0x24]
+   12a75:	mov    DWORD PTR [esp+0x5c],eax
+   12a79:	call   48c0 <memmove@plt>
+   12a7e:	mov    eax,DWORD PTR [esp+0x5c]
+   12a82:	test   eax,eax
+   12a84:	je     12a96 <ecs::World::flush(ecs::CommandBuffer&)+0x9a6>
+   12a86:	mov    DWORD PTR [esp+0x4],esi
+   12a8a:	mov    DWORD PTR [esp],eax
+   12a8d:	mov    ebx,DWORD PTR [esp+0x24]
+   12a91:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12a96:	add    esi,edi
+   12a98:	mov    ecx,esi
+   12a9a:	inc    ecx
+   12a9b:	mov    DWORD PTR [esp+0xb4],edi
+   12aa2:	mov    DWORD PTR [esp+0xb8],ecx
+   12aa9:	add    ebp,edi
+   12aab:	mov    DWORD PTR [esp+0xbc],ebp
+   12ab2:	mov    esi,ebp
+   12ab4:	mov    DWORD PTR [esp+0x5c],edi
+   12ab8:	mov    ebx,DWORD PTR [esp+0x24]
+   12abc:	mov    ebp,DWORD PTR [esp+0x48]
+   12ac0:	jmp    12766 <ecs::World::flush(ecs::CommandBuffer&)+0x676>
+   12ac5:	mov    eax,DWORD PTR [esp+0x40]
+   12ac9:	mov    DWORD PTR [esp+0x98],eax
+   12ad0:	mov    DWORD PTR [esp+0x9c],ebp
+   12ad7:	mov    eax,DWORD PTR [esp+0x30]
+   12adb:	mov    DWORD PTR [esp+0x94],eax
+   12ae2:	mov    eax,DWORD PTR [esp+0xa0]
+   12ae9:	mov    ebp,DWORD PTR [esp+0x34]
+   12aed:	jmp    12afb <ecs::World::flush(ecs::CommandBuffer&)+0xa0b>
+   12aef:	mov    DWORD PTR [esp+0x40],eax
+   12af3:	mov    ebx,DWORD PTR [esp+0x24]
+   12af7:	mov    eax,DWORD PTR [esp+0x2c]
+   12afb:	mov    BYTE PTR [esp+0x8c],0x1
+   12b03:	mov    ecx,DWORD PTR [esp+0x68]
+   12b07:	mov    ecx,DWORD PTR [ecx]
+   12b09:	mov    dl,0x1
+   12b0b:	mov    DWORD PTR [esp+0x60],edx
+   12b0f:	test   ecx,ecx
+   12b11:	mov    DWORD PTR [esp+0x2c],eax
+   12b15:	je     123c7 <ecs::World::flush(ecs::CommandBuffer&)+0x2d7>
+   12b1b:	mov    eax,DWORD PTR [esp+0xa4]
+   12b22:	test   eax,eax
+   12b24:	je     12b71 <ecs::World::flush(ecs::CommandBuffer&)+0xa81>
+   12b26:	mov    ecx,DWORD PTR [esp+0x70]
+   12b2a:	mov    DWORD PTR [esp+0x84],ecx
+   12b31:	mov    ecx,DWORD PTR [esp+0xd0]
+   12b38:	mov    DWORD PTR [esp+0x80],ecx
+   12b3f:	movsd  xmm0,QWORD PTR [esp+0x80]
+   12b48:	movsd  QWORD PTR [esp+0x4],xmm0
+   12b4e:	mov    DWORD PTR [esp+0x14],eax
+   12b52:	mov    eax,DWORD PTR [esp+0x2c]
+   12b56:	mov    DWORD PTR [esp+0x10],eax
+   12b5a:	mov    eax,DWORD PTR [esp+0x68]
+   12b5e:	mov    DWORD PTR [esp+0xc],eax
+   12b62:	mov    eax,DWORD PTR [esp+0x120]
+   12b69:	mov    DWORD PTR [esp],eax
+   12b6c:	call   bad0 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)>
+   12b71:	cmp    DWORD PTR [esp+0x58],ebp
+   12b75:	je     121e3 <ecs::World::flush(ecs::CommandBuffer&)+0xf3>
+   12b7b:	mov    eax,DWORD PTR [esp+0x68]
+   12b7f:	mov    eax,DWORD PTR [eax+0x4]
+   12b82:	mov    DWORD PTR [esp+0x64],eax
+   12b86:	mov    eax,DWORD PTR [esp+0xa8]
+   12b8d:	mov    DWORD PTR [esp+0x28],eax
+   12b91:	mov    eax,DWORD PTR [esp+0xb4]
+   12b98:	mov    DWORD PTR [esp+0x44],eax
+   12b9c:	add    ebp,0x8
+   12b9f:	xor    esi,esi
+   12ba1:	mov    ecx,DWORD PTR [esp+0x124]
+   12ba8:	mov    eax,DWORD PTR [esp+0x3c]
+   12bac:	jmp    12bdb <ecs::World::flush(ecs::CommandBuffer&)+0xaeb>
+   12bae:	xchg   ax,ax
+   12bb0:	mov    DWORD PTR [esp+0x4],ecx
+   12bb4:	mov    DWORD PTR [esp],ebp
+   12bb7:	mov    ebx,DWORD PTR [esp+0x24]
+   12bbb:	call   DWORD PTR [eax+0xc]
+   12bbe:	mov    ecx,DWORD PTR [esp+0x124]
+   12bc5:	mov    eax,DWORD PTR [esp+0x3c]
+   12bc9:	mov    ebp,DWORD PTR [esp+0x34]
+   12bcd:	inc    esi
+   12bce:	add    ebp,0xc
+   12bd1:	cmp    DWORD PTR [esp+0x78],esi
+   12bd5:	je     12c79 <ecs::World::flush(ecs::CommandBuffer&)+0xb89>
+   12bdb:	mov    edx,DWORD PTR [esp+0x28]
+   12bdf:	mov    edi,DWORD PTR [edx+esi*4]
+   12be2:	test   edi,edi
+   12be4:	je     12bcd <ecs::World::flush(ecs::CommandBuffer&)+0xadd>
+   12be6:	mov    DWORD PTR [esp+0x34],ebp
+   12bea:	mov    eax,DWORD PTR [edi]
+   12bec:	mov    ebp,DWORD PTR [eax]
+   12bee:	imul   ebp,DWORD PTR [esp+0x64]
+   12bf3:	add    ebp,DWORD PTR [edi+0x4]
+   12bf6:	mov    ecx,DWORD PTR [esp+0x44]
+   12bfa:	cmp    BYTE PTR [ecx+esi*1],0x0
+   12bfe:	je     12c12 <ecs::World::flush(ecs::CommandBuffer&)+0xb22>
+   12c00:	cmp    BYTE PTR [eax+0x8],0x0
+   12c04:	jne    12c12 <ecs::World::flush(ecs::CommandBuffer&)+0xb22>
+   12c06:	mov    DWORD PTR [esp],ebp
+   12c09:	mov    ebx,DWORD PTR [esp+0x24]
+   12c0d:	call   DWORD PTR [eax+0x10]
+   12c10:	mov    eax,DWORD PTR [edi]
+   12c12:	mov    ecx,DWORD PTR [esp+0x34]
+   12c16:	mov    ecx,DWORD PTR [ecx]
+   12c18:	cmp    BYTE PTR [eax+0x8],0x0
+   12c1c:	je     12bb0 <ecs::World::flush(ecs::CommandBuffer&)+0xac0>
+   12c1e:	mov    eax,DWORD PTR [eax]
+   12c20:	lea    edx,[eax-0x4]
+   12c23:	rol    edx,0x1e
+   12c26:	cmp    edx,0x3
+   12c29:	mov    ebx,DWORD PTR [esp+0x24]
+   12c2d:	ja     12c64 <ecs::World::flush(ecs::CommandBuffer&)+0xb74>
+   12c2f:	mov    eax,DWORD PTR [ebx+edx*4-0x19d6c]
+   12c36:	add    eax,ebx
+   12c38:	jmp    eax
+   12c3a:	mov    eax,DWORD PTR [ecx]
+   12c3c:	mov    DWORD PTR [ebp+0x0],eax
+   12c3f:	jmp    12bbe <ecs::World::flush(ecs::CommandBuffer&)+0xace>
+   12c44:	mov    eax,DWORD PTR [ecx+0x8]
+   12c47:	mov    DWORD PTR [ebp+0x8],eax
+   12c4a:	movsd  xmm0,QWORD PTR [ecx]
+   12c4e:	movsd  QWORD PTR [ebp+0x0],xmm0
+   12c53:	jmp    12bbe <ecs::World::flush(ecs::CommandBuffer&)+0xace>
+   12c58:	movups xmm0,XMMWORD PTR [ecx]
+   12c5b:	movups XMMWORD PTR [ebp+0x0],xmm0
+   12c5f:	jmp    12bbe <ecs::World::flush(ecs::CommandBuffer&)+0xace>
+   12c64:	mov    DWORD PTR [esp+0x8],eax
+   12c68:	mov    DWORD PTR [esp+0x4],ecx
+   12c6c:	mov    DWORD PTR [esp],ebp
+   12c6f:	call   4220 <memcpy@plt>
+   12c74:	jmp    12bbe <ecs::World::flush(ecs::CommandBuffer&)+0xace>
+   12c79:	mov    ebx,DWORD PTR [esp+0x24]
+   12c7d:	add    eax,0x10
+   12c80:	cmp    eax,DWORD PTR [esp+0xe0]
+   12c87:	jne    121fe <ecs::World::flush(ecs::CommandBuffer&)+0x10e>
+   12c8d:	mov    esi,DWORD PTR [esp+0xb4]
+   12c94:	mov    DWORD PTR [esp],ecx
+   12c97:	call   86e0 <ecs::CommandBuffer::clear()>
+   12c9c:	test   esi,esi
+   12c9e:	je     12cb5 <ecs::World::flush(ecs::CommandBuffer&)+0xbc5>
+   12ca0:	mov    eax,DWORD PTR [esp+0xbc]
+   12ca7:	sub    eax,esi
+   12ca9:	mov    DWORD PTR [esp+0x4],eax
+   12cad:	mov    DWORD PTR [esp],esi
+   12cb0:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12cb5:	mov    eax,DWORD PTR [esp+0xa8]
+   12cbc:	test   eax,eax
+   12cbe:	je     12cd5 <ecs::World::flush(ecs::CommandBuffer&)+0xbe5>
+   12cc0:	mov    ecx,DWORD PTR [esp+0xb0]
+   12cc7:	sub    ecx,eax
+   12cc9:	mov    DWORD PTR [esp+0x4],ecx
+   12ccd:	mov    DWORD PTR [esp],eax
+   12cd0:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12cd5:	mov    eax,DWORD PTR [esp+0x94]
+   12cdc:	test   eax,eax
+   12cde:	je     12cf5 <ecs::World::flush(ecs::CommandBuffer&)+0xc05>
+   12ce0:	mov    ecx,DWORD PTR [esp+0x9c]
+   12ce7:	sub    ecx,eax
+   12ce9:	mov    DWORD PTR [esp+0x4],ecx
+   12ced:	mov    DWORD PTR [esp],eax
+   12cf0:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12cf5:	mov    eax,DWORD PTR [esp+0xc4]
+   12cfc:	test   eax,eax
+   12cfe:	je     12d15 <ecs::World::flush(ecs::CommandBuffer&)+0xc25>
+   12d00:	mov    ecx,DWORD PTR [esp+0xcc]
+   12d07:	sub    ecx,eax
+   12d09:	mov    DWORD PTR [esp+0x4],ecx
+   12d0d:	mov    DWORD PTR [esp],eax
+   12d10:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12d15:	mov    eax,DWORD PTR [esp+0xf8]
+   12d1c:	test   eax,eax
+   12d1e:	je     12d35 <ecs::World::flush(ecs::CommandBuffer&)+0xc45>
+   12d20:	mov    ecx,DWORD PTR [esp+0x100]
+   12d27:	sub    ecx,eax
+   12d29:	mov    DWORD PTR [esp+0x4],ecx
+   12d2d:	mov    DWORD PTR [esp],eax
+   12d30:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12d35:	mov    eax,DWORD PTR [esp+0xe4]
+   12d3c:	test   eax,eax
+   12d3e:	je     12d55 <ecs::World::flush(ecs::CommandBuffer&)+0xc65>
+   12d40:	mov    ecx,DWORD PTR [esp+0xec]
+   12d47:	sub    ecx,eax
+   12d49:	mov    DWORD PTR [esp+0x4],ecx
+   12d4d:	mov    DWORD PTR [esp],eax
+   12d50:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12d55:	add    esp,0x10c
+   12d5b:	pop    esi
+   12d5c:	pop    edi
+   12d5d:	pop    ebx
+   12d5e:	pop    ebp
+   12d5f:	ret    
+   12d60:	mov    DWORD PTR [esp],esi
+   12d63:	call   86e0 <ecs::CommandBuffer::clear()>
+   12d68:	mov    eax,DWORD PTR [esp+0xa8]
+   12d6f:	test   eax,eax
+   12d71:	jne    12cc0 <ecs::World::flush(ecs::CommandBuffer&)+0xbd0>
+   12d77:	jmp    12cd5 <ecs::World::flush(ecs::CommandBuffer&)+0xbe5>
+   12d7c:	mov    ebx,DWORD PTR [esp+0x24]
+   12d80:	call   43c0 <std::__throw_bad_array_new_length()@plt>
+   12d85:	mov    eax,DWORD PTR [esp+0x40]
+   12d89:	mov    DWORD PTR [esp+0x98],eax
+   12d90:	mov    eax,DWORD PTR [esp+0x48]
+   12d94:	mov    DWORD PTR [esp+0x9c],eax
+   12d9b:	mov    eax,DWORD PTR [esp+0x30]
+   12d9f:	mov    DWORD PTR [esp+0x94],eax
+   12da6:	lea    eax,[ebx-0x19e72]
+   12dac:	mov    DWORD PTR [esp],eax
+   12daf:	call   4240 <std::__throw_length_error(char const*)@plt>
+   12db4:	mov    esi,eax
+   12db6:	mov    ebx,DWORD PTR [esp+0x24]
+   12dba:	jmp    12e46 <ecs::World::flush(ecs::CommandBuffer&)+0xd56>
+   12dbf:	jmp    12e44 <ecs::World::flush(ecs::CommandBuffer&)+0xd54>
+   12dc4:	mov    esi,eax
+   12dc6:	mov    eax,DWORD PTR [esp+0xd4]
+   12dcd:	test   eax,eax
+   12dcf:	je     12df0 <ecs::World::flush(ecs::CommandBuffer&)+0xd00>
+   12dd1:	mov    ecx,DWORD PTR [esp+0xdc]
+   12dd8:	sub    ecx,eax
+   12dda:	mov    DWORD PTR [esp+0x4],ecx
+   12dde:	mov    DWORD PTR [esp],eax
+   12de1:	mov    ebx,DWORD PTR [esp+0x24]
+   12de5:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12dea:	jmp    12df0 <ecs::World::flush(ecs::CommandBuffer&)+0xd00>
+   12dec:	jmp    12e44 <ecs::World::flush(ecs::CommandBuffer&)+0xd54>
+   12dee:	mov    esi,eax
+   12df0:	mov    eax,DWORD PTR [esp+0x4c]
+   12df4:	cmp    DWORD PTR [esp+0x38],0x0
+   12df9:	test   eax,eax
+   12dfb:	jne    12e03 <ecs::World::flush(ecs::CommandBuffer&)+0xd13>
+   12dfd:	mov    ebx,DWORD PTR [esp+0x24]
+   12e01:	jmp    12e46 <ecs::World::flush(ecs::CommandBuffer&)+0xd56>
+   12e03:	mov    ecx,DWORD PTR [esp+0x54]
+   12e07:	sub    ecx,eax
+   12e09:	mov    DWORD PTR [esp+0x4],ecx
+   12e0d:	mov    DWORD PTR [esp],eax
+   12e10:	mov    ebx,DWORD PTR [esp+0x24]
+   12e14:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12e19:	jmp    12e46 <ecs::World::flush(ecs::CommandBuffer&)+0xd56>
+   12e1b:	mov    esi,eax
+   12e1d:	mov    eax,DWORD PTR [esp+0x40]
+   12e21:	mov    DWORD PTR [esp+0x98],eax
+   12e28:	mov    eax,DWORD PTR [esp+0x48]
+   12e2c:	mov    DWORD PTR [esp+0x9c],eax
+   12e33:	mov    eax,DWORD PTR [esp+0x30]
+   12e37:	mov    DWORD PTR [esp+0x94],eax
+   12e3e:	mov    ebx,DWORD PTR [esp+0x24]
+   12e42:	jmp    12e46 <ecs::World::flush(ecs::CommandBuffer&)+0xd56>
+   12e44:	mov    esi,eax
+   12e46:	lea    ecx,[esp+0x8c]
+   12e4d:	call   12e90 <ecs::(anonymous namespace)::FlushMemo::~FlushMemo()>
+   12e52:	mov    eax,DWORD PTR [esp+0xc4]
+   12e59:	test   eax,eax
+   12e5b:	je     12e72 <ecs::World::flush(ecs::CommandBuffer&)+0xd82>
+   12e5d:	mov    ecx,DWORD PTR [esp+0xcc]
+   12e64:	sub    ecx,eax
+   12e66:	mov    DWORD PTR [esp+0x4],ecx
+   12e6a:	mov    DWORD PTR [esp],eax
+   12e6d:	call   4320 <operator delete(void*, unsigned int)@plt>
+   12e72:	lea    eax,[esp+0xe4]
+   12e79:	mov    DWORD PTR [esp],eax
+   12e7c:	call   a0e0 <ecs::CommandPlan::~CommandPlan()>
+   12e81:	mov    DWORD PTR [esp],esi
+   12e84:	call   4880 <_Unwind_Resume@plt>
+   12e89:	nop    DWORD PTR [eax+0x0]
+

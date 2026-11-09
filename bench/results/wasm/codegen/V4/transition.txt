@@ -1,0 +1,174 @@
+# ecs::World::transitionTo não existe como função neste binário: foi inlinada em ecs::World::flush (ver flush.txt); bench_flush.wasm não tem símbolo próprio para ela.
+# ecs::World::moveEntity (bench_transitions)
+00029b26 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)>:
+        .local i32, i32, i32, i32, i32, i32, i32, i32, i64
+   29b2d:      	global.get	0
+   29b2f:      	i32.const	32
+   29b31:      	i32.sub 
+   29b32:      	local.tee	6
+   29b34:      	global.set	0
+   29b36:      	local.get	2
+   29b38:      	i32.load	4
+   29b3b:      	local.set	10
+   29b3d:      	local.get	2
+   29b3f:      	i32.load	0
+   29b42:      	local.set	9
+   29b44:      	local.get	6
+   29b46:      	local.get	1
+   29b48:      	i64.load	0:p2align=2
+   29b4b:      	local.tee	13
+   29b4d:      	i64.store	0
+   29b50:      	local.get	6
+   29b52:      	local.get	13
+   29b54:      	i64.store	24
+   29b57:      	local.get	3
+   29b59:      	i32.const	28
+   29b5b:      	i32.add 
+   29b5c:      	local.get	6
+   29b5e:      	call	547
+   29b61:      	local.set	11
+   29b63:      	local.get	9
+   29b65:      	i32.load	32
+   29b68:      	local.get	9
+   29b6a:      	i32.load	28
+   29b6d:      	local.tee	5
+   29b6f:      	i32.sub 
+   29b70:      	i32.const	524280
+   29b74:      	i32.and 
+   29b75:      	if    	
+   29b77:      	i32.const	0
+   29b79:      	local.set	1
+   29b7b:      	loop    	                        # label2277:
+   29b7d:      	local.get	5
+   29b7f:      	local.get	1
+   29b81:      	i32.const	3
+   29b83:      	i32.shl 
+   29b84:      	i32.add 
+   29b85:      	local.tee	7
+   29b87:      	i32.load	0
+   29b8a:      	local.set	5
+   29b8c:      	block   	
+   29b8e:      	local.get	4
+   29b90:      	i32.load	4
+   29b93:      	local.get	1
+   29b95:      	i32.const	1
+   29b97:      	i32.shl 
+   29b98:      	i32.add 
+   29b99:      	i32.load16_s	0
+   29b9c:      	local.tee	8
+   29b9e:      	i32.const	0
+   29ba0:      	i32.ge_s
+   29ba1:      	if    	
+   29ba3:      	local.get	3
+   29ba5:      	i32.load	28
+   29ba8:      	local.get	8
+   29baa:      	i32.const	3
+   29bac:      	i32.shl 
+   29bad:      	i32.add 
+   29bae:      	local.tee	8
+   29bb0:      	i32.load	4
+   29bb3:      	local.get	8
+   29bb5:      	i32.load	0
+   29bb8:      	i32.load	0
+   29bbb:      	local.get	11
+   29bbd:      	i32.mul 
+   29bbe:      	i32.add 
+   29bbf:      	local.set	8
+   29bc1:      	local.get	7
+   29bc3:      	i32.load	4
+   29bc6:      	local.get	5
+   29bc8:      	i32.load	0
+   29bcb:      	local.tee	12
+   29bcd:      	local.get	10
+   29bcf:      	i32.mul 
+   29bd0:      	i32.add 
+   29bd1:      	local.set	7
+   29bd3:      	local.get	5
+   29bd5:      	i32.load8_u	8
+   29bd8:      	i32.const	1
+   29bda:      	i32.eq  
+   29bdb:      	if    	
+   29bdd:      	local.get	8
+   29bdf:      	local.get	7
+   29be1:      	local.get	12
+   29be3:      	call	31
+   29be5:      	drop
+   29be6:      	br      	2                       # 2: down to label2276
+   29be8:      	end
+   29be9:      	local.get	8
+   29beb:      	local.get	7
+   29bed:      	local.get	5
+   29bef:      	i32.load	12
+   29bf2:      	call_indirect	 2
+   29bf5:      	local.get	7
+   29bf7:      	local.get	5
+   29bf9:      	i32.load	16
+   29bfc:      	call_indirect	 1
+   29bff:      	br      	1                       # 1: up to label2277
+   29c01:      	end
+   29c02:      	local.get	5
+   29c04:      	i32.load8_u	8
+   29c07:      	br_if   	0                       # 0: down to label2278
+   29c09:      	local.get	7
+   29c0b:      	i32.load	4
+   29c0e:      	local.get	5
+   29c10:      	i32.load	0
+   29c13:      	local.get	10
+   29c15:      	i32.mul 
+   29c16:      	i32.add 
+   29c17:      	local.get	5
+   29c19:      	i32.load	16
+   29c1c:      	call_indirect	 1
+   29c1f:      	end
+   29c20:      	local.get	1
+   29c22:      	i32.const	1
+   29c24:      	i32.add 
+   29c25:      	local.tee	1
+   29c27:      	local.get	9
+   29c29:      	i32.load	32
+   29c2c:      	local.get	9
+   29c2e:      	i32.load	28
+   29c31:      	local.tee	5
+   29c33:      	i32.sub 
+   29c34:      	i32.const	3
+   29c36:      	i32.shr_u
+   29c37:      	i32.const	65535
+   29c3b:      	i32.and 
+   29c3c:      	i32.lt_u
+   29c3d:      	br_if   	0                       # 0: down to label2278
+   29c3f:      	end
+   29c40:      	end
+   29c41:      	local.get	6
+   29c43:      	i32.const	12
+   29c45:      	i32.add 
+   29c46:      	local.get	9
+   29c48:      	i32.const	28
+   29c4a:      	i32.add 
+   29c4b:      	local.get	10
+   29c4d:      	call	548
+   29c50:      	local.get	6
+   29c52:      	i32.load8_u	20
+   29c55:      	if    	
+   29c57:      	local.get	0
+   29c59:      	i32.load	0
+   29c5c:      	local.get	6
+   29c5e:      	i32.load	12
+   29c61:      	i32.const	12
+   29c63:      	i32.mul 
+   29c64:      	i32.add 
+   29c65:      	local.get	10
+   29c67:      	i32.store	4
+   29c6a:      	end
+   29c6b:      	local.get	2
+   29c6d:      	local.get	11
+   29c6f:      	i32.store	4
+   29c72:      	local.get	2
+   29c74:      	local.get	3
+   29c76:      	i32.store	0
+   29c79:      	local.get	6
+   29c7b:      	i32.const	32
+   29c7d:      	i32.add 
+   29c7e:      	global.set	0
+   29c80:      	local.get	11
+   29c82:      	end
+

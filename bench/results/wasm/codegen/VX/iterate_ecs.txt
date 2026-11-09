@@ -1,0 +1,232 @@
+0000000000008210 <BM_IterateSingle_ECS(benchmark::State&)>:
+    8210:	push   rbp
+    8211:	push   r15
+    8213:	push   r14
+    8215:	push   r13
+    8217:	push   r12
+    8219:	push   rbx
+    821a:	sub    rsp,0x168
+    8221:	mov    rbx,rdi
+    8224:	mov    rax,QWORD PTR [rdi+0x20]
+    8228:	mov    r13,QWORD PTR [rax]
+    822b:	lea    rdi,[rsp+0x40]
+    8230:	call   c9f0 <ecs::World::World()>
+    8235:	test   r13,r13
+    8238:	je     828a <BM_IterateSingle_ECS(benchmark::State&)+0x7a>
+    823a:	lea    r14,[rsp+0x40]
+    823f:	lea    r15,[rsp+0x8]
+    8244:	lea    r12,[rsp+0x30]
+    8249:	mov    rbp,r13
+    824c:	nop    DWORD PTR [rax+0x0]
+    8250:	mov    QWORD PTR [rsp+0x8],0x0
+    8259:	mov    DWORD PTR [rsp+0x10],0x0
+    8261:	vmovsd xmm0,QWORD PTR [rip+0x49e27]        # 52090 <_IO_stdin_used+0x90>
+    8269:	vmovsd QWORD PTR [rsp+0x30],xmm0
+    826f:	mov    DWORD PTR [rsp+0x38],0x40400000
+    8277:	mov    rdi,r14
+    827a:	mov    rsi,r15
+    827d:	mov    rdx,r12
+    8280:	call   8d90 <ecs::Entity ecs::World::create<Position, Velocity>(Position&&, Velocity&&)>
+    8285:	dec    rbp
+    8288:	jne    8250 <BM_IterateSingle_ECS(benchmark::State&)+0x40>
+    828a:	lea    rdi,[rsp+0x40]
+    828f:	call   9060 <ecs::Query<Position, Velocity const>& ecs::World::query<Position, Velocity const>()>
+    8294:	mov    r14,rax
+    8297:	mov    ebp,DWORD PTR [rbx+0x1c]
+    829a:	mov    r15,QWORD PTR [rbx+0x10]
+    829e:	mov    rdi,rbx
+    82a1:	call   1b2a0 <benchmark::State::StartKeepRunning()>
+    82a6:	test   ebp,ebp
+    82a8:	jne    840a <BM_IterateSingle_ECS(benchmark::State&)+0x1fa>
+    82ae:	test   r15,r15
+    82b1:	je     840a <BM_IterateSingle_ECS(benchmark::State&)+0x1fa>
+    82b7:	vbroadcastss xmm0,DWORD PTR [rip+0x49e10]        # 520d0 <_IO_stdin_used+0xd0>
+    82c0:	vmovss xmm1,DWORD PTR [rip+0x49e08]        # 520d0 <_IO_stdin_used+0xd0>
+    82c8:	vbroadcastss ymm2,DWORD PTR [rip+0x49dff]        # 520d0 <_IO_stdin_used+0xd0>
+    82d1:	jmp    82eb <BM_IterateSingle_ECS(benchmark::State&)+0xdb>
+    82d3:	data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+    82e0:	mov    DWORD PTR [rax],ecx
+    82e2:	dec    r15
+    82e5:	je     840a <BM_IterateSingle_ECS(benchmark::State&)+0x1fa>
+    82eb:	mov    rax,QWORD PTR [r14+0x8]
+    82ef:	mov    ecx,DWORD PTR [rax]
+    82f1:	lea    edx,[rcx+0x1]
+    82f4:	mov    DWORD PTR [rax],edx
+    82f6:	mov    rdx,QWORD PTR [r14+0x48]
+    82fa:	mov    rsi,QWORD PTR [r14+0x50]
+    82fe:	jmp    8304 <BM_IterateSingle_ECS(benchmark::State&)+0xf4>
+    8300:	add    rdx,0x10
+    8304:	cmp    rdx,rsi
+    8307:	je     82e0 <BM_IterateSingle_ECS(benchmark::State&)+0xd0>
+    8309:	mov    r8,QWORD PTR [rdx]
+    830c:	mov    edi,DWORD PTR [r8+0x80]
+    8313:	test   rdi,rdi
+    8316:	je     8300 <BM_IterateSingle_ECS(benchmark::State&)+0xf0>
+    8318:	mov    r9,QWORD PTR [r8+0x38]
+    831c:	movzx  r8d,WORD PTR [rdx+0x8]
+    8321:	movzx  r10d,WORD PTR [rdx+0xa]
+    8326:	shl    r8d,0x4
+    832a:	mov    r8,QWORD PTR [r9+r8*1+0x8]
+    832f:	shl    r10d,0x4
+    8333:	mov    r9,QWORD PTR [r9+r10*1+0x8]
+    8338:	cmp    edi,0x8
+    833b:	jae    8350 <BM_IterateSingle_ECS(benchmark::State&)+0x140>
+    833d:	xor    r10d,r10d
+    8340:	jmp    83be <BM_IterateSingle_ECS(benchmark::State&)+0x1ae>
+    8342:	data16 data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+    8350:	mov    r10d,edi
+    8353:	and    r10d,0xfffffff8
+    8357:	mov    r11d,edi
+    835a:	shr    r11d,0x3
+    835e:	shl    r11,0x5
+    8362:	lea    r11,[r11+r11*2]
+    8366:	xor    r12d,r12d
+    8369:	nop    DWORD PTR [rax+0x0]
+    8370:	vmovups ymm3,YMMWORD PTR [r9+r12*1+0x20]
+    8377:	vmovups ymm4,YMMWORD PTR [r9+r12*1+0x40]
+    837e:	vfmadd213ps ymm4,ymm2,YMMWORD PTR [r8+r12*1+0x40]
+    8385:	vfmadd213ps ymm3,ymm2,YMMWORD PTR [r8+r12*1+0x20]
+    838c:	vmovups ymm5,YMMWORD PTR [r9+r12*1]
+    8392:	vfmadd213ps ymm5,ymm2,YMMWORD PTR [r8+r12*1]
+    8398:	vmovups YMMWORD PTR [r8+r12*1],ymm5
+    839e:	vmovups YMMWORD PTR [r8+r12*1+0x20],ymm3
+    83a5:	vmovups YMMWORD PTR [r8+r12*1+0x40],ymm4
+    83ac:	add    r12,0x60
+    83b0:	cmp    r11,r12
+    83b3:	jne    8370 <BM_IterateSingle_ECS(benchmark::State&)+0x160>
+    83b5:	cmp    r10d,edi
+    83b8:	je     8300 <BM_IterateSingle_ECS(benchmark::State&)+0xf0>
+    83be:	sub    rdi,r10
+    83c1:	lea    r10,[r10+r10*2]
+    83c5:	lea    r10,[r10*4+0x8]
+    83cd:	nop    DWORD PTR [rax]
+    83d0:	vmovsd xmm3,QWORD PTR [r9+r10*1-0x8]
+    83d7:	vmovsd xmm4,QWORD PTR [r8+r10*1-0x8]
+    83de:	vfmadd231ps xmm4,xmm0,xmm3
+    83e3:	vmovlps QWORD PTR [r8+r10*1-0x8],xmm4
+    83ea:	vmovss xmm3,DWORD PTR [r9+r10*1]
+    83f0:	vfmadd213ss xmm3,xmm1,DWORD PTR [r8+r10*1]
+    83f6:	vmovss DWORD PTR [r8+r10*1],xmm3
+    83fc:	add    r10,0xc
+    8400:	dec    rdi
+    8403:	jne    83d0 <BM_IterateSingle_ECS(benchmark::State&)+0x1c0>
+    8405:	jmp    8300 <BM_IterateSingle_ECS(benchmark::State&)+0xf0>
+    840a:	mov    rdi,rbx
+    840d:	vzeroupper 
+    8410:	call   1b310 <benchmark::State::FinishKeepRunning()>
+    8415:	mov    r12,QWORD PTR [rsp+0x70]
+    841a:	mov    r15,QWORD PTR [rsp+0x78]
+    841f:	add    rbx,0x40
+    8423:	lea    r14,[rsp+0x18]
+    8428:	mov    QWORD PTR [rsp+0x8],r14
+    842d:	movabs rax,0x7079746568637261
+    8437:	mov    QWORD PTR [rsp+0x18],rax
+    843c:	mov    WORD PTR [rsp+0x20],0x7365
+    8443:	mov    QWORD PTR [rsp+0x10],0xa
+    844c:	mov    BYTE PTR [rsp+0x22],0x0
+    8451:	lea    rsi,[rsp+0x8]
+    8456:	mov    rdi,rbx
+    8459:	call   86b0 <std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, benchmark::Counter, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter> > >::operator[](std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)>
+    845e:	sub    r15,r12
+    8461:	shr    r15,0x3
+    8465:	mov    ecx,r15d
+    8468:	vcvtsi2sd xmm0,xmm6,rcx
+    846d:	vmovsd QWORD PTR [rax],xmm0
+    8471:	movabs r15,0x3e800000000
+    847b:	mov    QWORD PTR [rax+0x8],r15
+    847f:	mov    rdi,QWORD PTR [rsp+0x8]
+    8484:	cmp    rdi,r14
+    8487:	je     8496 <BM_IterateSingle_ECS(benchmark::State&)+0x286>
+    8489:	mov    rsi,QWORD PTR [rsp+0x18]
+    848e:	inc    rsi
+    8491:	call   6490 <operator delete(void*, unsigned long)@plt>
+    8496:	mov    r12,QWORD PTR [rsp+0x78]
+    849b:	sub    r12,QWORD PTR [rsp+0x70]
+    84a0:	mov    QWORD PTR [rsp+0x8],r14
+    84a5:	mov    edi,0x17
+    84aa:	call   6480 <operator new(unsigned long)@plt>
+    84af:	mov    QWORD PTR [rsp+0x8],rax
+    84b4:	mov    QWORD PTR [rsp+0x18],0x16
+    84bd:	vmovupd xmm0,XMMWORD PTR [rip+0x49c8a]        # 5214f <_IO_stdin_used+0x14f>
+    84c5:	vmovupd XMMWORD PTR [rax],xmm0
+    84c9:	movabs rcx,0x6570797465686372
+    84d3:	mov    QWORD PTR [rax+0xe],rcx
+    84d7:	mov    QWORD PTR [rsp+0x10],0x16
+    84e0:	mov    BYTE PTR [rax+0x16],0x0
+    84e4:	lea    rsi,[rsp+0x8]
+    84e9:	mov    rdi,rbx
+    84ec:	call   86b0 <std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, benchmark::Counter, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter> > >::operator[](std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)>
+    84f1:	vmovq  xmm0,r13
+    84f6:	vpunpckldq xmm0,xmm0,XMMWORD PTR [rip+0x49ba2]        # 520a0 <_IO_stdin_used+0xa0>
+    84fe:	vsubpd xmm0,xmm0,XMMWORD PTR [rip+0x49baa]        # 520b0 <_IO_stdin_used+0xb0>
+    8506:	vshufpd xmm1,xmm0,xmm0,0x1
+    850b:	vaddsd xmm1,xmm1,xmm0
+    850f:	shr    r12,0x3
+    8513:	dec    r12d
+    8516:	vcvtsi2sd xmm0,xmm6,r12
+    851b:	vmovsd QWORD PTR [rsp+0x28],xmm1
+    8521:	vdivsd xmm0,xmm1,xmm0
+    8525:	vmovsd QWORD PTR [rax],xmm0
+    8529:	mov    QWORD PTR [rax+0x8],r15
+    852d:	mov    rdi,QWORD PTR [rsp+0x8]
+    8532:	cmp    rdi,r14
+    8535:	je     8544 <BM_IterateSingle_ECS(benchmark::State&)+0x334>
+    8537:	mov    rsi,QWORD PTR [rsp+0x18]
+    853c:	inc    rsi
+    853f:	call   6490 <operator delete(void*, unsigned long)@plt>
+    8544:	mov    QWORD PTR [rsp+0x8],r14
+    8549:	movabs rax,0x69746e655f726570
+    8553:	mov    QWORD PTR [rsp+0x18],rax
+    8558:	mov    WORD PTR [rsp+0x20],0x7974
+    855f:	mov    QWORD PTR [rsp+0x10],0xa
+    8568:	mov    BYTE PTR [rsp+0x22],0x0
+    856d:	lea    rsi,[rsp+0x8]
+    8572:	mov    rdi,rbx
+    8575:	call   86b0 <std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, benchmark::Counter, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter> > >::operator[](std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)>
+    857a:	vmovsd xmm0,QWORD PTR [rsp+0x28]
+    8580:	vmovsd QWORD PTR [rax],xmm0
+    8584:	movabs rcx,0x3e880000005
+    858e:	mov    QWORD PTR [rax+0x8],rcx
+    8592:	mov    rdi,QWORD PTR [rsp+0x8]
+    8597:	cmp    rdi,r14
+    859a:	je     85a9 <BM_IterateSingle_ECS(benchmark::State&)+0x399>
+    859c:	mov    rsi,QWORD PTR [rsp+0x18]
+    85a1:	inc    rsi
+    85a4:	call   6490 <operator delete(void*, unsigned long)@plt>
+    85a9:	lea    rdi,[rsp+0x40]
+    85ae:	call   cfb0 <ecs::World::~World()>
+    85b3:	add    rsp,0x168
+    85ba:	pop    rbx
+    85bb:	pop    r12
+    85bd:	pop    r13
+    85bf:	pop    r14
+    85c1:	pop    r15
+    85c3:	pop    rbp
+    85c4:	ret    
+    85c5:	jmp    85cb <BM_IterateSingle_ECS(benchmark::State&)+0x3bb>
+    85c7:	jmp    85cb <BM_IterateSingle_ECS(benchmark::State&)+0x3bb>
+    85c9:	jmp    85f9 <BM_IterateSingle_ECS(benchmark::State&)+0x3e9>
+    85cb:	mov    rbx,rax
+    85ce:	mov    rdi,QWORD PTR [rsp+0x8]
+    85d3:	cmp    rdi,r14
+    85d6:	je     8611 <BM_IterateSingle_ECS(benchmark::State&)+0x401>
+    85d8:	mov    rsi,QWORD PTR [rsp+0x18]
+    85dd:	inc    rsi
+    85e0:	call   6490 <operator delete(void*, unsigned long)@plt>
+    85e5:	lea    rdi,[rsp+0x40]
+    85ea:	call   cfb0 <ecs::World::~World()>
+    85ef:	mov    rdi,rbx
+    85f2:	call   6840 <_Unwind_Resume@plt>
+    85f7:	jmp    85f9 <BM_IterateSingle_ECS(benchmark::State&)+0x3e9>
+    85f9:	mov    rbx,rax
+    85fc:	lea    rdi,[rsp+0x40]
+    8601:	call   cfb0 <ecs::World::~World()>
+    8606:	mov    rdi,rbx
+    8609:	call   6840 <_Unwind_Resume@plt>
+    860e:	mov    rbx,rax
+    8611:	lea    rdi,[rsp+0x40]
+    8616:	call   cfb0 <ecs::World::~World()>
+    861b:	mov    rdi,rbx
+    861e:	call   6840 <_Unwind_Resume@plt>
+    8623:	data16 data16 data16 cs nop WORD PTR [rax+rax*1+0x0]
+

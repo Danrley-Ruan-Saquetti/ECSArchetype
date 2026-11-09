@@ -1,0 +1,377 @@
+000000000040a600 <BM_IterateSingle_SoA(benchmark::State&)>:
+  40a600:	push   r15
+  40a602:	push   r14
+  40a604:	push   r13
+  40a606:	push   r12
+  40a608:	push   rbp
+  40a609:	push   rbx
+  40a60a:	sub    rsp,0x68
+  40a60e:	mov    rax,QWORD PTR [rdi+0x20]
+  40a612:	mov    r13,QWORD PTR [rax]
+  40a615:	movabs rax,0xaaaaaaaaaaaaaaa
+  40a61f:	cmp    rax,r13
+  40a622:	jb     40594a <BM_IterateSingle_SoA(benchmark::State&) [clone .cold]>
+  40a628:	mov    r12,rdi
+  40a62b:	test   r13,r13
+  40a62e:	je     40abab <BM_IterateSingle_SoA(benchmark::State&)+0x5ab>
+  40a634:	lea    r14,[r13+r13*2+0x0]
+  40a639:	shl    r14,0x2
+  40a63d:	mov    rdi,r14
+  40a640:	call   405430 <operator new(unsigned long)@plt>
+  40a645:	mov    rcx,r14
+  40a648:	mov    rbx,rax
+  40a64b:	shr    rcx,0x2
+  40a64f:	lea    rax,[rax+r14*1]
+  40a653:	mov    QWORD PTR [rsp+0x10],rax
+  40a658:	sub    rcx,0x3
+  40a65c:	movabs rax,0x2aaaaaaaaaaaaaab
+  40a666:	imul   rcx,rax
+  40a66a:	movabs rax,0x3fffffffffffffff
+  40a674:	and    rcx,rax
+  40a677:	mov    rax,rbx
+  40a67a:	lea    r15,[rcx+0x1]
+  40a67e:	cmp    rcx,0x2
+  40a682:	jbe    40a6cd <BM_IterateSingle_SoA(benchmark::State&)+0xcd>
+  40a684:	mov    rdx,r15
+  40a687:	pxor   xmm0,xmm0
+  40a68b:	shr    rdx,0x2
+  40a68f:	lea    rdx,[rdx+rdx*2]
+  40a693:	shl    rdx,0x4
+  40a697:	add    rdx,rbx
+  40a69a:	nop    WORD PTR [rax+rax*1+0x0]
+  40a6a0:	movups XMMWORD PTR [rax],xmm0
+  40a6a3:	add    rax,0x30
+  40a6a7:	movups XMMWORD PTR [rax-0x20],xmm0
+  40a6ab:	movups XMMWORD PTR [rax-0x10],xmm0
+  40a6af:	cmp    rdx,rax
+  40a6b2:	jne    40a6a0 <BM_IterateSingle_SoA(benchmark::State&)+0xa0>
+  40a6b4:	mov    rax,r15
+  40a6b7:	and    rax,0xfffffffffffffffc
+  40a6bb:	lea    rax,[rax+rax*2]
+  40a6bf:	lea    rax,[rbx+rax*4]
+  40a6c3:	test   r15b,0x3
+  40a6c7:	je     40abc6 <BM_IterateSingle_SoA(benchmark::State&)+0x5c6>
+  40a6cd:	mov    rdi,QWORD PTR [rsp+0x10]
+  40a6d2:	lea    rdx,[rax+0xc]
+  40a6d6:	mov    QWORD PTR [rax],0x0
+  40a6dd:	mov    DWORD PTR [rax+0x8],0x0
+  40a6e4:	cmp    rdi,rdx
+  40a6e7:	je     40a710 <BM_IterateSingle_SoA(benchmark::State&)+0x110>
+  40a6e9:	lea    rdx,[rax+0x18]
+  40a6ed:	mov    QWORD PTR [rax+0xc],0x0
+  40a6f5:	mov    DWORD PTR [rax+0x14],0x0
+  40a6fc:	cmp    rdi,rdx
+  40a6ff:	je     40a710 <BM_IterateSingle_SoA(benchmark::State&)+0x110>
+  40a701:	mov    QWORD PTR [rax+0x18],0x0
+  40a709:	mov    DWORD PTR [rax+0x20],0x0
+  40a710:	mov    rdi,r14
+  40a713:	mov    QWORD PTR [rsp+0x8],rcx
+  40a718:	call   405430 <operator new(unsigned long)@plt>
+  40a71d:	mov    rcx,QWORD PTR [rsp+0x8]
+  40a722:	mov    rbp,rax
+  40a725:	lea    rax,[rax+r14*1]
+  40a729:	mov    QWORD PTR [rsp+0x18],rax
+  40a72e:	cmp    rcx,0x2
+  40a732:	jbe    40abfe <BM_IterateSingle_SoA(benchmark::State&)+0x5fe>
+  40a738:	mov    rdx,r15
+  40a73b:	movaps xmm2,XMMWORD PTR [rip+0x6275e]        # 46cea0 <std::piecewise_construct+0x8>
+  40a742:	mov    rax,rbp
+  40a745:	movaps xmm1,XMMWORD PTR [rip+0x62764]        # 46ceb0 <std::piecewise_construct+0x18>
+  40a74c:	shr    rdx,0x2
+  40a750:	movaps xmm0,XMMWORD PTR [rip+0x62769]        # 46cec0 <std::piecewise_construct+0x28>
+  40a757:	lea    rdx,[rdx+rdx*2]
+  40a75b:	shl    rdx,0x4
+  40a75f:	add    rdx,rbp
+  40a762:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  40a76d:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  40a778:	nop    DWORD PTR [rax+rax*1+0x0]
+  40a780:	movups XMMWORD PTR [rax],xmm2
+  40a783:	add    rax,0x30
+  40a787:	movups XMMWORD PTR [rax-0x20],xmm1
+  40a78b:	movups XMMWORD PTR [rax-0x10],xmm0
+  40a78f:	cmp    rdx,rax
+  40a792:	jne    40a780 <BM_IterateSingle_SoA(benchmark::State&)+0x180>
+  40a794:	mov    rax,r15
+  40a797:	and    rax,0xfffffffffffffffc
+  40a79b:	and    r15d,0x3
+  40a79f:	lea    rax,[rax+rax*2]
+  40a7a3:	lea    rax,[rbp+rax*4+0x0]
+  40a7a8:	je     40a7f0 <BM_IterateSingle_SoA(benchmark::State&)+0x1f0>
+  40a7aa:	mov    rdx,QWORD PTR [rip+0x626ef]        # 46cea0 <std::piecewise_construct+0x8>
+  40a7b1:	movss  xmm0,DWORD PTR [rip+0x62707]        # 46cec0 <std::piecewise_construct+0x28>
+  40a7b9:	lea    rcx,[rax+0xc]
+  40a7bd:	mov    rsi,QWORD PTR [rsp+0x18]
+  40a7c2:	mov    QWORD PTR [rax],rdx
+  40a7c5:	movss  DWORD PTR [rax+0x8],xmm0
+  40a7ca:	cmp    rsi,rcx
+  40a7cd:	je     40a7f0 <BM_IterateSingle_SoA(benchmark::State&)+0x1f0>
+  40a7cf:	lea    rcx,[rax+0x18]
+  40a7d3:	mov    QWORD PTR [rax+0xc],rdx
+  40a7d7:	movss  DWORD PTR [rax+0x14],xmm0
+  40a7dc:	cmp    rsi,rcx
+  40a7df:	je     40a7f0 <BM_IterateSingle_SoA(benchmark::State&)+0x1f0>
+  40a7e1:	mov    QWORD PTR [rax+0x18],rdx
+  40a7e5:	movss  DWORD PTR [rax+0x20],xmm0
+  40a7ea:	nop    WORD PTR [rax+rax*1+0x0]
+  40a7f0:	mov    edx,DWORD PTR [r12+0x1c]
+  40a7f5:	test   edx,edx
+  40a7f7:	je     40a9c5 <BM_IterateSingle_SoA(benchmark::State&)+0x3c5>
+  40a7fd:	mov    rdi,r12
+  40a800:	call   423190 <benchmark::State::StartKeepRunning()>
+  40a805:	mov    rdi,r12
+  40a808:	call   423350 <benchmark::State::FinishKeepRunning()>
+  40a80d:	pxor   xmm6,xmm6
+  40a811:	mov    r14,QWORD PTR [r12+0x50]
+  40a816:	lea    rdx,[r12+0x48]
+  40a81b:	movabs rax,0x69746e655f726570
+  40a825:	cvtsi2sd xmm6,r13
+  40a82a:	mov    QWORD PTR [rsp+0x50],rax
+  40a82f:	lea    r13,[rsp+0x50]
+  40a834:	mov    r15,rdx
+  40a837:	mov    eax,0x7974
+  40a83c:	mov    QWORD PTR [rsp+0x40],r13
+  40a841:	mov    WORD PTR [rsp+0x58],ax
+  40a846:	mov    QWORD PTR [rsp+0x48],0xa
+  40a84f:	mov    BYTE PTR [rsp+0x5a],0x0
+  40a854:	movsd  QWORD PTR [rsp+0x28],xmm6
+  40a85a:	test   r14,r14
+  40a85d:	je     40a932 <BM_IterateSingle_SoA(benchmark::State&)+0x332>
+  40a863:	mov    QWORD PTR [rsp+0x20],rbx
+  40a868:	mov    rbx,r14
+  40a86b:	mov    r14,rdx
+  40a86e:	mov    QWORD PTR [rsp+0x8],rbp
+  40a873:	jmp    40a8c1 <BM_IterateSingle_SoA(benchmark::State&)+0x2c1>
+  40a875:	nop    DWORD PTR [rax]
+  40a878:	mov    edx,0xa
+  40a87d:	mov    rdi,QWORD PTR [rbx+0x20]
+  40a881:	mov    rsi,r13
+  40a884:	cmp    rbp,rdx
+  40a887:	cmovbe rdx,rbp
+  40a88b:	call   405180 <memcmp@plt>
+  40a890:	test   eax,eax
+  40a892:	jne    40a8b1 <BM_IterateSingle_SoA(benchmark::State&)+0x2b1>
+  40a894:	lea    rax,[rbp-0xa]
+  40a898:	mov    esi,0x80000000
+  40a89d:	cmp    rax,rsi
+  40a8a0:	jge    40a8b5 <BM_IterateSingle_SoA(benchmark::State&)+0x2b5>
+  40a8a2:	movabs rsi,0xffffffff7fffffff
+  40a8ac:	cmp    rax,rsi
+  40a8af:	jle    40a8ca <BM_IterateSingle_SoA(benchmark::State&)+0x2ca>
+  40a8b1:	test   eax,eax
+  40a8b3:	js     40a8ca <BM_IterateSingle_SoA(benchmark::State&)+0x2ca>
+  40a8b5:	mov    r15,rbx
+  40a8b8:	mov    rbx,QWORD PTR [rbx+0x10]
+  40a8bc:	test   rbx,rbx
+  40a8bf:	je     40a8d3 <BM_IterateSingle_SoA(benchmark::State&)+0x2d3>
+  40a8c1:	mov    rbp,QWORD PTR [rbx+0x28]
+  40a8c5:	test   rbp,rbp
+  40a8c8:	jne    40a878 <BM_IterateSingle_SoA(benchmark::State&)+0x278>
+  40a8ca:	mov    rbx,QWORD PTR [rbx+0x18]
+  40a8ce:	test   rbx,rbx
+  40a8d1:	jne    40a8c1 <BM_IterateSingle_SoA(benchmark::State&)+0x2c1>
+  40a8d3:	mov    rbp,QWORD PTR [rsp+0x8]
+  40a8d8:	mov    rbx,QWORD PTR [rsp+0x20]
+  40a8dd:	cmp    r14,r15
+  40a8e0:	je     40a932 <BM_IterateSingle_SoA(benchmark::State&)+0x332>
+  40a8e2:	mov    r14,QWORD PTR [r15+0x28]
+  40a8e6:	test   r14,r14
+  40a8e9:	je     40abdf <BM_IterateSingle_SoA(benchmark::State&)+0x5df>
+  40a8ef:	mov    eax,0xa
+  40a8f4:	mov    rsi,QWORD PTR [r15+0x20]
+  40a8f8:	mov    rdi,r13
+  40a8fb:	cmp    r14,rax
+  40a8fe:	cmovbe rax,r14
+  40a902:	mov    rdx,rax
+  40a905:	call   405180 <memcmp@plt>
+  40a90a:	test   eax,eax
+  40a90c:	jne    40a92a <BM_IterateSingle_SoA(benchmark::State&)+0x32a>
+  40a90e:	mov    eax,0xa
+  40a913:	sub    rax,r14
+  40a916:	cmp    rax,0x7fffffff
+  40a91c:	jg     40abdf <BM_IterateSingle_SoA(benchmark::State&)+0x5df>
+  40a922:	cmp    rax,0xffffffff80000000
+  40a928:	jl     40a932 <BM_IterateSingle_SoA(benchmark::State&)+0x332>
+  40a92a:	test   eax,eax
+  40a92c:	jns    40abdf <BM_IterateSingle_SoA(benchmark::State&)+0x5df>
+  40a932:	lea    r14,[rsp+0x40]
+  40a937:	lea    rcx,[rsp+0x38]
+  40a93c:	mov    edx,0x46ce98
+  40a941:	mov    rsi,r15
+  40a944:	lea    rdi,[r12+0x40]
+  40a949:	lea    r8,[rsp+0x37]
+  40a94e:	mov    QWORD PTR [rsp+0x38],r14
+  40a953:	call   40bb70 <std::_Rb_tree_iterator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter> > std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter>, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter> >, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter> > >::_M_emplace_hint_unique<std::piecewise_construct_t const&, std::tuple<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&>, std::tuple<> >(std::_Rb_tree_const_iterator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, benchmark::Counter> >, std::piecewise_construct_t const&, std::tuple<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&>&&, std::tuple<>&&)>
+  40a958:	movsd  xmm5,QWORD PTR [rsp+0x28]
+  40a95e:	mov    rdi,QWORD PTR [rsp+0x40]
+  40a963:	movabs rsi,0x3e880000005
+  40a96d:	mov    QWORD PTR [rax+0x48],rsi
+  40a971:	movsd  QWORD PTR [rax+0x40],xmm5
+  40a976:	cmp    rdi,r13
+  40a979:	je     40a989 <BM_IterateSingle_SoA(benchmark::State&)+0x389>
+  40a97b:	mov    rax,QWORD PTR [rsp+0x50]
+  40a980:	lea    rsi,[rax+0x1]
+  40a984:	call   405440 <operator delete(void*, unsigned long)@plt>
+  40a989:	test   rbp,rbp
+  40a98c:	je     40a99e <BM_IterateSingle_SoA(benchmark::State&)+0x39e>
+  40a98e:	mov    rsi,QWORD PTR [rsp+0x18]
+  40a993:	mov    rdi,rbp
+  40a996:	sub    rsi,rbp
+  40a999:	call   405440 <operator delete(void*, unsigned long)@plt>
+  40a99e:	test   rbx,rbx
+  40a9a1:	je     40ab9c <BM_IterateSingle_SoA(benchmark::State&)+0x59c>
+  40a9a7:	mov    rsi,QWORD PTR [rsp+0x10]
+  40a9ac:	add    rsp,0x68
+  40a9b0:	mov    rdi,rbx
+  40a9b3:	sub    rsi,rbx
+  40a9b6:	pop    rbx
+  40a9b7:	pop    rbp
+  40a9b8:	pop    r12
+  40a9ba:	pop    r13
+  40a9bc:	pop    r14
+  40a9be:	pop    r15
+  40a9c0:	jmp    405440 <operator delete(void*, unsigned long)@plt>
+  40a9c5:	mov    rdi,r12
+  40a9c8:	mov    r14,QWORD PTR [r12+0x10]
+  40a9cd:	call   423190 <benchmark::State::StartKeepRunning()>
+  40a9d2:	test   r14,r14
+  40a9d5:	je     40a805 <BM_IterateSingle_SoA(benchmark::State&)+0x205>
+  40a9db:	mov    rsi,r14
+  40a9de:	lea    rdi,[r13-0x1]
+  40a9e2:	test   r13,r13
+  40a9e5:	jne    40a9f7 <BM_IterateSingle_SoA(benchmark::State&)+0x3f7>
+  40a9e7:	mov    QWORD PTR [rsp+0x8],rbx
+  40a9ec:	sub    rsi,0x1
+  40a9f0:	jne    40a9e7 <BM_IterateSingle_SoA(benchmark::State&)+0x3e7>
+  40a9f2:	jmp    40a805 <BM_IterateSingle_SoA(benchmark::State&)+0x205>
+  40a9f7:	mov    rax,r13
+  40a9fa:	movss  xmm3,DWORD PTR [rip+0x6272e]        # 46d130 <std::piecewise_construct+0x298>
+  40aa02:	movq   xmm5,QWORD PTR [rip+0x62726]        # 46d130 <std::piecewise_construct+0x298>
+  40aa0a:	shr    rax,0x2
+  40aa0e:	movss  xmm6,DWORD PTR [rip+0x6271a]        # 46d130 <std::piecewise_construct+0x298>
+  40aa16:	lea    rcx,[rax+rax*2]
+  40aa1a:	movq   xmm4,xmm5
+  40aa1e:	shufps xmm3,xmm3,0x0
+  40aa22:	shl    rcx,0x4
+  40aa26:	add    rcx,rbx
+  40aa29:	cmp    rdi,0x2
+  40aa2d:	jbe    40ab7c <BM_IterateSingle_SoA(benchmark::State&)+0x57c>
+  40aa33:	data16 cs nop WORD PTR [rax+rax*1+0x0]
+  40aa3e:	xchg   ax,ax
+  40aa40:	mov    rax,rbx
+  40aa43:	mov    rdx,rbp
+  40aa46:	cs nop WORD PTR [rax+rax*1+0x0]
+  40aa50:	movups xmm1,XMMWORD PTR [rdx+0x10]
+  40aa54:	movups xmm0,XMMWORD PTR [rdx+0x20]
+  40aa58:	add    rax,0x30
+  40aa5c:	add    rdx,0x30
+  40aa60:	movups xmm2,XMMWORD PTR [rdx-0x30]
+  40aa64:	movups xmm7,XMMWORD PTR [rax-0x20]
+  40aa68:	mulps  xmm1,xmm3
+  40aa6b:	mulps  xmm0,xmm3
+  40aa6e:	mulps  xmm2,xmm3
+  40aa71:	addps  xmm1,xmm7
+  40aa74:	movups xmm7,XMMWORD PTR [rax-0x10]
+  40aa78:	addps  xmm0,xmm7
+  40aa7b:	movups xmm7,XMMWORD PTR [rax-0x30]
+  40aa7f:	movups XMMWORD PTR [rax-0x20],xmm1
+  40aa83:	addps  xmm2,xmm7
+  40aa86:	movups XMMWORD PTR [rax-0x10],xmm0
+  40aa8a:	movups XMMWORD PTR [rax-0x30],xmm2
+  40aa8e:	cmp    rax,rcx
+  40aa91:	jne    40aa50 <BM_IterateSingle_SoA(benchmark::State&)+0x450>
+  40aa93:	mov    rdx,r13
+  40aa96:	and    rdx,0xfffffffffffffffc
+  40aa9a:	test   r13b,0x3
+  40aa9e:	je     40ab88 <BM_IterateSingle_SoA(benchmark::State&)+0x588>
+  40aaa4:	movq   xmm2,QWORD PTR [rip+0x62684]        # 46d130 <std::piecewise_construct+0x298>
+  40aaac:	mov    r8,r13
+  40aaaf:	sub    r8,rdx
+  40aab2:	cmp    r8,0x1
+  40aab6:	je     40ab27 <BM_IterateSingle_SoA(benchmark::State&)+0x527>
+  40aab8:	lea    rax,[rdx+rdx*2]
+  40aabc:	movaps xmm2,xmm5
+  40aabf:	shl    rax,0x2
+  40aac3:	movq   xmm0,QWORD PTR [rbp+rax*1+0x8]
+  40aac9:	movq   xmm1,QWORD PTR [rbx+rax*1+0x8]
+  40aacf:	lea    r9,[rbx+rax*1]
+  40aad3:	movq   xmm7,QWORD PTR [rbx+rax*1]
+  40aad8:	mulps  xmm0,xmm4
+  40aadb:	movq   xmm0,xmm0
+  40aadf:	addps  xmm0,xmm1
+  40aae2:	movq   xmm1,QWORD PTR [rbx+rax*1+0x10]
+  40aae8:	movq   r10,xmm0
+  40aaed:	movq   xmm0,QWORD PTR [rbp+rax*1+0x10]
+  40aaf3:	mov    QWORD PTR [r9+0x8],r10
+  40aaf7:	mulps  xmm0,xmm4
+  40aafa:	movq   xmm0,xmm0
+  40aafe:	addps  xmm0,xmm1
+  40ab01:	movq   xmm1,QWORD PTR [rbp+rax*1+0x0]
+  40ab07:	mulps  xmm1,xmm4
+  40ab0a:	movlps QWORD PTR [r9+0x10],xmm0
+  40ab0f:	movq   xmm1,xmm1
+  40ab13:	addps  xmm1,xmm7
+  40ab16:	movlps QWORD PTR [r9],xmm1
+  40ab1a:	test   r8b,0x1
+  40ab1e:	je     40ab63 <BM_IterateSingle_SoA(benchmark::State&)+0x563>
+  40ab20:	and    r8,0xfffffffffffffffe
+  40ab24:	add    rdx,r8
+  40ab27:	lea    rax,[rdx+rdx*2]
+  40ab2b:	movq   xmm2,xmm2
+  40ab2f:	shl    rax,0x2
+  40ab33:	movq   xmm0,QWORD PTR [rbp+rax*1+0x0]
+  40ab39:	movq   xmm1,QWORD PTR [rbx+rax*1]
+  40ab3e:	lea    rdx,[rbx+rax*1]
+  40ab42:	mulps  xmm0,xmm2
+  40ab45:	movq   xmm0,xmm0
+  40ab49:	addps  xmm0,xmm1
+  40ab4c:	movlps QWORD PTR [rdx],xmm0
+  40ab4f:	movss  xmm0,DWORD PTR [rbp+rax*1+0x8]
+  40ab55:	mulss  xmm0,xmm6
+  40ab59:	addss  xmm0,DWORD PTR [rdx+0x8]
+  40ab5e:	movss  DWORD PTR [rdx+0x8],xmm0
+  40ab63:	mov    QWORD PTR [rsp+0x8],rbx
+  40ab68:	sub    rsi,0x1
+  40ab6c:	je     40a805 <BM_IterateSingle_SoA(benchmark::State&)+0x205>
+  40ab72:	cmp    rdi,0x2
+  40ab76:	ja     40aa40 <BM_IterateSingle_SoA(benchmark::State&)+0x440>
+  40ab7c:	xor    edx,edx
+  40ab7e:	jmp    40aaa4 <BM_IterateSingle_SoA(benchmark::State&)+0x4a4>
+  40ab83:	nop    DWORD PTR [rax+rax*1+0x0]
+  40ab88:	mov    QWORD PTR [rsp+0x8],rbx
+  40ab8d:	sub    rsi,0x1
+  40ab91:	jne    40aa40 <BM_IterateSingle_SoA(benchmark::State&)+0x440>
+  40ab97:	jmp    40a805 <BM_IterateSingle_SoA(benchmark::State&)+0x205>
+  40ab9c:	add    rsp,0x68
+  40aba0:	pop    rbx
+  40aba1:	pop    rbp
+  40aba2:	pop    r12
+  40aba4:	pop    r13
+  40aba6:	pop    r14
+  40aba8:	pop    r15
+  40abaa:	ret
+  40abab:	mov    QWORD PTR [rsp+0x10],0x0
+  40abb4:	xor    ebx,ebx
+  40abb6:	xor    ebp,ebp
+  40abb8:	mov    QWORD PTR [rsp+0x18],0x0
+  40abc1:	jmp    40a7f0 <BM_IterateSingle_SoA(benchmark::State&)+0x1f0>
+  40abc6:	mov    rdi,r14
+  40abc9:	call   405430 <operator new(unsigned long)@plt>
+  40abce:	mov    rbp,rax
+  40abd1:	lea    rax,[rax+r14*1]
+  40abd5:	mov    QWORD PTR [rsp+0x18],rax
+  40abda:	jmp    40a738 <BM_IterateSingle_SoA(benchmark::State&)+0x138>
+  40abdf:	movabs rax,0x3e880000005
+  40abe9:	movsd  xmm6,QWORD PTR [rsp+0x28]
+  40abef:	mov    QWORD PTR [r15+0x48],rax
+  40abf3:	movsd  QWORD PTR [r15+0x40],xmm6
+  40abf9:	jmp    40a989 <BM_IterateSingle_SoA(benchmark::State&)+0x389>
+  40abfe:	mov    rax,rbp
+  40ac01:	jmp    40a7aa <BM_IterateSingle_SoA(benchmark::State&)+0x1aa>
+  40ac06:	mov    r12,rax
+  40ac09:	jmp    40595c <BM_IterateSingle_SoA(benchmark::State&) [clone .cold]+0x12>
+  40ac0e:	mov    r12,rax
+  40ac11:	jmp    405954 <BM_IterateSingle_SoA(benchmark::State&) [clone .cold]+0xa>
+  40ac16:	mov    r12,rax
+  40ac19:	jmp    40598e <BM_IterateSingle_SoA(benchmark::State&) [clone .cold]+0x44>
+  40ac1e:	xchg   ax,ax
+

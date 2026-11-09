@@ -1,0 +1,126 @@
+# ecs::World::transitionTo (bench_flush)
+00000000000138f0 <ecs::World::transitionTo(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const*)>:
+   138f0:	push   r14
+   138f2:	push   rbx
+   138f3:	push   rax
+   138f4:	mov    rbx,rdx
+   138f7:	cmp    QWORD PTR [rdx],0x0
+   138fb:	je     1390c <ecs::World::transitionTo(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const*)+0x1c>
+   138fd:	test   r8,r8
+   13900:	je     1391e <ecs::World::transitionTo(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const*)+0x2e>
+   13902:	mov    rdx,rbx
+   13905:	call   d0b0 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)>
+   1390a:	jmp    1391e <ecs::World::transitionTo(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const*)+0x2e>
+   1390c:	lea    rdi,[rcx+0x38]
+   13910:	mov    r14,rcx
+   13913:	call   19a20 <ecs::Table::pushUninitialized(ecs::Entity)>
+   13918:	mov    DWORD PTR [rbx+0x8],eax
+   1391b:	mov    QWORD PTR [rbx],r14
+   1391e:	mov    eax,DWORD PTR [rbx+0x8]
+   13921:	add    rsp,0x8
+   13925:	pop    rbx
+   13926:	pop    r14
+   13928:	ret    
+   13929:	nop    DWORD PTR [rax+0x0]
+
+
+# ecs::World::moveEntity (bench_transitions)
+00000000000173e0 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)>:
+   173e0:	push   rbp
+   173e1:	push   r15
+   173e3:	push   r14
+   173e5:	push   r13
+   173e7:	push   r12
+   173e9:	push   rbx
+   173ea:	sub    rsp,0x48
+   173ee:	mov    r13,r8
+   173f1:	mov    QWORD PTR [rsp+0x18],rdi
+   173f6:	mov    rbp,QWORD PTR [rdx]
+   173f9:	mov    QWORD PTR [rsp+0x30],rdx
+   173fe:	mov    eax,DWORD PTR [rdx+0x8]
+   17401:	mov    QWORD PTR [rsp+0x10],rax
+   17406:	mov    QWORD PTR [rsp+0x28],rcx
+   1740b:	lea    rdi,[rcx+0x38]
+   1740f:	mov    QWORD PTR [rsp+0x40],rdi
+   17414:	call   16040 <ecs::Table::pushUninitialized(ecs::Entity)>
+   17419:	mov    DWORD PTR [rsp+0xc],eax
+   1741d:	lea    rax,[rbp+0x38]
+   17421:	mov    QWORD PTR [rsp+0x20],rax
+   17426:	mov    ecx,DWORD PTR [rbp+0x40]
+   17429:	mov    rax,QWORD PTR [rbp+0x38]
+   1742d:	sub    ecx,eax
+   1742f:	test   ecx,0xffff0
+   17435:	je     174ed <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x10d>
+   1743b:	mov    ecx,DWORD PTR [rsp+0xc]
+   1743f:	mov    QWORD PTR [rsp+0x38],rcx
+   17444:	mov    r12d,0x8
+   1744a:	xor    ebx,ebx
+   1744c:	jmp    17473 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x93>
+   1744e:	xchg   ax,ax
+   17450:	mov    rsi,r14
+   17453:	call   63b0 <memcpy@plt>
+   17458:	inc    rbx
+   1745b:	mov    ecx,DWORD PTR [rbp+0x40]
+   1745e:	mov    rax,QWORD PTR [rbp+0x38]
+   17462:	sub    ecx,eax
+   17464:	shr    ecx,0x4
+   17467:	movzx  ecx,cx
+   1746a:	add    r12,0x10
+   1746e:	cmp    rbx,rcx
+   17471:	jae    174ed <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x10d>
+   17473:	mov    rcx,QWORD PTR [r13+0x8]
+   17477:	movsx  rcx,WORD PTR [rcx+rbx*2]
+   1747c:	mov    r15,QWORD PTR [rax+r12*1-0x8]
+   17481:	test   rcx,rcx
+   17484:	js     174d0 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0xf0>
+   17486:	mov    rdx,QWORD PTR [rsp+0x40]
+   1748b:	mov    rdx,QWORD PTR [rdx]
+   1748e:	shl    rcx,0x4
+   17492:	mov    rsi,QWORD PTR [rdx+rcx*1]
+   17496:	mov    edi,DWORD PTR [rsi]
+   17498:	imul   rdi,QWORD PTR [rsp+0x38]
+   1749e:	add    rdi,QWORD PTR [rdx+rcx*1+0x8]
+   174a3:	mov    edx,DWORD PTR [r15]
+   174a6:	mov    r14,rdx
+   174a9:	imul   r14,QWORD PTR [rsp+0x10]
+   174af:	add    r14,QWORD PTR [rax+r12*1]
+   174b3:	cmp    BYTE PTR [r15+0x8],0x1
+   174b8:	je     17450 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x70>
+   174ba:	mov    rsi,r14
+   174bd:	call   QWORD PTR [r15+0x10]
+   174c1:	mov    rdi,r14
+   174c4:	jmp    174e4 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x104>
+   174c6:	cs nop WORD PTR [rax+rax*1+0x0]
+   174d0:	cmp    BYTE PTR [r15+0x8],0x0
+   174d5:	jne    17458 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x78>
+   174d7:	mov    edi,DWORD PTR [r15]
+   174da:	imul   rdi,QWORD PTR [rsp+0x10]
+   174e0:	add    rdi,QWORD PTR [rax+r12*1]
+   174e4:	call   QWORD PTR [r15+0x18]
+   174e8:	jmp    17458 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x78>
+   174ed:	mov    rdi,QWORD PTR [rsp+0x20]
+   174f2:	mov    rbx,QWORD PTR [rsp+0x10]
+   174f7:	mov    esi,ebx
+   174f9:	call   161b0 <ecs::Table::fillHole(unsigned int)>
+   174fe:	test   dl,0x1
+   17501:	je     17515 <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)+0x135>
+   17503:	mov    eax,eax
+   17505:	mov    rcx,QWORD PTR [rsp+0x18]
+   1750a:	mov    rcx,QWORD PTR [rcx]
+   1750d:	shl    rax,0x4
+   17511:	mov    DWORD PTR [rcx+rax*1+0x8],ebx
+   17515:	mov    rdx,QWORD PTR [rsp+0x30]
+   1751a:	mov    rcx,QWORD PTR [rsp+0x28]
+   1751f:	mov    QWORD PTR [rdx],rcx
+   17522:	mov    eax,DWORD PTR [rsp+0xc]
+   17526:	mov    DWORD PTR [rdx+0x8],eax
+   17529:	add    rsp,0x48
+   1752d:	pop    rbx
+   1752e:	pop    r12
+   17530:	pop    r13
+   17532:	pop    r14
+   17534:	pop    r15
+   17536:	pop    rbp
+   17537:	ret    
+   17538:	nop    DWORD PTR [rax+rax*1+0x0]
+
