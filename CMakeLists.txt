@@ -40,6 +40,22 @@ function(ecs_warnings target)
   endif()
 endfunction()
 
+# Exceções WASM só onde o doctest as captura (CHECK_THROWS). No-op fora do Emscripten.
+function(ecs_wasm_exceptions target)
+  if(EMSCRIPTEN)
+    target_compile_options(${target} PRIVATE -fwasm-exceptions)
+    target_link_options(${target} PRIVATE -fwasm-exceptions)
+  endif()
+endfunction()
+
+# Variáveis de ambiente do processo node chegam ao getenv do teste. No-op fora do Emscripten.
+function(ecs_wasm_node_env target)
+  if(EMSCRIPTEN)
+    target_link_options(${target} PRIVATE --pre-js ${PROJECT_SOURCE_DIR}/tools/wasm/node_env.js)
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS ${PROJECT_SOURCE_DIR}/tools/wasm/node_env.js)
+  endif()
+endfunction()
+
 file(GLOB ECS_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(ecs STATIC ${ECS_SOURCES})
 target_include_directories(ecs PUBLIC include)

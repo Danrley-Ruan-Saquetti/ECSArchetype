@@ -6,6 +6,8 @@ function(ecs_add_test name)
   target_link_libraries(${name} PRIVATE ecs doctest::doctest)
   target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
   ecs_warnings(${name})
+  ecs_wasm_exceptions(${name})
+  ecs_wasm_node_env(${name})
   add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
