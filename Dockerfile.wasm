@@ -10,3 +10,7 @@ WORKDIR /app
 # O LLVM do emsdk é o mesmo do Emscripten e já tem o alvo x86-64: serve de Clang nativo (V1/V2/VX).
 RUN /emsdk/upstream/bin/clang++ --print-targets | grep -q x86-64 \
   && ln -s /emsdk/upstream/bin/clang++ /usr/local/bin/clang++
+
+# O entrypoint do emsdk põe /emsdk/upstream/emscripten no PATH, e lá há um diretório "cmake" que o make
+# (exec direto) confunde com o executável (EACCES). /emsdk vem antes no PATH, então o link resolve.
+RUN ln -s /usr/local/bin/cmake /emsdk/cmake
