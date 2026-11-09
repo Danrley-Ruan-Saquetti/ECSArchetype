@@ -62,4 +62,33 @@ static void BM_IterateSingle_ECS(benchmark::State& state) {
 }
 BENCHMARK(BM_IterateSingle_ECS)->Arg(1000)->Arg(10000)->Arg(100000)->Arg(1000000);
 
+static void BM_IterateSingle_RawQuery(benchmark::State& state) {
+  const auto entityCount = static_cast<size_t>(state.range(0));
+  ecs::World world;
+  for (size_t i = 0; i < entityCount; ++i) {
+    world.create(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
+  }
+
+  auto& query = world.rawQuery({.read = {ecs::componentId<Velocity>()}, .write = {ecs::componentId<Position>()}});
+
+  for (auto _ : state) {
+    query.eachBlock([](ecs::Table& table, std::span<const uint16_t> columns) {
+      const Velocity* velocityData = reinterpret_cast<const Velocity*>(table.column(columns[0]).data);
+      Position* positionData = reinterpret_cast<Position*>(table.column(columns[1]).data);
+      const size_t count = table.count();
+      for (size_t i = 0; i < count; ++i) {
+        positionData[i].value.x += velocityData[i].value.x * kDeltaTime;
+        positionData[i].value.y += velocityData[i].value.y * kDeltaTime;
+        positionData[i].value.z += velocityData[i].value.z * kDeltaTime;
+      }
+    });
+
+    benchmark::ClobberMemory();
+  }
+
+  state.counters["per_entity"] = benchmark::Counter(
+    static_cast<double>(entityCount), benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
+}
+BENCHMARK(BM_IterateSingle_RawQuery)->Arg(1000)->Arg(10000)->Arg(100000)->Arg(1000000);
+
 BENCHMARK_MAIN();

@@ -94,6 +94,8 @@ namespace ecs {
     void remove(Entity entity) {
       removeRaw(entity, componentId<T>());
     }
+    // Move de `value` (quem chamou segue dono do moved-from); ignorado para tags.
+    void addRaw(Entity entity, ComponentId componentId, void* value);
     void removeRaw(Entity entity, ComponentId componentId);
 
     // Visita os comandos em ordem de gravação.

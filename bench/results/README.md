@@ -13,6 +13,7 @@ compare sempre razões medidas na mesma execução. Commit de referência dos n�
 | `m3_vectorization.txt` | Relatório de vetorização do laço de iteração | — |
 | `m4_flush.json` | Flush coalescido vs adds diretos (task 18) | NF-P5 |
 | `m5_perf_fragmented.txt` | `perf stat` de `BM_IterateFragmented/A` (task 20) | — |
+| `e1_iterate.json`, `e1_fragmented.json`, `e1_flush.json` | Reexecução após `RawQuery`/`addRaw` (engine fase 1, task 2) | NF-P1, NF-P2, NF-P5 |
 
 ## NF-P5 — situação
 
@@ -34,3 +35,18 @@ Os eventos são divididos por iterações × 1M e incluem a montagem do mundo, e
 
 Até 512 arquétipos (2048 entidades por bloco) o custo por entidade é praticamente plano; em 4096 (244 entidades por bloco)
 o tempo dobra e os cache-misses de último nível sobem ~13× em relação a A = 1. Dados brutos em `m5_perf_fragmented.txt`.
+
+## Reexecução após `RawQuery`/`addRaw` (engine fase 1)
+
+Razões das medianas nos `e1_*.json`: `BM_IterateSingle_ECS/1000000` / SoA = 0,82 (NF-P1 ≤ 1,10);
+`BM_IterateFragmented/64` / SoA = 0,71 (NF-P2 ≤ 1,25); `BM_FlushCoalesced/1000` / `BM_DirectAdds/1000` = 0,44 (NF-P5 ≤ 0,5);
+`BM_FlushCoalesced/100000` / `BM_DirectAdds/100000` = 0,95 (já documentado ~0,85; meta continua não atendida a N = 100000).
+
+Ruído: execuções completas do mesmo binário deram ECS/SoA a 1M entre 0,82 e 1,31 (as execuções filtradas em 1M deram 0,86, 0,99 e 0,96),
+e o flush a N = 1000 entre 0,44 e 0,59. Para separar ruído de regressão, o `bench_flush` do `master` foi medido em seguida, ao lado do
+branch: 0,55 / 0,59 / 0,57 no `master` contra 0,51 / 0,44 / 0,59 no branch. O caminho do flush não mudou, então a faixa
+~0,45–0,6 a N = 1000 é a precisão do ambiente, não efeito desta fase. Os arquivos registrados são execuções representativas, não as melhores
+de um sorteio: os valores acima mostram a dispersão.
+
+`BM_IterateSingle_RawQuery/N` / `BM_IterateSingle_ECS/N`: 1,005 (1000), 1,010 (10000), 0,902 (100000), 1,043 (1000000) — a query
+type-erased custa o mesmo que a template no laço de blocos.

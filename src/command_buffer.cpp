@@ -207,6 +207,20 @@ namespace ecs {
     pushRecord(CommandOperation::Destroy, entity, 0, 0, 1, true);
   }
 
+  void CommandBuffer::addRaw(Entity entity, ComponentId componentId, void* value) {
+    const TypeInfo& info = typeInfo(componentId);
+    void* payload = pushRecord(CommandOperation::Add, entity, componentId, info.size, info.tag ? 1 : info.alignment, info.trivial);
+    if (info.tag) {
+      return;
+    }
+
+    if (info.trivial) {
+      std::memcpy(payload, value, info.size);
+    } else {
+      info.moveConstruct(payload, value);
+    }
+  }
+
   void CommandBuffer::removeRaw(Entity entity, ComponentId componentId) {
     pushRecord(CommandOperation::Remove, entity, componentId, 0, 1, true);
   }

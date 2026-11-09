@@ -446,3 +446,74 @@ TEST_CASE("buffer reutilizado depois do flush agrupa de novo") {
   CHECK(world.get<A>(second).value == 2);
   CHECK_INVARIANTS(world);
 }
+
+TEST_CASE("addRaw grava componente trivial por ID") {
+  ecs::World world;
+  auto entity = world.create();
+  auto commandBuffer = world.commands();
+
+  A value{7};
+  commandBuffer.addRaw(entity, ecs::componentId<A>(), &value);
+  world.flush(commandBuffer);
+
+  CHECK(world.get<A>(entity).value == 7);
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("addRaw de tag ignora o valor") {
+  ecs::World world;
+  auto entity = world.create();
+  auto commandBuffer = world.commands();
+
+  commandBuffer.addRaw(entity, ecs::componentId<Tag>(), nullptr);
+  world.flush(commandBuffer);
+
+  CHECK(world.has<Tag>(entity));
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("addRaw move tipo não trivial") {
+  const int64_t aliveBefore = LifeCounter::alive;
+  {
+    ecs::World world;
+    auto entity = world.create();
+    auto commandBuffer = world.commands();
+    {
+      LifeCounter source{9};
+      commandBuffer.addRaw(entity, ecs::componentId<LifeCounter>(), &source);
+    }
+    world.flush(commandBuffer);
+
+    CHECK(world.get<LifeCounter>(entity).value == 9);
+    world.destroy(entity);
+    CHECK_INVARIANTS(world);
+  }
+
+  CHECK(LifeCounter::alive == aliveBefore);
+}
+
+TEST_CASE("addRaw coalesce igual a add<T> no flush") {
+  ecs::World rawWorld, typedWorld;
+  auto rawEntity = rawWorld.create();
+  auto typedEntity = typedWorld.create();
+
+  auto rawBuffer = rawWorld.commands();
+  A rawA{1};
+  B rawB{2, 3};
+  rawBuffer.addRaw(rawEntity, ecs::componentId<A>(), &rawA);
+  rawBuffer.removeRaw(rawEntity, ecs::componentId<A>());
+  rawBuffer.addRaw(rawEntity, ecs::componentId<B>(), &rawB);
+  rawWorld.flush(rawBuffer);
+
+  auto typedBuffer = typedWorld.commands();
+  typedBuffer.add(typedEntity, A{1});
+  typedBuffer.remove<A>(typedEntity);
+  typedBuffer.add(typedEntity, B{2, 3});
+  typedWorld.flush(typedBuffer);
+
+  CHECK_FALSE(rawWorld.has<A>(rawEntity));
+  CHECK_FALSE(typedWorld.has<A>(typedEntity));
+  CHECK(rawWorld.get<B>(rawEntity).second == typedWorld.get<B>(typedEntity).second);
+  CHECK_INVARIANTS(rawWorld);
+  CHECK_INVARIANTS(typedWorld);
+}

@@ -497,7 +497,7 @@ namespace ecs {
       for (const std::vector<ComponentId>* group : {&read, &write}) {
         for (ComponentId componentId : *group) {
           ECS_ASSERT(componentId < registeredTypeCount(), "rawQuery componente desconhecido cid=%u", componentId);
-          const TypeInfo& info = typeInfo(componentId);
+          [[maybe_unused]] const TypeInfo& info = typeInfo(componentId);
           ECS_ASSERT(!info.tag, "rawQuery tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
           ECS_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "rawQuery componente repetido type=%.*s",
                      int(info.name.size()), info.name.data());
