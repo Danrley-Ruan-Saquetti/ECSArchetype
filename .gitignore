@@ -2,3 +2,4 @@ build
 .superpowers
 *.local.*
 *.log
+__pycache__
