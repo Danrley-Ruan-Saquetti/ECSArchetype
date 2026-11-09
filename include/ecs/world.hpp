@@ -17,6 +17,7 @@
 #include "ecs/detail/assert.hpp"
 #include "ecs/entity.hpp"
 #include "ecs/query.hpp"
+#include "ecs/raw_query.hpp"
 #include "ecs/table.hpp"
 #include "ecs/type_info.hpp"
 
@@ -62,6 +63,7 @@ namespace ecs {
     uint32_t iterating_ = 0;
     mutable uint64_t signatureLookups_ = 0;
     std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
+    std::map<QueryKey, std::unique_ptr<RawQuery>> rawQueryCache_; // separado: o static_cast de queryCache_ confundiria os tipos
     std::vector<QueryCacheBase*> queries_;
     std::unordered_map<uint64_t, Edge> jumpEdges_; // (source.id << 32) | destination.id
 
@@ -108,6 +110,9 @@ namespace ecs {
     // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação.
     template <class... Ts, class... Filters>
     Query<Ts...>& query(Filters... filters);
+
+    // Query por ComponentId, cacheada pela spec (read/write mantêm a ordem dada).
+    RawQuery& rawQuery(const RawQuerySpec& spec);
 
     void* getRaw(Entity entity, ComponentId componentId) noexcept {
       if (!store_.isAlive(entity)) {

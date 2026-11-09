@@ -10,6 +10,7 @@
 
 #include "components.hpp"
 #include "ecs/detail/assert.hpp"
+#include "ecs/raw_query.hpp"
 #include "ecs/world.hpp"
 
 namespace {
@@ -71,6 +72,33 @@ namespace {
     world.query<A>().eachBlock([&](std::span<A>) { world.destroy(entity); });
   }
 
+  void rawQueryTagInRead() {
+    ecs::World world;
+    world.rawQuery({.read = {ecs::componentId<Tag>()}});
+  }
+
+  void rawQueryRepeatedComponent() {
+    ecs::World world;
+    world.rawQuery({.read = {ecs::componentId<A>()}, .write = {ecs::componentId<A>()}});
+  }
+
+  void rawQueryUnknownComponent() {
+    ecs::World world;
+    world.rawQuery({.read = {ecs::registeredTypeCount() + 5}});
+  }
+
+  void rawQueryEndWithoutBegin() {
+    ecs::World world;
+    world.rawQuery({.read = {ecs::componentId<A>()}}).endIteration();
+  }
+
+  void addDuringRawIteration() {
+    ecs::World world;
+    auto entity = world.create(A{1});
+    world.rawQuery({.read = {ecs::componentId<A>()}}).beginIteration();
+    world.add(entity, B{});
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -85,6 +113,11 @@ int main(int argumentCount, char** arguments) {
     {"flush_during_each", flushDuringEach, {"flush"}},
     {"command_after_destroy", commandAfterDestroy, {"after destroy"}},
     {"destroy_during_each_block", destroyDuringEachBlock, {"destroy"}},
+    {"raw_query_tag_in_read", rawQueryTagInRead, {"rawQuery", "tag"}},
+    {"raw_query_repeated_component", rawQueryRepeatedComponent, {"rawQuery", "repetido"}},
+    {"raw_query_unknown_component", rawQueryUnknownComponent, {"rawQuery", "desconhecido"}},
+    {"raw_query_end_without_begin", rawQueryEndWithoutBegin, {"endIteration"}},
+    {"add_during_raw_iteration", addDuringRawIteration, {"add"}},
   };
 
   if (argumentCount != 2) {

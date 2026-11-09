@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <span>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -36,6 +37,19 @@ namespace ecs {
   };
 
   namespace detail {
+    inline bool signatureMatches(const Signature& signature, std::span<const ComponentId> with, std::span<const ComponentId> without) {
+      if (!std::includes(signature.begin(), signature.end(), with.begin(), with.end())) {
+        return false;
+      }
+      for (ComponentId componentId : without) {
+        if (std::binary_search(signature.begin(), signature.end(), componentId)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     struct IterationGuard {
       uint32_t* counter_;
 
@@ -99,16 +113,7 @@ namespace ecs {
     }
 
     bool matches(const Archetype& archetype) const override {
-      if (!std::includes(archetype.signature.begin(), archetype.signature.end(), with_.begin(), with_.end())) {
-        return false;
-      }
-      for (ComponentId componentId : without_) {
-        if (std::binary_search(archetype.signature.begin(), archetype.signature.end(), componentId)) {
-          return false;
-        }
-      }
-
-      return true;
+      return detail::signatureMatches(archetype.signature, with_, without_);
     }
 
     bool isMatched(const Archetype* archetype) const override {

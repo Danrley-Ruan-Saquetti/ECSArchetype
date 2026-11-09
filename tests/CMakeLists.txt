@@ -21,6 +21,7 @@ ecs_add_test(fuzz_vs_model fuzz_vs_model.cpp)
 ecs_add_test(nontrivial nontrivial.cpp)
 ecs_add_test(queries queries.cpp)
 ecs_add_test(command_buffer command_buffer.cpp)
+ecs_add_test(raw_query raw_query.cpp)
 
 # Testes de morte: um executável próprio, só com asserts ligados; um teste CTest por caso.
 if(_ecs_asserts)
@@ -28,7 +29,9 @@ if(_ecs_asserts)
   target_link_libraries(contract_death PRIVATE ecs)
   target_include_directories(contract_death PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
   ecs_warnings(contract_death)
-  foreach(c add_during_each get_dead_entity flush_during_each command_after_destroy destroy_during_each_block)
+  foreach(c add_during_each get_dead_entity flush_during_each command_after_destroy destroy_during_each_block
+          raw_query_tag_in_read raw_query_repeated_component raw_query_unknown_component
+          raw_query_end_without_begin add_during_raw_iteration)
     add_test(NAME contract_death.${c} COMMAND contract_death ${c})
   endforeach()
 endif()

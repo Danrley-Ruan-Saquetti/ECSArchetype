@@ -491,6 +491,52 @@ namespace ecs {
     return true;
   }
 
+  namespace {
+    void validateRawQueryComponents(const std::vector<ComponentId>& read, const std::vector<ComponentId>& write) {
+      std::vector<ComponentId> seen;
+      for (const std::vector<ComponentId>* group : {&read, &write}) {
+        for (ComponentId componentId : *group) {
+          ECS_ASSERT(componentId < registeredTypeCount(), "rawQuery componente desconhecido cid=%u", componentId);
+          const TypeInfo& info = typeInfo(componentId);
+          ECS_ASSERT(!info.tag, "rawQuery tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
+          ECS_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "rawQuery componente repetido type=%.*s",
+                     int(info.name.size()), info.name.data());
+          seen.push_back(componentId);
+        }
+      }
+    }
+  }
+
+  RawQuery& World::rawQuery(const RawQuerySpec& spec) {
+    validateRawQueryComponents(spec.read, spec.write);
+
+    std::vector<ComponentId> components = spec.read;
+    components.insert(components.end(), spec.write.begin(), spec.write.end());
+
+    Signature with = components, without = spec.without;
+    with.insert(with.end(), spec.with.begin(), spec.with.end());
+    detail::sortUnique(with);
+    detail::sortUnique(without);
+
+    QueryKey key{{}, with, without};
+    for (ComponentId componentId : spec.read) {
+      key.components.push_back(uint64_t(componentId) << 1 | 1);
+    }
+    for (ComponentId componentId : spec.write) {
+      key.components.push_back(uint64_t(componentId) << 1);
+    }
+    if (auto it = rawQueryCache_.find(key); it != rawQueryCache_.end()) {
+      return *it->second;
+    }
+
+    auto created = std::make_unique<RawQuery>(&iterating_, std::move(components), with, std::move(without));
+    created->initialize(archetypes_, smallestIndex(with));
+    RawQuery& reference = *created;
+    queries_.push_back(&reference);
+    rawQueryCache_.emplace(std::move(key), std::move(created));
+    return reference;
+  }
+
   QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query) {
     QueryCacheBase* registered = query.get();
 
