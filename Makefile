@@ -1,3 +1,5 @@
+NPM = $(dir $(shell command -v node))npm
+
 PRESET ?= debug-asan
 T ?= .
 
@@ -21,3 +23,7 @@ run: test
 .PHONY: run
 
 all: test
+
+engine-ts:
+	cd engine && ([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build
+.PHONY: engine-ts
