@@ -42,10 +42,26 @@ Camadas estritas, cada módulo só usa os de baixo: `type_info → entity → ta
 - **`table`**: SoA com um único `count`/`capacity` para todas as colunas, colunas alinhadas a 64 B. Não conhece entidades vivas nem records. `pushUninit` deixa uma linha morta que o chamador precisa construir; `fillHole(r)` faz swap-remove e devolve a entidade deslocada.
 - **`archetype`**: dono de uma `Table`, com `signature` (inclui tags) e `columnTypes` (só componentes com dados) — confundir os dois é a fonte clássica de coluna errada. Arestas `±ComponentId` memoizadas trazem o mapeamento de colunas `sourceToDestination` pronto. Arquétipos nunca são removidos; ponteiros são estáveis.
 - **`world`**: único dono dos `EntityRecord` e único que chama `fillHole`, então a correção do record da entidade deslocada vive num só lugar. Mantém `bySignature_` e `componentIndex_[cid]` (arquétipos que contêm `cid` + índice de coluna), atualizados só em `findOrCreate`, que também registra o arquétipo novo nas queries existentes. Templates em `world.hpp` são finos e delegam para funções não-template por `ComponentId` (`addRaw`, `removeRaw` etc.) em `world.cpp`.
-- **`query`**: `Query<Ts...>` cacheada e de vida controlada pelo `World`, com matching incremental. `each`/`eachBlock` incrementam `iterating_` (via `IterationGuard`); qualquer mudança estrutural direta com `iterating_ > 0` é erro de contrato (`ECS_ASSERT`). Mudanças durante iteração passam por `CommandBuffer`.
+- **`query`**: `Query<Ts...>` cacheada e de vida controlada pelo `World`, com matching incremental. `each`/`eachBlock` incrementam `iterating_` (via `IterationGuard`); qualquer mudança estrutural direta com `iterating_ > 0` é erro de contrato (`ECS_ASSERT`). Mudanças durante iteração passam por `CommandBuffer`. `RawQuery` é a versão type-erased por `ComponentId` (`World::rawQuery`, `eachBlock(table, columns)`, `beginIteration`/`endIteration` para a API C) e `CommandBuffer::addRaw` é o equivalente de `add<T>`; as APIs template **não** delegam para elas, porque isso poria indireção no caminho quente e mexeria em NF-P1/P2.
 - **`command_buffer`**: `spawn()` reserva o índice na hora (record com `archetype == nullptr`); `flush` agrupa por entidade, resolve conflitos (R-CB-4) e faz **uma única transição por entidade** até o arquétipo final.
 
 Validade: qualquer mudança estrutural invalida ponteiros/spans de qualquer entidade; só `Entity` é handle estável.
+
+## Engine (`engine/`)
+
+Camada acima do `world` (nada em `include/ecs/` ou `src/` inclui `engine/`): núcleo C++ com API C `extern "C"` (`engine/src/c_api.cpp`), pacote TS (`engine/ts/`), gerador C++ do esquema (`engine/generator/`) e jogo mínimo de teste (`engine/fixture/`). Só `engine/fixture/` conhece nomes de jogo. Tudo de node/TS roda no serviço `wasm`.
+
+```sh
+WC="docker compose run --rm wasm"
+$WC make engine-ts        # npm ci (se preciso) + tsc -> build/ts/
+$WC make engine-test      # engine-ts + ctest no preset wasm-engine (ECS em WASM, engine_c_api, testes TS)
+$WC sh -c 'make engine-ts && make test PRESET=wasm-engine-release T=engine_ts'   # Release: só as validações TS seguram os erros
+$WC node build/ts/bench/boundary.js --module build/wasm-engine-release/engine/fixture_game.mjs --out bench/results/engine/boundary_fase1.json --commit $(git rev-parse --short HEAD)
+```
+
+Presets `wasm-engine` (Debug, asserts) e `wasm-engine-release`; exigem `make engine-ts` antes de configurar. O esquema é um arquivo TS (`defineSchema`); o mesmo layout vai para o runtime e para o C++ gerado (`static_assert` + hash conferido por `loadEngine`, `SchemaMismatchError` se o WASM estiver desatualizado).
+
+Regras da ponte: views (`Block.read`/`write`) só valem dentro do callback de `eachBlock`; só `Entity` é handle estável. Toda chamada que pode alocar no WASM passa pela `Bridge`, que faz `sync()` (recria as views do heap se a memória cresceu); ninguém fora dela chama exports. O TS valida o uso antes de chamar a API C (erro = `EngineContractError`), para nunca chegar ao `ECS_ASSERT`.
 
 ## Corretude
 

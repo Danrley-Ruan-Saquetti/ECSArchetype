@@ -14,6 +14,7 @@ compare sempre razões medidas na mesma execução. Commit de referência dos n�
 | `m4_flush.json` | Flush coalescido vs adds diretos (task 18) | NF-P5 |
 | `m5_perf_fragmented.txt` | `perf stat` de `BM_IterateFragmented/A` (task 20) | — |
 | `e1_iterate.json`, `e1_fragmented.json`, `e1_flush.json` | Reexecução após `RawQuery`/`addRaw` (engine fase 1, task 2) | NF-P1, NF-P2, NF-P5 |
+| `engine/boundary_fase1.json` | Fronteira WASM↔TS da engine; ver `engine/README.md` (engine fase 1, task 8) | — |
 
 ## NF-P5 — situação
 
