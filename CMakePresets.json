@@ -78,6 +78,16 @@
         "CMAKE_BUILD_TYPE": "Debug", "ECS_SANITIZE": "OFF",
         "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "OFF"
       }
+    },
+    {
+      "name": "wasm-engine", "inherits": "wasm-debug",
+      "cacheVariables": { "ENGINE_BUILD_FIXTURE": "ON" }
+    },
+    {
+      "name": "wasm-engine-release", "inherits": "wasm-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release", "ECS_ENABLE_ASSERTS": "0", "ENGINE_BUILD_FIXTURE": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -90,7 +100,9 @@
     { "name": "native-clang-avx2", "configurePreset": "native-clang-avx2" },
     { "name": "wasm-scalar", "configurePreset": "wasm-scalar" },
     { "name": "wasm-simd", "configurePreset": "wasm-simd" },
-    { "name": "wasm-debug", "configurePreset": "wasm-debug" }
+    { "name": "wasm-debug", "configurePreset": "wasm-debug" },
+    { "name": "wasm-engine", "configurePreset": "wasm-engine" },
+    { "name": "wasm-engine-release", "configurePreset": "wasm-engine-release" }
   ],
   "testPresets": [
     { "name": "debug-asan", "configurePreset": "debug-asan", "output": { "outputOnFailure": true } },
@@ -101,6 +113,8 @@
     { "name": "native-clang-avx2", "configurePreset": "native-clang-avx2", "output": { "outputOnFailure": true } },
     { "name": "wasm-scalar", "configurePreset": "wasm-scalar", "output": { "outputOnFailure": true } },
     { "name": "wasm-simd", "configurePreset": "wasm-simd", "output": { "outputOnFailure": true } },
-    { "name": "wasm-debug", "configurePreset": "wasm-debug", "output": { "outputOnFailure": true } }
+    { "name": "wasm-debug", "configurePreset": "wasm-debug", "output": { "outputOnFailure": true } },
+    { "name": "wasm-engine", "configurePreset": "wasm-engine", "output": { "outputOnFailure": true } },
+    { "name": "wasm-engine-release", "configurePreset": "wasm-engine-release", "output": { "outputOnFailure": true } }
   ]
 }

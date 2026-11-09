@@ -27,3 +27,7 @@ all: test
 engine-ts:
 	cd engine && ([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build
 .PHONY: engine-ts
+
+engine-test: engine-ts
+	$(MAKE) test PRESET=wasm-engine
+.PHONY: engine-test
