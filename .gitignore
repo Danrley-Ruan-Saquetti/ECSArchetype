@@ -1,2 +1,4 @@
 build
 .superpowers
+*.local.*
+*.log
