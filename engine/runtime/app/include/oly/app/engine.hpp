@@ -41,6 +41,7 @@ namespace oly::app {
     bool pauseRequested_ = false;
     bool pausedThisStep_ = false;
     bool inFrame_ = false;
+    bool hidden_ = false;
 
    public:
     explicit Engine(ecs::World& world, EngineConfig config = {});
@@ -55,6 +56,8 @@ namespace oly::app {
     void setWhilePaused(SystemId system, bool whilePaused);
 
     void frame(double nowSeconds);
+    // Oculto, frame não faz nada; ao mostrar, o próximo frame só registra o tempo. Não mexe na pausa do jogo.
+    void setHidden(bool hidden);
 
     void pause() noexcept {
       pauseRequested_ = true;
@@ -79,6 +82,8 @@ namespace oly::app {
     }
 
    private:
+    void restartClock();
+    void recoverFromInterruptedFrame();
     void runFixedStep();
     void runPhase(Phase phase);
     void captureActions() {}

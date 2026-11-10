@@ -20,6 +20,8 @@ namespace oly::app {
   }
 
   SystemId Engine::addSystem(Phase phase, std::string_view name, SystemFunction function, void* userData) {
+    OLY_ASSERT(!inFrame_, "addSystem: sistema \"%.*s\" registrado durante frame", static_cast<int>(name.size()), name.data());
+
     const SystemId id = static_cast<SystemId>(systemLocations_.size());
     std::vector<SystemEntry>& entries = phases_[static_cast<uint32_t>(phase)];
 
@@ -30,15 +32,45 @@ namespace oly::app {
 
   void Engine::setWhilePaused(SystemId system, bool whilePaused) {
     const auto [phase, position] = systemLocations_[system];
-    phases_[static_cast<uint32_t>(phase)][position].whilePaused = whilePaused;
+    SystemEntry& entry = phases_[static_cast<uint32_t>(phase)][position];
+    OLY_ASSERT(isGameplayPhase(phase), "setWhilePaused: sistema \"%s\" de render não pode ter whilePaused", entry.name.c_str());
+
+    entry.whilePaused = whilePaused;
+  }
+
+  void Engine::setHidden(bool hidden) {
+    hidden_ = hidden;
+    restartClock();
+  }
+
+  void Engine::restartClock() {
+    accumulator_ = 0.0;
+    hasLastTime_ = false;
+  }
+
+  // Uma exceção de sistema (ex.: JS desenrolando o WASM sem destrutores) deixa inFrame_ ligado.
+  void Engine::recoverFromInterruptedFrame() {
+    commands_ = world_.commands();
+    inFrame_ = false;
+    restartClock();
   }
 
   void Engine::frame(double nowSeconds) {
+    if (inFrame_) {
+      recoverFromInterruptedFrame();
+    }
+
+    if (hidden_) {
+      return;
+    }
+
     if (!hasLastTime_) {
       lastTime_ = nowSeconds;
       hasLastTime_ = true;
       return;
     }
+
+    OLY_ASSERT(nowSeconds >= lastTime_, "frame: tempo %f menor que o anterior %f", nowSeconds, lastTime_);
 
     inFrame_ = true;
     accumulator_ += nowSeconds - lastTime_;
