@@ -32,21 +32,30 @@ namespace {
   }
 }
 
-TEST_CASE("frame interrompido por exceção se recupera") {
+TEST_CASE("exceção num sistema deixa o spawn adiado sem aplicar") {
   oly::ecs::World world;
   Engine engine(world);
   Shared shared;
   engine.addSystem(Phase::Update, "thrower", spawnThenThrowOnce, &shared);
-
   engine.frame(0.0);
+
   CHECK_THROWS(engine.frame(1.0 / 60));
+
   CHECK(!world.isAlive(shared.entity));
   CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("frame seguinte à exceção só registra o tempo e o próximo volta a rodar") {
+  oly::ecs::World world;
+  Engine engine(world);
+  Shared shared;
+  engine.addSystem(Phase::Update, "thrower", spawnThenThrowOnce, &shared);
+  engine.frame(0.0);
+  CHECK_THROWS(engine.frame(1.0 / 60));
 
   engine.frame(2.0 / 60);
-  CHECK(shared.stepsAfterFailure == 0);
-
   engine.frame(3.0 / 60);
+
   CHECK(shared.stepsAfterFailure == 1);
   CHECK_INVARIANTS(world);
 }

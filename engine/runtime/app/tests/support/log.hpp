@@ -26,6 +26,7 @@ struct Log {
 inline void recordName(oly::app::SystemContext& context) {
   Log& log = *static_cast<Log*>(context.userData());
   log.calls.push_back(std::string(context.name()));
+
   if (context.phase() == oly::app::Phase::Render) {
     log.interpolations.push_back(context.interpolation());
   } else {

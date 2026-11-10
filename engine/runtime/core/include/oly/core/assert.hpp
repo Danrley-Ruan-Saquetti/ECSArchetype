@@ -11,7 +11,8 @@
 namespace oly::core {
   using AssertHandler = void (*)(const char* message) noexcept;
 
-  // Instala o handler e devolve o anterior. Padrão: escreve em stderr e chama std::abort().
+  // Instala o handler e devolve o anterior; nullptr restaura o padrão (escreve em stderr e chama std::abort()).
+  // Se o handler retornar, o processo aborta mesmo assim.
   AssertHandler setAssertHandler(AssertHandler handler) noexcept;
 
   namespace detail {
@@ -24,11 +25,11 @@ namespace oly::core {
 }
 
 #if OLY_ENABLE_ASSERTS
-#define OLY_ASSERT(condition, ...)                                            \
-  do {                                                                        \
-    if (!(condition)) {                                                       \
+#define OLY_ASSERT(condition, ...)                                                  \
+  do {                                                                              \
+    if (!(condition)) {                                                             \
       ::oly::core::detail::assertFail(#condition, __FILE__, __LINE__, __VA_ARGS__); \
-    }                                                                         \
+    }                                                                               \
   } while (0)
 #else
 #define OLY_ASSERT(condition, ...) \

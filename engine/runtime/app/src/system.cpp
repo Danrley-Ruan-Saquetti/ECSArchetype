@@ -8,7 +8,8 @@
 
 namespace oly::app {
   namespace {
-    // Dentro de função: a ordem de inicialização estática entre arquivos não importa.
+    // Estático local, não global: OLY_SYSTEM registra durante a inicialização estática de outros arquivos, cuja
+    // ordem relativa a este não é definida.
     std::vector<std::pair<std::string, SystemFunction>>& namedSystems() {
       static std::vector<std::pair<std::string, SystemFunction>> systems;
       return systems;

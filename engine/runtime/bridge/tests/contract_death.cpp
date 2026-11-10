@@ -1,5 +1,5 @@
-// Testes de morte da API C: violações de contrato devem disparar OLY_ASSERT (só compilado com asserts ligados).
-// Uso: bridge_contract_death <caso>. Mesmo protocolo do contract_death do ecs.
+// Cada caso viola um contrato da API C e precisa disparar OLY_ASSERT com as substrings exigidas; só é compilado
+// com asserts ligados. Mesmo protocolo do contract_death do ecs.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -53,10 +53,9 @@ namespace {
 
     uint32_t blockCount = 0;
     const uintptr_t* descriptors = nullptr;
-    OlyIteration* first = olyQueryBegin(world, query, &blockCount, &descriptors);
-    OlyIteration* second = olyQueryBegin(world, query, &blockCount, &descriptors);
-    (void)second;
-    olyQueryEnd(world, first);
+    OlyIteration* outer = olyQueryBegin(world, query, &blockCount, &descriptors);
+    olyQueryBegin(world, query, &blockCount, &descriptors);
+    olyQueryEnd(world, outer);
   }
 
   void systemSpawnOutsideSystem() {

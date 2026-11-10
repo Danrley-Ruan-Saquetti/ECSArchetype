@@ -64,13 +64,11 @@ namespace oly::app {
     if (hidden_) {
       return;
     }
-
     if (!hasLastTime_) {
       lastTime_ = nowSeconds;
       hasLastTime_ = true;
       return;
     }
-
     OLY_ASSERT(nowSeconds >= lastTime_, "frame: tempo %f menor que o anterior %f", nowSeconds, lastTime_);
 
     inFrame_ = true;
@@ -88,6 +86,7 @@ namespace oly::app {
       ++stepsRun;
     }
 
+    // Descartar os passos que não couberam evita a espiral de atraso (spec game-engine-design §4.3).
     if (accumulator_ >= threshold) {
       accumulator_ = std::fmod(accumulator_, fixedDeltaTime_);
       if (accumulator_ >= threshold) {
@@ -101,6 +100,7 @@ namespace oly::app {
   }
 
   void Engine::runFixedStep() {
+    // Fixada no início: pause/resume pedidos por um sistema só valem no próximo passo.
     pausedThisStep_ = pauseRequested_;
 
     captureActions();

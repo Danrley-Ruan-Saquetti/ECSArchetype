@@ -58,6 +58,20 @@ namespace {
     A value{7};
     olySystemAdd(engine, entity.index, entity.generation, oly::ecs::componentId<A>(), &value);
   }
+
+  // Varre só os primeiros índices e gerações: bastam para os poucos spawns destes testes.
+  std::vector<OlyEntity> aliveEntities(OlyWorld* world) {
+    std::vector<OlyEntity> alive;
+    for (uint32_t index = 0; index < 4; ++index) {
+      for (uint32_t generation = 0; generation < 3; ++generation) {
+        if (olyEntityIsAlive(world, index, generation) == 1) {
+          alive.push_back(OlyEntity{index, generation});
+        }
+      }
+    }
+
+    return alive;
+  }
 }
 
 OLY_SYSTEM(bridgeTestNative) {
@@ -95,19 +109,9 @@ TEST_CASE("olySystemSpawn e olySystemAdd dentro do script são aplicados ao fim 
   fixture.step();
 
   OlyWorld* world = olyEngineWorld(fixture.engine);
-  OlyEntity entity{0, 0};
-  uint32_t found = 0;
-  for (uint32_t index = 0; index < 4; ++index) {
-    for (uint32_t generation = 0; generation < 3; ++generation) {
-      if (olyEntityIsAlive(world, index, generation) == 1) {
-        entity = OlyEntity{index, generation};
-        ++found;
-      }
-    }
-  }
-
-  REQUIRE(found == 1);
-  const A* value = static_cast<const A*>(olyComponentGet(world, entity.index, entity.generation, oly::ecs::componentId<A>()));
+  const std::vector<OlyEntity> alive = aliveEntities(world);
+  REQUIRE(alive.size() == 1);
+  const A* value = static_cast<const A*>(olyComponentGet(world, alive[0].index, alive[0].generation, oly::ecs::componentId<A>()));
   REQUIRE(value != nullptr);
   CHECK(value->value == 7);
   CHECK(fixture.invariantsHold());
@@ -115,19 +119,16 @@ TEST_CASE("olySystemSpawn e olySystemAdd dentro do script são aplicados ao fim 
 
 TEST_CASE("duas engines no mesmo processo: o invocador recebe a engine certa") {
   EngineFixture fixture;
-  OlyEngine* other = olyEngineCreate(60.0, 5);
+  EngineFixture other;
   olyEngineAddScriptSystem(fixture.engine, 1, "first");
-  olyEngineAddScriptSystem(other, 1, "second");
+  olyEngineAddScriptSystem(other.engine, 1, "second");
 
-  olyEngineFrame(other, 0.0);
-  olyEngineFrame(other, 1.0 / 60);
+  other.step();
 
   REQUIRE(!g_invocations.empty());
   for (const auto& [engine, systemId] : g_invocations) {
-    CHECK(engine == other);
+    CHECK(engine == other.engine);
   }
-
-  olyEngineDestroy(other);
 }
 
 TEST_CASE("olyEngineWorld serve à API de World existente") {

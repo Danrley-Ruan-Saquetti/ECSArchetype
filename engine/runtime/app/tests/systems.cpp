@@ -55,8 +55,8 @@ TEST_CASE("fases em ordem e, dentro da fase, ordem de registro") {
   engine.addSystem(Phase::UpdateBefore, "b", recordName, &log);
   engine.addSystem(Phase::UpdateAfter, "a", recordName, &log);
   engine.addSystem(Phase::Update, "u2", recordName, &log);
-
   engine.frame(0.0);
+
   engine.frame(1.0 / 60);
 
   CHECK(log.calls == std::vector<std::string>{"b", "u1", "u2", "a", "r"});
@@ -74,8 +74,8 @@ TEST_CASE("spawn adiado: viva só na fase seguinte") {
   Shared shared;
   engine.addSystem(Phase::Update, "spawn", spawnInUpdate, &shared);
   engine.addSystem(Phase::UpdateAfter, "observe", observeInUpdateAfter, &shared);
-
   engine.frame(0.0);
+
   engine.frame(1.0 / 60);
 
   CHECK(!shared.aliveInSameSystem);
@@ -89,8 +89,8 @@ TEST_CASE("comandos de render aplicados ao fim do frame") {
   Engine engine(world);
   Shared shared;
   engine.addSystem(Phase::Render, "spawn", spawnInRender, &shared);
-
   engine.frame(0.0);
+
   engine.frame(1.0 / 60);
 
   CHECK(world.isAlive(shared.entity));
@@ -103,8 +103,8 @@ TEST_CASE("destroy e add adiados na mesma fase resolvem como o CommandBuffer") {
   Shared shared;
   shared.entity = world.spawn(Position{});
   engine.addSystem(Phase::Update, "addAndDestroy", addAndDestroy, &shared);
-
   engine.frame(0.0);
+
   engine.frame(1.0 / 60);
 
   CHECK(!world.isAlive(shared.entity));

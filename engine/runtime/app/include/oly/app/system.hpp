@@ -53,6 +53,7 @@ namespace oly::app {
     float fixedDeltaTime() const noexcept;
     double time() const noexcept;
     float interpolation() const noexcept;
+
     void pause() noexcept;
     void resume() noexcept;
     bool paused() const noexcept;

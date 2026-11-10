@@ -1,5 +1,5 @@
-// Testes de morte do app: violações de contrato devem disparar OLY_ASSERT (só compilado com asserts ligados).
-// Uso: app_contract_death <caso>. Mesmo protocolo do contract_death do ecs.
+// Cada caso viola um contrato do app e precisa disparar OLY_ASSERT com as substrings exigidas; só é compilado com
+// asserts ligados. Mesmo protocolo do contract_death do ecs.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

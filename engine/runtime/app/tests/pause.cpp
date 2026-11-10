@@ -42,23 +42,35 @@ TEST_CASE("pausado: só whilePaused roda, relógio congela, render continua") {
   fixture.engine.setWhilePaused(pausedSystem, true);
   fixture.engine.addSystem(Phase::Render, "r", recordName, &fixture.log);
   fixture.engine.frame(0.0);
-
   fixture.engine.pause();
+
   fixture.step();
   fixture.step();
 
   CHECK(fixture.log.calls == std::vector<std::string>{"p", "r", "p", "r"});
   CHECK(fixture.engine.time() == 0.0);
+  CHECK_INVARIANTS(fixture.world);
+}
+
+TEST_CASE("resume volta a rodar os sistemas de gameplay no lugar dos whilePaused") {
+  Fixture fixture;
+  fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
+  const auto pausedSystem = fixture.engine.addSystem(Phase::Update, "p", recordName, &fixture.log);
+  fixture.engine.setWhilePaused(pausedSystem, true);
+  fixture.engine.addSystem(Phase::Render, "r", recordName, &fixture.log);
+  fixture.engine.frame(0.0);
+  fixture.engine.pause();
+  fixture.step();
+  fixture.log.calls.clear();
 
   fixture.engine.resume();
-  fixture.log.calls.clear();
   fixture.step();
 
   CHECK(fixture.log.calls == std::vector<std::string>{"u", "r"});
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("pause pedido por um sistema vale no próximo passo") {
+TEST_CASE("pause pedido por um sistema não interrompe o passo atual") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "pauser", pauseSelf, &fixture.log);
   fixture.engine.addSystem(Phase::UpdateAfter, "a", recordName, &fixture.log);
@@ -68,8 +80,17 @@ TEST_CASE("pause pedido por um sistema vale no próximo passo") {
 
   CHECK(fixture.log.calls == std::vector<std::string>{"pauser", "a"});
   CHECK(fixture.engine.paused());
+  CHECK_INVARIANTS(fixture.world);
+}
 
+TEST_CASE("pause pedido por um sistema vale no próximo passo") {
+  Fixture fixture;
+  fixture.engine.addSystem(Phase::Update, "pauser", pauseSelf, &fixture.log);
+  fixture.engine.addSystem(Phase::UpdateAfter, "a", recordName, &fixture.log);
+  fixture.engine.frame(0.0);
+  fixture.step();
   fixture.log.calls.clear();
+
   fixture.step();
 
   CHECK(fixture.log.calls.empty());
@@ -82,8 +103,8 @@ TEST_CASE("sistema whilePaused retoma pelo contexto") {
   fixture.engine.setWhilePaused(pausedSystem, true);
   fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
   fixture.engine.frame(0.0);
-
   fixture.engine.pause();
+
   fixture.step();
   fixture.step();
 
@@ -91,29 +112,39 @@ TEST_CASE("sistema whilePaused retoma pelo contexto") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("aba oculta ignora frames e o primeiro depois só registra o tempo") {
+TEST_CASE("aba oculta ignora frames") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
   fixture.engine.addSystem(Phase::Render, "r", recordName, &fixture.log);
   fixture.engine.frame(0.0);
+  fixture.engine.setHidden(true);
 
+  fixture.engine.frame(1.0);
+
+  CHECK(fixture.log.calls.empty());
+  CHECK_INVARIANTS(fixture.world);
+}
+
+TEST_CASE("primeiro frame depois da aba oculta só registra o tempo") {
+  Fixture fixture;
+  fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
+  fixture.engine.addSystem(Phase::Render, "r", recordName, &fixture.log);
+  fixture.engine.frame(0.0);
   fixture.engine.setHidden(true);
   fixture.engine.frame(1.0);
-  CHECK(fixture.log.calls.empty());
-
   fixture.engine.setHidden(false);
-  fixture.engine.frame(2.0);
-  CHECK(fixture.log.calls.empty());
 
+  fixture.engine.frame(2.0);
   fixture.engine.frame(2.0 + 1.0 / 60);
+
   CHECK(fixture.log.calls == std::vector<std::string>{"u", "r"});
   CHECK_INVARIANTS(fixture.world);
 }
 
 TEST_CASE("aba oculta não desfaz a pausa do jogo") {
   Fixture fixture;
-
   fixture.engine.pause();
+
   fixture.engine.setHidden(true);
   fixture.engine.setHidden(false);
 

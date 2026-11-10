@@ -4,6 +4,7 @@
 #include <new>
 
 namespace oly::core {
+  // `alignment` precisa ser potência de 2: o arredondamento é por máscara de bits.
   constexpr size_t alignUp(size_t value, size_t alignment) noexcept {
     return (value + alignment - 1) & ~(alignment - 1);
   }

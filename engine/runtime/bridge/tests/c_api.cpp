@@ -9,6 +9,9 @@
 #include "oly/bridge/world.hpp"
 
 namespace {
+  // 2 + readCount + writeCount para a query read A, write B: [count, entidades, coluna A, coluna B].
+  constexpr uint32_t DescriptorStrideReadAWriteB = 4;
+
   struct WorldFixture {
     OlyWorld* world = olyWorldCreate();
 
@@ -44,71 +47,105 @@ TEST_CASE("schema exposto pela API C") {
   CHECK(olyComponentSize(oly::ecs::componentId<Tag>()) == 0);
 }
 
-TEST_CASE("spawn, add, get, has, remove e destroy por ID") {
+TEST_CASE("olyComponentAdd por ID e olyComponentGet devolve o valor") {
   WorldFixture fixture;
-  OlyWorld* world = fixture.world;
+  const OlyEntity entity = fixture.spawn();
   const uint32_t idA = oly::ecs::componentId<A>();
-
-  OlyEntity entity = fixture.spawn();
-  CHECK(fixture.invariantsHold());
-
   A value{5};
-  olyComponentAdd(world, entity.index, entity.generation, idA, &value);
-  CHECK(static_cast<A*>(olyComponentGet(world, entity.index, entity.generation, idA))->value == 5);
-  CHECK(olyComponentHas(world, entity.index, entity.generation, idA) == 1);
+
+  olyComponentAdd(fixture.world, entity.index, entity.generation, idA, &value);
+
+  CHECK(static_cast<A*>(olyComponentGet(fixture.world, entity.index, entity.generation, idA))->value == 5);
+  CHECK(olyComponentHas(fixture.world, entity.index, entity.generation, idA) == 1);
   CHECK(fixture.invariantsHold());
+}
 
-  olyComponentRemove(world, entity.index, entity.generation, idA);
-  CHECK(olyComponentHas(world, entity.index, entity.generation, idA) == 0);
-  CHECK(olyComponentGet(world, entity.index, entity.generation, idA) == nullptr);
+TEST_CASE("olyComponentRemove por ID tira o componente") {
+  WorldFixture fixture;
+  const OlyEntity entity = fixture.spawn();
+  const uint32_t idA = oly::ecs::componentId<A>();
+  A value{5};
+  olyComponentAdd(fixture.world, entity.index, entity.generation, idA, &value);
+
+  olyComponentRemove(fixture.world, entity.index, entity.generation, idA);
+
+  CHECK(olyComponentHas(fixture.world, entity.index, entity.generation, idA) == 0);
+  CHECK(olyComponentGet(fixture.world, entity.index, entity.generation, idA) == nullptr);
   CHECK(fixture.invariantsHold());
+}
 
-  olyComponentAdd(world, entity.index, entity.generation, oly::ecs::componentId<Tag>(), nullptr);
-  CHECK(olyComponentHas(world, entity.index, entity.generation, oly::ecs::componentId<Tag>()) == 1);
-  CHECK(olyComponentGet(world, entity.index, entity.generation, oly::ecs::componentId<Tag>()) == nullptr);
+TEST_CASE("tag adicionada por ID existe mas não tem dados") {
+  WorldFixture fixture;
+  const OlyEntity entity = fixture.spawn();
+  const uint32_t idTag = oly::ecs::componentId<Tag>();
 
-  olyEntityDestroy(world, entity.index, entity.generation);
-  CHECK(olyEntityIsAlive(world, entity.index, entity.generation) == 0);
-  CHECK(olyComponentGet(world, entity.index, entity.generation, idA) == nullptr);
+  olyComponentAdd(fixture.world, entity.index, entity.generation, idTag, nullptr);
+
+  CHECK(olyComponentHas(fixture.world, entity.index, entity.generation, idTag) == 1);
+  CHECK(olyComponentGet(fixture.world, entity.index, entity.generation, idTag) == nullptr);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("olyEntityDestroy mata a entidade e seus componentes deixam de ser acessíveis") {
+  WorldFixture fixture;
+  const OlyEntity entity = fixture.spawn();
+  const uint32_t idA = oly::ecs::componentId<A>();
+  A value{5};
+  olyComponentAdd(fixture.world, entity.index, entity.generation, idA, &value);
+
+  olyEntityDestroy(fixture.world, entity.index, entity.generation);
+
+  CHECK(olyEntityIsAlive(fixture.world, entity.index, entity.generation) == 0);
+  CHECK(olyComponentGet(fixture.world, entity.index, entity.generation, idA) == nullptr);
   CHECK(fixture.invariantsHold());
 }
 
 TEST_CASE("olyQueryBegin entrega descritores por bloco") {
   WorldFixture fixture;
-  OlyWorld* world = fixture.world;
-  for (uint64_t i = 1; i <= 3; ++i) {
-    fixture.ecs().spawn(A{i}, B{0, 0});
+  for (uint64_t value = 1; value <= 3; ++value) {
+    fixture.ecs().spawn(A{value}, B{0, 0});
   }
-  for (uint64_t i = 10; i <= 20; i += 10) {
-    fixture.ecs().spawn(A{i}, B{0, 0}, Tag{});
+  for (uint64_t value = 10; value <= 20; value += 10) {
+    fixture.ecs().spawn(A{value}, B{0, 0}, Tag{});
   }
-
   const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
-  OlyQuery* query = olyQueryCreate(world, ids, 1, 1, 0, 0);
-
+  OlyQuery* query = olyQueryCreate(fixture.world, ids, 1, 1, 0, 0);
   uint32_t blockCount = 0;
   const uintptr_t* descriptors = nullptr;
-  OlyIteration* iteration = olyQueryBegin(world, query, &blockCount, &descriptors);
+
+  OlyIteration* iteration = olyQueryBegin(fixture.world, query, &blockCount, &descriptors);
+
   CHECK(blockCount == 2);
   CHECK(fixture.ecs().isIterating());
-
   uint64_t sum = 0;
   uint32_t rows = 0;
   for (uint32_t block = 0; block < blockCount; ++block) {
-    const uintptr_t* descriptor = descriptors + block * 4;
+    const uintptr_t* descriptor = descriptors + block * DescriptorStrideReadAWriteB;
     const auto* entities = reinterpret_cast<const oly::ecs::Entity*>(descriptor[1]);
-    const auto* a = reinterpret_cast<const A*>(descriptor[2]);
+    const auto* columnA = reinterpret_cast<const A*>(descriptor[2]);
     CHECK(descriptor[3] != 0);
     for (uint32_t row = 0; row < descriptor[0]; ++row) {
-      sum += a[row].value;
+      sum += columnA[row].value;
       CHECK(fixture.ecs().isAlive(entities[row]));
       ++rows;
     }
   }
   CHECK(rows == 5);
   CHECK(sum == 36);
+  olyQueryEnd(fixture.world, iteration);
+}
 
-  olyQueryEnd(world, iteration);
+TEST_CASE("olyQueryEnd encerra a iteração") {
+  WorldFixture fixture;
+  fixture.ecs().spawn(A{1}, B{0, 0});
+  const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
+  OlyQuery* query = olyQueryCreate(fixture.world, ids, 1, 1, 0, 0);
+  uint32_t blockCount = 0;
+  const uintptr_t* descriptors = nullptr;
+  OlyIteration* iteration = olyQueryBegin(fixture.world, query, &blockCount, &descriptors);
+
+  olyQueryEnd(fixture.world, iteration);
+
   CHECK_FALSE(fixture.ecs().isIterating());
   CHECK(fixture.invariantsHold());
 }
@@ -124,30 +161,27 @@ TEST_CASE("olyQueryCreate é cacheada") {
 
 TEST_CASE("olyQueryBegin aninhado preserva os descritores do externo") {
   WorldFixture fixture;
-  OlyWorld* world = fixture.world;
-  for (uint64_t i = 0; i < 4; ++i) {
-    fixture.ecs().spawn(A{i}, B{0, 0});
+  for (uint64_t value = 0; value < 4; ++value) {
+    fixture.ecs().spawn(A{value}, B{0, 0});
   }
   fixture.ecs().spawn(A{9}, B{0, 0}, Tag{});
-
   const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
-  OlyQuery* query = olyQueryCreate(world, ids, 1, 1, 0, 0);
-
+  OlyQuery* query = olyQueryCreate(fixture.world, ids, 1, 1, 0, 0);
   uint32_t outerBlocks = 0;
   const uintptr_t* outer = nullptr;
-  OlyIteration* outerIteration = olyQueryBegin(world, query, &outerBlocks, &outer);
-  std::vector<uintptr_t> outerCopy(outer, outer + outerBlocks * 4);
-
+  OlyIteration* outerIteration = olyQueryBegin(fixture.world, query, &outerBlocks, &outer);
+  const std::vector<uintptr_t> outerCopy(outer, outer + outerBlocks * DescriptorStrideReadAWriteB);
   uint32_t innerBlocks = 0;
   const uintptr_t* inner = nullptr;
-  OlyIteration* innerIteration = olyQueryBegin(world, query, &innerBlocks, &inner);
+
+  OlyIteration* innerIteration = olyQueryBegin(fixture.world, query, &innerBlocks, &inner);
+  olyQueryEnd(fixture.world, innerIteration);
+
   CHECK(innerBlocks == outerBlocks);
   CHECK(inner != outer);
-  olyQueryEnd(world, innerIteration);
   CHECK(fixture.ecs().isIterating());
-
   CHECK(std::memcmp(outer, outerCopy.data(), outerCopy.size() * sizeof(uintptr_t)) == 0);
-  olyQueryEnd(world, outerIteration);
+  olyQueryEnd(fixture.world, outerIteration);
   CHECK_FALSE(fixture.ecs().isIterating());
   CHECK(fixture.invariantsHold());
 }
@@ -164,9 +198,9 @@ TEST_CASE("iteração repetida reaproveita o slot") {
   fixture.ecs().spawn(A{1});
   const uint32_t ids[] = {oly::ecs::componentId<A>()};
   OlyQuery* query = olyQueryCreate(fixture.world, ids, 1, 0, 0, 0);
-
   uint32_t blockCount = 0;
   const uintptr_t* descriptors = nullptr;
+
   OlyIteration* first = olyQueryBegin(fixture.world, query, &blockCount, &descriptors);
   olyQueryEnd(fixture.world, first);
   OlyIteration* second = olyQueryBegin(fixture.world, query, &blockCount, &descriptors);

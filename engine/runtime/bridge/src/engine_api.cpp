@@ -8,6 +8,7 @@
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 
+// Module.olyInvokeScript é instalado pelo Runtime de @oly/core (runtime.ts) antes de qualquer frame.
 EM_JS(void, olyHostInvokeScript, (OlyEngine * engine, uint32_t systemId), { Module["olyInvokeScript"](engine, systemId); });
 #endif
 
@@ -23,7 +24,6 @@ namespace oly::bridge {
 
     ScriptInvoker g_invoker = &defaultInvoker;
 
-    // O sistema de script é, para o núcleo, uma função C++ que chama o invocador uma vez.
     void runScriptSystem(oly::app::SystemContext& context) {
       OlyEngine* engine = static_cast<OlyEngine*>(context.userData());
 
@@ -54,7 +54,6 @@ namespace oly::bridge {
   ScriptInvoker setScriptInvoker(ScriptInvoker invoker) noexcept {
     const ScriptInvoker previous = g_invoker;
     g_invoker = invoker;
-
     return previous;
   }
 }
@@ -118,7 +117,6 @@ uint32_t olyEngineAddNativeSystem(OlyEngine* engine, uint32_t phase, const char*
 
 uint32_t olyEngineAddScriptSystem(OlyEngine* engine, uint32_t phase, const char* name) {
   const oly::app::Phase checkedPhase = oly::bridge::phaseOf(phase, "olyEngineAddScriptSystem");
-
   return engine->engine.addSystem(checkedPhase, name, &oly::bridge::runScriptSystem, engine);
 }
 
