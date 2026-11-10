@@ -63,16 +63,23 @@ namespace {
   }
 
   void systemSpawnOutsideSystem() {
-    OlyEngine* engine = olyEngineCreate(60.0, 5);
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
     OlyEntity entity{};
 
     olySystemSpawn(engine, &entity);
   }
 
   void enginePhaseOutOfRange() {
-    OlyEngine* engine = olyEngineCreate(60.0, 5);
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
 
     olyEngineAddScriptSystem(engine, 4, "x");
+  }
+
+  void engineEmitOutOfRange() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+    uint32_t value = 0;
+
+    olyEngineEmit(engine, 5, &value);
   }
 
   struct Case {
@@ -87,6 +94,7 @@ int main(int argumentCount, char** arguments) {
     {"query_end_out_of_order", queryEndOutOfOrder, {"olyQueryEnd", "fora de ordem"}},
     {"system_spawn_outside_system", systemSpawnOutsideSystem, {"olySystemSpawn", "fora de sistema"}},
     {"engine_phase_out_of_range", enginePhaseOutOfRange, {"phase"}},
+    {"engine_emit_out_of_range", engineEmitOutOfRange, {"olyEngineEmit", "eventType"}},
   };
 
   if (argumentCount != 2) {

@@ -228,8 +228,8 @@ export class Bridge {
     this.module._olyQueryEnd(world, iteration);
   }
 
-  engineCreate(fixedHz: number, maxStepsPerFrame: number): number {
-    const engine = this.module._olyEngineCreate(fixedHz, maxStepsPerFrame) >>> 0;
+  engineCreate(fixedHz: number, maxStepsPerFrame: number, maxEventRounds: number): number {
+    const engine = this.module._olyEngineCreate(fixedHz, maxStepsPerFrame, maxEventRounds) >>> 0;
     this.sync();
 
     return engine;

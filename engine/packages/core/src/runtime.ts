@@ -85,7 +85,7 @@ export class Runtime {
     this.#bridge = new Bridge(module, schema);
     this.#componentIds = schema.types.map((_, index) => module._olySchemaComponentId(index));
 
-    module.olyInvokeScript = (engineHandle, systemId) => {
+    module.olyInvokeScript = (engineHandle, _kind, systemId) => {
       const engine = this.#engines.get(engineHandle);
       if (engine === undefined) {
         throw new ContractError(`olyInvokeScript engine=${engineHandle}: Engine desconhecida ou já liberada`);
@@ -105,7 +105,7 @@ export class Runtime {
       throw new ContractError(`createEngine maxStepsPerFrame=${maxStepsPerFrame}: deve ser um inteiro positivo`);
     }
 
-    const handle = this.#bridge.engineCreate(fixedHz, maxStepsPerFrame);
+    const handle = this.#bridge.engineCreate(fixedHz, maxStepsPerFrame, 16);
     const world = new World(this, this.#bridge.engineWorld(handle), false);
     const engine = new Engine(this, handle, world, () => {
       this.#engines.delete(handle);

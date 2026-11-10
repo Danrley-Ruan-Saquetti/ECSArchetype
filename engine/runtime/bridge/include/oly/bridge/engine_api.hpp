@@ -7,10 +7,17 @@
 struct OlyEngine;
 
 #define OLY_INVALID_SYSTEM 0xFFFFFFFFu
+#define OLY_INVALID_HANDLER 0xFFFFFFFFu
+#define OLY_HANDLER_TYPE_MISMATCH 0xFFFFFFFEu
+
+// `kind` da chamada de volta única para o JS (olyHostInvokeScript).
+#define OLY_SCRIPT_SYSTEM 0u
+#define OLY_SCRIPT_HANDLER 1u
 
 extern "C" {
-// fixedHz e maxStepsPerFrame precisam ser positivos (OLY_ASSERT).
-OLY_API OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame);
+// fixedHz, maxStepsPerFrame e maxEventRounds precisam ser positivos (OLY_ASSERT). Declara, na ordem do esquema, todos
+// os eventos de oly::bridge::schemaEvents(): o índice do evento no esquema é o seu tipo de evento (eventType).
+OLY_API OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame, uint32_t maxEventRounds);
 OLY_API void olyEngineDestroy(OlyEngine* engine);
 // Pertence à engine: vale até olyEngineDestroy e nunca vai para olyWorldDestroy.
 OLY_API OlyWorld* olyEngineWorld(OlyEngine* engine);
@@ -31,6 +38,15 @@ OLY_API uint32_t olyEngineAddNativeSystem(OlyEngine* engine, uint32_t phase, con
 // O sistema é chamado pelo invocador de scripts (olyHostInvokeScript no WASM) com o id devolvido aqui.
 OLY_API uint32_t olyEngineAddScriptSystem(OlyEngine* engine, uint32_t phase, const char* name);
 OLY_API void olyEngineSetWhilePaused(OlyEngine* engine, uint32_t systemId, int32_t whilePaused);
+
+// eventType < olySchemaEventCount() (OLY_ASSERT). Copia o evento (o tamanho do tipo) para a fila; vale dentro e fora
+// de olyEngineFrame. Eventos emitidos são despachados no passo 4 do passo fixo, em lote por tipo.
+OLY_API void olyEngineEmit(OlyEngine* engine, uint32_t eventType, const void* value);
+// OLY_INVALID_HANDLER se não existe handler nativo com esse nome (registrado por OLY_HANDLER) e
+// OLY_HANDLER_TYPE_MISMATCH se o handler nomeado é de outro tipo de evento. Registrar durante olyEngineFrame é erro.
+OLY_API uint32_t olyEngineAddNativeHandler(OlyEngine* engine, uint32_t eventType, const char* name);
+// O handler é chamado pelo invocador de scripts uma vez por lote, com o id devolvido aqui.
+OLY_API uint32_t olyEngineAddScriptHandler(OlyEngine* engine, uint32_t eventType, const char* name);
 
 // Só valem dentro de um sistema de script (fora dele, OLY_ASSERT). Mudanças adiadas até o fim da fase.
 OLY_API void olySystemSpawn(OlyEngine* engine, OlyEntity* out);

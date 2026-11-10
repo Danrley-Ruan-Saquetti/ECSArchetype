@@ -33,7 +33,7 @@ export interface OlyModule {
   _olyQueryEnd(world: number, iteration: number): void;
   _olyWorldCheckInvariants(world: number, message: number, capacity: number): number;
 
-  _olyEngineCreate(fixedHz: number, maxStepsPerFrame: number): number;
+  _olyEngineCreate(fixedHz: number, maxStepsPerFrame: number, maxEventRounds: number): number;
   _olyEngineDestroy(engine: number): void;
   _olyEngineWorld(engine: number): number;
   _olyEngineFrame(engine: number, nowSeconds: number): void;
@@ -53,7 +53,7 @@ export interface OlyModule {
   _olySystemRemove(engine: number, index: number, generation: number, componentId: number): void;
 
   // Chamada de volta do núcleo (olyHostInvokeScript): o Runtime instala uma vez e despacha por engine.
-  olyInvokeScript?: (engine: number, systemId: number) => void;
+  olyInvokeScript?: (engine: number, kind: number, id: number, events: number, eventCount: number) => void;
 }
 
 export type OlyModuleFactory = () => Promise<OlyModule>;
