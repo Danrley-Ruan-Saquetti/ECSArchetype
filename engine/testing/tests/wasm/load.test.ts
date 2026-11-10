@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { SchemaMismatchError } from "@oly/core";
-import { loadRuntime } from "@oly/core";
-import { component, defineSchema, tag } from "@oly/core";
+import { SchemaMismatchError, component, defineSchema, loadRuntime, tag } from "@oly/core";
+
 import { fixtureFactory, loadFixture } from "./fixture.js";
 
 test("carrega com o esquema do fixture", async () => {

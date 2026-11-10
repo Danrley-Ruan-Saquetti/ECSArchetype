@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { entityGeneration, entityIndex } from "@oly/core";
-import { ContractError } from "@oly/core";
+import { ContractError, entityGeneration, entityIndex } from "@oly/core";
 import type { World } from "@oly/core";
+
 import { Enemy, Mixed, Player, Position, Velocity, loadFixture } from "./fixture.js";
 
 const { runtime, fixture } = await loadFixture();

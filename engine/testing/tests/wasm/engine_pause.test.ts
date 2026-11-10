@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { ContractError, Phase } from "@oly/core";
 import type { Engine } from "@oly/core";
+
 import { Position, loadFixture } from "./fixture.js";
 
 const { runtime } = await loadFixture();

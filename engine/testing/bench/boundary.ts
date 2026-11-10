@@ -1,12 +1,10 @@
 import { writeFileSync } from "node:fs";
 
+import type { Entity, Query, Runtime, World } from "@oly/core";
+import { moduleOf, type OlyModule } from "@oly/core/internal";
+
 import { Position, Velocity } from "../fixture/schema.js";
 import { expectedPositionX, loadBenchRuntime, median, parseOptions, rotated } from "./common.js";
-import type { Entity } from "@oly/core";
-import { moduleOf, type OlyModule } from "@oly/core/internal";
-import type { Query } from "@oly/core";
-import type { Runtime } from "@oly/core";
-import type { World } from "@oly/core";
 
 const DeltaTime = Math.fround(1 / 60);
 const WarmupIterations = 50;

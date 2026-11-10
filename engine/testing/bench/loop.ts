@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 
 import { Phase } from "@oly/core";
 import type { Engine, Entity, Runtime, SystemContext } from "@oly/core";
+
 import { Position, Velocity } from "../fixture/schema.js";
 import { expectedPositionX, loadBenchRuntime, median, parseOptions, rotated } from "./common.js";
 
@@ -69,6 +70,7 @@ function makeEngineCase(runtime: Runtime, name: string, setup: (engine: Engine) 
   for (let index = 0; index < entityCount; ++index) {
     engine.world.spawn([Position, Velocity], { Position: { x: 0, y: 0 }, Velocity: { x: 1, y: 2 } });
   }
+
   setup(engine);
   engine.frame(0);
   let executed = 0;
@@ -122,8 +124,7 @@ function summarize(samples: number[]): Summary {
   return { median: median(samples), min: Math.min(...samples), max: Math.max(...samples), samples };
 }
 
-// Aquecimento, depois rodadas intercaladas com a ordem girando; devolve ns por passo.
-function measure(cases: Case[], stepsPerSample: number, rounds: number): Map<string, Summary> {
+function measureNanosecondsPerStep(cases: Case[], stepsPerSample: number, rounds: number): Map<string, Summary> {
   const samples = new Map<string, number[]>(cases.map((entry) => [entry.name, []]));
 
   for (const entry of cases) {
@@ -171,6 +172,7 @@ function addGrouped(engine: Engine, native: number, script: number): void {
   for (let index = 0; index < native; ++index) {
     addNativeNoop(engine);
   }
+
   for (let index = 0; index < script; ++index) {
     addScriptNoop(engine);
   }
@@ -190,7 +192,7 @@ function measureEmptySystems(runtime: Runtime, rounds: number): EmptySystemsRow[
       makeEngineCase(runtime, "ts", (engine) => addGrouped(engine, 0, count)),
       makeEngineCase(runtime, "zero", () => {}),
     ];
-    const summaries = measure(cases, EmptySteps, rounds);
+    const summaries = measureNanosecondsPerStep(cases, EmptySteps, rounds);
     cases.forEach((entry) => entry.dispose());
 
     const cpp = summaries.get("cpp")!;
@@ -214,7 +216,7 @@ function measureInterleaving(runtime: Runtime, rounds: number): InterleavingRow[
       makeEngineCase(runtime, "alternado", (engine) => addAlternating(engine, half)),
       makeEngineCase(runtime, "agrupado", (engine) => addGrouped(engine, half, half)),
     ];
-    const summaries = measure(cases, EmptySteps, rounds);
+    const summaries = measureNanosecondsPerStep(cases, EmptySteps, rounds);
     cases.forEach((entry) => entry.dispose());
 
     const alternado = summaries.get("alternado")!;
@@ -232,7 +234,7 @@ function measureBoundaryInLoop(runtime: Runtime, sizes: number[], rounds: number
       makeEngineCase(runtime, "ts-loop", (engine) => void engine.addSystem(Phase.Update, "move", moveTsSystem), size),
       makeManualCase(size),
     ];
-    const summaries = measure(cases, Math.ceil(TargetWork / size), rounds);
+    const summaries = measureNanosecondsPerStep(cases, Math.ceil(TargetWork / size), rounds);
     correct = verifyPositions(cases, `N=${size}`) && correct;
     cases.forEach((entry) => entry.dispose());
 

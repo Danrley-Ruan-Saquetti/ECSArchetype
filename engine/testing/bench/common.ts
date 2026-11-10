@@ -1,8 +1,9 @@
 import { pathToFileURL } from "node:url";
 
-import schema from "../fixture/schema.js";
 import type { OlyModuleFactory } from "@oly/core";
 import { loadRuntime, type Runtime } from "@oly/core";
+
+import schema from "../fixture/schema.js";
 
 export interface Options {
   modulePath: string;

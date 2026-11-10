@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { ContractError, Phase } from "@oly/core";
 import type { Engine, SystemContext } from "@oly/core";
 import { moduleOf } from "@oly/core/internal";
+
 import { Position, Trace, loadFixture } from "./fixture.js";
 
 const { runtime, fixture } = await loadFixture();
@@ -17,7 +18,6 @@ function createEngine(): Engine {
   return engine;
 }
 
-// Cada chamada avança um passo fixo: frame(k / 60) com k crescente.
 function stepper(engine: Engine): () => void {
   let step = 0;
 

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { ContractError } from "@oly/core";
-import type { Block } from "@oly/core";
-import type { World } from "@oly/core";
+import type { Block, World } from "@oly/core";
 import { bridgeOf, moduleOf } from "@oly/core/internal";
+
 import { Enemy, Mixed, Player, Position, Velocity, loadFixture } from "./fixture.js";
 
 const { runtime, fixture } = await loadFixture();
@@ -21,9 +21,9 @@ function withWorld(body: (world: World) => void): void {
 
 function spawnMovers(world: World, count: number): number[] {
   const entities: number[] = [];
-  for (let i = 0; i < count; ++i) {
-    const types = i % 2 === 0 ? ([Position, Velocity] as const) : ([Position, Velocity, Enemy] as const);
-    entities.push(world.spawn(types, { Position: { x: i, y: 0 }, Velocity: { x: 1, y: 2 } }));
+  for (let index = 0; index < count; ++index) {
+    const types = index % 2 === 0 ? ([Position, Velocity] as const) : ([Position, Velocity, Enemy] as const);
+    entities.push(world.spawn(types, { Position: { x: index, y: 0 }, Velocity: { x: 1, y: 2 } }));
   }
 
   return entities;
@@ -47,10 +47,10 @@ test("movimento no TS e no C++ dão o mesmo resultado", () => {
       fixture.fixtureMove(cppWorld.handle, 0.5);
 
       let expectedSum = 0;
-      for (let i = 0; i < count; ++i) {
-        assert.deepEqual(tsWorld.get(tsEntities[i]!, Position), { x: i + 0.5, y: 1 });
-        assert.deepEqual(cppWorld.get(cppEntities[i]!, Position), tsWorld.get(tsEntities[i]!, Position));
-        expectedSum += i + 0.5;
+      for (let index = 0; index < count; ++index) {
+        assert.deepEqual(tsWorld.get(tsEntities[index]!, Position), { x: index + 0.5, y: 1 });
+        assert.deepEqual(cppWorld.get(cppEntities[index]!, Position), tsWorld.get(tsEntities[index]!, Position));
+        expectedSum += index + 0.5;
       }
       assert.equal(fixture.fixtureSumPositionX(cppWorld.handle), expectedSum);
       assert.equal(fixture.fixtureSumPositionX(tsWorld.handle), expectedSum);
@@ -111,6 +111,7 @@ test("tabela esvaziada não gera bloco", () => {
   withWorld((world) => {
     const entity = world.spawn([Position]);
     const query = world.query({ read: [Position] });
+
     world.destroy(entity);
 
     let blocks = 0;
@@ -220,8 +221,8 @@ test("bloco usado fora do callback", () => {
 
 test("eachBlock aninhado na mesma query", () => {
   withWorld((world) => {
-    for (let i = 0; i < 10; ++i) {
-      world.spawn([Position], { Position: { x: i } });
+    for (let index = 0; index < 10; ++index) {
+      world.spawn([Position], { Position: { x: index } });
     }
     const query = world.query({ read: [Position] });
 
@@ -246,7 +247,7 @@ test("eachBlock aninhado na mesma query", () => {
 test("crescimento da memória durante eachBlock", () => {
   withWorld((world) => {
     const count = 100;
-    for (let i = 0; i < count; ++i) {
+    for (let index = 0; index < count; ++index) {
       world.spawn([Position]);
     }
 
@@ -269,9 +270,11 @@ test("crescimento da memória durante eachBlock", () => {
 test("dispose dentro de eachBlock é erro e o World segue usável", () => {
   withWorld((world) => {
     world.spawn([Position, Velocity]);
+
     world.query({ read: [Velocity], write: [Position] }).eachBlock(() => {
       assert.throws(() => world.dispose(), ContractError);
     });
+
     world.spawn([Position]);
   });
 });

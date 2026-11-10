@@ -15,6 +15,7 @@ test("struct na ordem de declaração", () => {
 
 test("static_asserts de tamanho e offsets", () => {
   const header = emitHeader(schema);
+
   assert.match(header, /sizeof\(P\) == 24 && alignof\(P\) == 8/);
   assert.match(header, /offsetof\(P, b\) == 8/);
   assert.match(header, /offsetof\(P, owner\) == 16/);
@@ -27,6 +28,7 @@ test("tag vira struct vazio", () => {
 
 test("registro com hash e ids na ordem", () => {
   const registry = emitRegistry(schema);
+
   assert.ok(registry.includes(`0x${schema.hash.toString(16)}u`));
   assert.match(registry, /oly::ecs::componentId<P>\(\),\s*oly::ecs::componentId<T>\(\)/);
   assert.match(registry, /namespace oly::bridge/);

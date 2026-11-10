@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import type { World } from "@oly/core";
 import { bridgeOf } from "@oly/core/internal";
+
 import { Position, Velocity, loadFixture } from "./fixture.js";
 
 const { runtime } = await loadFixture();
@@ -36,8 +37,8 @@ test("exceção no callback de eachBlock encerra a iteração", () => {
 
 test("eachBlock aninhado em outra query mantém o bloco externo", () => {
   withWorld((world) => {
-    for (let i = 0; i < 8; ++i) {
-      world.spawn([Position, Velocity], { Position: { x: i }, Velocity: { x: 100 + i } });
+    for (let index = 0; index < 8; ++index) {
+      world.spawn([Position, Velocity], { Position: { x: index }, Velocity: { x: 100 + index } });
     }
     const positions = world.query({ read: [Position] });
     const velocities = world.query({ read: [Velocity] });
@@ -64,8 +65,8 @@ test("eachBlock aninhado em outra query mantém o bloco externo", () => {
 test("query criada dentro de eachBlock (memória pode crescer) não corrompe o bloco externo", () => {
   withWorld((world) => {
     const entities: number[] = [];
-    for (let i = 0; i < 16; ++i) {
-      entities.push(world.spawn([Position, Velocity], { Position: { x: i * 3 }, Velocity: { x: i } }));
+    for (let index = 0; index < 16; ++index) {
+      entities.push(world.spawn([Position, Velocity], { Position: { x: index * 3 }, Velocity: { x: index } }));
     }
 
     world.query({ read: [Position] }).eachBlock((outer) => {
