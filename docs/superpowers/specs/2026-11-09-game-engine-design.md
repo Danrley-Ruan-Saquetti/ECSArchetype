@@ -8,6 +8,10 @@ Revisão de 2026-11-10 (antes da fase 2): a engine passa a ser completa em C++, 
 o loop sai do TS e vai para o C++ (§1, §2, §4, §4.3, §5, §7, §8). Nomes seguem a modularização
 (`2026-11-09-oly-modularizacao-design.md`): prefixo `oly`, `OLY_ASSERT`, módulos em `engine/runtime/<m>/`.
 
+Revisão de 2026-11-10 (antes da fase 3): §4.4 detalhado para os eventos — handlers recebem lotes por tipo,
+despacho tipo a tipo dentro de cada rodada da cascata, fluxo de referência da morte de um inimigo, e o jogo (não a
+engine) decide quando destruir a entidade. Medição da fase 3 no §7.
+
 Convenção deste documento: o que não vem marcado foi decidido pelo autor do projeto. Itens marcados
 **[decisão do design]** foram escolhas feitas ao escrever o documento, sem confirmação explícita; podem ser revistas
 no plano da fase correspondente sem voltar ao autor, desde que respeitem os objetivos e anti-objetivos.
@@ -234,19 +238,79 @@ E, por quadro do `requestAnimationFrame`: fase `render` (uma só vez, após os p
 
 ### 4.4 Eventos
 
-- Tipos de evento são declarados no esquema (§4.1); cada tipo tem uma fila.
+Objetivo da fase (do autor): eventos escritos em C++ tanto quanto possível. TS entra só onde o navegador é preciso
+(ex.: áudio). Um jogo só em C++ usa eventos inteiros pela API C++.
+
+**Fluxo de referência** (aceito pelo autor como modelo; nomes são do jogo, não da engine):
+
+1. Um sistema C++ de dano, em `updateAfter`, reduz a vida. Quando ela chega a zero, ele emite
+   `EnemyDied { entity, x, y }` e **não** destrói a entidade.
+2. No passo 4, os handlers de `EnemyDied` rodam na ordem de registro, cada um recebendo o lote de mortes do passo:
+   `dropCoin` (C++, cria a moeda em `x, y`, pode emitir outro evento, que vira nova rodada da cascata),
+   `addScore` (C++), `playDeathSound` (TS, único em TS porque o áudio é do navegador) e `destroyDead` (C++,
+   registrado por último, destrói a entidade).
+3. Enquanto os handlers rodam, o inimigo ainda está vivo e qualquer handler pode ler componentes dele. Ao fim do
+   despacho, ele não existe mais.
+
+Consequências para a engine:
+- **Quem destrói é o jogo.** A engine garante a ordem dos handlers; "destruir no final" é registrar o handler que
+  destrói por último. Não existe destruição automática associada a um evento.
+- **A engine não tira eventos repetidos.** Duas balas que matam o mesmo inimigo no mesmo passo geram dois
+  `EnemyDied` no mesmo lote; os handlers do jogo lidam com isso (ex.: `destroyDead` confere `isAlive`). Isso vale
+  para qualquer handler que muda estrutura: uma entidade citada num evento pode já ter sido destruída por um handler
+  anterior, de um lote anterior ou de uma rodada anterior.
+
+Regras:
+- Tipos de evento são declarados no esquema (§4.1) com `event(nome, campos)`, os mesmos tipos escalares dos
+  componentes (inclusive `entity`); o gerador produz o struct C++ e o descritor TS, como para componentes. Eventos não
+  são componentes: têm um id próprio e não entram no `World`. Cada tipo tem uma fila.
+- **Declaração de tipos de evento na `Engine`, [decisão do design]:** o registro de tipos de evento (id denso,
+  tamanho, alinhamento e nome de cada fila) vive no `app`, não no código gerado. Um tipo precisa ser declarado na
+  `Engine` antes de ser emitido ou de receber handlers (algo como `engine.declareEvent<EnemyDied>()`; usar um tipo não
+  declarado é erro de contrato), e a **ordem de declaração é a ordem de despacho**. Um jogo só em C++ declara os
+  tipos à mão, sem esquema nem codegen; no caminho TS, o `bridge` declara os eventos do esquema na ordem do esquema.
+  Assim a ordem de despacho é determinística e controlada pelo jogo nos dois caminhos.
 - Sistemas (C++ ou TS) e handlers **emitem**; ninguém reage na hora da emissão.
-- No passo 4 do loop, a engine **despacha** cada fila para os handlers registrados para aquele tipo, em C++ ou TS.
-  Ordem: a de emissão. **[decisão do design]** Quando há vários tipos pendentes, despachar na ordem global de emissão
-  ou tipo a tipo fica com o construtor, desde que seja determinística e documentada.
+- **Handler recebe um lote:** um handler é registrado para um tipo e é chamado **uma vez por lote**, com todos os
+  eventos pendentes daquele tipo na ordem de emissão (C++: algo como `std::span<const EnemyDied>`; TS: views sobre a
+  fila, com os mesmos acessores gerados dos blocos). **[decisão do design]** O handler percorre o lote; não há uma
+  chamada por evento, nem em C++.
+- **Ordem do despacho, [decisão do design]:** cada rodada tira um retrato de todas as filas não vazias e despacha
+  **tipo a tipo**, na ordem de declaração na `Engine` (no caminho TS, a ordem do esquema); dentro de um tipo, cada handler na ordem de registro recebe o
+  lote inteiro. Eventos emitidos durante a rodada vão para a rodada seguinte (não entram no lote em andamento, nem do
+  mesmo tipo). Assim o lote que um handler está lendo nunca muda nem se move enquanto ele roda. A ordem global de
+  emissão entre tipos diferentes **não** é preservada; isso fica documentado.
 - O despacho acontece fora da iteração de queries, então **handlers fazem mudanças estruturais diretamente** (sem
-  `CommandBuffer`).
+  `CommandBuffer`), em C++ e em TS. Handlers podem iniciar queries e iterá-las; dentro dessa iteração valem as regras
+  de sempre do ECS.
+- **Handlers C++** se registram pela API C++ (`engine.on<EnemyDied>(nome, função)` ou equivalente) e, para que o TS
+  possa encaixá-los na ordem, por nome com uma macro (ex.: `OLY_HANDLER(dropCoin, EnemyDied)`), que o TS adiciona
+  com `addNativeHandler`, como `OLY_SYSTEM`/`addNativeSystem`. **Handlers TS** usam a mesma chamada de volta única dos
+  sistemas TS (§4.3), uma vez por lote. Handlers C++ e TS de um mesmo tipo se misturam na ordem de registro.
+- **Pausa, [decisão do design]:** handlers rodam em todo passo fixo, pausado ou não; não existe `.whilePaused()` para
+  handlers. Pausado, só sistemas `.whilePaused()` rodam, então só eles (e seus handlers, em cascata) produzem eventos.
 - **Cascata no mesmo passo:** eventos emitidos durante o despacho são despachados em seguida, rodada após rodada,
-  até as filas esvaziarem. Existe um **limite de rodadas** (configurável); ultrapassá-lo é erro de contrato
-  (`OLY_ASSERT` no C++, erro equivalente no TS), com mensagem que nomeia o tipo de evento.
+  até as filas esvaziarem. Existe um **limite de rodadas** (configurável no `EngineConfig`; **[decisão do design]**
+  padrão 16); ultrapassá-lo é erro de contrato (`OLY_ASSERT` no C++, `ContractError` no TS antes de chegar ao
+  assert, se o TS puder detectar; senão o assert), com mensagem que nomeia o(s) tipo(s) de evento ainda pendentes.
 - As filas vivem na memória do WASM com o layout do esquema, para que sistemas C++ emitam sem cruzar a fronteira e
   handlers TS recebam um lote (views sobre a fila), não uma chamada por evento. **[decisão do design]**
+- **Emissão a partir do TS, [decisão do design]:** pode cruzar a fronteira uma vez por evento (`context.emit(EnemyDied,
+  {...})`); emitir de TS não é caminho quente do jogo de validação. Se o benchmark (§7) mostrar custo relevante, o
+  construtor pode acumular no TS e enviar em lote, sem mudar a API.
+- **Views de evento no TS e crescimento da memória:** um handler TS faz mudanças estruturais diretas, que podem
+  alocar no WASM e desanexar o `ArrayBuffer`. As views do lote não podem ficar inválidas em silêncio no meio do
+  handler: o construtor escolhe como (ex.: acessores que passam pela `Bridge` e se refazem após `sync()`, ou cópia
+  do lote para o JS antes de chamar o handler), e a escolha tem teste que força crescimento de memória dentro de um
+  handler. **[decisão do design]** o requisito; o mecanismo fica com o construtor.
+- Contexto do handler: o mesmo tipo de acesso do `SystemContext` (tempo, pausa, `get`/`tryGet`/`has`/`isAlive`,
+  queries, `emit`), mais mudanças estruturais **diretas** no lugar das adiadas. **[decisão do design]** Os nomes
+  (`HandlerContext` ou outro) ficam com o construtor.
+- **Exceção em handler TS:** mesma regra dos sistemas TS (§4.3): o passo é marcado como interrompido, e o `frame`
+  seguinte descarta os eventos pendentes junto com os comandos pendentes e se recupera. O que handlers anteriores já
+  fizeram fica.
 - Eventos do passo são descartados após o despacho; não sobrevivem ao passo.
+- Registro de handlers segue as regras do registro de sistemas: não pode acontecer durante `frame` (`OLY_ASSERT`).
 - **Eventos emitidos fora das fases do gameplay** (**[decisão do design]**):
   - em ações agendadas (passo 2): entram na fila e são despachados no passo 4 do mesmo passo fixo;
   - em `onExit`/`onEnter` (passo 5): depois da transição, se houver eventos pendentes, a engine roda um novo despacho
@@ -340,7 +404,7 @@ Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. 
 |---|------|---------|---------------|
 | 1 | **Ponte** | build WASM da engine com API C; pacote TS; esquema + gerador; spawn/destroy/get/set e `eachBlock` com views a partir do TS | um teste TS em node cria entidades, itera com views e o resultado bate com o lado C++; benchmark da fronteira (§7) registrado |
 | 2 | **Loop e fases** | módulo C++ com o loop (`frame`, `setHidden`, passo fixo, render, pausa), registro de sistemas C++ (por função e por nome) e TS (chamada de volta) nas fases, `CommandBuffer` por fase compartilhado pelas duas linguagens; host do navegador em `@oly/client` (rAF + `visibilitychange`); passos 1, 2, 4 e 5 do loop como lugares vazios | um teste C++ nativo roda o loop inteiro sem TS, com relógio falso; sistemas das duas linguagens rodam na ordem esperada (teste TS em node contra o WASM); pausa, aba oculta e `.whilePaused()` testados; medições do §7 registradas |
-| 3 | **Eventos** | filas tipadas pelo esquema, emissão nos dois lados, despacho com cascata e limite | testes de ordem, cascata e estouro do limite (caso de morte no C++) |
+| 3 | **Eventos** | `event` no esquema e no gerador; filas tipadas na memória do WASM; emissão nos dois lados; handlers C++ (por função e por nome) e TS por lote; despacho tipo a tipo com cascata e limite | teste C++ nativo do fluxo de referência (§4.4) sem TS, terminando com `checkInvariants` e o inimigo destruído; testes de ordem (tipo, registro, rodadas), cascata, estouro do limite (caso de morte no C++), evento duplicado, emissão na fase `render`, handlers C++ e TS misturados (teste TS em node contra o WASM), crescimento de memória dentro de handler TS e recuperação de exceção; medição do §7 registrada |
 | 4 | **Ações de input** | declaração de ações e ligações, snapshot por passo visível em C++ e TS | testes com entrada simulada, incluindo toque mais curto que um passo e sair da pausa por uma ação |
 | 5 | **Schedule** | `after`/`every`/cancelar no relógio do jogo, congelando na pausa | testes de ordem de disparo e de pausa com relógio falso |
 | 6 | **Estados** | estados, `onEnter`/`onExit`, `inState`, escopo de entidades e de ações agendadas | teste de `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`) |
@@ -374,6 +438,10 @@ só de 2 entre si; a ordem acima é a recomendada.
      intercalar linguagens custa mais que o número de chamadas de volta explica;
   3. o benchmark da fronteira (acima) repetido com os sistemas rodando dentro do loop.
   Sem meta numérica: os números dizem quanto custa ter o loop no C++ e orientam se vale agrupar sistemas TS.
+- Custo dos eventos (fase 3, **[decisão do design]**), na mesma execução, para N eventos de um tipo por passo:
+  1. um handler C++ contra um handler TS (custo da chamada de volta por lote e da leitura pelas views);
+  2. emissão de N eventos por um sistema C++ contra por um sistema TS (custo da emissão pela fronteira).
+  Sem meta numérica: os números dizem se vale emitir em lote a partir do TS.
 - Ambiente ruidoso (WSL2/Docker): só razões da mesma execução, como no ECS.
 - Resultados versionados em `docs/benchmarks/` com registro no `README.md` correspondente.
 
