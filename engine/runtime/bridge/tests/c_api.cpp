@@ -39,8 +39,8 @@ TEST_CASE("schema exposto pela API C") {
   CHECK(olySchemaHash() == 0x1234u);
   CHECK(olySchemaComponentCount() == 3);
   CHECK(olySchemaComponentId(1) == oly::ecs::componentId<B>());
-  CHECK(olyComponentSize(oly::ecs::componentId<A>()) == 8);
-  CHECK(olyComponentAlignment(oly::ecs::componentId<A>()) == 8);
+  CHECK(olyComponentSize(oly::ecs::componentId<A>()) == sizeof(A));
+  CHECK(olyComponentAlignment(oly::ecs::componentId<A>()) == alignof(A));
   CHECK(olyComponentSize(oly::ecs::componentId<Tag>()) == 0);
 }
 

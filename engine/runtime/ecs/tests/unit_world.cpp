@@ -8,7 +8,7 @@
 #include "components.hpp"
 #include "oly/ecs/world.hpp"
 
-TEST_CASE("create() nasce vivo no arquétipo raiz") {
+TEST_CASE("spawn() nasce vivo no arquétipo raiz") {
   oly::ecs::World world;
 
   auto entity = world.spawn();

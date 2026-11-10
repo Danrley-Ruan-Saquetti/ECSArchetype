@@ -20,19 +20,19 @@ Leia `CLAUDE.md` na raiz para a arquitetura em camadas (`type_info → entity �
 
 | Meta | O que exige | Como se confirma |
 |---|---|---|
-| NF-P1 | Iteração em 1M entidades num arquétipo ≤ 1,10× o SoA manual | razão em `bench_iterate` |
-| NF-P2 | O mesmo em 64 arquétipos ≤ 1,25× o SoA manual | razão em `bench_fragmented` |
+| NF-P1 | Iteração em 1M entidades num arquétipo ≤ 1,10× o SoA manual | razão em `ecs_bench_iterate` |
+| NF-P2 | O mesmo em 64 arquétipos ≤ 1,25× o SoA manual | razão em `ecs_bench_fragmented` |
 | NF-P3 | Laço interno de `eachBlock` com tipos aritméticos vetorizado | `-fopt-info-vec` (GCC) / `-Rpass=loop-vectorize` (Clang) |
 | NF-P4 | `add`/`remove` com aresta em cache, 4 componentes triviais: zero alocações e zero lookups de hash | leitura do caminho + assembly de `transitionTo` |
-| NF-P5 | Flush de N adds coalescidos ≥ 2× mais rápido que 3N `add` diretos | razão em `bench_flush` (não atendida a N = 100000) |
+| NF-P5 | Flush de N adds coalescidos ≥ 2× mais rápido que 3N `add` diretos | razão em `ecs_bench_flush` (não atendida a N = 100000) |
 
 NF-P3 e NF-P4 são as que você consegue verificar sozinho, e são o centro da revisão.
 
 Pontos de projeto que mudam o que é "caro" aqui:
 
 - `Table` é SoA com um único `count`/`capacity` e colunas alinhadas a 64 B (NF-M3). Qualquer coisa que leve a dados intercalados (AoS), a colunas desalinhadas ou a acesso por linha através do `EntityRecord` dentro de um laço é regressão de localidade.
-- `eachBlock` entrega `std::span<Ts>` por tabela; `each` itera por linha. Um teste por entidade dentro do laço interno (tag, flag, `nullptr`, `ECS_ASSERT` que sobrevive em release) quebra vetorização e custa branch por elemento. Testes por tabela (`count() == 0`) são aceitáveis.
-- `ECS_ASSERT` some com `ECS_ENABLE_ASSERTS=0` (inclusive a avaliação dos argumentos). Uma checagem fora de `ECS_ASSERT` não some.
+- `eachBlock` entrega `std::span<Ts>` por tabela; `each` itera por linha. Um teste por entidade dentro do laço interno (tag, flag, `nullptr`, `OLY_ASSERT` que sobrevive em release) quebra vetorização e custa branch por elemento. Testes por tabela (`count() == 0`) são aceitáveis.
+- `OLY_ASSERT` some com `OLY_ENABLE_ASSERTS=0` (inclusive a avaliação dos argumentos). Uma checagem fora de `OLY_ASSERT` não some.
 - `TypeInfo` tem caminho `memcpy` para tipos triviais e ponteiros de move/destroy para os demais. Chamar o ponteiro de função para um tipo trivial no caminho de transição é custo evitável.
 - Arestas `±ComponentId` memoizadas no arquétipo trazem `sourceToDestination` pronto. Um `unordered_map::find` (ou `bySignature_`) por `add`/`remove` com aresta já criada viola NF-P4.
 - Templates de `world.hpp` delegam para funções não-template por `ComponentId` em `world.cpp`. Isso é intencional para operações estruturais; levar a mesma indireção para dentro da iteração não é.
@@ -40,7 +40,7 @@ Pontos de projeto que mudam o que é "caro" aqui:
 
 ## O que procurar
 
-1. **Alocação no caminho quente**: crescimento de `std::vector` sem `reserve`, `std::function`, `std::string`/formatação fora de `ECS_ASSERT`, `new`/`make_unique` por entidade ou por comando, containers temporários dentro de laços.
+1. **Alocação no caminho quente**: crescimento de `std::vector` sem `reserve`, `std::function`, `std::string`/formatação fora de `OLY_ASSERT`, `new`/`make_unique` por entidade ou por comando, containers temporários dentro de laços.
 2. **Lookups de hash e buscas lineares** onde já existe um índice: `bySignature_`, `componentIndex_`, busca em `signature` por linha ou por entidade em vez de por arquétipo.
 3. **Localidade**: acesso por `get<T>(entity)` dentro de laços que poderiam usar spans; saltos entre colunas e tabelas; estruturas novas que aumentam `EntityRecord` (NF-M1: 16 B em 64 bits) ou a linha da tabela.
 4. **Branches e chamadas no laço interno** de `each`/`eachBlock`/`callRows`/`callBlock`: testes por elemento, chamadas indiretas (ponteiro de função, `virtual`, `std::function`) e funções não inlinadas.
@@ -71,31 +71,31 @@ Se o pedido nomear outro alvo (um commit, um arquivo), use esse. Leia os arquivo
 Use um diretório de build próprio, para não sujar o cache de `build/release`:
 
 ```sh
-MSYS_NO_PATHCONV=1 $DC sh -c 'cmake --preset release -B build/perf-review -DECS_VEC_REPORT=ON > /dev/null && cmake --build build/perf-review -j --clean-first 2>&1 | grep -E "vectorized|missed" | sort -u'
+MSYS_NO_PATHCONV=1 $DC sh -c 'cmake --preset release -B build/perf-review -DOLY_VEC_REPORT=ON > /dev/null && cmake --build build/perf-review -j --clean-first 2>&1 | grep -E "vectorized|missed" | sort -u'
 ```
 
-`--clean-first` é necessário: num build incremental os TUs sem mudança não recompilam e não imprimem nada. A referência registrada é `bench/results/m3_vectorization.txt` (laços de `bench/iterate.cpp` vetorizados com vetores de 16 B). Um laço que estava lá e sumiu é achado.
+`--clean-first` é necessário: num build incremental os TUs sem mudança não recompilam e não imprimem nada. A referência registrada é `docs/benchmarks/ecs/m3_vectorization.txt` (laços de `bench/iterate.cpp` vetorizados com vetores de 16 B). Um laço que estava lá e sumiu é achado.
 
 ### 3. Assembly gerado
 
 `tools/extract_codegen.sh <binário> <regex-da-função> <saída>` grava o corpo de uma função desmontada (sintaxe Intel, nome demanglado). A saída fica no `/tmp` do container, então extraia e leia no mesmo comando:
 
 ```sh
-MSYS_NO_PATHCONV=1 $DC sh -c 'make build PRESET=release > /dev/null && tools/extract_codegen.sh build/release/bench/bench_iterate "^BM_IterateSingle_ECS" /tmp/out.txt && cat /tmp/out.txt'
+MSYS_NO_PATHCONV=1 $DC sh -c 'make build PRESET=release > /dev/null && tools/extract_codegen.sh build/release/bench/ecs_bench_iterate "^BM_IterateSingle_ECS" /tmp/out.txt && cat /tmp/out.txt'
 ```
 
 Alvos usuais:
 
 | Alvo | Binário | Regex |
 |---|---|---|
-| Iteração ECS (corpo de `eachBlock` inlinado) | `bench_iterate` | `^BM_IterateSingle_ECS` |
-| Linha de base SoA | `bench_iterate` | `^BM_IterateSingle_SoA` |
-| Transição (NF-P4) | `bench_transitions` | `^ecs::World::transitionTo` e `^ecs::World::moveEntity` (o laço por coluna mora nesta) |
-| Flush (NF-P5) | `bench_flush` | `^ecs::World::flush` |
+| Iteração ECS (corpo de `eachBlock` inlinado) | `ecs_bench_iterate` | `^BM_IterateSingle_ECS` |
+| Linha de base SoA | `ecs_bench_iterate` | `^BM_IterateSingle_SoA` |
+| Transição (NF-P4) | `ecs_bench_transitions` | `^oly::ecs::World::transitionTo` e `^oly::ecs::World::moveEntity` (o laço por coluna mora nesta) |
+| Flush (NF-P5) | `ecs_bench_flush` | `^oly::ecs::World::flush` |
 
 - A regex é ERE do awk e precisa casar com exatamente uma função; se o script disser "regex ambígua", ancore mais. Se disser "função não encontrada", ela foi inlinada: procure no chamador.
 - Corpos longos: filtre antes de ler (`grep -nE "call|div|vmovup|movup|addps|mulps|j[a-z]+ "`) e depois leia o laço interno inteiro.
-- Referência de antes: `bench/results/wasm/codegen/V0/{iterate_ecs,iterate_soa,transition,flush}.txt` é o GCC Release do commit `d0ddff1`. Compare a estrutura do laço interno (instruções vetoriais e de que largura, chamadas, saltos, carregamentos por iteração), nunca endereços. Para uma função fora dessa lista, o "antes" não existe pronto; diga isso em vez de compará-la com memória.
+- Referência de antes: `docs/benchmarks/wasm/codegen/V0/{iterate_ecs,iterate_soa,transition,flush}.txt` é o GCC Release do commit `d0ddff1`. Compare a estrutura do laço interno (instruções vetoriais e de que largura, chamadas, saltos, carregamentos por iteração), nunca endereços. Para uma função fora dessa lista, o "antes" não existe pronto; diga isso em vez de compará-la com memória.
 
 O que procurar no assembly:
 
@@ -110,10 +110,10 @@ O que procurar no assembly:
 Se um achado depende de quantificação, um benchmark isolado com filtro dá uma ordem de grandeza:
 
 ```sh
-$DC ./build/release/bench/bench_iterate --benchmark_filter='BM_IterateSingle_(ECS|SoA)/1000000' --benchmark_repetitions=5 --benchmark_report_aggregates_only=true
+$DC ./build/release/bench/ecs_bench_iterate --benchmark_filter='BM_IterateSingle_(ECS|SoA)/1000000' --benchmark_repetitions=5 --benchmark_report_aggregates_only=true
 ```
 
-Reporte apenas a razão entre as medianas da mesma execução, nunca ns isolados, e deixe claro que não é a rodada oficial. Não grave nada em `bench/results/`.
+Reporte apenas a razão entre as medianas da mesma execução, nunca ns isolados, e deixe claro que não é a rodada oficial. Não grave nada em `docs/benchmarks/`.
 
 ## Relatório
 
