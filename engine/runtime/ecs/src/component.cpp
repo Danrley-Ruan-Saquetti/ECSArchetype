@@ -1,4 +1,4 @@
-#include "oly/ecs/type_info.hpp"
+#include "oly/ecs/component.hpp"
 
 #include <deque>
 

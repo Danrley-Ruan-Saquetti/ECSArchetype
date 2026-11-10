@@ -18,7 +18,7 @@ TEST_CASE("rawQuery entrega colunas na ordem read seguida de write") {
   CHECK(query.components().size() == 2);
 
   uint64_t sum = 0;
-  query.eachBlock([&](oly::ecs::Table& table, std::span<const uint16_t> columns) {
+  query.eachBlock([&](oly::ecs::detail::Table& table, std::span<const uint16_t> columns) {
     const A* a = reinterpret_cast<const A*>(table.column(columns[0]).data);
     B* b = reinterpret_cast<B*>(table.column(columns[1]).data);
     for (uint32_t row = 0; row < table.count(); ++row) {
@@ -55,7 +55,7 @@ TEST_CASE("rawQuery e Query<Ts...> com a mesma assinatura são instâncias disti
 
   int typedBlocks = 0, rawBlocks = 0;
   typed.eachBlock([&](std::span<const A>, std::span<B>) { ++typedBlocks; });
-  raw.eachBlock([&](oly::ecs::Table&, std::span<const uint16_t>) { ++rawBlocks; });
+  raw.eachBlock([&](oly::ecs::detail::Table&, std::span<const uint16_t>) { ++rawBlocks; });
   CHECK(typedBlocks == 1);
   CHECK(rawBlocks == 1);
   CHECK_INVARIANTS(world);
@@ -71,7 +71,7 @@ TEST_CASE("rawQuery acompanha arquétipos criados depois") {
   CHECK_INVARIANTS(world);
 
   uint32_t rows = 0;
-  query.eachBlock([&](oly::ecs::Table& table, std::span<const uint16_t>) { rows += table.count(); });
+  query.eachBlock([&](oly::ecs::detail::Table& table, std::span<const uint16_t>) { rows += table.count(); });
   CHECK(rows == 1);
 }
 
@@ -86,7 +86,7 @@ TEST_CASE("rawQuery filtra por with e without") {
 
   auto countRows = [&](oly::ecs::RawQuery& query) {
     uint32_t rows = 0;
-    query.eachBlock([&](oly::ecs::Table& table, std::span<const uint16_t>) { rows += table.count(); });
+    query.eachBlock([&](oly::ecs::detail::Table& table, std::span<const uint16_t>) { rows += table.count(); });
     return rows;
   };
 
@@ -102,7 +102,7 @@ TEST_CASE("rawQuery pula tabelas vazias") {
   world.destroy(entity);
 
   int calls = 0;
-  query.eachBlock([&](oly::ecs::Table&, std::span<const uint16_t>) { ++calls; });
+  query.eachBlock([&](oly::ecs::detail::Table&, std::span<const uint16_t>) { ++calls; });
   CHECK(calls == 0);
   CHECK_INVARIANTS(world);
 }

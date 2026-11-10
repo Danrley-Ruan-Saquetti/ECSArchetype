@@ -6,11 +6,11 @@
 #include <span>
 #include <vector>
 
-#include "oly/ecs/archetype.hpp"
+#include "oly/ecs/detail/archetype.hpp"
 #include "oly/core/assert.hpp"
 #include "oly/core/small_map.hpp"
-#include "oly/ecs/query.hpp"
-#include "oly/ecs/type_info.hpp"
+#include "oly/ecs/detail/query_cache.hpp"
+#include "oly/ecs/component.hpp"
 
 namespace oly::ecs {
   struct RawQuerySpec {
@@ -18,12 +18,12 @@ namespace oly::ecs {
   };
 
   struct RawMatchedTable {
-    Archetype* archetype;
+    detail::Archetype* archetype;
     std::vector<uint16_t> columns; // columns[i] é a coluna de components()[i]
   };
 
   // Query por ComponentId, sem tipos em tempo de compilação: serve a camadas que só conhecem IDs.
-  class RawQuery : public QueryCacheBase {
+  class RawQuery : public detail::QueryCacheBase {
    private:
     std::vector<ComponentId> with_, without_, components_;
     std::vector<RawMatchedTable> matched_;
@@ -32,12 +32,12 @@ namespace oly::ecs {
    public:
     // `with` = read ∪ write ∪ with, ordenado e sem repetição; `components` = read seguido de write.
     RawQuery(uint32_t* iterating, std::vector<ComponentId> components, std::vector<ComponentId> with, std::vector<ComponentId> without)
-      : QueryCacheBase(iterating),
+      : detail::QueryCacheBase(iterating),
         with_(std::move(with)),
         without_(std::move(without)),
         components_(std::move(components)) {}
 
-    void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const core::SmallMap<ArchetypeId, uint16_t>* smallest) {
+    void initialize(const std::vector<std::unique_ptr<detail::Archetype>>& all, const core::SmallMap<detail::ArchetypeId, uint16_t>* smallest) {
       if (smallest) {
         for (const auto& [archetypeId, column] : *smallest) {
           onArchetypeCreated(*all[archetypeId]);
@@ -62,15 +62,15 @@ namespace oly::ecs {
       return iterationDepth_;
     }
 
-    bool matches(const Archetype& archetype) const override {
+    bool matches(const detail::Archetype& archetype) const override {
       return detail::signatureMatches(archetype.signature, with_, without_);
     }
 
-    bool isMatched(const Archetype* archetype) const override {
+    bool isMatched(const detail::Archetype* archetype) const override {
       return std::any_of(matched_.begin(), matched_.end(), [archetype](const RawMatchedTable& matched) { return matched.archetype == archetype; });
     }
 
-    void onArchetypeCreated(Archetype& archetype) override {
+    void onArchetypeCreated(detail::Archetype& archetype) override {
       if (!matches(archetype)) {
         return;
       }
@@ -78,7 +78,7 @@ namespace oly::ecs {
       RawMatchedTable matched{&archetype, {}};
       matched.columns.reserve(components_.size());
       for (ComponentId componentId : components_) {
-        matched.columns.push_back(columnOf(archetype, componentId));
+        matched.columns.push_back(detail::columnOf(archetype, componentId));
       }
 
       matched_.push_back(std::move(matched));
@@ -96,12 +96,12 @@ namespace oly::ecs {
       --iterationDepth_;
     }
 
-    // callback(Table&, std::span<const uint16_t> columns) uma vez por tabela não vazia.
+    // callback(detail::Table&, std::span<const uint16_t> columns) uma vez por tabela não vazia.
     template <class F>
     void eachBlock(F&& callback) {
       detail::IterationGuard guard(iterating_);
       for (const RawMatchedTable& matched : matched_) {
-        Table& table = matched.archetype->table;
+        detail::Table& table = matched.archetype->table;
         if (table.count() == 0) {
           continue;
         }

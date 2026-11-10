@@ -104,7 +104,7 @@ uint32_t engineQueryBegin(EngineWorld* world, EngineQuery* query, const uintptr_
 
   uint32_t blockCount = 0;
   for (const oly::ecs::RawMatchedTable& matched : rawQuery.matchedTables()) {
-    oly::ecs::Table& table = matched.archetype->table;
+    oly::ecs::detail::Table& table = matched.archetype->table;
     if (table.count() == 0) {
       continue;
     }
@@ -127,7 +127,7 @@ void engineQueryEnd(EngineWorld*, EngineQuery* query) {
 
 int32_t engineCheckInvariants(EngineWorld* world, char* message, uint32_t capacity) {
   std::string why;
-  const bool ok = world->world.checkInvariants(&why);
+  const bool ok = oly::ecs::checkInvariants(world->world, &why);
   if (!ok && capacity > 0) {
     const size_t length = std::min<size_t>(why.size(), capacity - 1);
     std::memcpy(message, why.data(), length);

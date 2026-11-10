@@ -12,14 +12,18 @@
 #include <utility>
 #include <vector>
 
-#include "oly/ecs/archetype.hpp"
-#include "oly/ecs/command_buffer.hpp"
 #include "oly/core/assert.hpp"
+#include "oly/core/small_map.hpp"
+#include "oly/ecs/command_buffer.hpp"
+#include "oly/ecs/component.hpp"
+#include "oly/ecs/detail/archetype.hpp"
+#include "oly/ecs/detail/entity_store.hpp"
+#include "oly/ecs/detail/query_cache.hpp"
+#include "oly/ecs/detail/table.hpp"
+#include "oly/ecs/diagnostics.hpp"
 #include "oly/ecs/entity.hpp"
 #include "oly/ecs/query.hpp"
 #include "oly/ecs/raw_query.hpp"
-#include "oly/ecs/table.hpp"
-#include "oly/ecs/type_info.hpp"
 
 namespace oly::ecs {
   namespace detail {
@@ -27,45 +31,35 @@ namespace oly::ecs {
     inline constexpr bool distinctTypes = true;
     template <class T, class... Rest>
     inline constexpr bool distinctTypes<T, Rest...> = (!(std::is_same_v<T, Rest> || ...)) && distinctTypes<Rest...>;
+
+    struct WorldTestAccess;
   }
-
-  struct ArchetypeStats {
-    ArchetypeId id;
-    Signature signature;
-    uint32_t count, capacity, edgeCount;
-    size_t columnBytes; // capacity × Σ size das colunas + capacity × sizeof(Entity)
-    size_t idleBytes; // (capacity − count) × (Σ size + sizeof(Entity))
-    size_t signatureBytes; // capacity() de signature + columnTypes, em bytes
-    size_t edgeBytes; // capacityBytes() de addEdges/removeEdges + sourceToDestination
-  };
-
-  struct WorldStats {
-    uint32_t archetypeCount;
-    uint32_t liveEntities;
-    std::vector<ArchetypeStats> archetypes; // por id
-    std::array<uint32_t, 33> histogram; // [0] = arquétipos vazios; [i] = count em [2^(i-1), 2^i)
-    uint64_t signatureLookups;
-  };
 
   class World {
    private:
+    friend struct detail::WorldTestAccess;
+    friend bool checkInvariants(const World& world, std::string* why);
+    friend WorldStats stats(const World& world);
+    friend uint64_t signatureLookupCount(const World& world);
+    friend uint32_t archetypeCount(const World& world);
+
     struct QueryKey {
       std::vector<uint64_t> components; // (componentId << 1) | isConst, na ordem de Ts
-      Signature with, without;
+      detail::Signature with, without;
 
       auto operator<=>(const QueryKey&) const = default;
     };
 
-    EntityStore store_;
-    std::vector<std::unique_ptr<Archetype>> archetypes_;
-    std::unordered_map<Signature, Archetype*, SignatureHash> bySignature_;
-    std::vector<core::SmallMap<ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
+    detail::EntityStore store_;
+    std::vector<std::unique_ptr<detail::Archetype>> archetypes_;
+    std::unordered_map<detail::Signature, detail::Archetype*, detail::SignatureHash> bySignature_;
+    std::vector<core::SmallMap<detail::ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
     uint32_t iterating_ = 0;
     mutable uint64_t signatureLookups_ = 0;
-    std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
+    std::map<QueryKey, std::unique_ptr<detail::QueryCacheBase>> queryCache_;
     std::map<QueryKey, std::unique_ptr<RawQuery>> rawQueryCache_; // separado: o static_cast de queryCache_ confundiria os tipos
-    std::vector<QueryCacheBase*> queries_;
-    std::unordered_map<uint64_t, Edge> jumpEdges_; // (source.id << 32) | destination.id
+    std::vector<detail::QueryCacheBase*> queries_;
+    std::unordered_map<uint64_t, detail::Edge> jumpEdges_; // (source.id << 32) | destination.id
 
    public:
     World();
@@ -102,8 +96,6 @@ namespace oly::ecs {
     CommandBuffer commands() {
       return CommandBuffer(store_);
     }
-    // Oráculo sem coalescing: aplica cada comando na ordem de gravação e limpa o buffer.
-    void flushSequential(CommandBuffer& commandBuffer);
     // Duas passadas (R-CB-3): agrupa por entidade e faz uma única transição para o arquétipo final.
     void flush(CommandBuffer& commandBuffer);
 
@@ -122,26 +114,14 @@ namespace oly::ecs {
         return nullptr;
       }
 
-      const EntityRecord& record = store_.record(entity.index);
+      const detail::EntityRecord& record = store_.record(entity.index);
       const uint16_t* column = componentIndex_[componentId].find(record.archetype->id);
-      if (!column || *column == NoColumn) {
+      if (!column || *column == detail::NoColumn) {
         return nullptr;
       }
 
       return record.archetype->table.column(*column).at(record.row);
     }
-
-    uint64_t signatureLookupCount() const noexcept {
-      return signatureLookups_;
-    }
-    uint32_t archetypeCount() const noexcept {
-      return static_cast<uint32_t>(archetypes_.size());
-    }
-    WorldStats stats() const;
-
-    // Verifica as invariantes I-1, I-3..I-7, I-10, I-11 (compilado em todos os builds).
-    // Em falha escreve em *why o ID e o objeto (ex.: "I-3 e=4:1") e devolve false.
-    bool checkInvariants(std::string* why = nullptr) const;
 
     bool hasRaw(Entity entity, ComponentId componentId) const noexcept {
       if (!store_.isAlive(entity) || componentId >= componentIndex_.size()) {
@@ -152,25 +132,29 @@ namespace oly::ecs {
     }
 
    private:
-    Archetype* findOrCreate(Signature signature);
-    uint32_t moveEntity(Entity entity, EntityRecord& record, Archetype& destination, const Edge& edge);
+    // Oráculo sem coalescing: aplica cada comando na ordem de gravação e limpa o buffer.
+    void flushSequential(CommandBuffer& commandBuffer);
 
-    QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query);
-    const core::SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
+    detail::Archetype* findOrCreate(detail::Signature signature);
+    uint32_t moveEntity(Entity entity, detail::EntityRecord& record, detail::Archetype& destination, const detail::Edge& edge);
 
-    const Edge& edgeFor(Archetype& source, ComponentId componentId, bool adding);
-    const Edge& jumpEdge(Archetype& source, Archetype& destination);
+    detail::QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<detail::QueryCacheBase> query);
+    const core::SmallMap<detail::ArchetypeId, uint16_t>* smallestIndex(const detail::Signature& with) const;
+
+    const detail::Edge& edgeFor(detail::Archetype& source, ComponentId componentId, bool adding);
+    const detail::Edge& jumpEdge(detail::Archetype& source, detail::Archetype& destination);
     void materialize(Entity reserved);
     void destroyOrRelease(Entity entity, bool alive); // reservada (não viva) só devolve o índice
     // A linha nasce morta se a entidade estava reservada. `edge` nullptr: reservada ou já em `destination`.
-    uint32_t transitionTo(Entity entity, EntityRecord& record, Archetype& destination, const Edge* edge);
-    Entity place(Archetype& archetype); // a linha nasce morta: o chamador constrói as colunas
-    Archetype& root() noexcept {
+    uint32_t transitionTo(Entity entity, detail::EntityRecord& record, detail::Archetype& destination, const detail::Edge* edge);
+    Entity place(detail::Archetype& archetype); // a linha nasce morta: o chamador constrói as colunas
+    detail::Archetype& root() noexcept {
       return *archetypes_[0];
     }
 
+    bool checkInvariants(std::string* why) const;
     bool checkArchetypes(std::string* why) const;
-    bool checkRows(const Archetype& archetype, std::string* why) const;
+    bool checkRows(const detail::Archetype& archetype, std::string* why) const;
     bool checkRecords(std::string* why) const;
     bool checkFreeList(std::string* why) const;
     bool checkComponentIndex(std::string* why) const;
@@ -183,9 +167,9 @@ namespace oly::ecs {
     static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "create<Ts...>: tipos repetidos");
     OLY_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
 
-    Signature signature{componentId<Ts>()...};
+    detail::Signature signature{componentId<Ts>()...};
     std::sort(signature.begin(), signature.end());
-    Archetype* archetype = findOrCreate(std::move(signature));
+    detail::Archetype* archetype = findOrCreate(std::move(signature));
     Entity entity = place(*archetype);
 
     const uint32_t row = store_.record(entity.index).row;
@@ -193,7 +177,7 @@ namespace oly::ecs {
       [&] {
         using U = std::remove_cvref_t<Ts>;
         if constexpr (!std::is_empty_v<U>) {
-          void* slot = archetype->table.column(columnOf(*archetype, componentId<U>())).at(row);
+          void* slot = archetype->table.column(detail::columnOf(*archetype, componentId<U>())).at(row);
           ::new (slot) U(std::forward<Ts>(components));
         }
       }(),
@@ -270,7 +254,7 @@ namespace oly::ecs {
   Query<Ts...>& World::query(Filters... filters) {
     using Q = Query<Ts...>;
 
-    Signature with{componentId<std::remove_const_t<Ts>>()...}, without;
+    detail::Signature with{componentId<std::remove_const_t<Ts>>()...}, without;
     (detail::addFilter(with, without, filters), ...);
     detail::sortUnique(with);
     detail::sortUnique(without);

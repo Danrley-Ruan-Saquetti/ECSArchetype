@@ -9,6 +9,7 @@ oly_add_test(MODULE ecs NAME nontrivial SOURCES nontrivial.cpp)
 oly_add_test(MODULE ecs NAME queries SOURCES queries.cpp)
 oly_add_test(MODULE ecs NAME command_buffer SOURCES command_buffer.cpp)
 oly_add_test(MODULE ecs NAME raw_query SOURCES raw_query.cpp)
+oly_add_test(MODULE ecs NAME surface SOURCES surface.cpp)
 
 oly_add_contract_death(MODULE ecs SOURCE contract_death.cpp
   CASES add_during_each get_dead_entity flush_during_each command_after_destroy destroy_during_each_block

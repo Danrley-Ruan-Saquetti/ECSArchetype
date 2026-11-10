@@ -5,14 +5,14 @@
 
 namespace oly::ecs {
   namespace {
-    bool checkEdgeMapping(const Archetype& source, const Archetype& destination, const Edge& edge) {
+    bool checkEdgeMapping(const detail::Archetype& source, const detail::Archetype& destination, const detail::Edge& edge) {
       if (edge.sourceToDestination.size() != source.columnTypes.size()) {
         return false;
       }
 
       for (size_t i = 0; i < source.columnTypes.size(); ++i) {
-        const uint16_t column = columnOf(destination, source.columnTypes[i]);
-        const int16_t expected = column == NoColumn ? int16_t(-1) : static_cast<int16_t>(column);
+        const uint16_t column = detail::columnOf(destination, source.columnTypes[i]);
+        const int16_t expected = column == detail::NoColumn ? int16_t(-1) : static_cast<int16_t>(column);
         if (edge.sourceToDestination[i] != expected) {
           return false;
         }
@@ -33,12 +33,12 @@ namespace oly::ecs {
       return "e=" + std::to_string(index) + ":" + std::to_string(generation);
     }
 
-    std::string archetypeLabel(const Archetype& archetype) {
+    std::string archetypeLabel(const detail::Archetype& archetype) {
       return "arch=" + std::to_string(archetype.id);
     }
 
-    bool checkTableShape(const Archetype& archetype, std::string* why) {
-      const Table& table = archetype.table;
+    bool checkTableShape(const detail::Archetype& archetype, std::string* why) {
+      const detail::Table& table = archetype.table;
       if (table.entities().size() != table.count() || table.capacity() < table.count()) {
         return fail(why, "I-1", archetypeLabel(archetype));
       }
@@ -46,7 +46,7 @@ namespace oly::ecs {
       return true;
     }
 
-    bool checkColumnTypes(const Archetype& archetype, std::string* why) {
+    bool checkColumnTypes(const detail::Archetype& archetype, std::string* why) {
       if (!std::is_sorted(archetype.signature.begin(), archetype.signature.end()) || std::adjacent_find(archetype.signature.begin(), archetype.signature.end()) != archetype.signature.end()) {
         return fail(why, "I-5", archetypeLabel(archetype) + " signature");
       }
@@ -62,7 +62,7 @@ namespace oly::ecs {
         return fail(why, "I-5", archetypeLabel(archetype) + " columnTypes");
       }
 
-      const Table& table = archetype.table;
+      const detail::Table& table = archetype.table;
       if (table.columnCount() != archetype.columnTypes.size() || !std::equal(table.columnTypes().begin(), table.columnTypes().end(), archetype.columnTypes.begin(), archetype.columnTypes.end())) {
         return fail(why, "I-5", archetypeLabel(archetype) + " table");
       }
@@ -70,7 +70,7 @@ namespace oly::ecs {
       return true;
     }
 
-    Signature edgeSignature(Signature signature, ComponentId componentId, bool adding) {
+    detail::Signature edgeSignature(detail::Signature signature, ComponentId componentId, bool adding) {
       auto position = std::lower_bound(signature.begin(), signature.end(), componentId);
       if (adding) {
         signature.insert(position, componentId);
@@ -81,7 +81,7 @@ namespace oly::ecs {
       return signature;
     }
 
-    bool checkCachedEdges(const Archetype& archetype, std::string* why) {
+    bool checkCachedEdges(const detail::Archetype& archetype, std::string* why) {
       for (int adding = 1; adding >= 0; --adding) {
         for (const auto& [componentId, edge] : adding ? archetype.addEdges : archetype.removeEdges) {
           const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(componentId) + " " + archetypeLabel(archetype);
@@ -89,7 +89,7 @@ namespace oly::ecs {
             return fail(why, "I-9", where + " sem destino");
           }
 
-          const Archetype& target = *edge.target;
+          const detail::Archetype& target = *edge.target;
           if (target.signature != edgeSignature(archetype.signature, componentId, adding)) {
             return fail(why, "I-9", where + " assinatura");
           }
@@ -97,7 +97,7 @@ namespace oly::ecs {
             return fail(why, "I-9", where + " sourceToDestination");
           }
 
-          const int16_t expectedAddedColumn = adding && !typeInfo(componentId).tag ? static_cast<int16_t>(columnOf(target, componentId)) : int16_t(-1);
+          const int16_t expectedAddedColumn = adding && !typeInfo(componentId).tag ? static_cast<int16_t>(detail::columnOf(target, componentId)) : int16_t(-1);
           if (edge.addedColumn != expectedAddedColumn) {
             return fail(why, "I-9", where + " addedColumn");
           }
@@ -111,14 +111,14 @@ namespace oly::ecs {
     // então a assinatura final, a aresta e as colunas são calculadas uma vez só.
     struct FlushMemo {
       bool valid = false;
-      const Archetype* source = nullptr;
+      const detail::Archetype* source = nullptr;
       std::vector<std::pair<ComponentId, bool>> key;
-      Archetype* destination = nullptr;
-      const Edge* edge = nullptr; // nullptr se source == destination ou entidade reservada
-      std::vector<Column*> columns; // por operação: coluna no destino (nullptr: sem valor a construir)
+      detail::Archetype* destination = nullptr;
+      const detail::Edge* edge = nullptr; // nullptr se source == destination ou entidade reservada
+      std::vector<detail::Column*> columns; // por operação: coluna no destino (nullptr: sem valor a construir)
       std::vector<uint8_t> existed; // por operação: o componente já existia na origem
 
-      bool matches(const Archetype* candidateSource, std::span<const NetComponentOperation> operations) const {
+      bool matches(const detail::Archetype* candidateSource, std::span<const detail::NetComponentOperation> operations) const {
         if (!valid || source != candidateSource || key.size() != operations.size()) {
           return false;
         }
@@ -132,7 +132,7 @@ namespace oly::ecs {
         return true;
       }
 
-      void assign(const Archetype* newSource, std::span<const NetComponentOperation> operations, Archetype* newDestination, const Edge* newEdge) {
+      void assign(const detail::Archetype* newSource, std::span<const detail::NetComponentOperation> operations, detail::Archetype* newDestination, const detail::Edge* newEdge) {
         source = newSource;
         destination = newDestination;
         edge = newEdge;
@@ -140,9 +140,9 @@ namespace oly::ecs {
         key.clear();
         columns.clear();
         existed.clear();
-        for (const NetComponentOperation& operation : operations) {
+        for (const detail::NetComponentOperation& operation : operations) {
           key.emplace_back(operation.componentId, operation.present);
-          columns.push_back(operation.present && !typeInfo(operation.componentId).tag ? &destination->table.column(columnOf(*destination, operation.componentId)) : nullptr);
+          columns.push_back(operation.present && !typeInfo(operation.componentId).tag ? &destination->table.column(detail::columnOf(*destination, operation.componentId)) : nullptr);
           existed.push_back(source && std::binary_search(source->signature.begin(), source->signature.end(), operation.componentId));
         }
 
@@ -150,8 +150,8 @@ namespace oly::ecs {
       }
     };
 
-    Signature applyOperations(Signature signature, std::span<const NetComponentOperation> operations) {
-      for (const NetComponentOperation& operation : operations) {
+    detail::Signature applyOperations(detail::Signature signature, std::span<const detail::NetComponentOperation> operations) {
+      for (const detail::NetComponentOperation& operation : operations) {
         auto position = std::lower_bound(signature.begin(), signature.end(), operation.componentId);
         const bool has = position != signature.end() && *position == operation.componentId;
         if (operation.present && !has) {
@@ -181,16 +181,16 @@ namespace oly::ecs {
       }
     }
 
-    void writeValues(const FlushMemo& memo, std::span<const NetComponentOperation> operations, uint32_t row) {
+    void writeValues(const FlushMemo& memo, std::span<const detail::NetComponentOperation> operations, uint32_t row) {
       for (size_t i = 0; i < operations.size(); ++i) {
         if (!memo.columns[i]) {
           continue;
         }
 
-        Column& column = *memo.columns[i];
+        detail::Column& column = *memo.columns[i];
         void* slot = column.at(row);
         if (memo.existed[i]) {
-          destroyValue(*column.info, slot);
+          detail::destroyValue(*column.info, slot);
         }
 
         constructValue(*column.info, slot, operations[i].payload);
@@ -204,35 +204,35 @@ namespace oly::ecs {
 
   World::~World() = default;
 
-  Archetype* World::findOrCreate(Signature signature) {
+  detail::Archetype* World::findOrCreate(detail::Signature signature) {
     ++signatureLookups_;
 
     if (auto it = bySignature_.find(signature); it != bySignature_.end()) {
       return it->second;
     }
 
-    const auto id = static_cast<ArchetypeId>(archetypes_.size());
-    archetypes_.push_back(std::make_unique<Archetype>(id, signature));
-    Archetype* archetype = archetypes_.back().get();
+    const auto id = static_cast<detail::ArchetypeId>(archetypes_.size());
+    archetypes_.push_back(std::make_unique<detail::Archetype>(id, signature));
+    detail::Archetype* archetype = archetypes_.back().get();
     bySignature_.emplace(std::move(signature), archetype);
 
     for (ComponentId componentId : archetype->signature) {
       if (componentId >= componentIndex_.size()) {
         componentIndex_.resize(size_t(componentId) + 1);
       }
-      componentIndex_[componentId].insert(id, columnOf(*archetype, componentId));
+      componentIndex_[componentId].insert(id, detail::columnOf(*archetype, componentId));
     }
 
-    for (QueryCacheBase* query : queries_) {
+    for (detail::QueryCacheBase* query : queries_) {
       query->onArchetypeCreated(*archetype);
     }
 
     return archetype;
   }
 
-  Entity World::place(Archetype& archetype) {
+  Entity World::place(detail::Archetype& archetype) {
     Entity entity = store_.allocate();
-    EntityRecord& record = store_.record(entity.index);
+    detail::EntityRecord& record = store_.record(entity.index);
 
     record.row = archetype.table.pushUninitialized(entity);
     record.archetype = &archetype;
@@ -248,8 +248,8 @@ namespace oly::ecs {
   void World::destroy(Entity entity) {
     OLY_ASSERT(isAlive(entity) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", entity.index, entity.generation, iterating_);
 
-    EntityRecord& record = store_.record(entity.index);
-    Table& table = record.archetype->table;
+    detail::EntityRecord& record = store_.record(entity.index);
+    detail::Table& table = record.archetype->table;
     const uint32_t row = record.row;
 
     table.destroyRow(row);
@@ -260,18 +260,18 @@ namespace oly::ecs {
     store_.release(entity.index);
   }
 
-  uint32_t World::moveEntity(Entity entity, EntityRecord& record, Archetype& destination, const Edge& edge) {
-    Archetype& source = *record.archetype;
+  uint32_t World::moveEntity(Entity entity, detail::EntityRecord& record, detail::Archetype& destination, const detail::Edge& edge) {
+    detail::Archetype& source = *record.archetype;
     const uint32_t sourceRow = record.row;
     const uint32_t destinationRow = destination.table.pushUninitialized(entity);
 
     for (uint16_t columnIndex = 0; columnIndex < source.table.columnCount(); ++columnIndex) {
-      Column& sourceColumn = source.table.column(columnIndex);
+      detail::Column& sourceColumn = source.table.column(columnIndex);
       const int16_t destinationColumn = edge.sourceToDestination[columnIndex];
       if (destinationColumn >= 0) {
-        relocateValue(*sourceColumn.info, destination.table.column(static_cast<uint16_t>(destinationColumn)).at(destinationRow), sourceColumn.at(sourceRow));
+        detail::relocateValue(*sourceColumn.info, destination.table.column(static_cast<uint16_t>(destinationColumn)).at(destinationRow), sourceColumn.at(sourceRow));
       } else {
-        destroyValue(*sourceColumn.info, sourceColumn.at(sourceRow));
+        detail::destroyValue(*sourceColumn.info, sourceColumn.at(sourceRow));
       }
     }
 
@@ -290,22 +290,22 @@ namespace oly::ecs {
     OLY_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation, int(info.name.size()),
                info.name.data());
 
-    EntityRecord& record = store_.record(entity.index);
-    Archetype& source = *record.archetype;
+    detail::EntityRecord& record = store_.record(entity.index);
+    detail::Archetype& source = *record.archetype;
 
     if (std::binary_search(source.signature.begin(), source.signature.end(), componentId)) {
       if (info.tag) {
         return;
       }
 
-      void* slot = source.table.column(columnOf(source, componentId)).at(record.row);
-      destroyValue(info, slot);
+      void* slot = source.table.column(detail::columnOf(source, componentId)).at(record.row);
+      detail::destroyValue(info, slot);
       constructValue(info, slot, value);
       return;
     }
 
-    const Edge& edge = edgeFor(source, componentId, true);
-    Archetype& destination = *edge.target;
+    const detail::Edge& edge = edgeFor(source, componentId, true);
+    detail::Archetype& destination = *edge.target;
     const uint32_t destinationRow = moveEntity(entity, record, destination, edge);
 
     if (edge.addedColumn >= 0) {
@@ -318,24 +318,24 @@ namespace oly::ecs {
     OLY_ASSERT(isAlive(entity) && iterating_ == 0, "remove e=%u:%u type=%.*s", entity.index, entity.generation,
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
-    EntityRecord& record = store_.record(entity.index);
-    Archetype& source = *record.archetype;
+    detail::EntityRecord& record = store_.record(entity.index);
+    detail::Archetype& source = *record.archetype;
 
     if (!std::binary_search(source.signature.begin(), source.signature.end(), componentId)) {
       return;
     }
 
-    const Edge& edge = edgeFor(source, componentId, false);
+    const detail::Edge& edge = edgeFor(source, componentId, false);
     moveEntity(entity, record, *edge.target, edge);
   }
 
-  const Edge& World::edgeFor(Archetype& source, ComponentId componentId, bool adding) {
-    core::SmallMap<ComponentId, Edge>& edges = adding ? source.addEdges : source.removeEdges;
-    if (const Edge* cached = edges.find(componentId)) {
+  const detail::Edge& World::edgeFor(detail::Archetype& source, ComponentId componentId, bool adding) {
+    core::SmallMap<ComponentId, detail::Edge>& edges = adding ? source.addEdges : source.removeEdges;
+    if (const detail::Edge* cached = edges.find(componentId)) {
       return *cached;
     }
 
-    Signature signature = source.signature;
+    detail::Signature signature = source.signature;
     auto position = std::lower_bound(signature.begin(), signature.end(), componentId);
     if (adding) {
       signature.insert(position, componentId);
@@ -343,8 +343,8 @@ namespace oly::ecs {
       signature.erase(position);
     }
 
-    Archetype* destination = findOrCreate(std::move(signature));
-    return edges.insert(componentId, buildEdge(source, *destination, adding ? componentId : NoComponent));
+    detail::Archetype* destination = findOrCreate(std::move(signature));
+    return edges.insert(componentId, detail::buildEdge(source, *destination, adding ? componentId : detail::NoComponent));
   }
 
   bool World::checkInvariants(std::string* why) const {
@@ -358,7 +358,7 @@ namespace oly::ecs {
 
   bool World::checkArchetypes(std::string* why) const {
     for (size_t i = 0; i < archetypes_.size(); ++i) {
-      const Archetype& archetype = *archetypes_[i];
+      const detail::Archetype& archetype = *archetypes_[i];
 
       auto it = bySignature_.find(archetype.signature);
       if (archetype.id != i || it == bySignature_.end() || it->second != &archetype) {
@@ -377,15 +377,15 @@ namespace oly::ecs {
     return true;
   }
 
-  bool World::checkRows(const Archetype& archetype, std::string* why) const {
-    const Table& table = archetype.table;
+  bool World::checkRows(const detail::Archetype& archetype, std::string* why) const {
+    const detail::Table& table = archetype.table;
     for (uint32_t row = 0; row < table.count(); ++row) {
       Entity entity = table.entities()[row];
       if (entity.index >= store_.slotCount()) {
         return fail(why, "I-4", archetypeLabel(archetype) + " row=" + std::to_string(row));
       }
 
-      const EntityRecord& record = store_.record(entity.index);
+      const detail::EntityRecord& record = store_.record(entity.index);
       if (record.archetype != &archetype || record.row != row || record.generation != entity.generation) {
         return fail(why, "I-4", entityLabel(entity.index, entity.generation) + " " + archetypeLabel(archetype) + " row=" + std::to_string(row));
       }
@@ -396,12 +396,12 @@ namespace oly::ecs {
 
   bool World::checkRecords(std::string* why) const {
     for (uint32_t i = 0; i < store_.slotCount(); ++i) {
-      const EntityRecord& record = store_.record(i);
+      const detail::EntityRecord& record = store_.record(i);
       if (!record.archetype) {
         continue;
       }
 
-      const Table& table = record.archetype->table;
+      const detail::Table& table = record.archetype->table;
       if (record.row >= table.count() || table.entities()[record.row] != Entity{i, record.generation}) {
         return fail(why, "I-3", entityLabel(i, record.generation));
       }
@@ -430,7 +430,7 @@ namespace oly::ecs {
     for (const auto& owned : archetypes_) {
       for (ComponentId componentId : owned->signature) {
         const uint16_t* column = componentId < componentIndex_.size() ? componentIndex_[componentId].find(owned->id) : nullptr;
-        if (!column || *column != columnOf(*owned, componentId)) {
+        if (!column || *column != detail::columnOf(*owned, componentId)) {
           return fail(why, "I-7", "cid=" + std::to_string(componentId) + " " + archetypeLabel(*owned));
         }
       }
@@ -442,8 +442,8 @@ namespace oly::ecs {
           return fail(why, "I-7", "cid=" + std::to_string(componentId));
         }
 
-        const Archetype& archetype = *archetypes_[archetypeId];
-        if (!std::binary_search(archetype.signature.begin(), archetype.signature.end(), ComponentId(componentId)) || column != columnOf(archetype, ComponentId(componentId))) {
+        const detail::Archetype& archetype = *archetypes_[archetypeId];
+        if (!std::binary_search(archetype.signature.begin(), archetype.signature.end(), ComponentId(componentId)) || column != detail::columnOf(archetype, ComponentId(componentId))) {
           return fail(why, "I-7", "cid=" + std::to_string(componentId) + " " + archetypeLabel(archetype));
         }
       }
@@ -513,7 +513,7 @@ namespace oly::ecs {
     std::vector<ComponentId> components = spec.read;
     components.insert(components.end(), spec.write.begin(), spec.write.end());
 
-    Signature with = components, without = spec.without;
+    detail::Signature with = components, without = spec.without;
     with.insert(with.end(), spec.with.begin(), spec.with.end());
     detail::sortUnique(with);
     detail::sortUnique(without);
@@ -537,8 +537,8 @@ namespace oly::ecs {
     return reference;
   }
 
-  QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query) {
-    QueryCacheBase* registered = query.get();
+  detail::QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<detail::QueryCacheBase> query) {
+    detail::QueryCacheBase* registered = query.get();
 
     queries_.push_back(registered);
     queryCache_.emplace(std::move(key), std::move(query));
@@ -547,10 +547,10 @@ namespace oly::ecs {
   }
 
   // Índice do componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
-  const core::SmallMap<ArchetypeId, uint16_t>* World::smallestIndex(const Signature& with) const {
-    static const core::SmallMap<ArchetypeId, uint16_t> empty;
+  const core::SmallMap<detail::ArchetypeId, uint16_t>* World::smallestIndex(const detail::Signature& with) const {
+    static const core::SmallMap<detail::ArchetypeId, uint16_t> empty;
 
-    const core::SmallMap<ArchetypeId, uint16_t>* best = nullptr;
+    const core::SmallMap<detail::ArchetypeId, uint16_t>* best = nullptr;
     for (ComponentId componentId : with) {
       const auto* index = componentId < componentIndex_.size() ? &componentIndex_[componentId] : &empty;
       if (!best || index->size() < best->size()) {
@@ -562,8 +562,8 @@ namespace oly::ecs {
   }
 
   void World::materialize(Entity reserved) {
-    EntityRecord& record = store_.record(reserved.index);
-    Archetype& rootArchetype = root();
+    detail::EntityRecord& record = store_.record(reserved.index);
+    detail::Archetype& rootArchetype = root();
 
     record.row = rootArchetype.table.pushUninitialized(reserved);
     record.archetype = &rootArchetype;
@@ -577,7 +577,7 @@ namespace oly::ecs {
     }
   }
 
-  uint32_t World::transitionTo(Entity entity, EntityRecord& record, Archetype& destination, const Edge* edge) {
+  uint32_t World::transitionTo(Entity entity, detail::EntityRecord& record, detail::Archetype& destination, const detail::Edge* edge) {
     if (!record.archetype) {
       record.row = destination.table.pushUninitialized(entity);
       record.archetype = &destination;
@@ -592,26 +592,26 @@ namespace oly::ecs {
     OLY_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
     OLY_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
 
-    commandBuffer.forEach([&](const CommandView& command) {
+    commandBuffer.forEach([&](const detail::CommandView& command) {
       switch (command.operation) {
-      case CommandOperation::Spawn:
+      case detail::CommandOperation::Spawn:
         if (store_.isReserved(command.entity)) {
           materialize(command.entity);
         }
         break;
-      case CommandOperation::Destroy:
+      case detail::CommandOperation::Destroy:
         if (store_.isAlive(command.entity)) {
           destroy(command.entity);
         } else if (store_.isReserved(command.entity)) {
           store_.release(command.entity.index);
         }
         break;
-      case CommandOperation::Add:
+      case detail::CommandOperation::Add:
         if (store_.isAlive(command.entity)) {
           addRaw(command.entity, command.componentId, command.payload);
         }
         break;
-      case CommandOperation::Remove:
+      case detail::CommandOperation::Remove:
         if (store_.isAlive(command.entity)) {
           removeRaw(command.entity, command.componentId);
         }
@@ -622,24 +622,24 @@ namespace oly::ecs {
     commandBuffer.clear();
   }
 
-  const Edge& World::jumpEdge(Archetype& source, Archetype& destination) {
+  const detail::Edge& World::jumpEdge(detail::Archetype& source, detail::Archetype& destination) {
     const uint64_t key = (uint64_t(source.id) << 32) | destination.id;
     if (auto it = jumpEdges_.find(key); it != jumpEdges_.end()) {
       return it->second;
     }
 
-    return jumpEdges_.emplace(key, buildEdge(source, destination, NoComponent)).first->second;
+    return jumpEdges_.emplace(key, detail::buildEdge(source, destination, detail::NoComponent)).first->second;
   }
 
   void World::flush(CommandBuffer& commandBuffer) {
     OLY_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
     OLY_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
 
-    const CommandPlan plan = commandBuffer.plan();
-    NetEffect net;
+    const detail::CommandPlan plan = commandBuffer.plan();
+    detail::NetEffect net;
     FlushMemo memo;
 
-    for (const EntityPlan& entityPlan : plan.entities) {
+    for (const detail::EntityPlan& entityPlan : plan.entities) {
       const Entity entity = entityPlan.entity;
       commandBuffer.netEffect(plan, entityPlan, net);
 
@@ -654,11 +654,11 @@ namespace oly::ecs {
         continue;
       }
 
-      const std::span<const NetComponentOperation> operations = net.operations;
-      EntityRecord& record = store_.record(entity.index);
-      Archetype* source = record.archetype; // nullptr se reservada
+      const std::span<const detail::NetComponentOperation> operations = net.operations;
+      detail::EntityRecord& record = store_.record(entity.index);
+      detail::Archetype* source = record.archetype; // nullptr se reservada
       if (!memo.matches(source, operations)) {
-        Archetype* destination = findOrCreate(applyOperations(source ? source->signature : Signature{}, operations));
+        detail::Archetype* destination = findOrCreate(applyOperations(source ? source->signature : detail::Signature{}, operations));
         memo.assign(source, operations, destination, (source && destination != source) ? &jumpEdge(*source, *destination) : nullptr);
       }
 
@@ -667,44 +667,5 @@ namespace oly::ecs {
     }
 
     commandBuffer.clear();
-  }
-
-  WorldStats World::stats() const {
-    WorldStats worldStats{};
-    worldStats.archetypeCount = archetypeCount();
-    worldStats.signatureLookups = signatureLookups_;
-
-    for (const auto& owned : archetypes_) {
-      const Archetype& archetype = *owned;
-      size_t rowBytes = sizeof(Entity);
-      for (uint16_t i = 0; i < archetype.table.columnCount(); ++i) {
-        rowBytes += archetype.table.column(i).info->size;
-      }
-
-      ArchetypeStats archetypeStats{};
-      archetypeStats.id = archetype.id;
-      archetypeStats.signature = archetype.signature;
-      archetypeStats.count = archetype.table.count();
-      archetypeStats.capacity = archetype.table.capacity();
-      archetypeStats.edgeCount = static_cast<uint32_t>(archetype.addEdges.size() + archetype.removeEdges.size());
-      archetypeStats.columnBytes = size_t(archetypeStats.capacity) * rowBytes;
-      archetypeStats.idleBytes = size_t(archetypeStats.capacity - archetypeStats.count) * rowBytes;
-      archetypeStats.signatureBytes = (archetype.signature.capacity() + archetype.columnTypes.capacity()) * sizeof(ComponentId);
-
-      archetypeStats.edgeBytes = archetype.addEdges.capacityBytes() + archetype.removeEdges.capacityBytes();
-      for (const auto& [componentId, edge] : archetype.addEdges) {
-        archetypeStats.edgeBytes += edge.sourceToDestination.capacity() * sizeof(int16_t);
-      }
-      for (const auto& [componentId, edge] : archetype.removeEdges) {
-        archetypeStats.edgeBytes += edge.sourceToDestination.capacity() * sizeof(int16_t);
-      }
-
-      worldStats.liveEntities += archetypeStats.count;
-      const uint32_t bucket = archetypeStats.count == 0 ? 0 : 1 + (31 - static_cast<uint32_t>(__builtin_clz(archetypeStats.count)));
-      ++worldStats.histogram[bucket];
-      worldStats.archetypes.push_back(std::move(archetypeStats));
-    }
-
-    return worldStats;
   }
 }

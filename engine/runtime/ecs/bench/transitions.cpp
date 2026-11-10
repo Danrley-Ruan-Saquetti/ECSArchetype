@@ -51,8 +51,8 @@ namespace {
     }
 
     state.counters["ns_per_op"] = benchmark::Counter(2.0 * kEntityCount, benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
-    state.counters["archetypes"] = world.archetypeCount();
-    state.counters["entities_per_archetype"] = double(kEntityCount) / world.archetypeCount();
+    state.counters["archetypes"] = oly::ecs::archetypeCount(world);
+    state.counters["entities_per_archetype"] = double(kEntityCount) / oly::ecs::archetypeCount(world);
   }
   BENCHMARK_TEMPLATE2(BM_Transition, false, 2)->Name("BM_Transition_Trivial/2");
   BENCHMARK_TEMPLATE2(BM_Transition, false, 4)->Name("BM_Transition_Trivial/4");

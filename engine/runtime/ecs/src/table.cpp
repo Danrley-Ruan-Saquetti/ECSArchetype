@@ -1,11 +1,11 @@
-#include "oly/ecs/table.hpp"
+#include "oly/ecs/detail/table.hpp"
 
 #include <algorithm>
 
 #include "oly/core/align.hpp"
 #include "oly/core/assert.hpp"
 
-namespace oly::ecs {
+namespace oly::ecs::detail {
   namespace {
     size_t columnAlignment(const TypeInfo& info) {
       return std::max<size_t>(info.alignment, 64);

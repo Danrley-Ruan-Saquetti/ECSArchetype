@@ -4,7 +4,7 @@
 #include <string>
 
 #include "components.hpp"
-#include "oly/ecs/type_info.hpp"
+#include "oly/ecs/component.hpp"
 
 TEST_CASE("componentId é estável, denso e ignora cvref") {
   auto idA = oly::ecs::componentId<A>();

@@ -9,25 +9,25 @@
 
 #include "components.hpp"
 #include "oly/core/assert.hpp"
-#include "oly/ecs/table.hpp"
-#include "oly/ecs/type_info.hpp"
+#include "oly/ecs/detail/table.hpp"
+#include "oly/ecs/component.hpp"
 
 namespace {
-  uint16_t columnIndexOf(const oly::ecs::Table& table, oly::ecs::ComponentId id) {
+  uint16_t columnIndexOf(const oly::ecs::detail::Table& table, oly::ecs::ComponentId id) {
     auto columnTypes = table.columnTypes();
     return static_cast<uint16_t>(std::lower_bound(columnTypes.begin(), columnTypes.end(), id) - columnTypes.begin());
   }
 
-  void construct(oly::ecs::Table& table, uint32_t row, uint64_t value) {
+  void construct(oly::ecs::detail::Table& table, uint32_t row, uint64_t value) {
     new (table.column(columnIndexOf(table, oly::ecs::componentId<A>())).at(row)) A{value};
     new (table.column(columnIndexOf(table, oly::ecs::componentId<LifeCounter>())).at(row)) LifeCounter{value};
   }
 
-  uint64_t valueA(oly::ecs::Table& table, uint32_t row) {
+  uint64_t valueA(oly::ecs::detail::Table& table, uint32_t row) {
     return static_cast<A*>(table.column(columnIndexOf(table, oly::ecs::componentId<A>())).at(row))->value;
   }
 
-  void checkI1I2(const oly::ecs::Table& table) {
+  void checkI1I2(const oly::ecs::detail::Table& table) {
     CHECK(table.entities().size() == table.count());
     CHECK(table.capacity() >= table.count());
     CHECK(LifeCounter::alive == table.count());
@@ -48,7 +48,7 @@ TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
   {
     oly::ecs::ComponentId ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<LifeCounter>()};
     std::sort(std::begin(ids), std::end(ids));
-    oly::ecs::Table table(ids);
+    oly::ecs::detail::Table table(ids);
 
     for (uint32_t i = 0; i < 200; ++i) {
       auto row = table.pushUninitialized({i, 0});
@@ -75,7 +75,7 @@ TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
 TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
   oly::ecs::ComponentId ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<Wide>()};
   std::sort(std::begin(ids), std::end(ids));
-  oly::ecs::Table table(ids);
+  oly::ecs::detail::Table table(ids);
 
   table.pushUninitialized({0, 0});
 
@@ -86,7 +86,7 @@ TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
 
 TEST_CASE("std::string sobrevive à realocação") {
   oly::ecs::ComponentId ids[] = {oly::ecs::componentId<std::string>()};
-  oly::ecs::Table table(ids);
+  oly::ecs::detail::Table table(ids);
   auto make = [](uint32_t i) { return std::string(40, 'a') + std::to_string(i); };
 
   for (uint32_t i = 0; i < 100; ++i) {

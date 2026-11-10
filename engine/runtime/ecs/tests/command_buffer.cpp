@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "oly/ecs/detail/test_access.hpp"
 #include "oly/ecs/world.hpp"
 #include "model.hpp"
 
@@ -35,7 +36,7 @@ TEST_CASE("spawn referenciado no mesmo buffer") {
 
   commandBuffer.add(entity, A{5});
   commandBuffer.add(entity, FuzzState{std::string(40, 'x')});
-  world.flushSequential(commandBuffer);
+  oly::ecs::detail::WorldTestAccess::flushSequential(world, commandBuffer);
 
   CHECK(world.get<A>(entity).value == 5);
   CHECK(world.get<FuzzState>(entity).text == std::string(40, 'x'));
@@ -54,7 +55,7 @@ TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") {
   for (int i = 0; i < 500; ++i) {
     commandBuffer.add(world.create(), A{uint64_t(i)}); // força várias realocações
   }
-  world.flushSequential(commandBuffer);
+  oly::ecs::detail::WorldTestAccess::flushSequential(world, commandBuffer);
 
   CHECK(world.get<FuzzState>(entity).text == big);
   CHECK(world.get<FuzzState>(shortEntity).text == "abc");
@@ -69,15 +70,15 @@ TEST_CASE("payload alignas(64) fica alinhado") {
   commandBuffer.add(entity, Wide{});
 
   int seen = 0;
-  commandBuffer.forEach([&](const oly::ecs::CommandView& command) {
-    if (command.operation == oly::ecs::CommandOperation::Add && command.componentId == oly::ecs::componentId<Wide>()) {
+  oly::ecs::detail::CommandBufferTestAccess::forEach(commandBuffer, [&](const oly::ecs::detail::CommandView& command) {
+    if (command.operation == oly::ecs::detail::CommandOperation::Add && command.componentId == oly::ecs::componentId<Wide>()) {
       ++seen;
       CHECK(reinterpret_cast<uintptr_t>(command.payload) % 64 == 0);
     }
   });
   CHECK(seen == 1);
 
-  world.flushSequential(commandBuffer);
+  oly::ecs::detail::WorldTestAccess::flushSequential(world, commandBuffer);
   CHECK(world.has<Wide>(entity));
 }
 
@@ -90,12 +91,12 @@ TEST_CASE("forEach reproduz a ordem de gravação") {
   commandBuffer.remove<B>(entity);
   commandBuffer.destroy(spawned);
 
-  std::vector<oly::ecs::CommandOperation> operations;
-  commandBuffer.forEach([&](const oly::ecs::CommandView& command) { operations.push_back(command.operation); });
+  std::vector<oly::ecs::detail::CommandOperation> operations;
+  oly::ecs::detail::CommandBufferTestAccess::forEach(commandBuffer, [&](const oly::ecs::detail::CommandView& command) { operations.push_back(command.operation); });
 
   CHECK(commandBuffer.commandCount() == 4);
   CHECK_FALSE(commandBuffer.empty());
-  CHECK(operations == std::vector<oly::ecs::CommandOperation>{oly::ecs::CommandOperation::Spawn, oly::ecs::CommandOperation::Add, oly::ecs::CommandOperation::Remove, oly::ecs::CommandOperation::Destroy});
+  CHECK(operations == std::vector<oly::ecs::detail::CommandOperation>{oly::ecs::detail::CommandOperation::Spawn, oly::ecs::detail::CommandOperation::Add, oly::ecs::detail::CommandOperation::Remove, oly::ecs::detail::CommandOperation::Destroy});
 }
 
 TEST_CASE("buffer descartado sem flush não vaza") {
@@ -125,7 +126,7 @@ TEST_CASE("flushSequential ignora handles que não estão vivos nem reservados")
   commandBuffer.destroy(entity);
   commandBuffer.remove<A>(entity);
 
-  world.flushSequential(commandBuffer);
+  oly::ecs::detail::WorldTestAccess::flushSequential(world, commandBuffer);
 
   CHECK_FALSE(world.isAlive(entity));
   CHECK_INVARIANTS(world);
@@ -174,7 +175,7 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
       }
     }
 
-    world.flushSequential(commandBuffer);
+    oly::ecs::detail::WorldTestAccess::flushSequential(world, commandBuffer);
     CHECK(commandBuffer.empty());
     requireEqual(world, model);
     CHECK_INVARIANTS(world);
@@ -190,7 +191,7 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
 TEST_CASE("R-CB-4: add seguido de remove não deixa nada") {
   oly::ecs::World world;
   auto entity = world.create(B{1, 2});
-  auto before = world.archetypeCount();
+  auto before = oly::ecs::archetypeCount(world);
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, A{1});
   commandBuffer.remove<A>(entity);
@@ -199,7 +200,7 @@ TEST_CASE("R-CB-4: add seguido de remove não deixa nada") {
 
   CHECK_FALSE(world.has<A>(entity));
   CHECK(world.get<B>(entity).first == 1);
-  CHECK(world.archetypeCount() == before); // permaneceu no arquétipo original
+  CHECK(oly::ecs::archetypeCount(world) == before); // permaneceu no arquétipo original
   CHECK_INVARIANTS(world);
 }
 
@@ -281,11 +282,11 @@ TEST_CASE("R-CB-3: uma única transição por entidade") {
   commandBuffer.add(entity, A{1});
   commandBuffer.add(entity, B{2, 3});
   commandBuffer.add(entity, Tag{});
-  auto before = world.archetypeCount();
+  auto before = oly::ecs::archetypeCount(world);
 
   world.flush(commandBuffer);
 
-  CHECK(world.archetypeCount() == before + 1); // só {A,B,Tag}; nenhum intermediário
+  CHECK(oly::ecs::archetypeCount(world) == before + 1); // só {A,B,Tag}; nenhum intermediário
   CHECK(world.get<B>(entity).second == 3);
   CHECK(world.has<Tag>(entity));
   CHECK_INVARIANTS(world);
@@ -297,11 +298,11 @@ TEST_CASE("flush: entidade com dados nasce direto no arquétipo final") {
   auto spawned = commandBuffer.spawn();
   commandBuffer.add(spawned, A{1});
   commandBuffer.add(spawned, B{2, 3});
-  auto before = world.archetypeCount();
+  auto before = oly::ecs::archetypeCount(world);
 
   world.flush(commandBuffer);
 
-  CHECK(world.archetypeCount() == before + 1);
+  CHECK(oly::ecs::archetypeCount(world) == before + 1);
   CHECK(world.get<A>(spawned).value == 1);
   CHECK_INVARIANTS(world);
 }
@@ -391,7 +392,7 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
       }
 
       coalesced.flush(coalescedCommands);
-      sequential.flushSequential(sequentialCommands);
+      oly::ecs::detail::WorldTestAccess::flushSequential(sequential, sequentialCommands);
 
       compare();
       CHECK_INVARIANTS(coalesced);
@@ -415,11 +416,11 @@ TEST_CASE("R-CB-3: comandos intercalados entre entidades ainda coalescem por ent
   commandBuffer.add(first, B{3, 4}); // first volta fora do trecho consecutivo
   commandBuffer.add(second, B{5, 6});
   commandBuffer.add(first, A{7});
-  auto before = world.archetypeCount();
+  auto before = oly::ecs::archetypeCount(world);
 
   world.flush(commandBuffer);
 
-  CHECK(world.archetypeCount() == before + 1); // só {A,B}
+  CHECK(oly::ecs::archetypeCount(world) == before + 1); // só {A,B}
   CHECK(world.get<A>(first).value == 7);
   CHECK(world.get<B>(first).second == 4);
   CHECK(world.get<A>(second).value == 2);

@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "components.hpp"
-#include "oly/ecs/archetype.hpp"
+#include "oly/ecs/detail/archetype.hpp"
 #include "oly/core/small_map.hpp"
 
 namespace {
@@ -11,47 +11,47 @@ namespace {
     uint32_t value;
   };
 
-  oly::ecs::Signature sorted(oly::ecs::Signature signature) {
+  oly::ecs::detail::Signature sorted(oly::ecs::detail::Signature signature) {
     std::sort(signature.begin(), signature.end());
     return signature;
   }
 }
 
 TEST_CASE("columnTypes exclui tags; signature ordenada inclui") {
-  oly::ecs::Signature signature = sorted({oly::ecs::componentId<A>(), oly::ecs::componentId<Tag>(), oly::ecs::componentId<B>()});
+  oly::ecs::detail::Signature signature = sorted({oly::ecs::componentId<A>(), oly::ecs::componentId<Tag>(), oly::ecs::componentId<B>()});
 
-  oly::ecs::Archetype archetype(1, signature);
+  oly::ecs::detail::Archetype archetype(1, signature);
 
   CHECK(archetype.signature == signature);
   CHECK(archetype.columnTypes.size() == 2);
   CHECK(archetype.table.columnCount() == 2);
-  CHECK(oly::ecs::columnOf(archetype, oly::ecs::componentId<Tag>()) == oly::ecs::NoColumn);
-  CHECK(oly::ecs::columnOf(archetype, oly::ecs::componentId<A>()) != oly::ecs::NoColumn);
-  CHECK(oly::ecs::columnOf(archetype, oly::ecs::componentId<C>()) == oly::ecs::NoColumn);
+  CHECK(oly::ecs::detail::columnOf(archetype, oly::ecs::componentId<Tag>()) == oly::ecs::detail::NoColumn);
+  CHECK(oly::ecs::detail::columnOf(archetype, oly::ecs::componentId<A>()) != oly::ecs::detail::NoColumn);
+  CHECK(oly::ecs::detail::columnOf(archetype, oly::ecs::componentId<C>()) == oly::ecs::detail::NoColumn);
 }
 
 TEST_CASE("buildEdge mapeia colunas por merge") {
   const auto idA = oly::ecs::componentId<A>(), idB = oly::ecs::componentId<B>(), idC = oly::ecs::componentId<C>();
-  oly::ecs::Archetype source(1, sorted({idA, idB}));
+  oly::ecs::detail::Archetype source(1, sorted({idA, idB}));
   {
-    oly::ecs::Archetype destination(2, sorted({idA, idB, idC}));
-    auto edge = oly::ecs::buildEdge(source, destination, idC);
+    oly::ecs::detail::Archetype destination(2, sorted({idA, idB, idC}));
+    auto edge = oly::ecs::detail::buildEdge(source, destination, idC);
     CHECK(edge.target == &destination);
     REQUIRE(edge.sourceToDestination.size() == 2);
-    CHECK(edge.sourceToDestination[oly::ecs::columnOf(source, idA)] == oly::ecs::columnOf(destination, idA));
-    CHECK(edge.sourceToDestination[oly::ecs::columnOf(source, idB)] == oly::ecs::columnOf(destination, idB));
-    CHECK(edge.addedColumn == oly::ecs::columnOf(destination, idC));
+    CHECK(edge.sourceToDestination[oly::ecs::detail::columnOf(source, idA)] == oly::ecs::detail::columnOf(destination, idA));
+    CHECK(edge.sourceToDestination[oly::ecs::detail::columnOf(source, idB)] == oly::ecs::detail::columnOf(destination, idB));
+    CHECK(edge.addedColumn == oly::ecs::detail::columnOf(destination, idC));
   }
   {
-    oly::ecs::Archetype destination(3, sorted({idB}));
-    auto edge = oly::ecs::buildEdge(source, destination, oly::ecs::NoComponent);
-    CHECK(edge.sourceToDestination[oly::ecs::columnOf(source, idA)] == -1);
-    CHECK(edge.sourceToDestination[oly::ecs::columnOf(source, idB)] == 0);
+    oly::ecs::detail::Archetype destination(3, sorted({idB}));
+    auto edge = oly::ecs::detail::buildEdge(source, destination, oly::ecs::detail::NoComponent);
+    CHECK(edge.sourceToDestination[oly::ecs::detail::columnOf(source, idA)] == -1);
+    CHECK(edge.sourceToDestination[oly::ecs::detail::columnOf(source, idB)] == 0);
     CHECK(edge.addedColumn == -1);
   }
   {
-    oly::ecs::Archetype destination(4, sorted({idA, idB, oly::ecs::componentId<Tag>()}));
-    auto edge = oly::ecs::buildEdge(source, destination, oly::ecs::componentId<Tag>());
+    oly::ecs::detail::Archetype destination(4, sorted({idA, idB, oly::ecs::componentId<Tag>()}));
+    auto edge = oly::ecs::detail::buildEdge(source, destination, oly::ecs::componentId<Tag>());
     CHECK(edge.addedColumn == -1); // tag não tem coluna
     CHECK(edge.sourceToDestination[0] == 0);
     CHECK(edge.sourceToDestination[1] == 1);
@@ -74,5 +74,5 @@ TEST_CASE("SmallMap mantém ordem e encontra") {
 }
 
 TEST_CASE("SignatureHash difere para assinaturas diferentes") {
-  CHECK(oly::ecs::SignatureHash{}({1, 2}) != oly::ecs::SignatureHash{}({2, 1, 0}));
+  CHECK(oly::ecs::detail::SignatureHash{}({1, 2}) != oly::ecs::detail::SignatureHash{}({2, 1, 0}));
 }

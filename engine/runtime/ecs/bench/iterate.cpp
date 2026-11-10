@@ -55,8 +55,8 @@ static void BM_IterateSingle_ECS(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 
-  state.counters["archetypes"] = world.archetypeCount();
-  state.counters["entities_per_archetype"] = double(entityCount) / (world.archetypeCount() - 1);
+  state.counters["archetypes"] = oly::ecs::archetypeCount(world);
+  state.counters["entities_per_archetype"] = double(entityCount) / (oly::ecs::archetypeCount(world) - 1);
   state.counters["per_entity"] = benchmark::Counter(
     static_cast<double>(entityCount), benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert);
 }
@@ -72,7 +72,7 @@ static void BM_IterateSingle_RawQuery(benchmark::State& state) {
   auto& query = world.rawQuery({.read = {oly::ecs::componentId<Velocity>()}, .write = {oly::ecs::componentId<Position>()}});
 
   for (auto _ : state) {
-    query.eachBlock([](oly::ecs::Table& table, std::span<const uint16_t> columns) {
+    query.eachBlock([](oly::ecs::detail::Table& table, std::span<const uint16_t> columns) {
       const Velocity* velocityData = reinterpret_cast<const Velocity*>(table.column(columns[0]).data);
       Position* positionData = reinterpret_cast<Position*>(table.column(columns[1]).data);
       const size_t count = table.count();

@@ -1,8 +1,8 @@
-#include "oly/ecs/archetype.hpp"
+#include "oly/ecs/detail/archetype.hpp"
 
 #include <algorithm>
 
-namespace oly::ecs {
+namespace oly::ecs::detail {
   namespace {
     std::vector<ComponentId> dataTypes(const Signature& signature) {
       std::vector<ComponentId> out;

@@ -45,5 +45,5 @@ struct LifeCounter {
 #define CHECK_INVARIANTS(world)                          \
   do {                                                   \
     std::string why_;                                    \
-    CHECK_MESSAGE((world).checkInvariants(&why_), why_); \
+    CHECK_MESSAGE(oly::ecs::checkInvariants(world, &why_), why_); \
   } while (0)

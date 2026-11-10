@@ -175,7 +175,7 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
   world.add(entity, C4{4});
   world.remove<C4>(entity); // aquece arestas e capacidade (64 linhas)
   auto allocations = allocationCount();
-  auto lookups = world.signatureLookupCount();
+  auto lookups = oly::ecs::signatureLookupCount(world);
 
   for (int i = 0; i < 1000; ++i) {
     world.add(entity, C4{uint64_t(i)});
@@ -183,7 +183,7 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
   }
 
   auto allocationsAfter = allocationCount();
-  auto lookupsAfter = world.signatureLookupCount();
+  auto lookupsAfter = oly::ecs::signatureLookupCount(world);
   CHECK(allocationsAfter == allocations);
   CHECK(lookupsAfter == lookups);
   CHECK(world.get<C3>(entity).value == 3);
@@ -191,16 +191,16 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
 
 TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
   oly::ecs::World world;
-  CHECK(world.archetypeCount() == 1);
+  CHECK(oly::ecs::archetypeCount(world) == 1);
 
   world.create(A{1});
-  CHECK(world.archetypeCount() == 2);
+  CHECK(oly::ecs::archetypeCount(world) == 2);
 
   world.create(A{2});
-  CHECK(world.archetypeCount() == 2);
+  CHECK(oly::ecs::archetypeCount(world) == 2);
 
   world.create(A{3}, B{0, 0});
-  CHECK(world.archetypeCount() == 3);
+  CHECK(oly::ecs::archetypeCount(world) == 3);
 }
 
 TEST_CASE("stats: contagens, histograma e memória ociosa") {
@@ -210,7 +210,7 @@ TEST_CASE("stats: contagens, histograma e memória ociosa") {
   }
   world.create(A{0}, B{0, 0}); // {A,B}: 1
 
-  auto stats = world.stats();
+  auto stats = oly::ecs::stats(world);
 
   CHECK(stats.archetypeCount == 3); // raiz, {A}, {A,B}
   CHECK(stats.liveEntities == 6);
@@ -219,7 +219,7 @@ TEST_CASE("stats: contagens, histograma e memória ociosa") {
   CHECK(stats.histogram[3] == 1); // count 5 ∈ [4, 8)
 
   auto& archetypeA = *std::find_if(stats.archetypes.begin(), stats.archetypes.end(),
-                                   [](auto& archetype) { return archetype.signature == oly::ecs::Signature{oly::ecs::componentId<A>()}; });
+                                   [](auto& archetype) { return archetype.signature == oly::ecs::detail::Signature{oly::ecs::componentId<A>()}; });
   CHECK(archetypeA.capacity == 64);
   CHECK(archetypeA.idleBytes == (64 - 5) * (sizeof(A) + sizeof(oly::ecs::Entity)));
   CHECK(archetypeA.columnBytes == 64 * (sizeof(A) + sizeof(oly::ecs::Entity)));

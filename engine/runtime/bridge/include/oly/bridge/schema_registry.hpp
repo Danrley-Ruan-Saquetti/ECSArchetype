@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <span>
 
-#include "oly/ecs/type_info.hpp"
+#include "oly/ecs/component.hpp"
 
 namespace oly::bridge {
   // Definidas pelo código gerado do jogo (ou, nos testes, por um registro escrito à mão).

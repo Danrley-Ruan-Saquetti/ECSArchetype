@@ -6,7 +6,7 @@
 
 #include "oly/core/align.hpp"
 #include "oly/core/assert.hpp"
-#include "oly/ecs/table.hpp"
+#include "oly/ecs/detail/table.hpp"
 
 namespace oly::ecs {
   namespace {
@@ -94,17 +94,17 @@ namespace oly::ecs {
     size_ = capacity_ = 0;
   }
 
-  size_t CommandBuffer::readAt(size_t offset, CommandView& out) const noexcept {
+  size_t CommandBuffer::readAt(size_t offset, detail::CommandView& out) const noexcept {
     const std::byte* header = data_ + offset;
     uint64_t entityBits;
     uint32_t size;
-    out.operation = static_cast<CommandOperation>(header[0]);
+    out.operation = static_cast<detail::CommandOperation>(header[0]);
     std::memcpy(&entityBits, header + 8, 8);
     std::memcpy(&out.componentId, header + 16, 4);
     std::memcpy(&size, header + 20, 4);
     out.entity = Entity{static_cast<uint32_t>(entityBits), static_cast<uint32_t>(entityBits >> 32)};
 
-    if (out.operation == CommandOperation::Add && size > 0) {
+    if (out.operation == detail::CommandOperation::Add && size > 0) {
       const size_t payloadOffset = core::alignUp(offset + kHeaderSize, std::max<size_t>(8, static_cast<uint8_t>(header[1])));
       out.payload = const_cast<std::byte*>(data_) + payloadOffset;
       return core::alignUp(payloadOffset + size, 8);
@@ -127,12 +127,12 @@ namespace oly::ecs {
       }
     } else {
       for (size_t offset = 0; offset < size_;) {
-        CommandView command;
+        detail::CommandView command;
         const size_t next = readAt(offset, command);
         std::memcpy(fresh + offset, data_ + offset, kHeaderSize);
         if (command.payload) {
           const TypeInfo& info = typeInfo(command.componentId);
-          relocateValue(info, fresh + (static_cast<std::byte*>(command.payload) - data_), command.payload);
+          detail::relocateValue(info, fresh + (static_cast<std::byte*>(command.payload) - data_), command.payload);
         }
         offset = next;
       }
@@ -146,7 +146,7 @@ namespace oly::ecs {
     capacity_ = newCapacity;
   }
 
-  std::byte* CommandBuffer::pushRecord(CommandOperation operation, Entity entity, ComponentId componentId, uint32_t size, uint32_t alignment, bool trivial) {
+  std::byte* CommandBuffer::pushRecord(detail::CommandOperation operation, Entity entity, ComponentId componentId, uint32_t size, uint32_t alignment, bool trivial) {
     const size_t offset = size_;
     size_t payloadOffset = offset + kHeaderSize, next = offset + kHeaderSize;
     if (size > 0) {
@@ -173,7 +173,7 @@ namespace oly::ecs {
           runs_.clear();
         } else {
           seen_[word] |= bit;
-          runs_.push_back(EntityPlan{entity, static_cast<uint32_t>(offset >> 3), 1});
+          runs_.push_back(detail::EntityPlan{entity, static_cast<uint32_t>(offset >> 3), 1});
         }
       }
     }
@@ -198,18 +198,18 @@ namespace oly::ecs {
 
   Entity CommandBuffer::spawn() {
     Entity entity = store_->allocate();
-    pushRecord(CommandOperation::Spawn, entity, 0, 0, 1, true);
+    pushRecord(detail::CommandOperation::Spawn, entity, 0, 0, 1, true);
     spawned_.push_back(entity);
     return entity;
   }
 
   void CommandBuffer::destroy(Entity entity) {
-    pushRecord(CommandOperation::Destroy, entity, 0, 0, 1, true);
+    pushRecord(detail::CommandOperation::Destroy, entity, 0, 0, 1, true);
   }
 
   void CommandBuffer::addRaw(Entity entity, ComponentId componentId, void* value) {
     const TypeInfo& info = typeInfo(componentId);
-    void* payload = pushRecord(CommandOperation::Add, entity, componentId, info.size, info.tag ? 1 : info.alignment, info.trivial);
+    void* payload = pushRecord(detail::CommandOperation::Add, entity, componentId, info.size, info.tag ? 1 : info.alignment, info.trivial);
     if (info.tag) {
       return;
     }
@@ -222,16 +222,16 @@ namespace oly::ecs {
   }
 
   void CommandBuffer::removeRaw(Entity entity, ComponentId componentId) {
-    pushRecord(CommandOperation::Remove, entity, componentId, 0, 1, true);
+    pushRecord(detail::CommandOperation::Remove, entity, componentId, 0, 1, true);
   }
 
   void CommandBuffer::clear() noexcept {
     if (hasNonTrivialPayload_) {
       for (size_t offset = 0; offset < size_;) {
-        CommandView command;
+        detail::CommandView command;
         offset = readAt(offset, command);
         if (command.payload) {
-          destroyValue(typeInfo(command.componentId), command.payload);
+          detail::destroyValue(typeInfo(command.componentId), command.payload);
         }
       }
     }
@@ -245,9 +245,9 @@ namespace oly::ecs {
     spawned_.clear();
   }
 
-  CommandPlan CommandBuffer::plan() const {
+  detail::CommandPlan CommandBuffer::plan() const {
     constexpr uint32_t None = UINT32_MAX;
-    CommandPlan result;
+    detail::CommandPlan result;
     if (grouped_) {
       result.entities = runs_;
       return result;
@@ -257,7 +257,7 @@ namespace oly::ecs {
     std::unordered_map<uint64_t, uint32_t> overflow; // geração diferente no mesmo índice / índice fora da faixa
     auto planOf = [&](Entity entity) -> uint32_t {
       auto make = [&] {
-        result.owned.push_back(EntityPlan{entity});
+        result.owned.push_back(detail::EntityPlan{entity});
         return static_cast<uint32_t>(result.owned.size() - 1);
       };
 
@@ -280,14 +280,14 @@ namespace oly::ecs {
     };
 
     for (size_t offset = 0; offset < size_;) {
-      CommandView command;
+      detail::CommandView command;
       const size_t next = readAt(offset, command);
       ++result.owned[planOf(command.entity)].count;
       offset = next;
     }
 
     uint32_t accumulated = 0;
-    for (EntityPlan& entityPlan : result.owned) {
+    for (detail::EntityPlan& entityPlan : result.owned) {
       entityPlan.begin = accumulated;
       accumulated += entityPlan.count;
     }
@@ -295,12 +295,12 @@ namespace oly::ecs {
     // `begin` serve de cursor de escrita e é restaurado logo abaixo.
     result.order.resize(accumulated);
     for (size_t offset = 0; offset < size_;) {
-      CommandView command;
+      detail::CommandView command;
       const size_t next = readAt(offset, command);
       result.order[result.owned[planOf(command.entity)].begin++] = static_cast<uint32_t>(offset >> 3);
       offset = next;
     }
-    for (EntityPlan& entityPlan : result.owned) {
+    for (detail::EntityPlan& entityPlan : result.owned) {
       entityPlan.begin -= entityPlan.count;
     }
 
@@ -309,20 +309,20 @@ namespace oly::ecs {
     return result;
   }
 
-  void CommandBuffer::netEffect(const CommandPlan& plan, const EntityPlan& entityPlan, NetEffect& out) const {
+  void CommandBuffer::netEffect(const detail::CommandPlan& plan, const detail::EntityPlan& entityPlan, detail::NetEffect& out) const {
     out.spawned = out.destroyed = false;
     out.operations.clear();
 
     size_t offset = static_cast<size_t>(entityPlan.begin) << 3;
     for (uint32_t i = 0; i < entityPlan.count; ++i) {
-      CommandView command;
+      detail::CommandView command;
       if (plan.contiguous) {
         offset = readAt(offset, command);
       } else {
         readAt(static_cast<size_t>(plan.order[entityPlan.begin + i]) << 3, command);
       }
 
-      if (command.operation == CommandOperation::Spawn) {
+      if (command.operation == detail::CommandOperation::Spawn) {
         out.spawned = true;
         continue;
       }
@@ -330,20 +330,20 @@ namespace oly::ecs {
         OLY_ASSERT(false, "command after destroy e=%u:%u", command.entity.index, command.entity.generation);
         continue; // sem asserts: ignorado (R-CB-4)
       }
-      if (command.operation == CommandOperation::Destroy) {
+      if (command.operation == detail::CommandOperation::Destroy) {
         out.operations.clear();
         out.destroyed = true;
         continue;
       }
 
-      const NetComponentOperation net{command.componentId, command.operation == CommandOperation::Add, command.operation == CommandOperation::Add ? command.payload : nullptr};
+      const detail::NetComponentOperation net{command.componentId, command.operation == detail::CommandOperation::Add, command.operation == detail::CommandOperation::Add ? command.payload : nullptr};
       if (out.operations.empty() || out.operations.back().componentId < command.componentId) { // caso comum: ids crescentes
         out.operations.push_back(net);
         continue;
       }
 
       auto it = std::lower_bound(out.operations.begin(), out.operations.end(), command.componentId,
-                                 [](const NetComponentOperation& operation, ComponentId componentId) { return operation.componentId < componentId; });
+                                 [](const detail::NetComponentOperation& operation, ComponentId componentId) { return operation.componentId < componentId; });
       if (it != out.operations.end() && it->componentId == command.componentId) {
         *it = net;
       } else {

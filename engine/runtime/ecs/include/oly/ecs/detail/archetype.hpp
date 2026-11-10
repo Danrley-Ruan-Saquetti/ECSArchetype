@@ -5,10 +5,10 @@
 #include <vector>
 
 #include "oly/core/small_map.hpp"
-#include "oly/ecs/table.hpp"
-#include "oly/ecs/type_info.hpp"
+#include "oly/ecs/detail/table.hpp"
+#include "oly/ecs/component.hpp"
 
-namespace oly::ecs {
+namespace oly::ecs::detail {
   using ArchetypeId = uint32_t;
   using Signature = std::vector<ComponentId>;
 
