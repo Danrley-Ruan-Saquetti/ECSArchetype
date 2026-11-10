@@ -32,12 +32,12 @@ namespace oly::bridge {
       engine->currentContext = nullptr;
     }
 
-    oly::app::SystemContext& currentContext(OlyEngine* engine, const char* operation) {
+    oly::app::SystemContext& currentContext(OlyEngine* engine, [[maybe_unused]] const char* operation) {
       OLY_ASSERT(engine->currentContext != nullptr, "%s: chamado fora de sistema", operation);
       return *engine->currentContext;
     }
 
-    oly::app::Phase phaseOf(uint32_t phase, const char* operation) {
+    oly::app::Phase phaseOf(uint32_t phase, [[maybe_unused]] const char* operation) {
       OLY_ASSERT(phase < oly::app::PhaseCount, "%s: phase=%u fora do intervalo (0..%u)", operation, phase, oly::app::PhaseCount - 1);
       return static_cast<oly::app::Phase>(phase);
     }
