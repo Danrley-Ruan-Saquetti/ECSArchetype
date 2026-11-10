@@ -4,6 +4,10 @@ Data: 2026-11-09. Evolui o pacote descrito em `2026-10-16-ecs-archetype-spec.md`
 `I-*`, metas `NF-*` continuam valendo para o ECS) e aproveita a infraestrutura de build WASM de
 `2026-11-06-wasm-cost-study-design.md`.
 
+Revisão de 2026-11-10 (antes da fase 2): a engine passa a ser completa em C++, com o TypeScript como camada fina;
+o loop sai do TS e vai para o C++ (§1, §2, §4, §4.3, §5, §7, §8). Nomes seguem a modularização
+(`2026-11-09-oly-modularizacao-design.md`): prefixo `oly`, `OLY_ASSERT`, módulos em `engine/runtime/<m>/`.
+
 Convenção deste documento: o que não vem marcado foi decidido pelo autor do projeto. Itens marcados
 **[decisão do design]** foram escolhas feitas ao escrever o documento, sem confirmação explícita; podem ser revistas
 no plano da fase correspondente sem voltar ao autor, desde que respeitem os objetivos e anti-objetivos.
@@ -12,8 +16,14 @@ no plano da fase correspondente sem voltar ao autor, desde que respeitem os obje
 
 Transformar o ECS por arquétipos numa **game engine reaproveitável para jogos 2D no navegador**, com:
 
-- um **núcleo em C++** (o ECS atual mais a infraestrutura da engine), compilado para WASM;
-- um **complemento em TypeScript**, que é por onde o jogo usa a engine no navegador.
+- um **núcleo em C++** (o ECS atual mais a infraestrutura da engine), compilado para WASM. **O núcleo é a engine
+  inteira**: loop, fases, passo fixo, pausa, eventos, ações, schedule e estados vivem nele;
+- um **complemento em TypeScript**, que é por onde o jogo usa a engine no navegador. É uma **camada fina**: carrega o
+  WASM, repassa ao núcleo o tempo e os sinais do navegador, registra sistemas TS e dá acesso sem cópia aos
+  componentes. Não contém lógica de engine que falte ao C++.
+
+Motivo (do autor): quem quiser escrever um jogo só em C++, e no futuro rodá-lo em outro ambiente que não o navegador,
+não pode encontrar a engine incompleta porque parte dela foi escrita em TypeScript.
 
 Um sistema é um sistema, independente da linguagem: o jogo pode escrever cada sistema em C++ ou em TypeScript, e os
 dois tipos convivem nas mesmas fases. Isso faz da **fronteira WASM↔JS uma peça central do design**, não um detalhe:
@@ -42,6 +52,9 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
 - Infraestrutura completa para: sistemas em fases fixas, mudanças estruturais seguras, eventos, ações de input,
   `schedule` de ações no tempo, ciclo de vida da aplicação e estados de jogo.
 - Sistemas em C++ e em TypeScript com o mesmo modelo de uso.
+- Engine completa em C++: um jogo só em C++ usa todos os mecanismos (loop, fases, pausa e, nas fases seguintes,
+  eventos, ações, schedule e estados) pela API C++, sem depender de nada escrito em TS. O que é próprio do ambiente
+  (tempo, quadro, visibilidade e, depois, input) entra no núcleo pelo **host** (§4.3), trocável.
 - Acesso TS a componentes **sem cópia**, por bloco de arquétipo.
 - O jogo de validação jogável no navegador, de ponta a ponta.
 - Custo da fronteira medido: o mesmo sistema escrito em TS (via engine) e em C++, e contra uma linha de base TS manual.
@@ -50,7 +63,9 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
 - Render, colisão/física, áudio, carregamento de assets, câmera, UI. Ficam com o jogo.
 - Threads, Web Workers, `SharedArrayBuffer`.
 - Rede/multiplayer, editor, hot reload, serialização/save.
-- Executar fora do navegador como produto (um build nativo existe só para testar o núcleo C++, §6).
+- Executar fora do navegador como produto (um build nativo existe só para testar o núcleo C++, §6). A engine fica
+  **pronta** para isso (núcleo completo e host trocável), mas nenhum host nativo de verdade (janela, input, SDL etc.)
+  é entregue agora.
 - Suporte garantido a múltiplos navegadores: o alvo de validação é um navegador baseado em Chromium.
 - Gamepad (as ações são desenhadas para aceitá-lo depois; teclado e mouse bastam agora).
 
@@ -58,8 +73,10 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
 - Cruzar a fronteira WASM↔JS **por entidade** em caminhos quentes (iteração de sistemas, emissão de eventos por
   sistemas C++). A fronteira é cruzada por bloco, por lote ou por sistema.
 - O layout de um componente divergir entre C++ e TS. Existe uma única fonte (o esquema, §4.1).
-- Regredir o ECS: presets, testes, invariantes e números registrados em `bench/results/README.md` continuam valendo.
+- Regredir o ECS: presets, testes, invariantes e números registrados em `docs/benchmarks/README.md` continuam valendo.
 - Conceitos do jogo de validação vazarem para a engine.
+- Lógica de engine (decidir quando rodar passos, fases, pausa, eventos, schedule, estados) escrita só em TS. O TS
+  pode ter conveniências de API, nunca comportamento que um jogo só em C++ não teria.
 - Engine que só funciona com o jogo de validação (APIs moldadas para um caso só).
 
 ## 3. Restrições
@@ -82,14 +99,17 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
 ## 4. Arquitetura
 
 ```
- jogo (TS + C++ opcional)
- ───────────────────────────────────────────────
- pacote TS da engine      │  núcleo C++ da engine (WASM)
-  boot, loop, rAF, input  │   fases, eventos, schedule, estados
-  views sobre colunas     │   API C exportada (extern "C")
-  sistemas/handlers TS    │   sistemas/handlers C++
- ───────────────────────────────────────────────
- ECS (type_info → entity → table → archetype → query/command_buffer → world)
+ jogo (TS e/ou C++)
+ ─────────────────────────────────────────────────────────
+ pacotes TS (camada fina)         │  núcleo C++ da engine (WASM ou nativo)
+  boot (carrega o WASM)           │   loop: frame(agora) → passos fixos + render
+  host do navegador: rAF,         │   fases, pausa, CommandBuffer por fase
+   visibilitychange, input        │   eventos, schedule, estados (fases 3–6)
+  views sobre colunas             │   API C exportada (extern "C")
+  sistemas/handlers TS            │   sistemas/handlers C++
+   (chamados de volta pelo C++)   │
+ ─────────────────────────────────────────────────────────
+ ECS (component → entity → table → archetype → query/command_buffer → world)
 ```
 
 ### 4.1 Esquema único de componentes e eventos
@@ -132,11 +152,38 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
 
 ### 4.3 Loop e fases
 
+**Quem conduz o loop.** O loop é do **núcleo C++**. Um módulo C++ novo (nome sugerido `app`, em
+`engine/runtime/app/`, acima de `ecs`; **[decisão do design]** o nome) guarda o `World`, as fases e a ordem dos
+sistemas, o relógio do jogo, o acumulador do passo fixo, o estado de pausa e o `CommandBuffer` por fase.
+
+- **O host conduz o tempo; o núcleo decide o resto.** O host é quem conhece o ambiente. Ele chama `frame(agora)` uma
+  vez por quadro (tempo em segundos, monotônico) e avisa quando o jogo fica oculto/visível (`setHidden`). O núcleo
+  acumula o tempo, roda os passos fixos que couberem e a fase `render`. Hosts:
+  - navegador: o pacote `@oly/client`, com `requestAnimationFrame` e `visibilitychange`, chamando a API C;
+  - testes: um relógio falso, tanto no C++ nativo (doctest) quanto no TS em node (pela API C do WASM);
+  - outros ambientes: ficam para depois (§2); a engine não pode depender de nada do navegador.
+  Na fase 2, `frame` e `setHidden` bastam e **não** há interface de plataforma; uma interface entra quando o input
+  precisar (fase 4). **[decisão do design]**
+- **Sistemas C++** são funções registradas no núcleo e chamadas direto, sem fronteira. Um jogo só em C++ os registra
+  pela API C++ (`addSystem(fase, nome, função)`). Para que o TS possa colocá-los na ordem das fases, sistemas C++ do
+  jogo também podem ser registrados por **nome** com uma macro (ex.: `OLY_SYSTEM(move)`), e o TS os adiciona por esse
+  nome (`addNativeSystem`).
+- **Sistemas TS** são registrados pelo TS, que recebe um id do núcleo. Na hora de rodar, o núcleo chama o TS de volta
+  por **uma única função JS importada** pelo módulo WASM, que escolhe o sistema pelo id (sem `addFunction` nem tabela
+  de funções que cresce). **[decisão do design]** A fronteira é cruzada uma vez por sistema TS por passo, o que o
+  anti-objetivo permite (por sistema, não por entidade). O mesmo mecanismo serve, nas fases seguintes, para handlers
+  de evento, callbacks do schedule e ganchos de estado escritos em TS.
+- Contrato da chamada de volta: enquanto um sistema TS roda, o núcleo não guarda ponteiros para dentro do `World`
+  nem do heap através da chamada, porque o TS pode alocar no WASM (crescimento de memória) e mudar estrutura pelo
+  `CommandBuffer`. Exceções lançadas por um sistema TS sobem para quem chamou `frame` e deixam a engine num estado
+  definido (documentado no plano), sem corromper o `World`.
+
 **Ciclo de vida da aplicação** (controlado pela engine, igual para qualquer jogo):
-- `boot`: carrega o WASM, cria o `World`, registra o esquema.
-- `run`: o loop. Gameplay em **passo fixo** (**[decisão do design]** 60 Hz por padrão, configurável), acumulando o
-  tempo real do `requestAnimationFrame`, com um limite de passos por quadro para evitar espiral de atraso. Render uma
-  vez por quadro do `requestAnimationFrame`, recebendo o fator de interpolação entre passos.
+- `boot`: no navegador, o TS carrega o WASM; o núcleo cria o `World` e registra o esquema. Um jogo só em C++ cria a
+  engine direto.
+- `run`: o host passa a chamar `frame(agora)`. Gameplay em **passo fixo** (**[decisão do design]** 60 Hz por padrão,
+  configurável), acumulando o tempo real entre chamadas, com um limite de passos por quadro para evitar espiral de
+  atraso (o excedente é descartado). Render uma vez por `frame`, recebendo o fator de interpolação entre passos.
 - `pause`/`resume`: automático quando a aba fica oculta (`visibilitychange`) e disponível ao jogo
   (`engine.pause()`/`engine.resume()`, também pelo `context`). Pausado:
   - o relógio do jogo e o `schedule` congelam, e os sistemas de gameplay não rodam;
@@ -145,9 +192,22 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
     despacho de eventos e da transição de estado pendente;
   - o `render` continua.
   A pausa por aba oculta é independente da pausa do jogo: a aba volta e o jogo retoma sozinho, a menos que o jogo
-  também tenha pausado. Durante a aba oculta nenhum passo roda (o navegador para o `requestAnimationFrame`), e o tempo
-  acumulado é descartado ao voltar.
+  também tenha pausado. Durante a aba oculta nenhum passo roda (o navegador para o `requestAnimationFrame`; o núcleo,
+  avisado por `setHidden`, ignora `frame`), e o tempo acumulado é descartado ao voltar. Essa regra vive no núcleo;
+  o host só repassa o sinal.
 - `shutdown`: libera o `World` e os recursos da engine.
+
+**Detalhes do loop** (**[decisão do design]**, revisáveis no plano da fase 2):
+- `pause()`/`resume()` pedidos no meio de um passo valem a partir do próximo passo fixo.
+- A fase `render` roda pausada ou não; `.whilePaused()` só se aplica às fases de gameplay.
+- Pausado, o relógio do jogo congela, mas sistemas `.whilePaused()` recebem o `fixedDeltaTime` normal.
+- Dentro de sistemas (C++ e TS), o contexto só oferece mudanças estruturais pelo `CommandBuffer` da fase; acesso
+  estrutural direto ao `World` fica fora do loop. O `CommandBuffer` também é aplicado ao fim da fase `render`.
+- O primeiro `frame`, e o primeiro depois da aba oculta, só registram o tempo: o acumulador começa em zero.
+- Dependências: `app` fica acima de `ecs`; `bridge` passa a depender de `app` para expor o loop na API C. Pode haver
+  mais de uma engine por instância do WASM; a chamada de volta única recebe qual engine chamou.
+- Exceção em sistema TS: o C++ compila sem exceções, então um erro JS atravessa o WASM sem rodar destrutores. A
+  engine marca o passo como interrompido, o `frame` seguinte se recupera, e isso tem teste.
 
 **Fases fixas.** Cada sistema se registra em exatamente uma fase. As fases do gameplay são `updateBefore`, `update`,
 `updateAfter`. Ordem de um passo fixo (**[decisão do design]** a ordem dos itens que não são fases do gameplay):
@@ -162,10 +222,11 @@ E, por quadro do `requestAnimationFrame`: fase `render` (uma só vez, após os p
 
 - Não existe fase de física: colisão e física do jogo se registram em `updateAfter`. **[decisão do design]**
 - Dentro de uma fase, a ordem é a ordem de registro. **[decisão do design]** Não há grafo de dependências.
-- Sistemas C++ e TS se misturam livremente na mesma fase. A orquestração (quem chama quem) fica com o construtor;
-  a restrição é não cruzar a fronteira por entidade. Sistemas C++ consecutivos podem rodar numa única chamada.
+- Sistemas C++ e TS se misturam livremente na mesma fase, na ordem de registro; o núcleo percorre a fase e chama
+  cada um (C++ direto, TS pela chamada de volta).
 - **Mudanças estruturais dentro de sistemas** (`spawn`, `destroy`, `add`, `remove`) são adiadas pelo `CommandBuffer`
-  do ECS, aplicado **ao fim de cada fase**. **[decisão do design]** `spawn` devolve a `Entity` na hora (o ECS já
+  do ECS, aplicado **ao fim de cada fase**. Sistemas C++ e TS escrevem no **mesmo** `CommandBuffer` da fase; o TS
+  chega a ele pela API C (operações por `ComponentId`). **[decisão do design]** **[decisão do design]** `spawn` devolve a `Entity` na hora (o ECS já
   reserva o índice). Alterar valores de componentes é direto.
 - Um sistema pode ser restrito a estados (`inState("playing")`, §4.7); fora deles não roda.
 - Um sistema registrado com `.whilePaused()` roda **só** enquanto a engine está pausada pelo jogo; os demais, só
@@ -182,7 +243,7 @@ E, por quadro do `requestAnimationFrame`: fase `render` (uma só vez, após os p
   `CommandBuffer`).
 - **Cascata no mesmo passo:** eventos emitidos durante o despacho são despachados em seguida, rodada após rodada,
   até as filas esvaziarem. Existe um **limite de rodadas** (configurável); ultrapassá-lo é erro de contrato
-  (`ECS_ASSERT` no C++, erro equivalente no TS), com mensagem que nomeia o tipo de evento.
+  (`OLY_ASSERT` no C++, erro equivalente no TS), com mensagem que nomeia o tipo de evento.
 - As filas vivem na memória do WASM com o layout do esquema, para que sistemas C++ emitam sem cruzar a fronteira e
   handlers TS recebam um lote (views sobre a fila), não uma chamada por evento. **[decisão do design]**
 - Eventos do passo são descartados após o despacho; não sobrevivem ao passo.
@@ -261,7 +322,7 @@ function chasePlayerSystem(context: SystemContext) {
 ```
 
 ```cpp
-ENGINE_SYSTEM(move) {
+OLY_SYSTEM(move) {
   const float deltaTime = context.fixedDeltaTime();
   context.query<Position, const Velocity>().each([&](Position& position, const Velocity& velocity) {
     position.x += velocity.x * deltaTime;
@@ -278,7 +339,7 @@ Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. 
 | # | Fase | Entrega | Pronto quando |
 |---|------|---------|---------------|
 | 1 | **Ponte** | build WASM da engine com API C; pacote TS; esquema + gerador; spawn/destroy/get/set e `eachBlock` com views a partir do TS | um teste TS em node cria entidades, itera com views e o resultado bate com o lado C++; benchmark da fronteira (§7) registrado |
-| 2 | **Loop e fases** | `boot`/`run`/`pause`/`shutdown`, passo fixo + render por rAF, registro de sistemas C++ e TS nas fases, `CommandBuffer` por fase | sistemas das duas linguagens rodam na ordem esperada; pausa e `.whilePaused()` testados; loop testável com relógio falso (sem navegador) |
+| 2 | **Loop e fases** | módulo C++ com o loop (`frame`, `setHidden`, passo fixo, render, pausa), registro de sistemas C++ (por função e por nome) e TS (chamada de volta) nas fases, `CommandBuffer` por fase compartilhado pelas duas linguagens; host do navegador em `@oly/client` (rAF + `visibilitychange`); passos 1, 2, 4 e 5 do loop como lugares vazios | um teste C++ nativo roda o loop inteiro sem TS, com relógio falso; sistemas das duas linguagens rodam na ordem esperada (teste TS em node contra o WASM); pausa, aba oculta e `.whilePaused()` testados; medições do §7 registradas |
 | 3 | **Eventos** | filas tipadas pelo esquema, emissão nos dois lados, despacho com cascata e limite | testes de ordem, cascata e estouro do limite (caso de morte no C++) |
 | 4 | **Ações de input** | declaração de ações e ligações, snapshot por passo visível em C++ e TS | testes com entrada simulada, incluindo toque mais curto que um passo e sair da pausa por uma ação |
 | 5 | **Schedule** | `after`/`every`/cancelar no relógio do jogo, congelando na pausa | testes de ordem de disparo e de pausa com relógio falso |
@@ -307,15 +368,22 @@ só de 2 entre si; a ordem acima é a recomendada.
   3. TS manual (typed arrays próprios, sem engine) como linha de base.
   Reportar as razões (2)/(3) e (2)/(1) por tamanho, separando os que cabem em cache. **[decisão do design]** Sem meta
   numérica nesta etapa: os números são registrados e orientam a decisão sobre SoA por campo (§4.2).
+- Custo do loop (fase 2), com K sistemas vazios e 0 entidades, na mesma execução:
+  1. custo fixo de um passo com K sistemas C++ (linha de base) e com K sistemas TS: mede a chamada de volta C++→JS;
+  2. K/2 sistemas C++ e K/2 TS **alternados** (`C,T,C,T…`) contra **agrupados** (`C…C,T…T`) na mesma fase: mede se
+     intercalar linguagens custa mais que o número de chamadas de volta explica;
+  3. o benchmark da fronteira (acima) repetido com os sistemas rodando dentro do loop.
+  Sem meta numérica: os números dizem quanto custa ter o loop no C++ e orientam se vale agrupar sistemas TS.
 - Ambiente ruidoso (WSL2/Docker): só razões da mesma execução, como no ECS.
-- Resultados versionados em `bench/results/` com registro no `README.md` correspondente.
+- Resultados versionados em `docs/benchmarks/` com registro no `README.md` correspondente.
 
 ## 8. O que fica a critério do construtor
 
 - Estrutura de diretórios do núcleo C++ da engine, do pacote TS e do exemplo; nome do pacote.
 - Ferramentas TS (bundler, dev server, test runner) e a imagem/serviço Docker que as roda.
 - Formato do esquema e linguagem do gerador (§4.1).
-- Mecanismo de orquestração entre sistemas C++ e TS dentro das fases (§4.3), respeitando os anti-objetivos.
+- Forma da função JS importada para a chamada de volta (`--js-library`, `EM_JS` ou equivalente) e da API C++ de
+  registro de sistemas, desde que o loop fique no núcleo (§4.3).
 - Representação de `Entity` no TS (§4.2).
 - Detalhes da API C exportada e da API TS, desde que o uso fique próximo do esboço (§4.8).
 - Ordem global vs por tipo no despacho de eventos (§4.4).
