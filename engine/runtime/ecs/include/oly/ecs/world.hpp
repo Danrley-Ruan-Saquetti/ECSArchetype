@@ -21,7 +21,7 @@
 #include "oly/ecs/table.hpp"
 #include "oly/ecs/type_info.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   namespace detail {
     template <class...>
     inline constexpr bool distinctTypes = true;
@@ -59,7 +59,7 @@ namespace ecs {
     EntityStore store_;
     std::vector<std::unique_ptr<Archetype>> archetypes_;
     std::unordered_map<Signature, Archetype*, SignatureHash> bySignature_;
-    std::vector<SmallMap<ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
+    std::vector<core::SmallMap<ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
     uint32_t iterating_ = 0;
     mutable uint64_t signatureLookups_ = 0;
     std::map<QueryKey, std::unique_ptr<QueryCacheBase>> queryCache_;
@@ -156,7 +156,7 @@ namespace ecs {
     uint32_t moveEntity(Entity entity, EntityRecord& record, Archetype& destination, const Edge& edge);
 
     QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<QueryCacheBase> query);
-    const SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
+    const core::SmallMap<ArchetypeId, uint16_t>* smallestIndex(const Signature& with) const;
 
     const Edge& edgeFor(Archetype& source, ComponentId componentId, bool adding);
     const Edge& jumpEdge(Archetype& source, Archetype& destination);
@@ -181,7 +181,7 @@ namespace ecs {
   template <class... Ts>
   Entity World::create(Ts&&... components) {
     static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "create<Ts...>: tipos repetidos");
-    ECS_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
+    OLY_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
 
     Signature signature{componentId<Ts>()...};
     std::sort(signature.begin(), signature.end());
@@ -205,8 +205,8 @@ namespace ecs {
   template <class T>
   void World::add(Entity entity, T&& value) {
     using U = std::remove_cvref_t<T>;
-    const ComponentId componentId = ecs::componentId<U>();
-    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation,
+    const ComponentId componentId = oly::ecs::componentId<U>();
+    OLY_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation,
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
     if constexpr (std::is_empty_v<U>) {
@@ -221,8 +221,8 @@ namespace ecs {
 
   template <class T>
   void World::remove(Entity entity) {
-    const ComponentId componentId = ecs::componentId<T>();
-    ECS_ASSERT(isAlive(entity), "remove e=%u:%u type=%.*s", entity.index, entity.generation, int(typeInfo(componentId).name.size()),
+    const ComponentId componentId = oly::ecs::componentId<T>();
+    OLY_ASSERT(isAlive(entity), "remove e=%u:%u type=%.*s", entity.index, entity.generation, int(typeInfo(componentId).name.size()),
                typeInfo(componentId).name.data());
 
     removeRaw(entity, componentId);
@@ -237,8 +237,8 @@ namespace ecs {
   T& World::get(Entity entity) {
     using U = std::remove_cvref_t<T>;
     static_assert(!std::is_empty_v<U>, "get<Tag> não é permitido");
-    const ComponentId componentId = ecs::componentId<U>();
-    ECS_ASSERT(isAlive(entity) && hasRaw(entity, componentId), "get e=%u:%u type=%.*s", entity.index, entity.generation,
+    const ComponentId componentId = oly::ecs::componentId<U>();
+    OLY_ASSERT(isAlive(entity) && hasRaw(entity, componentId), "get e=%u:%u type=%.*s", entity.index, entity.generation,
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
     return *static_cast<U*>(getRaw(entity, componentId));

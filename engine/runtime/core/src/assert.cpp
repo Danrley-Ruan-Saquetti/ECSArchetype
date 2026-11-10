@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-namespace ecs {
+namespace oly::core {
   namespace {
     void defaultHandler(const char* message) noexcept {
       std::fprintf(stderr, "%s\n", message);
@@ -30,7 +30,7 @@ namespace ecs {
       va_end(arguments);
 
       char fullMessage[512];
-      std::snprintf(fullMessage, sizeof fullMessage, "ECS_ASSERT failed: %s | %s (%s:%d)", expression, message, file, line);
+      std::snprintf(fullMessage, sizeof fullMessage, "OLY_ASSERT failed: %s | %s (%s:%d)", expression, message, file, line);
 
       g_handler(fullMessage);
       std::abort();

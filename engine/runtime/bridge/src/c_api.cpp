@@ -9,16 +9,16 @@
 #include "oly/bridge/schema_registry.hpp"
 #include "oly/bridge/world_handle.hpp"
 
-static_assert(sizeof(EngineEntity) == sizeof(ecs::Entity) && alignof(EngineEntity) == alignof(ecs::Entity),
-              "EngineEntity deve ter o mesmo layout de ecs::Entity");
+static_assert(sizeof(EngineEntity) == sizeof(oly::ecs::Entity) && alignof(EngineEntity) == alignof(oly::ecs::Entity),
+              "EngineEntity deve ter o mesmo layout de oly::ecs::Entity");
 
 namespace {
-  ecs::Entity entityOf(uint32_t index, uint32_t generation) {
-    return ecs::Entity{index, generation};
+  oly::ecs::Entity entityOf(uint32_t index, uint32_t generation) {
+    return oly::ecs::Entity{index, generation};
   }
 
-  ecs::RawQuery& queryOf(EngineQuery* query) {
-    return *reinterpret_cast<ecs::RawQuery*>(query);
+  oly::ecs::RawQuery& queryOf(EngineQuery* query) {
+    return *reinterpret_cast<oly::ecs::RawQuery*>(query);
   }
 }
 
@@ -32,27 +32,27 @@ void engineWorldDestroy(EngineWorld* world) {
 }
 
 uint32_t engineSchemaHash() {
-  return engine::schemaHash();
+  return oly::bridge::schemaHash();
 }
 
 uint32_t engineSchemaComponentCount() {
-  return static_cast<uint32_t>(engine::schemaComponentIds().size());
+  return static_cast<uint32_t>(oly::bridge::schemaComponentIds().size());
 }
 
 uint32_t engineSchemaComponentId(uint32_t schemaIndex) {
-  return engine::schemaComponentIds()[schemaIndex];
+  return oly::bridge::schemaComponentIds()[schemaIndex];
 }
 
 uint32_t engineComponentSize(uint32_t componentId) {
-  return ecs::typeInfo(componentId).size;
+  return oly::ecs::typeInfo(componentId).size;
 }
 
 uint32_t engineComponentAlignment(uint32_t componentId) {
-  return ecs::typeInfo(componentId).alignment;
+  return oly::ecs::typeInfo(componentId).alignment;
 }
 
 void engineCreate(EngineWorld* world, EngineEntity* out) {
-  const ecs::Entity entity = world->world.create();
+  const oly::ecs::Entity entity = world->world.create();
   out->index = entity.index;
   out->generation = entity.generation;
 }
@@ -82,7 +82,7 @@ void* engineGet(EngineWorld* world, uint32_t index, uint32_t generation, uint32_
 }
 
 EngineQuery* engineQuery(EngineWorld* world, const uint32_t* componentIds, uint32_t readCount, uint32_t writeCount, uint32_t withCount, uint32_t withoutCount) {
-  ecs::RawQuerySpec spec;
+  oly::ecs::RawQuerySpec spec;
   const uint32_t* cursor = componentIds;
   spec.read.assign(cursor, cursor + readCount);
   cursor += readCount;
@@ -96,15 +96,15 @@ EngineQuery* engineQuery(EngineWorld* world, const uint32_t* componentIds, uint3
 }
 
 uint32_t engineQueryBegin(EngineWorld* world, EngineQuery* query, const uintptr_t** outDescriptors) {
-  ecs::RawQuery& rawQuery = queryOf(query);
+  oly::ecs::RawQuery& rawQuery = queryOf(query);
   rawQuery.beginIteration();
 
   std::vector<uintptr_t>& descriptors = world->blockDescriptors;
   descriptors.clear();
 
   uint32_t blockCount = 0;
-  for (const ecs::RawMatchedTable& matched : rawQuery.matchedTables()) {
-    ecs::Table& table = matched.archetype->table;
+  for (const oly::ecs::RawMatchedTable& matched : rawQuery.matchedTables()) {
+    oly::ecs::Table& table = matched.archetype->table;
     if (table.count() == 0) {
       continue;
     }

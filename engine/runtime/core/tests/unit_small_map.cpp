@@ -7,7 +7,7 @@
 #include "oly/core/small_map.hpp"
 
 TEST_CASE("SmallMap insere, encontra e mantém a ordem das chaves") {
-  ecs::SmallMap<uint32_t, int> map;
+  oly::core::SmallMap<uint32_t, int> map;
 
   map.insert(7, 70);
   map.insert(3, 30);
@@ -25,8 +25,8 @@ TEST_CASE("SmallMap insere, encontra e mantém a ordem das chaves") {
 }
 
 TEST_CASE("alignUp arredonda para o próximo múltiplo") {
-  CHECK(ecs::alignUp(0, 64) == 0);
-  CHECK(ecs::alignUp(1, 64) == 64);
-  CHECK(ecs::alignUp(64, 64) == 64);
-  CHECK(ecs::alignUp(65, 8) == 72);
+  CHECK(oly::core::alignUp(0, 64) == 0);
+  CHECK(oly::core::alignUp(1, 64) == 64);
+  CHECK(oly::core::alignUp(64, 64) == 64);
+  CHECK(oly::core::alignUp(65, 8) == 72);
 }

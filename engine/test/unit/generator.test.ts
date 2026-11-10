@@ -9,7 +9,7 @@ const T = tag("T");
 const schema = defineSchema([P, T]);
 
 test("struct na ordem de declaração", () => {
-  assert.match(emitHeader(schema), /struct P \{\s*uint8_t a;\s*double b;\s*ecs::Entity owner;\s*\};/);
+  assert.match(emitHeader(schema), /struct P \{\s*uint8_t a;\s*double b;\s*oly::ecs::Entity owner;\s*\};/);
 });
 
 test("static_asserts de tamanho e offsets", () => {
@@ -27,5 +27,6 @@ test("tag vira struct vazio", () => {
 test("registro com hash e ids na ordem", () => {
   const registry = emitRegistry(schema);
   assert.ok(registry.includes(`0x${schema.hash.toString(16)}u`));
-  assert.match(registry, /ecs::componentId<P>\(\),\s*ecs::componentId<T>\(\)/);
+  assert.match(registry, /oly::ecs::componentId<P>\(\),\s*oly::ecs::componentId<T>\(\)/);
+  assert.match(registry, /namespace oly::bridge/);
 });

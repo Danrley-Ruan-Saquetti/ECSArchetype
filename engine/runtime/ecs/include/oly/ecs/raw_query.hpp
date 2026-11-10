@@ -12,7 +12,7 @@
 #include "oly/ecs/query.hpp"
 #include "oly/ecs/type_info.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   struct RawQuerySpec {
     std::vector<ComponentId> read{}, write{}, with{}, without{};
   };
@@ -37,7 +37,7 @@ namespace ecs {
         without_(std::move(without)),
         components_(std::move(components)) {}
 
-    void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const SmallMap<ArchetypeId, uint16_t>* smallest) {
+    void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const core::SmallMap<ArchetypeId, uint16_t>* smallest) {
       if (smallest) {
         for (const auto& [archetypeId, column] : *smallest) {
           onArchetypeCreated(*all[archetypeId]);
@@ -91,7 +91,7 @@ namespace ecs {
     }
 
     void endIteration() noexcept {
-      ECS_ASSERT(iterationDepth_ > 0, "endIteration sem beginIteration correspondente");
+      OLY_ASSERT(iterationDepth_ > 0, "endIteration sem beginIteration correspondente");
       --*iterating_;
       --iterationDepth_;
     }

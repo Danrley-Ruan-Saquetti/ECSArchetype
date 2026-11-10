@@ -10,7 +10,7 @@
 #endif
 
 struct EngineWorld;
-struct EngineQuery; // opaco: é um ecs::RawQuery*
+struct EngineQuery; // opaco: é um oly::ecs::RawQuery*
 
 extern "C" {
 struct EngineEntity {

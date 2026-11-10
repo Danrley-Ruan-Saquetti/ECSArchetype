@@ -9,7 +9,7 @@
 #include "oly/ecs/world.hpp"
 
 TEST_CASE("create() nasce vivo no arquétipo raiz") {
-  ecs::World world;
+  oly::ecs::World world;
 
   auto entity = world.create();
 
@@ -18,7 +18,7 @@ TEST_CASE("create() nasce vivo no arquétipo raiz") {
 }
 
 TEST_CASE("create<Ts...> nasce no arquétipo final com valores") {
-  ecs::World world;
+  oly::ecs::World world;
 
   auto entity = world.create(A{1}, B{2, 3}, Tag{});
 
@@ -28,7 +28,7 @@ TEST_CASE("create<Ts...> nasce no arquétipo final com valores") {
 }
 
 TEST_CASE("create<Ts...> copia lvalues") {
-  ecs::World world;
+  oly::ecs::World world;
   A componentA{4};
 
   auto entity = world.create(componentA);
@@ -38,7 +38,7 @@ TEST_CASE("create<Ts...> copia lvalues") {
 }
 
 TEST_CASE("add sobre T existente atribui sem mudar arquétipo") {
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(A{1});
 
   world.add(entity, A{7});
@@ -47,7 +47,7 @@ TEST_CASE("add sobre T existente atribui sem mudar arquétipo") {
 }
 
 TEST_CASE("add de T ausente move para o arquétipo com T") {
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(A{1});
 
   world.add(entity, B{2, 3});
@@ -57,7 +57,7 @@ TEST_CASE("add de T ausente move para o arquétipo com T") {
 }
 
 TEST_CASE("remove de T ausente é no-op") {
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(A{1});
 
   world.remove<B>(entity);
@@ -66,7 +66,7 @@ TEST_CASE("remove de T ausente é no-op") {
 }
 
 TEST_CASE("remove de T presente") {
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(A{1}, B{2, 3});
 
   world.remove<A>(entity);
@@ -76,7 +76,7 @@ TEST_CASE("remove de T presente") {
 }
 
 TEST_CASE("destroy atualiza o record da entidade deslocada") {
-  ecs::World world;
+  oly::ecs::World world;
   auto first = world.create(A{0});
   auto second = world.create(A{1});
   auto third = world.create(A{2});
@@ -90,7 +90,7 @@ TEST_CASE("destroy atualiza o record da entidade deslocada") {
 }
 
 TEST_CASE("remove/destroy da última e da única linha") {
-  ecs::World world;
+  oly::ecs::World world;
   auto first = world.create(A{1});
   auto second = world.create(A{2});
 
@@ -103,8 +103,8 @@ TEST_CASE("remove/destroy da última e da única linha") {
 }
 
 TEST_CASE("add com valor lido de outra entidade da tabela destino que realoca") {
-  ecs::World world;
-  std::vector<ecs::Entity> full;
+  oly::ecs::World world;
+  std::vector<oly::ecs::Entity> full;
   for (uint64_t i = 0; i < 64; ++i) {
     full.push_back(world.create(A{i}, B{i, i})); // capacidade 64 cheia
   }
@@ -118,7 +118,7 @@ TEST_CASE("add com valor lido de outra entidade da tabela destino que realoca") 
 }
 
 TEST_CASE("tryGet em entidade morta e sem T devolve nullptr") {
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(A{1});
   CHECK(world.tryGet<B>(entity) == nullptr);
   REQUIRE(world.tryGet<A>(entity) != nullptr);
@@ -131,7 +131,7 @@ TEST_CASE("tryGet em entidade morta e sem T devolve nullptr") {
 }
 
 TEST_CASE("tags: add/has/remove sem coluna") {
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(A{1});
 
   world.add(entity, Tag{});
@@ -144,7 +144,7 @@ TEST_CASE("tags: add/has/remove sem coluna") {
 }
 
 TEST_CASE("handle antigo após reciclagem do índice") {
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(A{1});
   world.destroy(entity);
 
@@ -170,7 +170,7 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
     uint64_t value;
   };
 
-  ecs::World world;
+  oly::ecs::World world;
   auto entity = world.create(C1{1}, C2{2}, C3{3});
   world.add(entity, C4{4});
   world.remove<C4>(entity); // aquece arestas e capacidade (64 linhas)
@@ -190,7 +190,7 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
 }
 
 TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
-  ecs::World world;
+  oly::ecs::World world;
   CHECK(world.archetypeCount() == 1);
 
   world.create(A{1});
@@ -204,7 +204,7 @@ TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
 }
 
 TEST_CASE("stats: contagens, histograma e memória ociosa") {
-  ecs::World world;
+  oly::ecs::World world;
   for (uint64_t i = 0; i < 5; ++i) {
     world.create(A{i}); // {A}: 5
   }
@@ -219,8 +219,8 @@ TEST_CASE("stats: contagens, histograma e memória ociosa") {
   CHECK(stats.histogram[3] == 1); // count 5 ∈ [4, 8)
 
   auto& archetypeA = *std::find_if(stats.archetypes.begin(), stats.archetypes.end(),
-                                   [](auto& archetype) { return archetype.signature == ecs::Signature{ecs::componentId<A>()}; });
+                                   [](auto& archetype) { return archetype.signature == oly::ecs::Signature{oly::ecs::componentId<A>()}; });
   CHECK(archetypeA.capacity == 64);
-  CHECK(archetypeA.idleBytes == (64 - 5) * (sizeof(A) + sizeof(ecs::Entity)));
-  CHECK(archetypeA.columnBytes == 64 * (sizeof(A) + sizeof(ecs::Entity)));
+  CHECK(archetypeA.idleBytes == (64 - 5) * (sizeof(A) + sizeof(oly::ecs::Entity)));
+  CHECK(archetypeA.columnBytes == 64 * (sizeof(A) + sizeof(oly::ecs::Entity)));
 }

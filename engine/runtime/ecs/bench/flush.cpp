@@ -9,13 +9,13 @@
 #include "oly/ecs/world.hpp"
 
 namespace {
-  using ecs::World;
+  using oly::ecs::World;
 
   // N entidades no arquétipo raiz (fora do tempo). Os arquétipos e as arestas são aquecidos com
   // uma entidade extra, que é destruída em seguida.
   struct Setup {
     std::unique_ptr<World> world = std::make_unique<World>();
-    std::vector<ecs::Entity> entities;
+    std::vector<oly::ecs::Entity> entities;
 
     explicit Setup(int64_t entityCount, bool coalesced) {
       auto warm = world->create();
@@ -39,8 +39,8 @@ namespace {
     }
   };
 
-  void record(ecs::CommandBuffer& commandBuffer, const std::vector<ecs::Entity>& entities) {
-    for (ecs::Entity entity : entities) {
+  void record(oly::ecs::CommandBuffer& commandBuffer, const std::vector<oly::ecs::Entity>& entities) {
+    for (oly::ecs::Entity entity : entities) {
       commandBuffer.add(entity, Component<0>{1});
       commandBuffer.add(entity, Component<1>{2});
       commandBuffer.add(entity, Component<2>{3});
@@ -54,7 +54,7 @@ namespace {
     for (auto _ : state) {
       state.PauseTiming();
       Setup setup(entityCount, true);
-      std::optional<ecs::CommandBuffer> commandBuffer;
+      std::optional<oly::ecs::CommandBuffer> commandBuffer;
       commandBuffer.emplace(setup.world->commands());
       record(*commandBuffer, setup.entities);
       state.ResumeTiming();
@@ -79,7 +79,7 @@ namespace {
     for (auto _ : state) {
       state.PauseTiming();
       Setup setup(entityCount, true);
-      std::optional<ecs::CommandBuffer> commandBuffer;
+      std::optional<oly::ecs::CommandBuffer> commandBuffer;
       state.ResumeTiming();
 
       commandBuffer.emplace(setup.world->commands());
@@ -106,7 +106,7 @@ namespace {
       Setup setup(entityCount, false);
       state.ResumeTiming();
 
-      for (ecs::Entity entity : setup.entities) {
+      for (oly::ecs::Entity entity : setup.entities) {
         setup.world->add(entity, Component<0>{1});
         setup.world->add(entity, Component<1>{2});
         setup.world->add(entity, Component<2>{3});

@@ -8,7 +8,7 @@
 
 #include "oly/core/type_name.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   using ComponentId = uint32_t;
 
   struct TypeInfo {
@@ -34,7 +34,7 @@ namespace ecs {
       info.size = info.tag ? 0 : static_cast<uint32_t>(sizeof(U));
       info.alignment = static_cast<uint32_t>(alignof(U));
       info.trivial = info.tag || (std::is_trivially_copyable_v<U> && std::is_trivially_destructible_v<U>);
-      info.name = typeName<U>();
+      info.name = core::typeName<U>();
 
       if (!info.trivial) {
         info.moveConstruct = [](void* destination, void* source) noexcept { ::new (destination) U(std::move(*static_cast<U*>(source))); };

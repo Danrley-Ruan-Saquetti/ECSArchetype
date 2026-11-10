@@ -7,7 +7,7 @@
 
 #include "oly/core/assert.hpp"
 
-namespace ecs {
+namespace oly::core {
   // Mapa como vetor ordenado por chave: bom para poucos elementos e percursos em ordem.
   template <class K, class V>
   class SmallMap {
@@ -30,7 +30,7 @@ namespace ecs {
     // Pode invalidar referências anteriores.
     V& insert(K key, V value) {
       auto it = lowerBound(key);
-      ECS_ASSERT(it == items_.end() || it->first != key, "SmallMap::insert chave repetida");
+      OLY_ASSERT(it == items_.end() || it->first != key, "SmallMap::insert chave repetida");
 
       it = items_.insert(it, value_type(key, std::move(value)));
       return it->second;

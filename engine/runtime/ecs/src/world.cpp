@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstring>
 
-namespace ecs {
+namespace oly::ecs {
   namespace {
     bool checkEdgeMapping(const Archetype& source, const Archetype& destination, const Edge& edge) {
       if (edge.sourceToDestination.size() != source.columnTypes.size()) {
@@ -241,12 +241,12 @@ namespace ecs {
   }
 
   Entity World::create() {
-    ECS_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
+    OLY_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
     return place(root());
   }
 
   void World::destroy(Entity entity) {
-    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", entity.index, entity.generation, iterating_);
+    OLY_ASSERT(isAlive(entity) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", entity.index, entity.generation, iterating_);
 
     EntityRecord& record = store_.record(entity.index);
     Table& table = record.archetype->table;
@@ -287,7 +287,7 @@ namespace ecs {
 
   void World::addRaw(Entity entity, ComponentId componentId, void* value) {
     const TypeInfo& info = typeInfo(componentId);
-    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation, int(info.name.size()),
+    OLY_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation, int(info.name.size()),
                info.name.data());
 
     EntityRecord& record = store_.record(entity.index);
@@ -315,7 +315,7 @@ namespace ecs {
   }
 
   void World::removeRaw(Entity entity, ComponentId componentId) {
-    ECS_ASSERT(isAlive(entity) && iterating_ == 0, "remove e=%u:%u type=%.*s", entity.index, entity.generation,
+    OLY_ASSERT(isAlive(entity) && iterating_ == 0, "remove e=%u:%u type=%.*s", entity.index, entity.generation,
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
     EntityRecord& record = store_.record(entity.index);
@@ -330,7 +330,7 @@ namespace ecs {
   }
 
   const Edge& World::edgeFor(Archetype& source, ComponentId componentId, bool adding) {
-    SmallMap<ComponentId, Edge>& edges = adding ? source.addEdges : source.removeEdges;
+    core::SmallMap<ComponentId, Edge>& edges = adding ? source.addEdges : source.removeEdges;
     if (const Edge* cached = edges.find(componentId)) {
       return *cached;
     }
@@ -496,10 +496,10 @@ namespace ecs {
       std::vector<ComponentId> seen;
       for (const std::vector<ComponentId>* group : {&read, &write}) {
         for (ComponentId componentId : *group) {
-          ECS_ASSERT(componentId < registeredTypeCount(), "rawQuery componente desconhecido cid=%u", componentId);
+          OLY_ASSERT(componentId < registeredTypeCount(), "rawQuery componente desconhecido cid=%u", componentId);
           [[maybe_unused]] const TypeInfo& info = typeInfo(componentId);
-          ECS_ASSERT(!info.tag, "rawQuery tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
-          ECS_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "rawQuery componente repetido type=%.*s",
+          OLY_ASSERT(!info.tag, "rawQuery tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
+          OLY_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "rawQuery componente repetido type=%.*s",
                      int(info.name.size()), info.name.data());
           seen.push_back(componentId);
         }
@@ -547,10 +547,10 @@ namespace ecs {
   }
 
   // Índice do componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
-  const SmallMap<ArchetypeId, uint16_t>* World::smallestIndex(const Signature& with) const {
-    static const SmallMap<ArchetypeId, uint16_t> empty;
+  const core::SmallMap<ArchetypeId, uint16_t>* World::smallestIndex(const Signature& with) const {
+    static const core::SmallMap<ArchetypeId, uint16_t> empty;
 
-    const SmallMap<ArchetypeId, uint16_t>* best = nullptr;
+    const core::SmallMap<ArchetypeId, uint16_t>* best = nullptr;
     for (ComponentId componentId : with) {
       const auto* index = componentId < componentIndex_.size() ? &componentIndex_[componentId] : &empty;
       if (!best || index->size() < best->size()) {
@@ -589,8 +589,8 @@ namespace ecs {
   }
 
   void World::flushSequential(CommandBuffer& commandBuffer) {
-    ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
-    ECS_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
+    OLY_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
+    OLY_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
 
     commandBuffer.forEach([&](const CommandView& command) {
       switch (command.operation) {
@@ -632,8 +632,8 @@ namespace ecs {
   }
 
   void World::flush(CommandBuffer& commandBuffer) {
-    ECS_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
-    ECS_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
+    OLY_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
+    OLY_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
 
     const CommandPlan plan = commandBuffer.plan();
     NetEffect net;

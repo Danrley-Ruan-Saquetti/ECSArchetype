@@ -33,16 +33,16 @@ namespace {
 TEST_CASE("schema exposto pela API C") {
   CHECK(engineSchemaHash() == 0x1234u);
   CHECK(engineSchemaComponentCount() == 3);
-  CHECK(engineSchemaComponentId(1) == ecs::componentId<B>());
-  CHECK(engineComponentSize(ecs::componentId<A>()) == 8);
-  CHECK(engineComponentAlignment(ecs::componentId<A>()) == 8);
-  CHECK(engineComponentSize(ecs::componentId<Tag>()) == 0);
+  CHECK(engineSchemaComponentId(1) == oly::ecs::componentId<B>());
+  CHECK(engineComponentSize(oly::ecs::componentId<A>()) == 8);
+  CHECK(engineComponentAlignment(oly::ecs::componentId<A>()) == 8);
+  CHECK(engineComponentSize(oly::ecs::componentId<Tag>()) == 0);
 }
 
 TEST_CASE("create, add, get, has, remove e destroy por ID") {
   WorldFixture fixture;
   EngineWorld* world = fixture.world;
-  const uint32_t idA = ecs::componentId<A>();
+  const uint32_t idA = oly::ecs::componentId<A>();
 
   EngineEntity entity = fixture.create();
   CHECK(fixture.invariantsHold());
@@ -58,9 +58,9 @@ TEST_CASE("create, add, get, has, remove e destroy por ID") {
   CHECK(engineGet(world, entity.index, entity.generation, idA) == nullptr);
   CHECK(fixture.invariantsHold());
 
-  engineAdd(world, entity.index, entity.generation, ecs::componentId<Tag>(), nullptr);
-  CHECK(engineHas(world, entity.index, entity.generation, ecs::componentId<Tag>()) == 1);
-  CHECK(engineGet(world, entity.index, entity.generation, ecs::componentId<Tag>()) == nullptr);
+  engineAdd(world, entity.index, entity.generation, oly::ecs::componentId<Tag>(), nullptr);
+  CHECK(engineHas(world, entity.index, entity.generation, oly::ecs::componentId<Tag>()) == 1);
+  CHECK(engineGet(world, entity.index, entity.generation, oly::ecs::componentId<Tag>()) == nullptr);
 
   engineDestroy(world, entity.index, entity.generation);
   CHECK(engineIsAlive(world, entity.index, entity.generation) == 0);
@@ -78,7 +78,7 @@ TEST_CASE("engineQueryBegin entrega descritores por bloco") {
     world->world.create(A{i}, B{0, 0}, Tag{});
   }
 
-  const uint32_t ids[] = {ecs::componentId<A>(), ecs::componentId<B>()};
+  const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
   EngineQuery* query = engineQuery(world, ids, 1, 1, 0, 0);
 
   const uintptr_t* descriptors = nullptr;
@@ -90,7 +90,7 @@ TEST_CASE("engineQueryBegin entrega descritores por bloco") {
   uint32_t rows = 0;
   for (uint32_t block = 0; block < blockCount; ++block) {
     const uintptr_t* descriptor = descriptors + block * 4;
-    const auto* entities = reinterpret_cast<const ecs::Entity*>(descriptor[1]);
+    const auto* entities = reinterpret_cast<const oly::ecs::Entity*>(descriptor[1]);
     const auto* a = reinterpret_cast<const A*>(descriptor[2]);
     CHECK(descriptor[3] != 0);
     for (uint32_t row = 0; row < descriptor[0]; ++row) {
@@ -109,8 +109,8 @@ TEST_CASE("engineQueryBegin entrega descritores por bloco") {
 
 TEST_CASE("engineQuery é cacheada") {
   WorldFixture fixture;
-  const uint32_t ids[] = {ecs::componentId<A>(), ecs::componentId<B>()};
-  const uint32_t withTag[] = {ecs::componentId<A>(), ecs::componentId<B>(), ecs::componentId<Tag>()};
+  const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
+  const uint32_t withTag[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>(), oly::ecs::componentId<Tag>()};
 
   CHECK(engineQuery(fixture.world, ids, 1, 1, 0, 0) == engineQuery(fixture.world, ids, 1, 1, 0, 0));
   CHECK(engineQuery(fixture.world, withTag, 1, 1, 1, 0) != engineQuery(fixture.world, ids, 1, 1, 0, 0));
@@ -123,7 +123,7 @@ TEST_CASE("engineQueryBegin aninhado na mesma query") {
     world->world.create(A{i}, B{0, 0});
   }
 
-  const uint32_t ids[] = {ecs::componentId<A>(), ecs::componentId<B>()};
+  const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
   EngineQuery* query = engineQuery(world, ids, 1, 1, 0, 0);
 
   const uintptr_t* outer = nullptr;

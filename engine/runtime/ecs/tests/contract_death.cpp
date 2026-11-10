@@ -1,4 +1,4 @@
-// Testes de morte: violações de contrato devem disparar ECS_ASSERT (só compilado com asserts ligados).
+// Testes de morte: violações de contrato devem disparar OLY_ASSERT (só compilado com asserts ligados).
 // Uso: contract_death <caso>. O handler confere as substrings exigidas e sai com 0; se o caso
 // terminar sem assert, imprime "assert não disparou" e devolve 1.
 #include <cstdio>
@@ -34,7 +34,7 @@ namespace {
   }
 
   void addDuringEach() {
-    ecs::World world;
+    oly::ecs::World world;
     auto entity = world.create(A{1});
     world.query<A>().each([&](A&) { world.add(entity, B{}); });
   }
@@ -44,21 +44,21 @@ namespace {
       float x;
     };
 
-    ecs::World world;
+    oly::ecs::World world;
     auto entity = world.create(Position{1.f});
     world.destroy(entity);
     (void)world.get<Position>(entity);
   }
 
   void flushDuringEach() {
-    ecs::World world;
+    oly::ecs::World world;
     world.create(A{1});
     auto commandBuffer = world.commands();
     world.query<A>().each([&](A&) { world.flush(commandBuffer); });
   }
 
   void commandAfterDestroy() {
-    ecs::World world;
+    oly::ecs::World world;
     auto entity = world.create(A{1});
     auto commandBuffer = world.commands();
     commandBuffer.destroy(entity);
@@ -67,35 +67,35 @@ namespace {
   }
 
   void destroyDuringEachBlock() {
-    ecs::World world;
+    oly::ecs::World world;
     auto entity = world.create(A{1});
     world.query<A>().eachBlock([&](std::span<A>) { world.destroy(entity); });
   }
 
   void rawQueryTagInRead() {
-    ecs::World world;
-    world.rawQuery({.read = {ecs::componentId<Tag>()}});
+    oly::ecs::World world;
+    world.rawQuery({.read = {oly::ecs::componentId<Tag>()}});
   }
 
   void rawQueryRepeatedComponent() {
-    ecs::World world;
-    world.rawQuery({.read = {ecs::componentId<A>()}, .write = {ecs::componentId<A>()}});
+    oly::ecs::World world;
+    world.rawQuery({.read = {oly::ecs::componentId<A>()}, .write = {oly::ecs::componentId<A>()}});
   }
 
   void rawQueryUnknownComponent() {
-    ecs::World world;
-    world.rawQuery({.read = {ecs::registeredTypeCount() + 5}});
+    oly::ecs::World world;
+    world.rawQuery({.read = {oly::ecs::registeredTypeCount() + 5}});
   }
 
   void rawQueryEndWithoutBegin() {
-    ecs::World world;
-    world.rawQuery({.read = {ecs::componentId<A>()}}).endIteration();
+    oly::ecs::World world;
+    world.rawQuery({.read = {oly::ecs::componentId<A>()}}).endIteration();
   }
 
   void addDuringRawIteration() {
-    ecs::World world;
+    oly::ecs::World world;
     auto entity = world.create(A{1});
-    world.rawQuery({.read = {ecs::componentId<A>()}}).beginIteration();
+    world.rawQuery({.read = {oly::ecs::componentId<A>()}}).beginIteration();
     world.add(entity, B{});
   }
 
@@ -131,7 +131,7 @@ int main(int argumentCount, char** arguments) {
     }
 
     g_required = &testCase.required;
-    ecs::setAssertHandler(&handler);
+    oly::core::setAssertHandler(&handler);
     testCase.run();
     std::fprintf(stderr, "assert não disparou\n");
     return 1;

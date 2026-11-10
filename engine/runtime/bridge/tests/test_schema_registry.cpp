@@ -1,13 +1,13 @@
 #include "components.hpp"
 #include "oly/bridge/schema_registry.hpp"
 
-namespace engine {
+namespace oly::bridge {
   uint32_t schemaHash() noexcept {
     return 0x1234u;
   }
 
-  std::span<const ecs::ComponentId> schemaComponentIds() {
-    static const ecs::ComponentId ids[] = {ecs::componentId<A>(), ecs::componentId<B>(), ecs::componentId<Tag>()};
+  std::span<const oly::ecs::ComponentId> schemaComponentIds() {
+    static const oly::ecs::ComponentId ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>(), oly::ecs::componentId<Tag>()};
     return ids;
   }
 }

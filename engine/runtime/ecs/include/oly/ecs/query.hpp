@@ -15,7 +15,7 @@
 #include "oly/core/small_map.hpp"
 #include "oly/ecs/type_info.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   // Filtros: tags (ou componentes) que o arquétipo deve / não deve ter, sem entregá-los ao sistema.
   template <class... Us>
   struct With {};
@@ -96,7 +96,7 @@ namespace ecs {
         componentIds_{componentId<std::remove_const_t<Ts>>()...} {}
 
     // Com `smallest`, percorre só os arquétipos do menor componentIndex (R-QY-3).
-    void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const SmallMap<ArchetypeId, uint16_t>* smallest) {
+    void initialize(const std::vector<std::unique_ptr<Archetype>>& all, const core::SmallMap<ArchetypeId, uint16_t>* smallest) {
       if (smallest) {
         for (const auto& [archetypeId, column] : *smallest) {
           onArchetypeCreated(*all[archetypeId]);

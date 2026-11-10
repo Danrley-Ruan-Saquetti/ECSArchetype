@@ -21,7 +21,7 @@ ENGINE_API double fixtureSumPositionX(EngineWorld* world) {
 }
 
 ENGINE_API double fixtureMixedChecksum(EngineWorld* world, uint32_t index, uint32_t generation) {
-  const Mixed& mixed = world->world.get<Mixed>(ecs::Entity{index, generation});
+  const Mixed& mixed = world->world.get<Mixed>(oly::ecs::Entity{index, generation});
 
   return mixed.a + mixed.b + mixed.c + mixed.owner.index + mixed.owner.generation;
 }

@@ -6,7 +6,7 @@
 #include <span>
 #include <vector>
 
-namespace ecs {
+namespace oly::ecs {
   struct Archetype;
 
   struct Entity {

@@ -10,7 +10,7 @@
 #include "oly/ecs/entity.hpp"
 #include "oly/ecs/type_info.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   // `destination` não pode estar construído; `source` termina destruído.
   inline void relocateValue(const TypeInfo& info, void* destination, void* source) noexcept {
     if (info.trivial) {

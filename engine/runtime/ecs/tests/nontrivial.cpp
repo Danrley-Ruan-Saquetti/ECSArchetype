@@ -17,8 +17,8 @@ namespace {
 TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e transições") {
   LifeCounter::alive = 0;
   {
-    ecs::World world;
-    std::vector<ecs::Entity> entities;
+    oly::ecs::World world;
+    std::vector<oly::ecs::Entity> entities;
     for (uint64_t i = 0; i < 300; ++i) {
       entities.push_back(world.create(longString(i), std::make_unique<int>(int(i)), std::vector<int>(i % 7 + 1, int(i)),
                                       LifeCounter{i}));
@@ -59,7 +59,7 @@ TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e 
 TEST_CASE("remover componente não trivial destrói o valor") {
   LifeCounter::alive = 0;
   {
-    ecs::World world;
+    oly::ecs::World world;
     auto entity = world.create(LifeCounter{1}, A{2});
     CHECK(LifeCounter::alive == 1);
 

@@ -8,7 +8,7 @@
 #include "oly/core/assert.hpp"
 #include "oly/ecs/table.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   namespace {
     constexpr size_t kHeaderSize = 24;
     constexpr size_t kBlockAlignment = 64;
@@ -87,7 +87,7 @@ namespace ecs {
 
   void CommandBuffer::freeBlock() noexcept {
     if (data_) {
-      alignedFree(data_, kBlockAlignment);
+      core::alignedFree(data_, kBlockAlignment);
     }
 
     data_ = nullptr;
@@ -105,9 +105,9 @@ namespace ecs {
     out.entity = Entity{static_cast<uint32_t>(entityBits), static_cast<uint32_t>(entityBits >> 32)};
 
     if (out.operation == CommandOperation::Add && size > 0) {
-      const size_t payloadOffset = alignUp(offset + kHeaderSize, std::max<size_t>(8, static_cast<uint8_t>(header[1])));
+      const size_t payloadOffset = core::alignUp(offset + kHeaderSize, std::max<size_t>(8, static_cast<uint8_t>(header[1])));
       out.payload = const_cast<std::byte*>(data_) + payloadOffset;
-      return alignUp(payloadOffset + size, 8);
+      return core::alignUp(payloadOffset + size, 8);
     }
 
     out.payload = nullptr;
@@ -120,7 +120,7 @@ namespace ecs {
       newCapacity *= 2;
     }
 
-    std::byte* fresh = alignedAllocate(newCapacity, kBlockAlignment);
+    std::byte* fresh = core::alignedAllocate(newCapacity, kBlockAlignment);
     if (!hasNonTrivialPayload_) {
       if (size_ > 0) {
         std::memcpy(fresh, data_, size_);
@@ -139,7 +139,7 @@ namespace ecs {
     }
 
     if (data_) {
-      alignedFree(data_, kBlockAlignment);
+      core::alignedFree(data_, kBlockAlignment);
     }
 
     data_ = fresh;
@@ -150,8 +150,8 @@ namespace ecs {
     const size_t offset = size_;
     size_t payloadOffset = offset + kHeaderSize, next = offset + kHeaderSize;
     if (size > 0) {
-      payloadOffset = alignUp(offset + kHeaderSize, std::max<size_t>(8, alignment));
-      next = alignUp(payloadOffset + size, 8);
+      payloadOffset = core::alignUp(offset + kHeaderSize, std::max<size_t>(8, alignment));
+      next = core::alignUp(payloadOffset + size, 8);
     }
 
     if (next > capacity_) {
@@ -327,7 +327,7 @@ namespace ecs {
         continue;
       }
       if (out.destroyed) {
-        ECS_ASSERT(false, "command after destroy e=%u:%u", command.entity.index, command.entity.generation);
+        OLY_ASSERT(false, "command after destroy e=%u:%u", command.entity.index, command.entity.generation);
         continue; // sem asserts: ignorado (R-CB-4)
       }
       if (command.operation == CommandOperation::Destroy) {

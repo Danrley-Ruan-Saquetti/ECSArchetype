@@ -22,7 +22,7 @@ namespace {
   }
 
   template <bool NT, size_t... Is>
-  ecs::Entity createWithComponents(ecs::World& world, uint64_t value, std::index_sequence<Is...>) {
+  oly::ecs::Entity createWithComponents(oly::ecs::World& world, uint64_t value, std::index_sequence<Is...>) {
     return world.create(makeComponent<NT, int(Is)>(value)...);
   }
 
@@ -31,8 +31,8 @@ namespace {
   template <bool NT, int K>
   void BM_Transition(benchmark::State& state) {
     constexpr int kEntityCount = 1024;
-    ecs::World world;
-    std::vector<ecs::Entity> entities;
+    oly::ecs::World world;
+    std::vector<oly::ecs::Entity> entities;
     for (int i = 0; i < kEntityCount; ++i) {
       entities.push_back(createWithComponents<NT>(world, i, std::make_index_sequence<K>{}));
     }
@@ -67,7 +67,7 @@ namespace {
   void BM_TransitionCold(benchmark::State& state) {
     for (auto _ : state) {
       state.PauseTiming();
-      auto world = std::make_unique<ecs::World>();
+      auto world = std::make_unique<oly::ecs::World>();
       auto entity = world->create(Component<0>{1}, Component<1>{2}, Component<2>{3}, Component<3>{4});
       state.ResumeTiming();
 
@@ -96,8 +96,8 @@ namespace {
 
   // NF-P6: sem meta.
   void BM_RandomGet(benchmark::State& state) {
-    ecs::World world;
-    std::vector<ecs::Entity> entities;
+    oly::ecs::World world;
+    std::vector<oly::ecs::Entity> entities;
     entities.reserve(kGetCount);
     for (uint32_t i = 0; i < kGetCount; ++i) {
       entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
@@ -140,8 +140,8 @@ namespace {
   // Churn: 10% das entidades destruídas e 10% novas por iteração.
   void BM_CreateDestroyChurn(benchmark::State& state) {
     constexpr uint32_t kEntityCount = 100'000, kChurnPerIteration = kEntityCount / 10;
-    ecs::World world;
-    std::vector<ecs::Entity> entities;
+    oly::ecs::World world;
+    std::vector<oly::ecs::Entity> entities;
     entities.reserve(kEntityCount);
     for (uint32_t i = 0; i < kEntityCount; ++i) {
       entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));

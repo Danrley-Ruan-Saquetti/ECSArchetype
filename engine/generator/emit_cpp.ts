@@ -10,7 +10,7 @@ const cppTypes: Readonly<Record<ScalarType, string>> = {
   u16: "uint16_t",
   i32: "int32_t",
   u32: "uint32_t",
-  entity: "ecs::Entity",
+  entity: "oly::ecs::Entity",
 };
 
 function emitStruct(type: SchemaType): string {
@@ -37,23 +37,23 @@ function emitLayoutAsserts(type: ComponentType): string {
 export function emitHeader(schema: Schema): string {
   const structs = schema.types.map(emitStruct).join("\n");
 
-  return `// Gerado por engine/generator: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n\n${structs}`;
+  return `// Gerado por oly-codegen: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n\n${structs}`;
 }
 
 export function emitRegistry(schema: Schema): string {
-  const ids = schema.types.map((type) => `      ecs::componentId<${type.name}>()`).join(",\n");
+  const ids = schema.types.map((type) => `      oly::ecs::componentId<${type.name}>()`).join(",\n");
 
-  return `// Gerado por engine/generator: não edite.
+  return `// Gerado por oly-codegen: não edite.
 #include "oly/bridge/schema_registry.hpp"
 #include "schema.generated.hpp"
 
-namespace engine {
+namespace oly::bridge {
   uint32_t schemaHash() noexcept {
     return 0x${schema.hash.toString(16)}u;
   }
 
-  std::span<const ecs::ComponentId> schemaComponentIds() {
-    static const ecs::ComponentId ids[] = {
+  std::span<const oly::ecs::ComponentId> schemaComponentIds() {
+    static const oly::ecs::ComponentId ids[] = {
 ${ids}};
     return ids;
   }

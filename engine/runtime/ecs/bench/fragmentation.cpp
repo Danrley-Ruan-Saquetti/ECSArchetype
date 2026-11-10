@@ -16,8 +16,8 @@ namespace {
   constexpr int kFragmentTags = 12; // 2^12 = 4096 combinações
 
   template <size_t... Is>
-  std::array<ecs::ComponentId, sizeof...(Is)> fragmentIds(std::index_sequence<Is...>) {
-    return {ecs::componentId<Fragment<int(Is)>>()...};
+  std::array<oly::ecs::ComponentId, sizeof...(Is)> fragmentIds(std::index_sequence<Is...>) {
+    return {oly::ecs::componentId<Fragment<int(Is)>>()...};
   }
 
   constexpr uint32_t kEntityCount = 1'000'000;
@@ -52,9 +52,9 @@ namespace {
   void BM_IterateFragmented(benchmark::State& state) {
     const auto archetypeCount = static_cast<uint32_t>(state.range(0));
     const auto tags = fragmentIds(std::make_index_sequence<kFragmentTags>{});
-    ecs::World world;
+    oly::ecs::World world;
     for (uint32_t i = 0; i < kEntityCount; ++i) {
-      ecs::Entity entity = world.create(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
+      oly::ecs::Entity entity = world.create(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
       const uint32_t mask = i % archetypeCount;
       for (int j = 0; j < kFragmentTags; ++j) {
         if (mask & (1u << j)) {

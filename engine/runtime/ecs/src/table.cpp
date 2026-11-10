@@ -5,7 +5,7 @@
 #include "oly/core/align.hpp"
 #include "oly/core/assert.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   namespace {
     size_t columnAlignment(const TypeInfo& info) {
       return std::max<size_t>(info.alignment, 64);
@@ -17,7 +17,7 @@ namespace ecs {
     columns_.reserve(columnTypes.size());
     for (ComponentId id : columnTypes) {
       const TypeInfo& info = typeInfo(id);
-      ECS_ASSERT(!info.tag, "Table::Table tipo=%.*s é tag", int(info.name.size()), info.name.data());
+      OLY_ASSERT(!info.tag, "Table::Table tipo=%.*s é tag", int(info.name.size()), info.name.data());
       columns_.push_back(Column{&info, nullptr});
     }
   }
@@ -34,7 +34,7 @@ namespace ecs {
         }
       }
 
-      alignedFree(column.data, columnAlignment(*column.info));
+      core::alignedFree(column.data, columnAlignment(*column.info));
       column.data = nullptr;
     }
 
@@ -82,12 +82,12 @@ namespace ecs {
     std::vector<std::byte*> fresh(columns_.size(), nullptr);
     try {
       for (size_t i = 0; i < columns_.size(); ++i) {
-        fresh[i] = alignedAllocate(size_t(newCapacity) * columns_[i].info->size, columnAlignment(*columns_[i].info));
+        fresh[i] = core::alignedAllocate(size_t(newCapacity) * columns_[i].info->size, columnAlignment(*columns_[i].info));
       }
     } catch (...) {
       for (size_t i = 0; i < columns_.size(); ++i) {
         if (fresh[i]) {
-          alignedFree(fresh[i], columnAlignment(*columns_[i].info));
+          core::alignedFree(fresh[i], columnAlignment(*columns_[i].info));
         }
       }
       throw;
@@ -108,7 +108,7 @@ namespace ecs {
           }
         }
 
-        alignedFree(column.data, columnAlignment(*column.info));
+        core::alignedFree(column.data, columnAlignment(*column.info));
       }
 
       column.data = fresh[i];

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace ecs {
+namespace oly::ecs {
   namespace {
     std::vector<ComponentId> dataTypes(const Signature& signature) {
       std::vector<ComponentId> out;

@@ -8,23 +8,23 @@
 #include "oly/ecs/world.hpp"
 
 TEST_CASE("mesma instância para a mesma combinação; filtros mudam a chave") {
-  ecs::World world;
+  oly::ecs::World world;
 
   auto& firstQuery = world.query<A, const B>();
   auto& secondQuery = world.query<A, const B>();
 
   CHECK(&firstQuery == &secondQuery);
-  CHECK(static_cast<void*>(&world.query<A, const B>(ecs::Without<Tag>{})) != static_cast<void*>(&firstQuery));
+  CHECK(static_cast<void*>(&world.query<A, const B>(oly::ecs::Without<Tag>{})) != static_cast<void*>(&firstQuery));
   CHECK(static_cast<void*>(&world.query<A, B>()) != static_cast<void*>(&firstQuery)); // constness entra na chave
 }
 
 TEST_CASE("arquétipos criados antes e depois da query; with/without de tag") {
-  ecs::World world;
+  oly::ecs::World world;
   world.create(A{1});
   world.create(A{2}, Tag{});
   auto& all = world.query<A>();
-  auto& tagged = world.query<A>(ecs::With<Tag>{});
-  auto& untagged = world.query<A>(ecs::Without<Tag>{});
+  auto& tagged = world.query<A>(oly::ecs::With<Tag>{});
+  auto& untagged = world.query<A>(oly::ecs::Without<Tag>{});
 
   world.create(A{3}, B{0, 0});
   world.create(A{4}, B{0, 0}, Tag{}); // arquétipos novos depois
@@ -36,7 +36,7 @@ TEST_CASE("arquétipos criados antes e depois da query; with/without de tag") {
 }
 
 TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") {
-  ecs::World world;
+  oly::ecs::World world;
   auto& query = world.query<A, B>();
   CHECK(query.matchedCount() == 0);
 
@@ -49,16 +49,16 @@ TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") {
 }
 
 TEST_CASE("Query guarda metadados de leitura/escrita por tipo") {
-  using Q = ecs::Query<A, const B>;
+  using Q = oly::ecs::Query<A, const B>;
   static_assert(Q::writes[0] == true);
   static_assert(Q::writes[1] == false);
   CHECK(Q::writes.size() == 2);
 }
 
 TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
-  ecs::World world;
+  oly::ecs::World world;
   std::set<uint32_t> expected;
-  std::vector<ecs::Entity> withB;
+  std::vector<oly::ecs::Entity> withB;
   for (uint64_t i = 0; i < 300; ++i) {
     auto entity = (i % 3) ? world.create(A{i}, B{i, 0}) : world.create(A{i});
     if (i % 3) {
@@ -73,7 +73,7 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
 
   std::set<uint32_t> seen;
   size_t visits = 0;
-  world.query<A, const B>().each([&](ecs::Entity entity, A& componentA, const B&) {
+  world.query<A, const B>().each([&](oly::ecs::Entity entity, A& componentA, const B&) {
     seen.insert(entity.index);
     ++visits;
     componentA.value += 1000;
@@ -87,7 +87,7 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
 }
 
 TEST_CASE("each sem entidade no lambda") {
-  ecs::World world;
+  oly::ecs::World world;
   for (uint64_t i = 0; i < 10; ++i) {
     world.create(A{i});
   }
@@ -99,7 +99,7 @@ TEST_CASE("each sem entidade no lambda") {
 }
 
 TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
-  ecs::World world;
+  oly::ecs::World world;
   size_t expected = 0;
   for (uint64_t i = 0; i < 200; ++i) {
     if (i % 2) {
@@ -125,7 +125,7 @@ TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
 }
 
 TEST_CASE("iterating_ aninha e volta a zero, inclusive com exceção") {
-  ecs::World world;
+  oly::ecs::World world;
   world.create(A{1});
 
   world.query<A>().each([&](A&) {

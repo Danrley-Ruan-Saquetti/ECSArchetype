@@ -7,10 +7,10 @@
 #include "oly/ecs/world.hpp"
 
 TEST_CASE("sequência create/add/remove/destroy mantém invariantes") {
-  ecs::World world;
+  oly::ecs::World world;
   CHECK_INVARIANTS(world);
 
-  std::vector<ecs::Entity> entities;
+  std::vector<oly::ecs::Entity> entities;
   for (uint64_t i = 0; i < 100; ++i) {
     entities.push_back(world.create());
     CHECK_INVARIANTS(world);
@@ -45,9 +45,9 @@ TEST_CASE("sequência create/add/remove/destroy mantém invariantes") {
 TEST_CASE("I-2: LifeCounter bate com linhas vivas") {
   LifeCounter::alive = 0;
   {
-    ecs::World world;
+    oly::ecs::World world;
     constexpr int kEntityCount = 60;
-    std::vector<ecs::Entity> entities;
+    std::vector<oly::ecs::Entity> entities;
     std::vector<bool> hasLifeCounter(kEntityCount, false), dead(kEntityCount, false);
     auto expected = [&] {
       int64_t count = 0;

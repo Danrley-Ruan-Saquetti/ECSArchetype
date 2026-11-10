@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <new>
 
-namespace ecs {
+namespace oly::core {
   constexpr size_t alignUp(size_t value, size_t alignment) noexcept {
     return (value + alignment - 1) & ~(alignment - 1);
   }

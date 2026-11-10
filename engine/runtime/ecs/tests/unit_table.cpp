@@ -13,21 +13,21 @@
 #include "oly/ecs/type_info.hpp"
 
 namespace {
-  uint16_t columnIndexOf(const ecs::Table& table, ecs::ComponentId id) {
+  uint16_t columnIndexOf(const oly::ecs::Table& table, oly::ecs::ComponentId id) {
     auto columnTypes = table.columnTypes();
     return static_cast<uint16_t>(std::lower_bound(columnTypes.begin(), columnTypes.end(), id) - columnTypes.begin());
   }
 
-  void construct(ecs::Table& table, uint32_t row, uint64_t value) {
-    new (table.column(columnIndexOf(table, ecs::componentId<A>())).at(row)) A{value};
-    new (table.column(columnIndexOf(table, ecs::componentId<LifeCounter>())).at(row)) LifeCounter{value};
+  void construct(oly::ecs::Table& table, uint32_t row, uint64_t value) {
+    new (table.column(columnIndexOf(table, oly::ecs::componentId<A>())).at(row)) A{value};
+    new (table.column(columnIndexOf(table, oly::ecs::componentId<LifeCounter>())).at(row)) LifeCounter{value};
   }
 
-  uint64_t valueA(ecs::Table& table, uint32_t row) {
-    return static_cast<A*>(table.column(columnIndexOf(table, ecs::componentId<A>())).at(row))->value;
+  uint64_t valueA(oly::ecs::Table& table, uint32_t row) {
+    return static_cast<A*>(table.column(columnIndexOf(table, oly::ecs::componentId<A>())).at(row))->value;
   }
 
-  void checkI1I2(const ecs::Table& table) {
+  void checkI1I2(const oly::ecs::Table& table) {
     CHECK(table.entities().size() == table.count());
     CHECK(table.capacity() >= table.count());
     CHECK(LifeCounter::alive == table.count());
@@ -36,19 +36,19 @@ namespace {
 
 TEST_CASE("smoke: asserts ligados em debug") {
 #ifdef NDEBUG
-  CHECK(ECS_ENABLE_ASSERTS == 0);
+  CHECK(OLY_ENABLE_ASSERTS == 0);
 #else
-  CHECK(ECS_ENABLE_ASSERTS == 1);
+  CHECK(OLY_ENABLE_ASSERTS == 1);
 #endif
-  ECS_ASSERT(1 + 1 == 2, "op=%s", "smoke");
+  OLY_ASSERT(1 + 1 == 2, "op=%s", "smoke");
 }
 
 TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
   LifeCounter::alive = 0;
   {
-    ecs::ComponentId ids[] = {ecs::componentId<A>(), ecs::componentId<LifeCounter>()};
+    oly::ecs::ComponentId ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<LifeCounter>()};
     std::sort(std::begin(ids), std::end(ids));
-    ecs::Table table(ids);
+    oly::ecs::Table table(ids);
 
     for (uint32_t i = 0; i < 200; ++i) {
       auto row = table.pushUninitialized({i, 0});
@@ -73,9 +73,9 @@ TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
 }
 
 TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
-  ecs::ComponentId ids[] = {ecs::componentId<A>(), ecs::componentId<Wide>()};
+  oly::ecs::ComponentId ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<Wide>()};
   std::sort(std::begin(ids), std::end(ids));
-  ecs::Table table(ids);
+  oly::ecs::Table table(ids);
 
   table.pushUninitialized({0, 0});
 
@@ -85,8 +85,8 @@ TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
 }
 
 TEST_CASE("std::string sobrevive à realocação") {
-  ecs::ComponentId ids[] = {ecs::componentId<std::string>()};
-  ecs::Table table(ids);
+  oly::ecs::ComponentId ids[] = {oly::ecs::componentId<std::string>()};
+  oly::ecs::Table table(ids);
   auto make = [](uint32_t i) { return std::string(40, 'a') + std::to_string(i); };
 
   for (uint32_t i = 0; i < 100; ++i) {

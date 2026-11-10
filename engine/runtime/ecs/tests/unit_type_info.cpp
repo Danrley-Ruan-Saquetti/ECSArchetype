@@ -7,17 +7,17 @@
 #include "oly/ecs/type_info.hpp"
 
 TEST_CASE("componentId é estável, denso e ignora cvref") {
-  auto idA = ecs::componentId<A>();
-  auto idB = ecs::componentId<B>();
+  auto idA = oly::ecs::componentId<A>();
+  auto idB = oly::ecs::componentId<B>();
 
-  CHECK(ecs::componentId<A>() == idA);
-  CHECK(ecs::componentId<const A&>() == idA);
+  CHECK(oly::ecs::componentId<A>() == idA);
+  CHECK(oly::ecs::componentId<const A&>() == idA);
   CHECK(idB != idA);
-  CHECK(std::max(idA, idB) < ecs::registeredTypeCount());
+  CHECK(std::max(idA, idB) < oly::ecs::registeredTypeCount());
 }
 
 TEST_CASE("TypeInfo de trivial, não trivial e tag") {
-  auto& infoA = ecs::typeInfo(ecs::componentId<A>());
+  auto& infoA = oly::ecs::typeInfo(oly::ecs::componentId<A>());
   CHECK(infoA.size == sizeof(A));
   CHECK(infoA.trivial);
   CHECK_FALSE(infoA.tag);
@@ -25,14 +25,14 @@ TEST_CASE("TypeInfo de trivial, não trivial e tag") {
   CHECK(infoA.destroy == nullptr);
   CHECK(infoA.name == "A");
 
-  auto& infoString = ecs::typeInfo(ecs::componentId<std::string>());
+  auto& infoString = oly::ecs::typeInfo(oly::ecs::componentId<std::string>());
   CHECK_FALSE(infoString.trivial);
   CHECK(infoString.moveConstruct != nullptr);
   CHECK(infoString.destroy != nullptr);
 
-  auto& infoTag = ecs::typeInfo(ecs::componentId<Tag>());
+  auto& infoTag = oly::ecs::typeInfo(oly::ecs::componentId<Tag>());
   CHECK(infoTag.tag);
   CHECK(infoTag.size == 0);
 
-  CHECK(ecs::typeInfo(ecs::componentId<Wide>()).alignment == 64);
+  CHECK(oly::ecs::typeInfo(oly::ecs::componentId<Wide>()).alignment == 64);
 }

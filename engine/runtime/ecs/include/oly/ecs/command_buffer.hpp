@@ -11,7 +11,7 @@
 #include "oly/ecs/entity.hpp"
 #include "oly/ecs/type_info.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   enum class CommandOperation : uint8_t { Spawn,
                                    Destroy,
                                    Add,
@@ -136,7 +136,7 @@ namespace ecs {
   template <class T>
   void CommandBuffer::add(Entity entity, T&& value) {
     using U = std::remove_cvref_t<T>;
-    const ComponentId componentId = ecs::componentId<U>();
+    const ComponentId componentId = oly::ecs::componentId<U>();
 
     if constexpr (std::is_empty_v<U>) {
       pushRecord(CommandOperation::Add, entity, componentId, 0, 1, true);

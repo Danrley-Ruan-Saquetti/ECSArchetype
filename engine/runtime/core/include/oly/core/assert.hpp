@@ -1,14 +1,14 @@
 #pragma once
 
-#ifndef ECS_ENABLE_ASSERTS
+#ifndef OLY_ENABLE_ASSERTS
 #ifdef NDEBUG
-#define ECS_ENABLE_ASSERTS 0
+#define OLY_ENABLE_ASSERTS 0
 #else
-#define ECS_ENABLE_ASSERTS 1
+#define OLY_ENABLE_ASSERTS 1
 #endif
 #endif
 
-namespace ecs {
+namespace oly::core {
   using AssertHandler = void (*)(const char* message) noexcept;
 
   // Instala o handler e devolve o anterior. Padrão: escreve em stderr e chama std::abort().
@@ -23,15 +23,15 @@ namespace ecs {
   }
 }
 
-#if ECS_ENABLE_ASSERTS
-#define ECS_ASSERT(condition, ...)                                            \
+#if OLY_ENABLE_ASSERTS
+#define OLY_ASSERT(condition, ...)                                            \
   do {                                                                        \
     if (!(condition)) {                                                       \
-      ::ecs::detail::assertFail(#condition, __FILE__, __LINE__, __VA_ARGS__); \
+      ::oly::core::detail::assertFail(#condition, __FILE__, __LINE__, __VA_ARGS__); \
     }                                                                         \
   } while (0)
 #else
-#define ECS_ASSERT(condition, ...) \
+#define OLY_ASSERT(condition, ...) \
   do {                             \
   } while (0)
 #endif

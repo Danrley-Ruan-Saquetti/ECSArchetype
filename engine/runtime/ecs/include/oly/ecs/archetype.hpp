@@ -8,7 +8,7 @@
 #include "oly/ecs/table.hpp"
 #include "oly/ecs/type_info.hpp"
 
-namespace ecs {
+namespace oly::ecs {
   using ArchetypeId = uint32_t;
   using Signature = std::vector<ComponentId>;
 
@@ -45,7 +45,7 @@ namespace ecs {
     Signature signature; // ordenada, inclui tags
     std::vector<ComponentId> columnTypes; // ordenada, só dados
     Table table;
-    SmallMap<ComponentId, Edge> addEdges, removeEdges;
+    core::SmallMap<ComponentId, Edge> addEdges, removeEdges;
 
     Archetype(ArchetypeId id, Signature signature);
   };
