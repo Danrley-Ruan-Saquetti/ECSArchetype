@@ -17,7 +17,7 @@ TEST_CASE("spawn() nasce vivo no arquétipo raiz") {
   CHECK_FALSE(world.has<A>(entity));
 }
 
-TEST_CASE("create<Ts...> nasce no arquétipo final com valores") {
+TEST_CASE("spawn(components...) nasce no arquétipo final com valores") {
   oly::ecs::World world;
 
   auto entity = world.spawn(A{1}, B{2, 3}, Tag{});
@@ -27,7 +27,7 @@ TEST_CASE("create<Ts...> nasce no arquétipo final com valores") {
   CHECK(world.has<Tag>(entity));
 }
 
-TEST_CASE("create<Ts...> copia lvalues") {
+TEST_CASE("spawn(components...) copia lvalues") {
   oly::ecs::World world;
   A componentA{4};
 
@@ -174,8 +174,8 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
   auto entity = world.spawn(C1{1}, C2{2}, C3{3});
   world.add(entity, C4{4});
   world.remove<C4>(entity); // aquece arestas e capacidade (64 linhas)
-  auto allocations = allocationCount();
-  auto lookups = oly::ecs::signatureLookupCount(world);
+  auto allocationsBefore = allocationCount();
+  auto lookupsBefore = oly::ecs::signatureLookupCount(world);
 
   for (int i = 0; i < 1000; ++i) {
     world.add(entity, C4{uint64_t(i)});
@@ -184,8 +184,8 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
 
   auto allocationsAfter = allocationCount();
   auto lookupsAfter = oly::ecs::signatureLookupCount(world);
-  CHECK(allocationsAfter == allocations);
-  CHECK(lookupsAfter == lookups);
+  CHECK(allocationsAfter == allocationsBefore);
+  CHECK(lookupsAfter == lookupsBefore);
   CHECK(world.get<C3>(entity).value == 3);
 }
 

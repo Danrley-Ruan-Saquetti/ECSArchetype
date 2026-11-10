@@ -6,7 +6,7 @@
 #include "components.hpp"
 #include "oly/ecs/world.hpp"
 
-TEST_CASE("sequência create/add/remove/destroy mantém invariantes") {
+TEST_CASE("sequência spawn/add/remove/destroy mantém invariantes") {
   oly::ecs::World world;
   CHECK_INVARIANTS(world);
 

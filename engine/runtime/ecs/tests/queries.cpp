@@ -27,7 +27,7 @@ TEST_CASE("arquétipos criados antes e depois da query; with/without de tag") {
   auto& untagged = world.query<A>(oly::ecs::Without<Tag>{});
 
   world.spawn(A{3}, B{0, 0});
-  world.spawn(A{4}, B{0, 0}, Tag{}); // arquétipos novos depois
+  world.spawn(A{4}, B{0, 0}, Tag{});
 
   CHECK(all.matchedCount() == 4);
   CHECK(tagged.matchedCount() == 2);
@@ -49,10 +49,10 @@ TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") {
 }
 
 TEST_CASE("Query guarda metadados de leitura/escrita por tipo") {
-  using Q = oly::ecs::Query<A, const B>;
-  static_assert(Q::writes[0] == true);
-  static_assert(Q::writes[1] == false);
-  CHECK(Q::writes.size() == 2);
+  using ReadWriteQuery = oly::ecs::Query<A, const B>;
+  static_assert(ReadWriteQuery::writes[0] == true);
+  static_assert(ReadWriteQuery::writes[1] == false);
+  CHECK(ReadWriteQuery::writes.size() == 2);
 }
 
 TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
@@ -124,7 +124,7 @@ TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
   CHECK(blocks == 1);
 }
 
-TEST_CASE("iterating_ aninha e volta a zero, inclusive com exceção") {
+TEST_CASE("isIterating aninha e volta a zero, inclusive com exceção") {
   oly::ecs::World world;
   world.spawn(A{1});
 

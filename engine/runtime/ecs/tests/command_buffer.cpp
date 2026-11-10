@@ -7,9 +7,9 @@
 #include <string>
 #include <vector>
 
+#include "model.hpp"
 #include "oly/ecs/detail/test_access.hpp"
 #include "oly/ecs/world.hpp"
-#include "model.hpp"
 
 namespace {
   void addToCommandBuffer(oly::ecs::CommandBuffer& commandBuffer, oly::ecs::Entity entity, oly::ecs::ComponentId componentId, uint64_t value) {
@@ -30,7 +30,6 @@ namespace {
 TEST_CASE("spawn referenciado no mesmo buffer") {
   oly::ecs::World world;
   auto commandBuffer = world.commands();
-
   auto entity = commandBuffer.spawn();
   CHECK_FALSE(world.isAlive(entity));
 
@@ -494,17 +493,17 @@ TEST_CASE("addById move tipo não trivial") {
 }
 
 TEST_CASE("addById coalesce igual a add<T> no flush") {
-  oly::ecs::World rawWorld, typedWorld;
-  auto rawEntity = rawWorld.spawn();
+  oly::ecs::World byIdWorld, typedWorld;
+  auto byIdEntity = byIdWorld.spawn();
   auto typedEntity = typedWorld.spawn();
 
-  auto rawBuffer = rawWorld.commands();
-  A rawA{1};
-  B rawB{2, 3};
-  rawBuffer.addById(rawEntity, oly::ecs::componentId<A>(), &rawA);
-  rawBuffer.removeById(rawEntity, oly::ecs::componentId<A>());
-  rawBuffer.addById(rawEntity, oly::ecs::componentId<B>(), &rawB);
-  rawWorld.flush(rawBuffer);
+  auto byIdBuffer = byIdWorld.commands();
+  A aValue{1};
+  B bValue{2, 3};
+  byIdBuffer.addById(byIdEntity, oly::ecs::componentId<A>(), &aValue);
+  byIdBuffer.removeById(byIdEntity, oly::ecs::componentId<A>());
+  byIdBuffer.addById(byIdEntity, oly::ecs::componentId<B>(), &bValue);
+  byIdWorld.flush(byIdBuffer);
 
   auto typedBuffer = typedWorld.commands();
   typedBuffer.add(typedEntity, A{1});
@@ -512,9 +511,9 @@ TEST_CASE("addById coalesce igual a add<T> no flush") {
   typedBuffer.add(typedEntity, B{2, 3});
   typedWorld.flush(typedBuffer);
 
-  CHECK_FALSE(rawWorld.has<A>(rawEntity));
+  CHECK_FALSE(byIdWorld.has<A>(byIdEntity));
   CHECK_FALSE(typedWorld.has<A>(typedEntity));
-  CHECK(rawWorld.get<B>(rawEntity).second == typedWorld.get<B>(typedEntity).second);
-  CHECK_INVARIANTS(rawWorld);
+  CHECK(byIdWorld.get<B>(byIdEntity).second == typedWorld.get<B>(typedEntity).second);
+  CHECK_INVARIANTS(byIdWorld);
   CHECK_INVARIANTS(typedWorld);
 }

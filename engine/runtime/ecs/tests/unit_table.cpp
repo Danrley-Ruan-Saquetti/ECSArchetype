@@ -13,9 +13,9 @@
 #include "oly/ecs/component.hpp"
 
 namespace {
-  uint16_t columnIndexOf(const oly::ecs::detail::Table& table, oly::ecs::ComponentId id) {
+  uint16_t columnIndexOf(const oly::ecs::detail::Table& table, oly::ecs::ComponentId componentId) {
     auto columnTypes = table.columnTypes();
-    return static_cast<uint16_t>(std::lower_bound(columnTypes.begin(), columnTypes.end(), id) - columnTypes.begin());
+    return static_cast<uint16_t>(std::lower_bound(columnTypes.begin(), columnTypes.end(), componentId) - columnTypes.begin());
   }
 
   void construct(oly::ecs::detail::Table& table, uint32_t row, uint64_t value) {
@@ -46,9 +46,9 @@ TEST_CASE("smoke: asserts ligados em debug") {
 TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
   LifeCounter::alive = 0;
   {
-    oly::ecs::ComponentId ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<LifeCounter>()};
-    std::sort(std::begin(ids), std::end(ids));
-    oly::ecs::detail::Table table(ids);
+    oly::ecs::ComponentId componentIds[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<LifeCounter>()};
+    std::sort(std::begin(componentIds), std::end(componentIds));
+    oly::ecs::detail::Table table(componentIds);
 
     for (uint32_t i = 0; i < 200; ++i) {
       auto row = table.pushUninitialized({i, 0});
@@ -73,9 +73,9 @@ TEST_CASE("push, destroyRow, fillHole com swap e realocação") {
 }
 
 TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
-  oly::ecs::ComponentId ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<Wide>()};
-  std::sort(std::begin(ids), std::end(ids));
-  oly::ecs::detail::Table table(ids);
+  oly::ecs::ComponentId componentIds[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<Wide>()};
+  std::sort(std::begin(componentIds), std::end(componentIds));
+  oly::ecs::detail::Table table(componentIds);
 
   table.pushUninitialized({0, 0});
 
@@ -85,17 +85,17 @@ TEST_CASE("colunas alinhadas a 64, inclusive alignas(64)") {
 }
 
 TEST_CASE("std::string sobrevive à realocação") {
-  oly::ecs::ComponentId ids[] = {oly::ecs::componentId<std::string>()};
-  oly::ecs::detail::Table table(ids);
-  auto make = [](uint32_t i) { return std::string(40, 'a') + std::to_string(i); };
+  oly::ecs::ComponentId componentIds[] = {oly::ecs::componentId<std::string>()};
+  oly::ecs::detail::Table table(componentIds);
+  auto textFor = [](uint32_t i) { return std::string(40, 'a') + std::to_string(i); };
 
   for (uint32_t i = 0; i < 100; ++i) {
     auto row = table.pushUninitialized({i, 0});
-    new (table.column(0).at(row)) std::string(make(i));
+    new (table.column(0).at(row)) std::string(textFor(i));
   }
 
   CHECK(table.capacity() == 128); // cruzou 64
   for (uint32_t i = 0; i < 100; ++i) {
-    CHECK(*static_cast<std::string*>(table.column(0).at(i)) == make(i));
+    CHECK(*static_cast<std::string*>(table.column(0).at(i)) == textFor(i));
   }
 }

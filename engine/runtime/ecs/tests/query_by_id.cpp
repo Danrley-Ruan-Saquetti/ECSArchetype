@@ -1,3 +1,5 @@
+#include "oly/ecs/query_by_id.hpp"
+
 #include <doctest/doctest.h>
 
 #include <cstdint>
@@ -9,7 +11,6 @@
 
 #include "alloc_counter.hpp"
 #include "components.hpp"
-#include "oly/ecs/query_by_id.hpp"
 #include "oly/ecs/world.hpp"
 
 TEST_CASE("eachBlock entrega count, entidades e colunas na ordem read, write") {
@@ -25,12 +26,12 @@ TEST_CASE("eachBlock entrega count, entidades e colunas na ordem read, write") {
 
   uint64_t sum = 0;
   query.eachBlock([&](const oly::ecs::BlockById& block) {
-    const A* a = static_cast<const A*>(block.column(0));
-    B* b = static_cast<B*>(block.column(1));
+    const A* columnA = static_cast<const A*>(block.column(0));
+    B* columnB = static_cast<B*>(block.column(1));
     CHECK(block.entities().size() == block.count());
     for (uint32_t row = 0; row < block.count(); ++row) {
-      sum += a[row].value;
-      b[row].first += 100;
+      sum += columnA[row].value;
+      columnB[row].first += 100;
     }
   });
 

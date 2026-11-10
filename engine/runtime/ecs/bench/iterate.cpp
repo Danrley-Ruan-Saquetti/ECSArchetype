@@ -39,7 +39,6 @@ static void BM_IterateSingle_ECS(benchmark::State& state) {
   }
 
   auto& query = world.query<Position, const Velocity>();
-
   for (auto _ : state) {
     query.eachBlock([](std::span<Position> positions, std::span<const Velocity> velocities) {
       Position* positionData = positions.data();
@@ -70,7 +69,6 @@ static void BM_IterateSingle_QueryById(benchmark::State& state) {
   }
 
   auto& query = world.queryById({.read = {oly::ecs::componentId<Velocity>()}, .write = {oly::ecs::componentId<Position>()}});
-
   for (auto _ : state) {
     query.eachBlock([](const oly::ecs::BlockById& block) {
       const Velocity* velocityData = static_cast<const Velocity*>(block.column(0));

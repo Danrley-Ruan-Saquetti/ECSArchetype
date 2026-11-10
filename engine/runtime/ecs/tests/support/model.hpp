@@ -15,7 +15,7 @@ struct FuzzState {
   std::string text; // não trivial; valor sempre > 32 chars para sair do SSO
 };
 
-// tag guarda 0
+// Tags entram no modelo com valor 0.
 using Model = std::unordered_map<oly::ecs::Entity, std::map<oly::ecs::ComponentId, uint64_t>, oly::ecs::EntityHash>;
 
 namespace fuzz {
@@ -27,7 +27,7 @@ namespace fuzz {
 
   inline const oly::ecs::ComponentId* universe() {
     static const oly::ecs::ComponentId ids[5] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>(), oly::ecs::componentId<FuzzState>(),
-                                            oly::ecs::componentId<Tag>(), oly::ecs::componentId<LifeCounter>()};
+                                                 oly::ecs::componentId<Tag>(), oly::ecs::componentId<LifeCounter>()};
     return ids;
   }
 

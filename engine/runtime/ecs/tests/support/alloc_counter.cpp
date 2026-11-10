@@ -13,7 +13,6 @@ namespace {
     if (void* pointer = std::malloc(size ? size : 1)) {
       return pointer;
     }
-
     throw std::bad_alloc();
   }
 
@@ -25,7 +24,6 @@ namespace {
     if (void* pointer = std::aligned_alloc(alignmentBytes, size ? size : alignmentBytes)) {
       return pointer;
     }
-
     throw std::bad_alloc();
   }
 }

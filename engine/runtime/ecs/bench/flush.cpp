@@ -11,26 +11,26 @@
 namespace {
   using oly::ecs::World;
 
-  // N entidades no arquétipo raiz (fora do tempo). Os arquétipos e as arestas são aquecidos com
-  // uma entidade extra, que é destruída em seguida.
+  // N entidades no arquétipo raiz, com os arquétipos e as arestas do caminho já criados por uma
+  // entidade de aquecimento descartada, para que o tempo medido não inclua essa criação.
   struct Setup {
     std::unique_ptr<World> world = std::make_unique<World>();
     std::vector<oly::ecs::Entity> entities;
 
     explicit Setup(int64_t entityCount, bool coalesced) {
-      auto warm = world->spawn();
+      auto warmupEntity = world->spawn();
       if (coalesced) {
         auto commandBuffer = world->commands();
-        commandBuffer.add(warm, Component<0>{0});
-        commandBuffer.add(warm, Component<1>{0});
-        commandBuffer.add(warm, Component<2>{0});
+        commandBuffer.add(warmupEntity, Component<0>{0});
+        commandBuffer.add(warmupEntity, Component<1>{0});
+        commandBuffer.add(warmupEntity, Component<2>{0});
         world->flush(commandBuffer);
       } else {
-        world->add(warm, Component<0>{0});
-        world->add(warm, Component<1>{0});
-        world->add(warm, Component<2>{0});
+        world->add(warmupEntity, Component<0>{0});
+        world->add(warmupEntity, Component<1>{0});
+        world->add(warmupEntity, Component<2>{0});
       }
-      world->destroy(warm);
+      world->destroy(warmupEntity);
 
       entities.reserve(static_cast<size_t>(entityCount));
       for (int64_t i = 0; i < entityCount; ++i) {

@@ -8,13 +8,13 @@
 
 TEST_CASE("reciclagem incrementa geração e invalida handle antigo") {
   oly::ecs::detail::EntityStore store;
-  oly::ecs::detail::Archetype* fake = reinterpret_cast<oly::ecs::detail::Archetype*>(0x10);
+  oly::ecs::detail::Archetype* fakeArchetype = reinterpret_cast<oly::ecs::detail::Archetype*>(0x10);
 
   auto entity = store.allocate();
   CHECK(store.isReserved(entity));
   CHECK_FALSE(store.isAlive(entity));
 
-  store.record(entity.index).archetype = fake;
+  store.record(entity.index).archetype = fakeArchetype;
   CHECK(store.isAlive(entity));
 
   store.release(entity.index);
@@ -24,7 +24,7 @@ TEST_CASE("reciclagem incrementa geração e invalida handle antigo") {
   CHECK(recycled.index == entity.index);
   CHECK(recycled.generation == entity.generation + 1);
 
-  store.record(recycled.index).archetype = fake;
+  store.record(recycled.index).archetype = fakeArchetype;
   CHECK_FALSE(store.isAlive(entity));
   CHECK(store.isAlive(recycled));
 }

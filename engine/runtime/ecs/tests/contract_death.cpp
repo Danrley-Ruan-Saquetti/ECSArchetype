@@ -1,6 +1,5 @@
-// Testes de morte: violações de contrato devem disparar OLY_ASSERT (só compilado com asserts ligados).
-// Uso: contract_death <caso>. O handler confere as substrings exigidas e sai com 0; se o caso
-// terminar sem assert, imprime "assert não disparou" e devolve 1.
+// Casos de morte: cada violação de contrato deve disparar OLY_ASSERT, então só existe com asserts ligados.
+// Uso: contract_death <caso>. Sai com 0 só se o assert disparar com todas as substrings exigidas.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

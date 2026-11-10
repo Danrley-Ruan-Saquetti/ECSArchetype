@@ -12,41 +12,41 @@
 #include "oly/ecs/world.hpp"
 
 namespace {
-  template <bool NT, int I>
+  template <bool IsNonTrivial, int I>
   auto makeComponent(uint64_t value) {
-    if constexpr (NT) {
+    if constexpr (IsNonTrivial) {
       return NonTrivial<Component<I>>{Component<I>{value}};
     } else {
       return Component<I>{value};
     }
   }
 
-  template <bool NT, size_t... Is>
-  oly::ecs::Entity createWithComponents(oly::ecs::World& world, uint64_t value, std::index_sequence<Is...>) {
-    return world.spawn(makeComponent<NT, int(Is)>(value)...);
+  template <bool IsNonTrivial, size_t... Is>
+  oly::ecs::Entity spawnWithComponents(oly::ecs::World& world, uint64_t value, std::index_sequence<Is...>) {
+    return world.spawn(makeComponent<IsNonTrivial, int(Is)>(value)...);
   }
 
-  constexpr int kExtra = 31; // componente que entra e sai
+  constexpr int kToggledComponentIndex = 31;
 
-  template <bool NT, int K>
+  template <bool IsNonTrivial, int ComponentCount>
   void BM_Transition(benchmark::State& state) {
     constexpr int kEntityCount = 1024;
     oly::ecs::World world;
     std::vector<oly::ecs::Entity> entities;
     for (int i = 0; i < kEntityCount; ++i) {
-      entities.push_back(createWithComponents<NT>(world, i, std::make_index_sequence<K>{}));
+      entities.push_back(spawnWithComponents<IsNonTrivial>(world, i, std::make_index_sequence<ComponentCount>{}));
     }
 
-    using X = decltype(makeComponent<NT, kExtra>(0));
+    using ToggledComponent = decltype(makeComponent<IsNonTrivial, kToggledComponentIndex>(0));
     for (auto entity : entities) { // aquece arestas e capacidades
-      world.add(entity, makeComponent<NT, kExtra>(1));
-      world.remove<X>(entity);
+      world.add(entity, makeComponent<IsNonTrivial, kToggledComponentIndex>(1));
+      world.remove<ToggledComponent>(entity);
     }
 
     for (auto _ : state) {
       for (auto entity : entities) {
-        world.add(entity, makeComponent<NT, kExtra>(2));
-        world.remove<X>(entity);
+        world.add(entity, makeComponent<IsNonTrivial, kToggledComponentIndex>(2));
+        world.remove<ToggledComponent>(entity);
       }
     }
 
@@ -71,7 +71,7 @@ namespace {
       auto entity = world->spawn(Component<0>{1}, Component<1>{2}, Component<2>{3}, Component<3>{4});
       state.ResumeTiming();
 
-      world->add(entity, Component<kExtra>{5});
+      world->add(entity, Component<kToggledComponentIndex>{5});
 
       state.PauseTiming();
       world.reset();
@@ -104,7 +104,6 @@ namespace {
     }
 
     const auto shuffledIndices = permutation(kGetCount);
-
     for (auto _ : state) {
       uint64_t sum = 0;
       for (uint32_t i : shuffledIndices) {
@@ -124,7 +123,6 @@ namespace {
     }
 
     const auto shuffledIndices = permutation(kGetCount);
-
     for (auto _ : state) {
       uint64_t sum = 0;
       for (uint32_t i : shuffledIndices) {
@@ -137,7 +135,6 @@ namespace {
   }
   BENCHMARK(BM_RandomGet_VectorStruct);
 
-  // Churn: 10% das entidades destruídas e 10% novas por iteração.
   void BM_CreateDestroyChurn(benchmark::State& state) {
     constexpr uint32_t kEntityCount = 100'000, kChurnPerIteration = kEntityCount / 10;
     oly::ecs::World world;

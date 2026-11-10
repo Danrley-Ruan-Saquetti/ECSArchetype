@@ -25,7 +25,7 @@ TEST_CASE("fuzz: World == modelo de referência") {
     auto pickIndex = [&] { return size_t(generator() % live.size()); };
     auto pickComponentId = [&] { return fuzz::universe()[generator() % 5]; };
 
-    auto createOne = [&] {
+    auto spawnRandomEntity = [&] {
       ++counter;
       const uint64_t value = makeValue(oly::ecs::Entity{uint32_t(counter), 0}, counter);
       oly::ecs::Entity entity;
@@ -68,7 +68,7 @@ TEST_CASE("fuzz: World == modelo de referência") {
       const unsigned destroyWeight = live.size() > 4096 ? 40 : 10;
       unsigned roll = unsigned(generator() % (20 + destroyWeight + 30 + 20 + 20));
       if (roll < 20) {
-        createOne();
+        spawnRandomEntity();
       } else if (roll < 20 + destroyWeight) {
         if (!live.empty()) {
           size_t i = pickIndex();

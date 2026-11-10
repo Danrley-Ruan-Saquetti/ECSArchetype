@@ -64,7 +64,6 @@ namespace {
     }
 
     auto& query = world.query<Position, const Velocity>();
-
     for (auto _ : state) {
       query.eachBlock([](std::span<Position> positions, std::span<const Velocity> velocities) {
         Position* positionData = positions.data();
