@@ -43,7 +43,6 @@ export function computeLayout(fields: Fields): ComponentLayout {
   const layouts: FieldLayout[] = [];
   let offset = 0;
   let alignment = 1;
-
   for (const [name, type] of Object.entries(fields)) {
     const fieldAlignment = scalarAlignment(type);
     offset = alignUp(offset, fieldAlignment);

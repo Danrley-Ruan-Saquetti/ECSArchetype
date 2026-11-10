@@ -6,7 +6,10 @@ function importByHref(href: string): Promise<unknown> {
   return import(/* @vite-ignore */ href);
 }
 
-// Fábrica do módulo Emscripten (.mjs) a partir de uma URL. O .wasm é buscado ao lado do .mjs.
+/**
+ * Fábrica do módulo Emscripten (.mjs) a partir de uma URL, relativa à página quando há `location`. O .wasm é
+ * buscado ao lado do .mjs. A fábrica rejeita com Error se o .mjs não exportar a fábrica Emscripten como default.
+ */
 export function moduleFactoryFromUrl(url: string | URL, importModule: (href: string) => Promise<unknown> = importByHref): OlyModuleFactory {
   const base = globalThis.location?.href;
   const href = (base === undefined ? new URL(url) : new URL(url, base)).href;

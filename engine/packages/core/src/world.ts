@@ -20,6 +20,10 @@ interface WorldInternals {
 
 let worldInternals!: WorldInternals;
 
+/**
+ * Lança ContractError para uso depois de `dispose`, entidade morta, componente ausente em `get`/`set`, campo
+ * desconhecido e mudança estrutural direta durante eachBlock ou durante `Engine.frame`.
+ */
 export class World {
   readonly handle: number;
 
@@ -133,7 +137,10 @@ export class World {
     }
   }
 
-  // Memoizada por spec: a mesma combinação (com a ordem de read/write) devolve a mesma Query.
+  /**
+   * Memoizada por spec: a mesma combinação (com a ordem de read/write) devolve a mesma Query. Lança
+   * ContractError para tag em read/write ou tipo repetido em read/write.
+   */
   query(spec: QuerySpec): Query {
     this.#assertUsable("query");
 
@@ -188,11 +195,9 @@ export class World {
     if (this.#disposed) {
       return;
     }
-
     if (!this.#owned) {
       throw new ContractError("dispose: World pertence à Engine; use engine.dispose()");
     }
-
     if (this.#iterationDepth > 0) {
       throw new ContractError("dispose: World em iteração (eachBlock); libere depois do laço");
     }

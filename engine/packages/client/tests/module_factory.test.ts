@@ -35,7 +35,9 @@ test("devolve o módulo criado pela fábrica", async () => {
   const created = { HEAPU8: new Uint8Array(1) };
   const factory = moduleFactoryFromUrl(demoUrl, async () => ({ default: async () => created }));
 
-  assert.equal(await factory(), created as never);
+  const loaded = await factory();
+
+  assert.equal(loaded, created as never);
 });
 
 test("default ausente é erro com a URL", async () => {

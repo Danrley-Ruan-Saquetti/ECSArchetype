@@ -17,26 +17,34 @@ test("nomes inválidos", () => {
   assert.throws(() => tag("bad name"), ContractError);
 });
 
-test("defineSchema atribui schemaIndex na ordem e rejeita nome repetido", () => {
+test("tipo fora de esquema tem schemaIndex -1", () => {
+  assert.equal(component("Loose", { x: "f32" }).schemaIndex, -1);
+  assert.equal(tag("LooseTag").schemaIndex, -1);
+});
+
+test("defineSchema atribui schemaIndex na ordem", () => {
   const first = component("First", { x: "f32" });
   const second = tag("Second");
-  assert.equal(first.schemaIndex, -1);
 
   const schema = defineSchema([first, second]);
+
   assert.equal(first.schemaIndex, 0);
   assert.equal(second.schemaIndex, 1);
   assert.equal(schema.types.length, 2);
+});
 
+test("defineSchema rejeita nome repetido", () => {
   assert.throws(() => defineSchema([component("Dup", { x: "f32" }), tag("Dup")]), ContractError);
 });
 
 test("tipo já usado em outro esquema é erro", () => {
   const shared = component("Shared", { x: "f32" });
   defineSchema([shared]);
+
   assert.throws(() => defineSchema([shared]), ContractError);
 });
 
-test("fnv1a32", () => {
+test("fnv1a32 bate com os valores de referência do FNV-1a", () => {
   assert.equal(fnv1a32(""), 0x811c9dc5);
   assert.equal(fnv1a32("a"), 0xe40c292c);
 });
@@ -50,9 +58,13 @@ test("forma canônica", () => {
 
 test("hash muda com ordem e com tipo de campo", () => {
   const base = schemaHash([component("A", { x: "f32" }), tag("B")]);
+
   assert.notEqual(base, schemaHash([tag("B"), component("A", { x: "f32" })]));
   assert.notEqual(base, schemaHash([component("A", { x: "f64" }), tag("B")]));
+});
 
+test("defineSchema guarda o hash dos seus tipos", () => {
   const schema = defineSchema([component("H", { x: "f32" }), tag("T")]);
+
   assert.equal(schema.hash, schemaHash(schema.types));
 });

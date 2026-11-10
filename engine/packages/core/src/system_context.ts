@@ -12,7 +12,10 @@ export type SystemFunction = (context: SystemContext) => void;
 
 export let setContextActive!: (context: SystemContext, active: boolean) => void;
 
-// Válido só durante a chamada do seu sistema. Mudanças estruturais (spawn/destroy/add/remove) são adiadas até o fim da fase.
+/**
+ * Válido só durante a chamada do seu sistema; fora dela, qualquer uso lança ContractError. Mudanças estruturais
+ * (spawn/destroy/add/remove) são adiadas até o fim da fase.
+ */
 export class SystemContext {
   readonly phase: Phase;
   readonly name: string;
@@ -64,11 +67,13 @@ export class SystemContext {
 
   pause(): void {
     this.#assertActive("pause");
+
     this.#bridge.enginePause(this.#engineHandle);
   }
 
   resume(): void {
     this.#assertActive("resume");
+
     this.#bridge.engineResume(this.#engineHandle);
   }
 
@@ -86,6 +91,7 @@ export class SystemContext {
 
   set<F extends Fields>(entity: Entity, type: ComponentType<string, F>, value: Partial<ValueOf<F>>): void {
     this.#assertActive("set");
+
     this.#world.set(entity, type, value);
   }
 
@@ -101,7 +107,7 @@ export class SystemContext {
     return this.#world.isAlive(entity);
   }
 
-  // A entidade só fica viva ao fim da fase; o handle já pode ser usado nos comandos adiados.
+  /** A entidade só fica viva ao fim da fase; o handle já pode ser usado nos comandos adiados. */
   spawn<const Ts extends readonly SchemaType[]>(types: Ts, values?: SpawnValues<Ts>): Entity {
     this.#assertActive("spawn");
 
@@ -118,6 +124,7 @@ export class SystemContext {
 
   destroy(entity: Entity): void {
     this.#assertActive("destroy");
+
     this.#bridge.systemDestroy(this.#engineHandle, entity);
   }
 
@@ -134,6 +141,7 @@ export class SystemContext {
 
   remove(entity: Entity, type: SchemaType): void {
     this.#assertActive("remove");
+
     this.#bridge.systemRemove(this.#engineHandle, entity, componentIdOf(this.#runtime, type));
   }
 

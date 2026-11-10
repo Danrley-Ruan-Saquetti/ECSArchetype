@@ -11,12 +11,14 @@ export interface ComponentType<Name extends string = string, F extends Fields = 
   readonly name: Name;
   readonly fields: F;
   readonly layout: ComponentLayout;
+  /** -1 até o tipo entrar num esquema por defineSchema. */
   readonly schemaIndex: number;
 }
 
 export interface TagType<Name extends string = string> {
   readonly kind: "tag";
   readonly name: Name;
+  /** -1 até o tipo entrar num esquema por defineSchema. */
   readonly schemaIndex: number;
 }
 
@@ -30,7 +32,7 @@ export interface Schema {
 const typeNamePattern = /^[A-Z][A-Za-z0-9]*$/;
 const fieldNamePattern = /^[a-z][A-Za-z0-9]*$/;
 
-const reservedWords: ReadonlySet<string> = new Set(
+const cppReservedWords: ReadonlySet<string> = new Set(
   `class struct int float double char long short unsigned signed bool void auto return operator template namespace new delete
   this default case switch register union enum const static virtual public private protected friend using typename do if else for
   while goto break continue try catch throw true false nullptr sizeof alignof export extern inline mutable volatile explicit
@@ -44,13 +46,17 @@ function validateTypeName(name: string): void {
 }
 
 function validateFieldName(typeName: string, field: string): void {
-  if (!fieldNamePattern.test(field) || reservedWords.has(field)) {
+  if (!fieldNamePattern.test(field) || cppReservedWords.has(field)) {
     throw new ContractError(
       `campo inválido "${field}" em ${typeName}: use ${fieldNamePattern} e evite palavras reservadas do C++`,
     );
   }
 }
 
+/**
+ * Lança ContractError se o nome não for PascalCase, se algum campo não for camelCase ou for palavra reservada
+ * do C++, ou se não houver campos (use `tag`).
+ */
 export function component<const Name extends string, const F extends Fields>(
   name: Name,
   fields: F,
@@ -73,6 +79,10 @@ export function tag<const Name extends string>(name: Name): TagType<Name> {
   return { kind: "tag", name, schemaIndex: -1 };
 }
 
+/**
+ * Atribui `schemaIndex` na ordem de `types` e congela os tipos recebidos. Lança ContractError para nome repetido
+ * ou para tipo que já pertence a outro esquema.
+ */
 export function defineSchema(types: readonly SchemaType[]): Schema {
   const names = new Set<string>();
   for (const type of types) {

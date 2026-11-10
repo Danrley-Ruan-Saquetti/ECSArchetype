@@ -1,4 +1,4 @@
-// Violação do contrato de uso da Oly (entidade morta, componente ausente, bloco fora do callback...).
+/** Violação do contrato de uso da Oly (entidade morta, componente ausente, bloco fora do callback...). */
 export class ContractError extends Error {
   constructor(message: string) {
     super(message);
@@ -6,7 +6,7 @@ export class ContractError extends Error {
   }
 }
 
-// O WASM carregado foi compilado com outro esquema que o do TS.
+/** O WASM carregado foi compilado com outro esquema que o do TS; recompile o WASM. */
 export class SchemaMismatchError extends Error {
   constructor(message: string) {
     super(message);

@@ -14,7 +14,10 @@ export interface EngineConfig {
 
 export interface SystemRegistration {
   readonly id: number;
-  // Roda o sistema também com o jogo pausado (e só então). Não vale para a fase Render.
+  /**
+   * Faz o sistema rodar só com o jogo pausado: pausado, as fases de jogo rodam apenas os sistemas
+   * whilePaused; sem pausa, eles não rodam. Lança ContractError para sistema da fase Render.
+   */
   whilePaused(): SystemRegistration;
 }
 
@@ -52,6 +55,12 @@ export class Engine {
     this.#onDispose = onDispose;
   }
 
+  /**
+   * Avança o relógio de passo fixo até `nowSeconds` e roda as fases. Lança ContractError se chamado de dentro
+   * de um sistema ou com tempo não finito ou menor que o do frame anterior. Durante o frame, mudanças
+   * estruturais diretas no `world` são erro; use as do SystemContext. Exceção de um sistema TS sobe daqui, e o
+   * frame seguinte descarta os comandos pendentes.
+   */
   frame(nowSeconds: number): void {
     this.#assertUsable("frame");
     if (this.#inFrame) {
@@ -77,16 +86,19 @@ export class Engine {
 
   setHidden(hidden: boolean): void {
     this.#assertUsable("setHidden");
+
     this.#bridge.engineSetHidden(this.#handle, hidden);
   }
 
   pause(): void {
     this.#assertUsable("pause");
+
     this.#bridge.enginePause(this.#handle);
   }
 
   resume(): void {
     this.#assertUsable("resume");
+
     this.#bridge.engineResume(this.#handle);
   }
 

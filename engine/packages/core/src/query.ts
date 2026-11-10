@@ -14,10 +14,16 @@ export interface QuerySpec {
 
 const BlockMessage = "bloco usado fora do callback de eachBlock";
 
+// Descritor de bloco de olyQueryBegin, em u32 no wasm32: [count, endereço das entidades, endereço de cada coluna...].
+const DescriptorHeaderLength = 2;
+
 let invalidateBlock!: (block: Block) => void;
 
-// Uma tabela do ECS: `count` linhas, as entidades e as colunas pedidas pela query.
-// Só vale dentro do callback de eachBlock (a mudança estrutural invalidaria os endereços).
+/**
+ * Uma tabela do ECS: `count` linhas, as entidades e as colunas pedidas pela query. O bloco e as views de
+ * `read`/`write` só valem dentro do callback de eachBlock (a mudança estrutural invalidaria os endereços).
+ * Fora dele, os métodos do bloco lançam ContractError; as views não são conferidas.
+ */
 export class Block {
   readonly count: number;
 
@@ -53,6 +59,7 @@ export class Block {
 
   entity(row: number): Entity {
     this.#assertValid("entity");
+
     const position = (this.#entitiesAddress >> 2) + row * 2;
 
     return packEntity(this.#bridge.heap.u32[position]!, this.#bridge.heap.u32[position + 1]!);
@@ -119,13 +126,14 @@ export class Query {
     this.#components = [...readTypes, ...writeTypes];
   }
 
+  /** Durante o callback, mudança estrutural direta no World (spawn/destroy/add/remove) lança ContractError. */
   eachBlock(callback: (block: Block) => void): void {
     assertWorldUsable(this.#world, "eachBlock");
 
     const { iteration, blockCount, descriptors } = this.#bridge.queryBegin(this.#world.handle, this.#handle);
-    const stride = 2 + this.#components.length;
-    // Cópia: a memória do WASM pode crescer durante o callback e invalidar a view sobre o heap.
+    const stride = DescriptorHeaderLength + this.#components.length;
     const start = descriptors >> 2;
+    // Cópia: a memória do WASM pode crescer durante o callback e invalidar a view sobre o heap.
     const copy = this.#bridge.heap.u32.slice(start, start + blockCount * stride);
 
     enterIteration(this.#world);
@@ -133,7 +141,7 @@ export class Query {
     try {
       for (let index = 0; index < blockCount; ++index) {
         const offset = index * stride;
-        current = new Block(this.#bridge, this.#components, this.#writeTypes, copy[offset + 1]!, copy.subarray(offset + 2, offset + stride), copy[offset]!);
+        current = new Block(this.#bridge, this.#components, this.#writeTypes, copy[offset + 1]!, copy.subarray(offset + DescriptorHeaderLength, offset + stride), copy[offset]!);
         callback(current);
         invalidateBlock(current);
       }

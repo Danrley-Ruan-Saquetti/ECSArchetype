@@ -59,6 +59,7 @@ export class Runtime {
     this.schema = schema;
     this.#bridge = new Bridge(module, schema);
     this.#componentIds = schema.types.map((_, index) => module._olySchemaComponentId(index));
+
     module.olyInvokeScript = (engineHandle, systemId) => {
       const engine = this.#engines.get(engineHandle);
       if (engine === undefined) {
@@ -106,6 +107,10 @@ export function componentIdOf(runtime: Runtime, type: SchemaType): number {
   return runtimeInternals.componentIdOf(runtime, type);
 }
 
+/**
+ * Carrega o módulo WASM e confere que ele foi compilado com `schema`. Rejeita com SchemaMismatchError se o
+ * hash, o nº de tipos ou o tamanho/alinhamento de algum tipo diferirem.
+ */
 export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Promise<Runtime> {
   const module = await factory();
 

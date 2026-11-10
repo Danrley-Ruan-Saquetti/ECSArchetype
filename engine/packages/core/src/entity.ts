@@ -1,6 +1,6 @@
 import { ContractError } from "./errors.js";
 
-// generation * 2^32 + index. Com generation ≤ 2^21 − 1 o número cabe em 53 bits.
+/** generation * 2^32 + index. Com generation ≤ 2^21 − 1 o número cabe em 53 bits (inteiro seguro do JS). */
 export type Entity = number;
 
 export const MaxEntityGeneration = 0x1fffff;

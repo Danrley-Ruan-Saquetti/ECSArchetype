@@ -26,6 +26,11 @@ function globalEnvironment(): BrowserEnvironment {
   };
 }
 
+/**
+ * Chama `target.frame` a cada requestAnimationFrame (tempo em segundos) e `target.setHidden` a cada
+ * visibilitychange, e já no início se o documento estiver oculto. `stop` cancela o rAF pendente e remove o
+ * listener; chamá-lo de novo não faz nada.
+ */
 export function runInBrowser(
   target: FrameTarget,
   environment: BrowserEnvironment = globalEnvironment(),

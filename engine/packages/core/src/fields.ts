@@ -3,7 +3,7 @@ import { entityGeneration, entityIndex, packEntity } from "./entity.js";
 import { scalarSize, type ComponentLayout, type FieldLayout, type ScalarType } from "./layout.js";
 import type { Fields } from "./schema.js";
 
-// elemento = array[base + row * stride]; para `entity`, array é u32, `base` aponta para o index e `base + 1` para a generation.
+/** elemento = array[base + row * stride]; para `entity`, array é u32, `base` aponta para o index e `base + 1` para a generation. */
 export interface RawField {
   readonly array: Float32Array | Float64Array | Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array;
   readonly base: number;
@@ -12,7 +12,7 @@ export interface RawField {
 
 export interface ReadField {
   get(row: number): number;
-  // Válido até a próxima chamada que aloque no WASM (a memória pode crescer e trocar o buffer).
+  /** Válido até a próxima chamada que aloque no WASM (a memória pode crescer e trocar o buffer). */
   raw(): RawField;
 }
 
@@ -31,12 +31,15 @@ class F32Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.f32[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.f32[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.f32, base: this.base, stride: this.stride };
   }
@@ -48,12 +51,15 @@ class F64Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.f64[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.f64[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.f64, base: this.base, stride: this.stride };
   }
@@ -65,12 +71,15 @@ class I8Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.i8[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.i8[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.i8, base: this.base, stride: this.stride };
   }
@@ -82,12 +91,15 @@ class U8Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.u8[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.u8[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.u8, base: this.base, stride: this.stride };
   }
@@ -99,12 +111,15 @@ class I16Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.i16[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.i16[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.i16, base: this.base, stride: this.stride };
   }
@@ -116,12 +131,15 @@ class U16Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.u16[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.u16[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.u16, base: this.base, stride: this.stride };
   }
@@ -133,12 +151,15 @@ class I32Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.i32[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.i32[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.i32, base: this.base, stride: this.stride };
   }
@@ -150,12 +171,15 @@ class U32Field implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     return this.heap.u32[this.base + row * this.stride]!;
   }
+
   set(row: number, value: number): void {
     this.heap.u32[this.base + row * this.stride] = value;
   }
+
   raw(): RawField {
     return { array: this.heap.u32, base: this.base, stride: this.stride };
   }
@@ -167,22 +191,25 @@ class EntityField implements WriteField {
     private readonly base: number,
     private readonly stride: number,
   ) {}
+
   get(row: number): number {
     const position = this.base + row * this.stride;
 
     return packEntity(this.heap.u32[position]!, this.heap.u32[position + 1]!);
   }
+
   set(row: number, value: number): void {
     const position = this.base + row * this.stride;
     this.heap.u32[position] = entityIndex(value);
     this.heap.u32[position + 1] = entityGeneration(value);
   }
+
   raw(): RawField {
     return { array: this.heap.u32, base: this.base, stride: this.stride };
   }
 }
 
-// `entity` usa elementos u32 (a leitura de index e generation); os demais, o próprio tamanho.
+// `entity` é lido como dois u32 (index e generation), então o elemento tem 4 B, não os 8 B do escalar.
 function elementSize(type: ScalarType): number {
   return type === "entity" ? 4 : scalarSize(type);
 }

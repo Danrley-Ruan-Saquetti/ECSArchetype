@@ -88,11 +88,14 @@ export function writeScalar(heap: Heap, type: ScalarType, address: number, value
   }
 }
 
-const OutputOffset = 0; // OlyEntity (8 B), o ponteiro de descritores (4 B) e o nº de blocos (4 B)
+// Área de rascunho: OlyEntity de saída (8 B), ponteiro de descritores (4 B), nº de blocos (4 B), valor de um
+// componente (`valueCapacity` B) e, por último, a mensagem de checkInvariants.
+const OutputOffset = 0;
 const DescriptorsOffset = 8;
 const BlockCountOffset = 12;
 const ValueOffset = 16;
 const MessageCapacity = 256;
+
 const InitialIdCapacity = 32;
 const InitialStringCapacity = 64;
 
@@ -159,8 +162,8 @@ export class Bridge {
   spawn(world: number): Entity {
     this.module._olyEntitySpawn(world, this.scratch + OutputOffset);
     this.sync();
-    const base = (this.scratch + OutputOffset) >> 2;
 
+    const base = (this.scratch + OutputOffset) >> 2;
     return packEntity(this.heap.u32[base]!, this.heap.u32[base + 1]!);
   }
 
@@ -299,8 +302,8 @@ export class Bridge {
   systemSpawn(engine: number): Entity {
     this.module._olySystemSpawn(engine, this.scratch + OutputOffset);
     this.sync();
-    const base = (this.scratch + OutputOffset) >> 2;
 
+    const base = (this.scratch + OutputOffset) >> 2;
     return packEntity(this.heap.u32[base]!, this.heap.u32[base + 1]!);
   }
 
