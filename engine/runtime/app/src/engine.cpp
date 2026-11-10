@@ -27,6 +27,7 @@ namespace oly::app {
 
     systemLocations_.emplace_back(phase, static_cast<uint32_t>(entries.size()));
     entries.push_back(SystemEntry{function, userData, std::string(name), id, false});
+
     return id;
   }
 

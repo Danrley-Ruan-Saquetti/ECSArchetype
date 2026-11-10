@@ -54,6 +54,7 @@ namespace oly::bridge {
   ScriptInvoker setScriptInvoker(ScriptInvoker invoker) noexcept {
     const ScriptInvoker previous = g_invoker;
     g_invoker = invoker;
+
     return previous;
   }
 }

@@ -12,20 +12,20 @@ class FakeBrowser implements BrowserEnvironment {
   hidden = false;
   nextHandle = 1;
 
-  readonly document = {
-    get hidden(): boolean {
-      return fake.hidden;
-    },
-    addEventListener: (_type: "visibilitychange", listener: () => void): void => {
-      this.listener = listener;
-    },
-    removeEventListener: (_type: "visibilitychange", listener: () => void): void => {
-      if (this.listener === listener) {
-        this.listener = null;
-        ++this.removedListeners;
-      }
-    },
-  };
+  get document(): BrowserEnvironment["document"] {
+    return {
+      hidden: this.hidden,
+      addEventListener: (_type, listener) => {
+        this.listener = listener;
+      },
+      removeEventListener: (_type, listener) => {
+        if (this.listener === listener) {
+          this.listener = null;
+          ++this.removedListeners;
+        }
+      },
+    };
+  }
 
   requestAnimationFrame(callback: (timestampMilliseconds: number) => void): number {
     const handle = this.nextHandle++;
@@ -46,8 +46,6 @@ class FakeBrowser implements BrowserEnvironment {
   }
 }
 
-let fake: FakeBrowser;
-
 class RecordingTarget implements FrameTarget {
   readonly frames: number[] = [];
   readonly hiddenCalls: boolean[] = [];
@@ -64,9 +62,7 @@ class RecordingTarget implements FrameTarget {
 }
 
 function setup(): { target: RecordingTarget; browser: FakeBrowser } {
-  fake = new FakeBrowser();
-
-  return { target: new RecordingTarget(), browser: fake };
+  return { target: new RecordingTarget(), browser: new FakeBrowser() };
 }
 
 test("cada rAF chama frame com o timestamp em segundos", () => {

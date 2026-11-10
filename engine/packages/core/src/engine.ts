@@ -153,6 +153,7 @@ export class Engine {
         }
 
         this.#bridge.setWhilePaused(this.#handle, id, true);
+
         return registration;
       },
     };
