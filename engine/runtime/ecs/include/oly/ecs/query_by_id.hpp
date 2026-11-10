@@ -63,7 +63,7 @@ namespace oly::ecs {
         blockCount_(other.blockCount_),
         stride_(other.stride_),
         level_(other.level_) {}
-    QueryIteration& operator=(QueryIteration&& other) noexcept;
+    QueryIteration& operator=(QueryIteration&&) = delete;
     QueryIteration(const QueryIteration&) = delete;
     QueryIteration& operator=(const QueryIteration&) = delete;
 
@@ -198,19 +198,4 @@ namespace oly::ecs {
     }
   }
 
-  inline QueryIteration& QueryIteration::operator=(QueryIteration&& other) noexcept {
-    if (this != &other) {
-      if (query_) {
-        query_->endIteration(level_);
-      }
-
-      query_ = std::exchange(other.query_, nullptr);
-      descriptors_ = other.descriptors_;
-      blockCount_ = other.blockCount_;
-      stride_ = other.stride_;
-      level_ = other.level_;
-    }
-
-    return *this;
-  }
 }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -214,4 +215,9 @@ TEST_CASE("getById e tryGetById") {
   CHECK(world.tryGetById(dead, oly::ecs::componentId<A>()) == nullptr);
   CHECK(world.getById(entity, oly::ecs::componentId<A>()) == &world.get<A>(entity));
   CHECK(world.hasById(entity, oly::ecs::componentId<Tag>()));
+}
+
+TEST_CASE("QueryIteration não aceita atribuição por movimento") {
+  static_assert(!std::is_move_assignable_v<oly::ecs::QueryIteration>);
+  static_assert(!std::is_copy_assignable_v<oly::ecs::QueryIteration>);
 }
