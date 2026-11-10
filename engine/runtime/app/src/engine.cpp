@@ -1,0 +1,102 @@
+#include "oly/app/engine.hpp"
+
+#include <cmath>
+
+#include "oly/core/assert.hpp"
+
+namespace oly::app {
+  namespace {
+    // Erro de ponto flutuante no acumulador não pode perder nem duplicar um passo.
+    constexpr double StepTolerance = 1e-9;
+  }
+
+  Engine::Engine(ecs::World& world, EngineConfig config)
+    : world_(world),
+      config_(config),
+      fixedDeltaTime_(1.0 / config.fixedHz),
+      commands_(world.commands()) {
+    OLY_ASSERT(config.fixedHz > 0.0, "Engine: fixedHz=%f deve ser positivo", config.fixedHz);
+    OLY_ASSERT(config.maxStepsPerFrame > 0, "Engine: maxStepsPerFrame deve ser positivo");
+  }
+
+  SystemId Engine::addSystem(Phase phase, std::string_view name, SystemFunction function, void* userData) {
+    const SystemId id = static_cast<SystemId>(systemLocations_.size());
+    std::vector<SystemEntry>& entries = phases_[static_cast<uint32_t>(phase)];
+
+    systemLocations_.emplace_back(phase, static_cast<uint32_t>(entries.size()));
+    entries.push_back(SystemEntry{function, userData, std::string(name), id, false});
+    return id;
+  }
+
+  void Engine::setWhilePaused(SystemId system, bool whilePaused) {
+    const auto [phase, position] = systemLocations_[system];
+    phases_[static_cast<uint32_t>(phase)][position].whilePaused = whilePaused;
+  }
+
+  void Engine::frame(double nowSeconds) {
+    if (!hasLastTime_) {
+      lastTime_ = nowSeconds;
+      hasLastTime_ = true;
+      return;
+    }
+
+    inFrame_ = true;
+    accumulator_ += nowSeconds - lastTime_;
+    lastTime_ = nowSeconds;
+
+    const double threshold = fixedDeltaTime_ * (1.0 - StepTolerance);
+    uint32_t stepsRun = 0;
+    while (accumulator_ >= threshold && stepsRun < config_.maxStepsPerFrame) {
+      runFixedStep();
+      accumulator_ -= fixedDeltaTime_;
+      if (accumulator_ < 0.0) {
+        accumulator_ = 0.0;
+      }
+      ++stepsRun;
+    }
+
+    if (accumulator_ >= threshold) {
+      accumulator_ = std::fmod(accumulator_, fixedDeltaTime_);
+      if (accumulator_ >= threshold) {
+        accumulator_ = 0.0;
+      }
+    }
+
+    interpolation_ = accumulator_ / fixedDeltaTime_;
+    runPhase(Phase::Render);
+    inFrame_ = false;
+  }
+
+  void Engine::runFixedStep() {
+    pausedThisStep_ = pauseRequested_;
+
+    captureActions();
+    if (!pausedThisStep_) {
+      runDueSchedule();
+    }
+
+    runPhase(Phase::UpdateBefore);
+    runPhase(Phase::Update);
+    runPhase(Phase::UpdateAfter);
+
+    if (!pausedThisStep_) {
+      ++steps_;
+    }
+
+    dispatchEvents();
+    applyStateTransition();
+  }
+
+  void Engine::runPhase(Phase phase) {
+    for (SystemEntry& entry : phases_[static_cast<uint32_t>(phase)]) {
+      if (isGameplayPhase(phase) && entry.whilePaused != pausedThisStep_) {
+        continue;
+      }
+
+      SystemContext context(*this, world_, commands_, phase, entry.id, entry.name, entry.userData);
+      entry.function(context);
+    }
+
+    world_.flush(commands_);
+  }
+}
