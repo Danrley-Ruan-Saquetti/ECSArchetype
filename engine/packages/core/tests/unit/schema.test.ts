@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { EngineContractError, component, defineSchema, tag } from "@oly/core";
+import { ContractError, component, defineSchema, tag } from "@oly/core";
 import { canonicalSchema, fnv1a32, schemaHash } from "@oly/core/internal";
 
 test("component sem campos é erro", () => {
@@ -9,12 +9,12 @@ test("component sem campos é erro", () => {
 });
 
 test("nomes inválidos", () => {
-  assert.throws(() => component("1abc", { x: "f32" }), EngineContractError);
-  assert.throws(() => component("abc", { x: "f32" }), EngineContractError);
-  assert.throws(() => component("Ok", { class: "f32" }), EngineContractError);
-  assert.throws(() => component("Ok", { _x: "f32" }), EngineContractError);
-  assert.throws(() => component("Ok", { X: "f32" }), EngineContractError);
-  assert.throws(() => tag("bad name"), EngineContractError);
+  assert.throws(() => component("1abc", { x: "f32" }), ContractError);
+  assert.throws(() => component("abc", { x: "f32" }), ContractError);
+  assert.throws(() => component("Ok", { class: "f32" }), ContractError);
+  assert.throws(() => component("Ok", { _x: "f32" }), ContractError);
+  assert.throws(() => component("Ok", { X: "f32" }), ContractError);
+  assert.throws(() => tag("bad name"), ContractError);
 });
 
 test("defineSchema atribui schemaIndex na ordem e rejeita nome repetido", () => {
@@ -27,13 +27,13 @@ test("defineSchema atribui schemaIndex na ordem e rejeita nome repetido", () => 
   assert.equal(second.schemaIndex, 1);
   assert.equal(schema.types.length, 2);
 
-  assert.throws(() => defineSchema([component("Dup", { x: "f32" }), tag("Dup")]), EngineContractError);
+  assert.throws(() => defineSchema([component("Dup", { x: "f32" }), tag("Dup")]), ContractError);
 });
 
 test("tipo já usado em outro esquema é erro", () => {
   const shared = component("Shared", { x: "f32" });
   defineSchema([shared]);
-  assert.throws(() => defineSchema([shared]), EngineContractError);
+  assert.throws(() => defineSchema([shared]), ContractError);
 });
 
 test("fnv1a32", () => {

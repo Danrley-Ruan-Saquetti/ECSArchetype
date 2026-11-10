@@ -1,4 +1,4 @@
-import { EngineContractError } from "./errors.js";
+import { ContractError } from "./errors.js";
 import { computeLayout, type ComponentLayout, type ScalarType } from "./layout.js";
 import { schemaHash } from "./schema_hash.js";
 
@@ -39,13 +39,13 @@ const reservedWords: ReadonlySet<string> = new Set(
 
 function validateTypeName(name: string): void {
   if (!typeNamePattern.test(name)) {
-    throw new EngineContractError(`nome de tipo inválido "${name}": use ${typeNamePattern}`);
+    throw new ContractError(`nome de tipo inválido "${name}": use ${typeNamePattern}`);
   }
 }
 
 function validateFieldName(typeName: string, field: string): void {
   if (!fieldNamePattern.test(field) || reservedWords.has(field)) {
-    throw new EngineContractError(
+    throw new ContractError(
       `campo inválido "${field}" em ${typeName}: use ${fieldNamePattern} e evite palavras reservadas do C++`,
     );
   }
@@ -58,7 +58,7 @@ export function component<const Name extends string, const F extends Fields>(
   validateTypeName(name);
   const fieldNames = Object.keys(fields);
   if (fieldNames.length === 0) {
-    throw new EngineContractError(`componente ${name} sem campos: use tag("${name}")`);
+    throw new ContractError(`componente ${name} sem campos: use tag("${name}")`);
   }
   for (const field of fieldNames) {
     validateFieldName(name, field);
@@ -77,10 +77,10 @@ export function defineSchema(types: readonly SchemaType[]): Schema {
   const names = new Set<string>();
   for (const type of types) {
     if (names.has(type.name)) {
-      throw new EngineContractError(`defineSchema: nome repetido "${type.name}"`);
+      throw new ContractError(`defineSchema: nome repetido "${type.name}"`);
     }
     if (type.schemaIndex >= 0) {
-      throw new EngineContractError(`defineSchema: ${type.name} já pertence a outro esquema`);
+      throw new ContractError(`defineSchema: ${type.name} já pertence a outro esquema`);
     }
     names.add(type.name);
   }

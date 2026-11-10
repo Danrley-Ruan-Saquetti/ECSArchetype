@@ -1,9 +1,9 @@
 import type { Bridge } from "./bridge.js";
 import { packEntity, type Entity } from "./entity.js";
-import { EngineContractError } from "./errors.js";
+import { ContractError } from "./errors.js";
 import { makeView, type ReadView, type WriteView } from "./fields.js";
 import type { ComponentType, Fields, SchemaType } from "./schema.js";
-import type { World } from "./world.js";
+import { assertWorldUsable, enterIteration, leaveIteration, type World } from "./world.js";
 
 export interface QuerySpec {
   read?: readonly ComponentType[];
@@ -14,118 +14,135 @@ export interface QuerySpec {
 
 const BlockMessage = "bloco usado fora do callback de eachBlock";
 
+let invalidateBlock!: (block: Block) => void;
+
 // Uma tabela do ECS: `count` linhas, as entidades e as colunas pedidas pela query.
 // Só vale dentro do callback de eachBlock (a mudança estrutural invalidaria os endereços).
 export class Block {
   readonly count: number;
 
-  private valid = true;
-  private readonly views = new Map<ComponentType, WriteView<Fields>>();
+  #valid = true;
+  readonly #bridge: Bridge;
+  readonly #components: readonly ComponentType[];
+  readonly #writeTypes: readonly ComponentType[];
+  readonly #entitiesAddress: number;
+  readonly #columnAddresses: Uint32Array;
+  readonly #views = new Map<ComponentType, WriteView<Fields>>();
+
+  static {
+    invalidateBlock = (block) => {
+      block.#valid = false;
+    };
+  }
 
   constructor(
-    private readonly bridge: Bridge,
-    private readonly query: Query,
-    private readonly entitiesAddress: number,
-    private readonly columnAddresses: Uint32Array,
+    bridge: Bridge,
+    components: readonly ComponentType[],
+    writeTypes: readonly ComponentType[],
+    entitiesAddress: number,
+    columnAddresses: Uint32Array,
     count: number,
   ) {
+    this.#bridge = bridge;
+    this.#components = components;
+    this.#writeTypes = writeTypes;
+    this.#entitiesAddress = entitiesAddress;
+    this.#columnAddresses = columnAddresses;
     this.count = count;
   }
 
-  invalidate(): void {
-    this.valid = false;
-  }
-
   entity(row: number): Entity {
-    this.assertValid("entity");
-    const position = (this.entitiesAddress >> 2) + row * 2;
+    this.#assertValid("entity");
+    const position = (this.#entitiesAddress >> 2) + row * 2;
 
-    return packEntity(this.bridge.heap.u32[position]!, this.bridge.heap.u32[position + 1]!);
+    return packEntity(this.#bridge.heap.u32[position]!, this.#bridge.heap.u32[position + 1]!);
   }
 
   read<F extends Fields>(type: ComponentType<string, F>): ReadView<F> {
-    this.assertValid("read", type);
+    this.#assertValid("read", type);
 
-    return this.viewOf("read", type) as unknown as ReadView<F>;
+    return this.#viewOf("read", type) as unknown as ReadView<F>;
   }
 
   write<F extends Fields>(type: ComponentType<string, F>): WriteView<F> {
-    this.assertValid("write", type);
-    if (!this.query.writes(type)) {
-      throw new EngineContractError(`write type=${type.name}: tipo não está em write na query (só em read ou fora dela)`);
+    this.#assertValid("write", type);
+    if (!this.#writeTypes.includes(type)) {
+      throw new ContractError(`write type=${type.name}: tipo não está em write na query (só em read ou fora dela)`);
     }
 
-    return this.viewOf("write", type) as unknown as WriteView<F>;
+    return this.#viewOf("write", type) as unknown as WriteView<F>;
   }
 
-  private viewOf(operation: string, type: ComponentType): WriteView<Fields> {
-    const cached = this.views.get(type);
+  #viewOf(operation: string, type: ComponentType): WriteView<Fields> {
+    const cached = this.#views.get(type);
     if (cached) {
       return cached;
     }
 
-    const position = this.query.positionOf(type);
+    // Posição do tipo entre as colunas do descritor (read seguido de write).
+    const position = this.#components.indexOf(type);
     if (position < 0) {
-      throw new EngineContractError(`${operation} type=${type.name}: tipo não está na query`);
+      throw new ContractError(`${operation} type=${type.name}: tipo não está na query`);
     }
 
-    const view = makeView(this.bridge.heap, type.layout, this.columnAddresses[position]!);
-    this.views.set(type, view);
+    const view = makeView(this.#bridge.heap, type.layout, this.#columnAddresses[position]!);
+    this.#views.set(type, view);
 
     return view;
   }
 
-  private assertValid(operation: string, type?: SchemaType): void {
-    if (!this.valid) {
-      throw new EngineContractError(`${operation}${type ? ` type=${type.name}` : ""}: ${BlockMessage}`);
+  #assertValid(operation: string, type?: SchemaType): void {
+    if (!this.#valid) {
+      throw new ContractError(`${operation}${type ? ` type=${type.name}` : ""}: ${BlockMessage}`);
     }
   }
 }
 
 export class Query {
-  private readonly components: readonly ComponentType[];
+  readonly #world: World;
+  readonly #bridge: Bridge;
+  readonly #handle: number;
+  readonly #writeTypes: readonly ComponentType[];
+  readonly #components: readonly ComponentType[];
 
   constructor(
-    private readonly world: World,
-    private readonly bridge: Bridge,
-    private readonly handle: number,
-    private readonly readTypes: readonly ComponentType[],
-    private readonly writeTypes: readonly ComponentType[],
+    world: World,
+    bridge: Bridge,
+    handle: number,
+    readTypes: readonly ComponentType[],
+    writeTypes: readonly ComponentType[],
   ) {
-    this.components = [...readTypes, ...writeTypes];
-  }
-
-  writes(type: ComponentType): boolean {
-    return this.writeTypes.includes(type);
-  }
-
-  // Posição do tipo entre as colunas do descritor (read seguido de write), ou -1.
-  positionOf(type: ComponentType): number {
-    return this.components.indexOf(type);
+    this.#world = world;
+    this.#bridge = bridge;
+    this.#handle = handle;
+    this.#writeTypes = writeTypes;
+    this.#components = [...readTypes, ...writeTypes];
   }
 
   eachBlock(callback: (block: Block) => void): void {
-    this.world.assertUsable("eachBlock");
+    assertWorldUsable(this.#world, "eachBlock");
 
-    const { iteration, blockCount, descriptors } = this.bridge.queryBegin(this.world.handle, this.handle);
-    const stride = 2 + this.components.length;
-    // Cópia: um eachBlock aninhado sobrescreve o buffer de descritores do lado C++.
+    const { iteration, blockCount, descriptors } = this.#bridge.queryBegin(this.#world.handle, this.#handle);
+    const stride = 2 + this.#components.length;
+    // Cópia: a memória do WASM pode crescer durante o callback e invalidar a view sobre o heap.
     const start = descriptors >> 2;
-    const copy = this.bridge.heap.u32.slice(start, start + blockCount * stride);
+    const copy = this.#bridge.heap.u32.slice(start, start + blockCount * stride);
 
-    this.world.iterationDepth++;
+    enterIteration(this.#world);
     let current: Block | null = null;
     try {
       for (let index = 0; index < blockCount; ++index) {
         const offset = index * stride;
-        current = new Block(this.bridge, this, copy[offset + 1]!, copy.subarray(offset + 2, offset + stride), copy[offset]!);
+        current = new Block(this.#bridge, this.#components, this.#writeTypes, copy[offset + 1]!, copy.subarray(offset + 2, offset + stride), copy[offset]!);
         callback(current);
-        current.invalidate();
+        invalidateBlock(current);
       }
     } finally {
-      current?.invalidate();
-      this.world.iterationDepth--;
-      this.bridge.queryEnd(this.world.handle, iteration);
+      if (current !== null) {
+        invalidateBlock(current);
+      }
+      leaveIteration(this.#world);
+      this.#bridge.queryEnd(this.#world.handle, iteration);
     }
   }
 }

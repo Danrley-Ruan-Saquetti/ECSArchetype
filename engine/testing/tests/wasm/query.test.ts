@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { EngineContractError } from "@oly/core";
+import { ContractError } from "@oly/core";
 import type { Block } from "@oly/core";
 import type { World } from "@oly/core";
+import { bridgeOf, moduleOf } from "@oly/core/internal";
 import { Enemy, Mixed, Player, Position, Velocity, loadFixture } from "./fixture.js";
 
 const { runtime, fixture } = await loadFixture();
@@ -160,13 +161,13 @@ test("raw() lê o mesmo que get()", () => {
 
 test("erros de spec e de acesso", () => {
   withWorld((world) => {
-    assert.throws(() => world.query({ read: [Player] } as never), EngineContractError);
-    assert.throws(() => world.query({ read: [Position], write: [Position] }), EngineContractError);
+    assert.throws(() => world.query({ read: [Player] } as never), ContractError);
+    assert.throws(() => world.query({ read: [Position], write: [Position] }), ContractError);
 
     world.spawn([Position, Velocity]);
     world.query({ read: [Velocity], write: [Position] }).eachBlock((block) => {
-      assert.throws(() => block.write(Velocity), EngineContractError);
-      assert.throws(() => block.read(Mixed), EngineContractError);
+      assert.throws(() => block.write(Velocity), ContractError);
+      assert.throws(() => block.read(Mixed), ContractError);
     });
   });
 });
@@ -176,10 +177,10 @@ test("mudança estrutural dentro de eachBlock é erro e o World segue usável", 
     const entity = world.spawn([Position]);
 
     world.query({ read: [Position] }).eachBlock(() => {
-      assert.throws(() => world.spawn([Position]), EngineContractError);
-      assert.throws(() => world.destroy(entity), EngineContractError);
-      assert.throws(() => world.add(entity, Velocity), EngineContractError);
-      assert.throws(() => world.remove(entity, Position), EngineContractError);
+      assert.throws(() => world.spawn([Position]), ContractError);
+      assert.throws(() => world.destroy(entity), ContractError);
+      assert.throws(() => world.add(entity, Velocity), ContractError);
+      assert.throws(() => world.remove(entity, Position), ContractError);
     });
 
     assert.ok(world.spawn([Position]));
@@ -212,8 +213,8 @@ test("bloco usado fora do callback", () => {
       saved = block;
     });
 
-    assert.throws(() => saved!.read(Position), EngineContractError);
-    assert.throws(() => saved!.entity(0), EngineContractError);
+    assert.throws(() => saved!.read(Position), ContractError);
+    assert.throws(() => saved!.entity(0), ContractError);
   });
 });
 
@@ -251,14 +252,14 @@ test("crescimento da memória durante eachBlock", () => {
 
     world.query({ write: [Position] }).eachBlock((block) => {
       const position = block.write(Position);
-      const before = runtime.module.HEAPU8.buffer;
-      const pointer = runtime.bridge.allocate(64 * 1024 * 1024);
-      assert.notEqual(runtime.module.HEAPU8.buffer, before);
+      const before = moduleOf(runtime).HEAPU8.buffer;
+      const pointer = bridgeOf(runtime).allocate(64 * 1024 * 1024);
+      assert.notEqual(moduleOf(runtime).HEAPU8.buffer, before);
 
       for (let row = 0; row < block.count; ++row) {
         position.x.set(row, 42);
       }
-      runtime.bridge.free(pointer);
+      bridgeOf(runtime).free(pointer);
     });
 
     assert.equal(fixture.fixtureSumPositionX(world.handle), 42 * count);
@@ -269,7 +270,7 @@ test("dispose dentro de eachBlock é erro e o World segue usável", () => {
   withWorld((world) => {
     world.spawn([Position, Velocity]);
     world.query({ read: [Velocity], write: [Position] }).eachBlock(() => {
-      assert.throws(() => world.dispose(), EngineContractError);
+      assert.throws(() => world.dispose(), ContractError);
     });
     world.spawn([Position]);
   });
@@ -277,17 +278,17 @@ test("dispose dentro de eachBlock é erro e o World segue usável", () => {
 
 test("checkInvariants sincroniza o heap da Bridge depois de chamar o C++", () => {
   withWorld((world) => {
-    const bridge = runtime.bridge;
+    const bridge = bridgeOf(runtime);
     const pointers: number[] = [];
-    const before = runtime.module.HEAPU8.buffer;
-    while (runtime.module.HEAPU8.buffer === before) {
-      pointers.push(runtime.module._malloc(8 * 1024 * 1024));
+    const before = moduleOf(runtime).HEAPU8.buffer;
+    while (moduleOf(runtime).HEAPU8.buffer === before) {
+      pointers.push(moduleOf(runtime)._malloc(8 * 1024 * 1024));
     }
-    assert.notEqual(bridge.heap.buffer, runtime.module.HEAPU8.buffer);
+    assert.notEqual(bridge.heap.buffer, moduleOf(runtime).HEAPU8.buffer);
 
     assert.equal(world.checkInvariants(), null);
 
-    assert.equal(bridge.heap.buffer, runtime.module.HEAPU8.buffer);
-    pointers.forEach((pointer) => runtime.module._free(pointer));
+    assert.equal(bridge.heap.buffer, moduleOf(runtime).HEAPU8.buffer);
+    pointers.forEach((pointer) => moduleOf(runtime)._free(pointer));
   });
 });

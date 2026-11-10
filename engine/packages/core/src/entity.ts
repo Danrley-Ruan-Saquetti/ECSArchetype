@@ -1,4 +1,4 @@
-import { EngineContractError } from "./errors.js";
+import { ContractError } from "./errors.js";
 
 // generation * 2^32 + index. Com generation ≤ 2^21 − 1 o número cabe em 53 bits.
 export type Entity = number;
@@ -9,7 +9,7 @@ const IndexRange = 2 ** 32;
 
 export function packEntity(index: number, generation: number): Entity {
   if (generation > MaxEntityGeneration) {
-    throw new EngineContractError(
+    throw new ContractError(
       `packEntity e=${index}:${generation}: geração acima de ${MaxEntityGeneration} não cabe em um número JS`,
     );
   }

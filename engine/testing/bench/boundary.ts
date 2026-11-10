@@ -4,9 +4,9 @@ import { pathToFileURL } from "node:url";
 import schema, { Position, Velocity } from "../fixture/schema.js";
 import type { Entity } from "@oly/core";
 import type { OlyModuleFactory } from "@oly/core";
-import type { OlyModule } from "@oly/core/internal";
+import { moduleOf, type OlyModule } from "@oly/core/internal";
 import type { Query } from "@oly/core";
-import { loadEngine, type EngineRuntime } from "@oly/core";
+import { loadRuntime, type Runtime } from "@oly/core";
 import type { World } from "@oly/core";
 
 const DeltaTime = Math.fround(1 / 60);
@@ -56,14 +56,14 @@ function parseOptions(argv: string[]): Options {
   };
 }
 
-async function loadRuntime(modulePath: string): Promise<EngineRuntime> {
+async function loadBoundaryRuntime(modulePath: string): Promise<Runtime> {
   const factory: OlyModuleFactory = async () => {
     const loaded: { default: OlyModuleFactory } = await import(pathToFileURL(modulePath).href);
 
     return loaded.default();
   };
 
-  return loadEngine(factory, schema);
+  return loadRuntime(factory, schema);
 }
 
 function spawnEntities(world: World, count: number): void {
@@ -83,8 +83,8 @@ function firstEntity(query: Query): Entity {
   return first;
 }
 
-function makeCpp(runtime: EngineRuntime, count: number): Variant {
-  const module = runtime.module as FixtureModule;
+function makeCpp(runtime: Runtime, count: number): Variant {
+  const module = moduleOf(runtime) as FixtureModule;
   const world = runtime.createWorld();
   spawnEntities(world, count);
   const query = world.query({ read: [Velocity], write: [Position] });
@@ -97,7 +97,7 @@ function makeCpp(runtime: EngineRuntime, count: number): Variant {
   };
 }
 
-function makeTsEngine(runtime: EngineRuntime, count: number): Variant {
+function makeTsEngine(runtime: Runtime, count: number): Variant {
   const world = runtime.createWorld();
   spawnEntities(world, count);
   const query = world.query({ read: [Velocity], write: [Position] });
@@ -119,7 +119,7 @@ function makeTsEngine(runtime: EngineRuntime, count: number): Variant {
   };
 }
 
-function makeTsEngineRaw(runtime: EngineRuntime, count: number): Variant {
+function makeTsEngineRaw(runtime: Runtime, count: number): Variant {
   const world = runtime.createWorld();
   spawnEntities(world, count);
   const query = world.query({ read: [Velocity], write: [Position] });
@@ -190,7 +190,7 @@ function rotated<T>(items: T[], shift: number): T[] {
 
 async function main(): Promise<void> {
   const options = parseOptions(process.argv.slice(2));
-  const runtime = await loadRuntime(options.modulePath);
+  const runtime = await loadBoundaryRuntime(options.modulePath);
   const results: { size: number; variant: VariantName; nsPerEntity: number[]; median: number; min: number; max: number }[] = [];
   const ratios: { size: number; tsEngineOverTsManual: number; tsEngineOverCpp: number; tsEngineRawOverTsManual: number }[] = [];
   const iterationsPerSize: Record<number, number> = {};

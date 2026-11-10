@@ -1,8 +1,8 @@
-// Violação do contrato de uso da engine (entidade morta, componente ausente, bloco fora do callback...).
-export class EngineContractError extends Error {
+// Violação do contrato de uso da Oly (entidade morta, componente ausente, bloco fora do callback...).
+export class ContractError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "EngineContractError";
+    this.name = "ContractError";
   }
 }
 

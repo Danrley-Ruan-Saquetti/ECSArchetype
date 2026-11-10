@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { entityGeneration, entityIndex } from "@oly/core";
-import { EngineContractError } from "@oly/core";
+import { ContractError } from "@oly/core";
 import type { World } from "@oly/core";
 import { Enemy, Mixed, Player, Position, Velocity, loadFixture } from "./fixture.js";
 
@@ -108,7 +108,7 @@ test("erros de contrato", () => {
     ] as const) {
       assert.throws(
         action,
-        (error: unknown) => error instanceof EngineContractError && error.message.includes("e=") && error.message.includes(operation),
+        (error: unknown) => error instanceof ContractError && error.message.includes("e=") && error.message.includes(operation),
         operation,
       );
     }
@@ -116,11 +116,11 @@ test("erros de contrato", () => {
     const alive = world.spawn([Position]);
     assert.throws(
       () => world.get(alive, Velocity),
-      (error: unknown) => error instanceof EngineContractError && error.message.includes("type=Velocity"),
+      (error: unknown) => error instanceof ContractError && error.message.includes("type=Velocity"),
     );
-    assert.throws(() => world.set(alive, Velocity, { x: 1 }), EngineContractError);
-    assert.throws(() => world.spawn([Position], { Velocity: { x: 1 } } as never), EngineContractError);
-    assert.throws(() => world.spawn([Position], { Position: { z: 1 } } as never), EngineContractError);
+    assert.throws(() => world.set(alive, Velocity, { x: 1 }), ContractError);
+    assert.throws(() => world.spawn([Position], { Velocity: { x: 1 } } as never), ContractError);
+    assert.throws(() => world.spawn([Position], { Position: { z: 1 } } as never), ContractError);
 
     assert.ok(world.spawn([Position]));
   });
@@ -131,5 +131,5 @@ test("dispose", () => {
 
   world.dispose();
 
-  assert.throws(() => world.spawn([Position]), EngineContractError);
+  assert.throws(() => world.spawn([Position]), ContractError);
 });

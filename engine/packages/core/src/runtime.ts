@@ -1,8 +1,16 @@
 import { Bridge } from "./bridge.js";
-import { EngineContractError, SchemaMismatchError } from "./errors.js";
+import { ContractError, SchemaMismatchError } from "./errors.js";
 import type { OlyModule, OlyModuleFactory } from "./module.js";
 import type { Schema, SchemaType } from "./schema.js";
 import { World } from "./world.js";
+
+interface RuntimeInternals {
+  bridgeOf(runtime: Runtime): Bridge;
+  moduleOf(runtime: Runtime): OlyModule;
+  componentIdOf(runtime: Runtime, type: SchemaType): number;
+}
+
+let runtimeInternals!: RuntimeInternals;
 
 function hex(value: number): string {
   return `0x${(value >>> 0).toString(16)}`;
@@ -23,34 +31,52 @@ function firstDivergentType(module: OlyModule, schema: Schema): string | null {
   return null;
 }
 
-export class EngineRuntime {
+export class Runtime {
   readonly schema: Schema;
-  readonly module: OlyModule;
-  readonly bridge: Bridge;
 
-  private readonly componentIds: number[];
+  readonly #module: OlyModule;
+  readonly #bridge: Bridge;
+  readonly #componentIds: number[];
 
-  constructor(module: OlyModule, schema: Schema) {
-    this.module = module;
-    this.schema = schema;
-    this.bridge = new Bridge(module, schema);
-    this.componentIds = schema.types.map((_, index) => module._olySchemaComponentId(index));
+  static {
+    runtimeInternals = {
+      bridgeOf: (runtime) => runtime.#bridge,
+      moduleOf: (runtime) => runtime.#module,
+      componentIdOf: (runtime, type) => {
+        if (runtime.schema.types[type.schemaIndex] !== type) {
+          throw new ContractError(`type=${type.name}: tipo não pertence ao esquema deste runtime`);
+        }
+
+        return runtime.#componentIds[type.schemaIndex]!;
+      },
+    };
   }
 
-  componentId(type: SchemaType): number {
-    if (this.schema.types[type.schemaIndex] !== type) {
-      throw new EngineContractError(`type=${type.name}: tipo não pertence ao esquema deste runtime`);
-    }
-
-    return this.componentIds[type.schemaIndex]!;
+  constructor(module: OlyModule, schema: Schema) {
+    this.#module = module;
+    this.schema = schema;
+    this.#bridge = new Bridge(module, schema);
+    this.#componentIds = schema.types.map((_, index) => module._olySchemaComponentId(index));
   }
 
   createWorld(): World {
-    return new World(this, this.bridge.worldCreate());
+    return new World(this, this.#bridge.worldCreate());
   }
 }
 
-export async function loadEngine(factory: OlyModuleFactory, schema: Schema): Promise<EngineRuntime> {
+export function bridgeOf(runtime: Runtime): Bridge {
+  return runtimeInternals.bridgeOf(runtime);
+}
+
+export function moduleOf(runtime: Runtime): OlyModule {
+  return runtimeInternals.moduleOf(runtime);
+}
+
+export function componentIdOf(runtime: Runtime, type: SchemaType): number {
+  return runtimeInternals.componentIdOf(runtime, type);
+}
+
+export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Promise<Runtime> {
   const module = await factory();
 
   const wasmHash = module._olySchemaHash() >>> 0;
@@ -64,5 +90,5 @@ export async function loadEngine(factory: OlyModuleFactory, schema: Schema): Pro
     );
   }
 
-  return new EngineRuntime(module, schema);
+  return new Runtime(module, schema);
 }

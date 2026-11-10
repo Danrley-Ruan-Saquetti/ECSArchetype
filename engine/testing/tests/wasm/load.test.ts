@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { SchemaMismatchError } from "@oly/core";
-import { loadEngine } from "@oly/core";
+import { loadRuntime } from "@oly/core";
 import { component, defineSchema, tag } from "@oly/core";
 import { fixtureFactory, loadFixture } from "./fixture.js";
 
@@ -25,7 +25,7 @@ test("esquema divergente é rejeitado", async () => {
   ]);
 
   await assert.rejects(
-    loadEngine(fixtureFactory(), otherSchema),
+    loadRuntime(fixtureFactory(), otherSchema),
     (error: unknown) =>
       error instanceof SchemaMismatchError && /0x[0-9a-f]+.*0x[0-9a-f]+/s.test(error.message) && /Position/.test(error.message),
   );

@@ -12,6 +12,8 @@ import sys
 
 IGNORED_DIRECTORIES = {"build", "node_modules", ".git", ".superpowers", "dist", "dist-tests"}
 CPP_EXTENSIONS = (".hpp", ".cpp")
+TS_EXTENSION = ".ts"
+TS_IMPORT_PATTERN = re.compile(r"""(?:\bfrom\s+|\bimport\s*\(?\s*)["'](\.{1,2}/[^"']*|@oly/[^"']*)["']""")
 INCLUDE_PATTERN = re.compile(r'^\s*#\s*include\s+"oly/([a-z_]+)/([^"]*)"')
 RUNTIME_PREFIX = "engine/runtime/"
 
@@ -32,7 +34,7 @@ def source_files(root):
     for current, directories, files in os.walk(root):
         directories[:] = [directory for directory in directories if directory not in IGNORED_DIRECTORIES]
         for file_name in files:
-            if file_name.endswith(CPP_EXTENSIONS):
+            if file_name.endswith(CPP_EXTENSIONS) or file_name.endswith(TS_EXTENSION):
                 yield os.path.join(current, file_name)
 
 
@@ -53,12 +55,44 @@ def check_cpp_file(path, relative_path, owners):
     return violations
 
 
+def package_root(path, root):
+    current = os.path.dirname(path)
+    while os.path.abspath(current) != os.path.abspath(root):
+        if os.path.exists(os.path.join(current, "package.json")):
+            return current
+        current = os.path.dirname(current)
+    return None
+
+
+def check_ts_file(path, relative_path, root):
+    violations = []
+    inside_engine = relative_path.startswith("engine/")
+    inside_core = relative_path.startswith("engine/packages/core/")
+    package_directory = package_root(path, root)
+    with open(path, encoding="utf-8", errors="replace") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            for match in TS_IMPORT_PATTERN.finditer(line):
+                specifier = match.group(1)
+                if specifier.startswith("@oly/core/internal") and not inside_engine:
+                    violations.append(f"{relative_path}:{line_number}: @oly/core/internal só pode ser usado dentro de engine/")
+                if specifier.startswith("@oly/client") and inside_core:
+                    violations.append(f"{relative_path}:{line_number}: @oly/core não pode depender de @oly/client")
+                if specifier.startswith(".") and package_directory is not None:
+                    resolved = os.path.abspath(os.path.join(os.path.dirname(path), specifier))
+                    if os.path.commonpath([resolved, os.path.abspath(package_directory)]) != os.path.abspath(package_directory):
+                        violations.append(f"{relative_path}:{line_number}: import relativo atravessa pacotes; use o nome do pacote")
+    return violations
+
+
 def check(root, manifest):
     owners = load_owners(manifest)
     violations = []
     for path in source_files(root):
         relative_path = os.path.relpath(path, root).replace(os.sep, "/")
-        violations.extend(check_cpp_file(path, relative_path, owners))
+        if path.endswith(TS_EXTENSION):
+            violations.extend(check_ts_file(path, relative_path, root))
+        else:
+            violations.extend(check_cpp_file(path, relative_path, owners))
     return sorted(violations)
 
 

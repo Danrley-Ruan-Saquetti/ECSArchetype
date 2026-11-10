@@ -81,5 +81,40 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertIn("engine/fixture/systems.cpp:1:", output)
 
 
+    def test_internal_fora_de_engine_falha(self):
+        self.write("games/x/src/a.ts", 'import { Bridge } from "@oly/core/internal";\n')
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("games/x/src/a.ts:1: @oly/core/internal só pode ser usado dentro de engine/", output)
+
+    def test_internal_dentro_de_engine_passa(self):
+        self.write("engine/testing/tests/a.ts", 'import { Bridge } from "@oly/core/internal";\n')
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(output, "")
+
+    def test_core_importando_client_falha(self):
+        self.write("engine/packages/core/src/a.ts", 'import { moduleFactoryFromUrl } from "@oly/client";\n')
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/packages/core/src/a.ts:1: @oly/core não pode depender de @oly/client", output)
+
+    def test_relativo_entre_pacotes_falha(self):
+        self.write("engine/packages/client/package.json", "{}")
+        self.write("engine/packages/core/package.json", "{}")
+        self.write("engine/packages/client/src/a.ts", 'import { World } from "../../core/src/world.js";\n')
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/packages/client/src/a.ts:1: import relativo atravessa pacotes; use o nome do pacote", output)
+
+
 if __name__ == "__main__":
     unittest.main()

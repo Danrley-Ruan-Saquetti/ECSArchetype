@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { EngineContractError, NullEntity, entityGeneration, entityIndex, formatEntity } from "@oly/core";
+import { ContractError, NullEntity, entityGeneration, entityIndex, formatEntity } from "@oly/core";
 import { MaxEntityGeneration, packEntity } from "@oly/core/internal";
 
 test("empacota e desempacota", () => {
@@ -18,7 +18,7 @@ test("geração máxima cabe em inteiro seguro", () => {
 });
 
 test("geração acima do máximo é erro", () => {
-  assert.throws(() => packEntity(0, MaxEntityGeneration + 1), EngineContractError);
+  assert.throws(() => packEntity(0, MaxEntityGeneration + 1), ContractError);
 });
 
 test("NullEntity", () => {

@@ -2,10 +2,10 @@ import { pathToFileURL } from "node:url";
 
 import { Enemy, Mixed, Player, Position, Velocity } from "../../fixture/schema.js";
 import schema from "../../fixture/schema.js";
-import { loadEngine } from "@oly/core";
+import { loadRuntime } from "@oly/core";
 import type { OlyModuleFactory } from "@oly/core";
-import type { OlyModule } from "@oly/core/internal";
-import type { EngineRuntime } from "@oly/core";
+import { moduleOf, type OlyModule } from "@oly/core/internal";
+import type { Runtime } from "@oly/core";
 
 export { Enemy, Mixed, Player, Position, Velocity, schema };
 
@@ -34,9 +34,9 @@ export function fixtureFactory(): OlyModuleFactory {
   };
 }
 
-export async function loadFixture(): Promise<{ runtime: EngineRuntime; fixture: FixtureExports }> {
-  const runtime = await loadEngine(fixtureFactory(), schema);
-  const module = runtime.module as FixtureModule;
+export async function loadFixture(): Promise<{ runtime: Runtime; fixture: FixtureExports }> {
+  const runtime = await loadRuntime(fixtureFactory(), schema);
+  const module = moduleOf(runtime) as FixtureModule;
 
   return {
     runtime,
