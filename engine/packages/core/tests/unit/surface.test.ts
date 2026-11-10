@@ -34,7 +34,7 @@ function memberNames(name: string): string[] {
 }
 
 test("exports públicos batem com api/public-exports.txt", () => {
-  const expected = readFileSync(publicExportsPath, "utf8").split("\n").filter((line) => line !== "");
+  const expected = readFileSync(publicExportsPath, "utf8").split(/\r?\n/).filter((line) => line !== "");
 
   assert.deepEqual(exported.map((symbol) => symbol.name).sort(), expected);
 });
