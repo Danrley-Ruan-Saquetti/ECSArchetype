@@ -1,5 +1,6 @@
 #include <cstdint>
 
+#include "oly/app/system.hpp"
 #include "oly/bridge/c_api.hpp"
 #include "oly/bridge/world.hpp"
 #include "oly/ecs/entity.hpp"
@@ -25,4 +26,25 @@ OLY_API double fixtureMixedChecksum(OlyWorld* world, uint32_t index, uint32_t ge
 
   return mixed.a + mixed.b + mixed.c + mixed.owner.index + mixed.owner.generation;
 }
+}
+
+OLY_SYSTEM(noop) {}
+
+OLY_SYSTEM(move) {
+  const float deltaTime = context.fixedDeltaTime();
+  context.query<Position, const Velocity>().each([deltaTime](Position& position, const Velocity& velocity) {
+    position.x += velocity.x * deltaTime;
+    position.y += velocity.y * deltaTime;
+  });
+}
+
+OLY_SYSTEM(appendNine) {
+  context.query<Trace>().each([](Trace& trace) { trace.value = trace.value * 10 + 9; });
+}
+
+// Grande o bastante para o heap do WASM crescer antes do sistema TS seguinte.
+OLY_SYSTEM(spawnBatch) {
+  for (uint32_t count = 0; count < 400000; ++count) {
+    context.spawn(Position{1, 0});
+  }
 }

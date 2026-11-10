@@ -1,7 +1,7 @@
 oly_add_game(fixture_game
   SCHEMA_JS ${PROJECT_SOURCE_DIR}/engine/testing/dist/fixture/schema.js
   SOURCES fixture/systems.cpp
-  DEPENDS ecs bridge)
+  DEPENDS ecs app bridge)
 
 if(OLY_BUILD_TESTS)
   add_test(NAME ts.testing.wasm COMMAND ${OLY_NODE} --test ${PROJECT_SOURCE_DIR}/engine/testing/dist/tests/wasm/)

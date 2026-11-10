@@ -94,6 +94,7 @@ const BlockCountOffset = 12;
 const ValueOffset = 16;
 const MessageCapacity = 256;
 const InitialIdCapacity = 32;
+const InitialStringCapacity = 64;
 
 // Único lugar que chama exports do WASM. Toda chamada que pode alocar no WASM termina em `sync()`.
 export class Bridge {
@@ -104,6 +105,8 @@ export class Bridge {
   private valueCapacity: number;
   private idsPointer: number;
   private idsCapacity = InitialIdCapacity;
+  private stringPointer: number;
+  private stringCapacity = InitialStringCapacity;
 
   constructor(module: OlyModule, schema: Schema) {
     this.module = module;
@@ -112,6 +115,7 @@ export class Bridge {
     this.valueCapacity = Math.max(8, ...schema.types.map((type) => (type.kind === "component" ? type.layout.size : 0)));
     this.scratch = this.allocate(ValueOffset + this.valueCapacity + MessageCapacity);
     this.idsPointer = this.allocate(this.idsCapacity * 4);
+    this.stringPointer = this.allocate(this.stringCapacity);
   }
 
   // Área de rascunho para montar o valor de um componente (zerada pelo chamador).
@@ -219,6 +223,115 @@ export class Bridge {
 
   queryEnd(world: number, iteration: number): void {
     this.module._olyQueryEnd(world, iteration);
+  }
+
+  engineCreate(fixedHz: number, maxStepsPerFrame: number): number {
+    const engine = this.module._olyEngineCreate(fixedHz, maxStepsPerFrame) >>> 0;
+    this.sync();
+
+    return engine;
+  }
+
+  engineDestroy(engine: number): void {
+    this.module._olyEngineDestroy(engine);
+  }
+
+  engineWorld(engine: number): number {
+    return this.module._olyEngineWorld(engine) >>> 0;
+  }
+
+  // Um sistema TS pode lançar: a exceção JS atravessa o WASM e a memória pode ter crescido no meio.
+  engineFrame(engine: number, nowSeconds: number): void {
+    try {
+      this.module._olyEngineFrame(engine, nowSeconds);
+    } finally {
+      this.sync();
+    }
+  }
+
+  engineSetHidden(engine: number, hidden: boolean): void {
+    this.module._olyEngineSetHidden(engine, hidden ? 1 : 0);
+  }
+
+  enginePause(engine: number): void {
+    this.module._olyEnginePause(engine);
+  }
+
+  engineResume(engine: number): void {
+    this.module._olyEngineResume(engine);
+  }
+
+  engineIsPaused(engine: number): boolean {
+    return this.module._olyEngineIsPaused(engine) === 1;
+  }
+
+  engineTime(engine: number): number {
+    return this.module._olyEngineTime(engine);
+  }
+
+  engineFixedDeltaTime(engine: number): number {
+    return this.module._olyEngineFixedDeltaTime(engine);
+  }
+
+  engineInterpolation(engine: number): number {
+    return this.module._olyEngineInterpolation(engine);
+  }
+
+  // 0xFFFFFFFF (OLY_INVALID_SYSTEM) se o nome nativo não existe.
+  addNativeSystem(engine: number, phase: number, name: string): number {
+    const id = this.module._olyEngineAddNativeSystem(engine, phase, this.writeString(name)) >>> 0;
+    this.sync();
+
+    return id;
+  }
+
+  addScriptSystem(engine: number, phase: number, name: string): number {
+    const id = this.module._olyEngineAddScriptSystem(engine, phase, this.writeString(name)) >>> 0;
+    this.sync();
+
+    return id;
+  }
+
+  setWhilePaused(engine: number, systemId: number, whilePaused: boolean): void {
+    this.module._olyEngineSetWhilePaused(engine, systemId, whilePaused ? 1 : 0);
+  }
+
+  systemSpawn(engine: number): Entity {
+    this.module._olySystemSpawn(engine, this.scratch + OutputOffset);
+    this.sync();
+    const base = (this.scratch + OutputOffset) >> 2;
+
+    return packEntity(this.heap.u32[base]!, this.heap.u32[base + 1]!);
+  }
+
+  systemDestroy(engine: number, entity: Entity): void {
+    this.module._olySystemDestroy(engine, entityIndex(entity), entityGeneration(entity));
+    this.sync();
+  }
+
+  systemAdd(engine: number, entity: Entity, componentId: number, valuePointer: number): void {
+    this.module._olySystemAdd(engine, entityIndex(entity), entityGeneration(entity), componentId, valuePointer);
+    this.sync();
+  }
+
+  systemRemove(engine: number, entity: Entity, componentId: number): void {
+    this.module._olySystemRemove(engine, entityIndex(entity), entityGeneration(entity), componentId);
+    this.sync();
+  }
+
+  // UTF-8 + NUL numa área de rascunho que cresce; o ponteiro vale até a próxima chamada.
+  writeString(text: string): number {
+    const bytes = new TextEncoder().encode(text);
+    if (bytes.length + 1 > this.stringCapacity) {
+      this.free(this.stringPointer);
+      this.stringCapacity = Math.max(bytes.length + 1, this.stringCapacity * 2);
+      this.stringPointer = this.allocate(this.stringCapacity);
+    }
+
+    this.heap.u8.set(bytes, this.stringPointer);
+    this.heap.u8[this.stringPointer + bytes.length] = 0;
+
+    return this.stringPointer;
   }
 
   checkInvariants(world: number): string | null {

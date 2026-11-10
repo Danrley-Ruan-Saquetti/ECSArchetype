@@ -1,9 +1,10 @@
 import { readScalar, writeScalar, type Bridge } from "./bridge.js";
-import { formatEntity, type Entity } from "./entity.js";
+import { type Entity } from "./entity.js";
 import { ContractError } from "./errors.js";
 import { bridgeOf, componentIdOf, type Runtime } from "./runtime.js";
 import type { ComponentType, Fields, SchemaType, ValueOf } from "./schema.js";
 import { Query, type QuerySpec } from "./query.js";
+import { assertKnownFields, assertSpawnArguments, contractError, writeComponentValue } from "./values.js";
 
 export type SpawnValues<Ts extends readonly SchemaType[]> = {
   [C in Extract<Ts[number], ComponentType> as C["name"]]?: Partial<ValueOf<C["fields"]>>;
@@ -13,6 +14,8 @@ interface WorldInternals {
   assertUsable(world: World, operation: string): void;
   enterIteration(world: World): void;
   leaveIteration(world: World): void;
+  setStructureLocked(world: World, locked: boolean): void;
+  release(world: World): void;
 }
 
 let worldInternals!: WorldInternals;
@@ -24,7 +27,10 @@ export class World {
   #iterationDepth = 0;
   readonly #runtime: Runtime;
   readonly #bridge: Bridge;
+  readonly #owned: boolean;
   #disposed = false;
+  // Ligado pela Engine durante frame: as mudanças estruturais passam pelo SystemContext (adiadas).
+  #structureLocked = false;
   readonly #queries = new Map<string, Query>();
 
   static {
@@ -36,35 +42,28 @@ export class World {
       leaveIteration: (world) => {
         --world.#iterationDepth;
       },
+      setStructureLocked: (world, locked) => {
+        world.#structureLocked = locked;
+      },
+      release: (world) => {
+        world.#disposed = true;
+      },
     };
   }
 
-  constructor(runtime: Runtime, handle: number) {
+  // `owned` falso: o World pertence a uma Engine, que o libera junto com ela.
+  constructor(runtime: Runtime, handle: number, owned = true) {
     this.#runtime = runtime;
     this.#bridge = bridgeOf(runtime);
+    this.#owned = owned;
     this.handle = handle;
   }
 
   spawn<const Ts extends readonly SchemaType[]>(types: Ts, values?: SpawnValues<Ts>): Entity {
     this.#assertStructuralChangeAllowed("spawn");
 
-    const seen = new Set<SchemaType>();
-    for (const type of types) {
-      componentIdOf(this.#runtime, type);
-      if (seen.has(type)) {
-        throw new ContractError(`spawn type=${type.name}: tipo repetido em types`);
-      }
-      seen.add(type);
-    }
-
     const valuesByName = (values ?? {}) as Readonly<Record<string, Partial<Record<string, number>>>>;
-    for (const [name, value] of Object.entries(valuesByName)) {
-      const type = types.find((candidate) => candidate.name === name);
-      if (type === undefined || type.kind !== "component") {
-        throw new ContractError(`spawn type=${name}: valor para componente que não está em types`);
-      }
-      this.#assertKnownFields("spawn", null, type, value);
-    }
+    assertSpawnArguments(this.#runtime, types, valuesByName);
 
     const entity = this.#bridge.spawn(this.handle);
     for (const type of types) {
@@ -99,7 +98,7 @@ export class World {
     this.#assertStructuralChangeAllowed("add", entity, type);
     this.#assertAlive("add", entity, type);
     if (type.kind === "component") {
-      this.#assertKnownFields("add", entity, type, value ?? {});
+      assertKnownFields("add", entity, type, value ?? {});
     }
 
     this.#addToEntity(entity, type, value);
@@ -124,7 +123,7 @@ export class World {
 
   set<F extends Fields>(entity: Entity, type: ComponentType<string, F>, value: Partial<ValueOf<F>>): void {
     const address = this.#addressOf("set", entity, type);
-    this.#assertKnownFields("set", entity, type, value);
+    assertKnownFields("set", entity, type, value);
 
     for (const field of type.layout.fields) {
       const fieldValue = (value as Partial<Record<string, number>>)[field.name];
@@ -190,6 +189,10 @@ export class World {
       return;
     }
 
+    if (!this.#owned) {
+      throw new ContractError("dispose: World pertence à Engine; use engine.dispose()");
+    }
+
     if (this.#iterationDepth > 0) {
       throw new ContractError("dispose: World em iteração (eachBlock); libere depois do laço");
     }
@@ -200,19 +203,7 @@ export class World {
 
   #addToEntity(entity: Entity, type: SchemaType, value: Partial<Record<string, number>> | undefined): void {
     const componentId = componentIdOf(this.#runtime, type);
-    if (type.kind === "tag") {
-      this.#bridge.add(this.handle, entity, componentId, 0);
-      return;
-    }
-
-    const address = this.#bridge.valuePointer;
-    this.#bridge.heap.u8.fill(0, address, address + type.layout.size);
-    for (const field of type.layout.fields) {
-      const fieldValue = value?.[field.name];
-      if (fieldValue !== undefined) {
-        writeScalar(this.#bridge.heap, field.type, address + field.offset, fieldValue);
-      }
-    }
+    const address = writeComponentValue(this.#bridge, type, value);
 
     this.#bridge.add(this.handle, entity, componentId, address);
   }
@@ -224,19 +215,10 @@ export class World {
     const componentId = componentIdOf(this.#runtime, type);
     const address = this.#bridge.get(this.handle, entity, componentId);
     if (address === 0) {
-      throw this.#contractError(operation, entity, type, "entidade não tem o componente");
+      throw contractError(operation, entity, type, "entidade não tem o componente");
     }
 
     return address;
-  }
-
-  #assertKnownFields(operation: string, entity: Entity | null, type: ComponentType, value: Partial<Record<string, number>>): void {
-    const known = new Set(type.layout.fields.map((field) => field.name));
-    for (const name of Object.keys(value)) {
-      if (!known.has(name)) {
-        throw this.#contractError(operation, entity, type, `campo desconhecido "${name}"`);
-      }
-    }
   }
 
   #assertUsable(operation: string): void {
@@ -247,22 +229,18 @@ export class World {
 
   #assertStructuralChangeAllowed(operation: string, entity: Entity | null = null, type: SchemaType | null = null): void {
     this.#assertUsable(operation);
+    if (this.#structureLocked) {
+      throw contractError(operation, entity, type, "mudança estrutural direta durante frame; use context.spawn/destroy/add/remove");
+    }
     if (this.#iterationDepth > 0) {
-      throw this.#contractError(operation, entity, type, "mudança estrutural durante eachBlock");
+      throw contractError(operation, entity, type, "mudança estrutural durante eachBlock");
     }
   }
 
   #assertAlive(operation: string, entity: Entity, type: SchemaType | null = null): void {
     if (!this.#bridge.isAlive(this.handle, entity)) {
-      throw this.#contractError(operation, entity, type, "entidade morta");
+      throw contractError(operation, entity, type, "entidade morta");
     }
-  }
-
-  #contractError(operation: string, entity: Entity | null, type: SchemaType | null, reason: string): ContractError {
-    const entityPart = entity === null ? "" : ` e=${formatEntity(entity)}`;
-    const typePart = type === null ? "" : ` type=${type.name}`;
-
-    return new ContractError(`${operation}${entityPart}${typePart}: ${reason}`);
   }
 }
 
@@ -276,4 +254,13 @@ export function enterIteration(world: World): void {
 
 export function leaveIteration(world: World): void {
   worldInternals.leaveIteration(world);
+}
+
+export function setStructureLocked(world: World, locked: boolean): void {
+  worldInternals.setStructureLocked(world, locked);
+}
+
+// A Engine dona do World o libera junto com o OlyEngine: aqui só marca como liberado.
+export function releaseOwnedWorld(world: World): void {
+  worldInternals.release(world);
 }

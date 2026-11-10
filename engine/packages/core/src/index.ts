@@ -1,5 +1,7 @@
 export { entityGeneration, entityIndex, formatEntity, NullEntity } from "./entity.js";
 export type { Entity } from "./entity.js";
+export { Engine, Phase } from "./engine.js";
+export type { EngineConfig, SystemRegistration } from "./engine.js";
 export { ContractError, SchemaMismatchError } from "./errors.js";
 export type { ComponentLayout, FieldLayout, ScalarType } from "./layout.js";
 export type { OlyModuleFactory } from "./module.js";
@@ -9,5 +11,7 @@ export type { QuerySpec } from "./query.js";
 export { loadRuntime, Runtime } from "./runtime.js";
 export { component, defineSchema, tag } from "./schema.js";
 export type { ComponentType, Fields, Schema, SchemaType, TagType, ValueOf } from "./schema.js";
+export { SystemContext } from "./system_context.js";
+export type { SystemFunction } from "./system_context.js";
 export { World } from "./world.js";
 export type { SpawnValues } from "./world.js";

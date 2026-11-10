@@ -64,8 +64,46 @@ test("Block expõe só count, entity, read, write", () => {
   assert.deepEqual(memberNames("Block"), ["count", "entity", "read", "write"]);
 });
 
-test("Runtime expõe só schema e createWorld", () => {
-  assert.deepEqual(memberNames("Runtime"), ["createWorld", "schema"]);
+test("Runtime expõe só schema, createWorld e createEngine", () => {
+  assert.deepEqual(memberNames("Runtime"), ["createEngine", "createWorld", "schema"]);
+});
+
+test("Engine expõe só a API do glossário", () => {
+  assert.deepEqual(memberNames("Engine"), [
+    "addNativeSystem",
+    "addSystem",
+    "dispose",
+    "fixedDeltaTime",
+    "frame",
+    "pause",
+    "paused",
+    "resume",
+    "setHidden",
+    "time",
+    "world",
+  ]);
+});
+
+test("SystemContext expõe só a API do glossário", () => {
+  assert.deepEqual(memberNames("SystemContext"), [
+    "add",
+    "destroy",
+    "fixedDeltaTime",
+    "get",
+    "has",
+    "interpolation",
+    "isAlive",
+    "name",
+    "pause",
+    "paused",
+    "phase",
+    "query",
+    "remove",
+    "resume",
+    "set",
+    "spawn",
+    "time",
+  ]);
 });
 
 test("ContractError tem name ContractError", () => {

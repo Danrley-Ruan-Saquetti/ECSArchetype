@@ -1,13 +1,13 @@
 import { pathToFileURL } from "node:url";
 
-import { Enemy, Mixed, Player, Position, Velocity } from "../../fixture/schema.js";
+import { Enemy, Mixed, Player, Position, Trace, Velocity } from "../../fixture/schema.js";
 import schema from "../../fixture/schema.js";
 import { loadRuntime } from "@oly/core";
 import type { OlyModuleFactory } from "@oly/core";
 import { moduleOf, type OlyModule } from "@oly/core/internal";
 import type { Runtime } from "@oly/core";
 
-export { Enemy, Mixed, Player, Position, Velocity, schema };
+export { Enemy, Mixed, Player, Position, Trace, Velocity, schema };
 
 export interface FixtureExports {
   fixtureMove(world: number, deltaTime: number): void;

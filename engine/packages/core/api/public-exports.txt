@@ -2,11 +2,14 @@ Block
 ComponentLayout
 ComponentType
 ContractError
+Engine
+EngineConfig
 Entity
 FieldLayout
 Fields
 NullEntity
 OlyModuleFactory
+Phase
 Query
 QuerySpec
 RawField
@@ -18,6 +21,9 @@ Schema
 SchemaMismatchError
 SchemaType
 SpawnValues
+SystemContext
+SystemFunction
+SystemRegistration
 TagType
 ValueOf
 World

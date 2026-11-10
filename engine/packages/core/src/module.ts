@@ -29,6 +29,28 @@ export interface OlyModule {
   _olyQueryBegin(world: number, query: number, outBlockCount: number, outDescriptors: number): number;
   _olyQueryEnd(world: number, iteration: number): void;
   _olyWorldCheckInvariants(world: number, message: number, capacity: number): number;
+
+  _olyEngineCreate(fixedHz: number, maxStepsPerFrame: number): number;
+  _olyEngineDestroy(engine: number): void;
+  _olyEngineWorld(engine: number): number;
+  _olyEngineFrame(engine: number, nowSeconds: number): void;
+  _olyEngineSetHidden(engine: number, hidden: number): void;
+  _olyEnginePause(engine: number): void;
+  _olyEngineResume(engine: number): void;
+  _olyEngineIsPaused(engine: number): number;
+  _olyEngineTime(engine: number): number;
+  _olyEngineFixedDeltaTime(engine: number): number;
+  _olyEngineInterpolation(engine: number): number;
+  _olyEngineAddNativeSystem(engine: number, phase: number, name: number): number;
+  _olyEngineAddScriptSystem(engine: number, phase: number, name: number): number;
+  _olyEngineSetWhilePaused(engine: number, systemId: number, whilePaused: number): void;
+  _olySystemSpawn(engine: number, out: number): void;
+  _olySystemDestroy(engine: number, index: number, generation: number): void;
+  _olySystemAdd(engine: number, index: number, generation: number, componentId: number, value: number): void;
+  _olySystemRemove(engine: number, index: number, generation: number, componentId: number): void;
+
+  // Chamada de volta do núcleo (olyHostInvokeScript): o Runtime instala uma vez e despacha por engine.
+  olyInvokeScript?: (engine: number, systemId: number) => void;
 }
 
 export type OlyModuleFactory = () => Promise<OlyModule>;

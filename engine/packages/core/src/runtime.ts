@@ -1,4 +1,5 @@
 import { Bridge } from "./bridge.js";
+import { Engine, invokeSystem, type EngineConfig } from "./engine.js";
 import { ContractError, SchemaMismatchError } from "./errors.js";
 import type { OlyModule, OlyModuleFactory } from "./module.js";
 import type { Schema, SchemaType } from "./schema.js";
@@ -37,6 +38,7 @@ export class Runtime {
   readonly #module: OlyModule;
   readonly #bridge: Bridge;
   readonly #componentIds: number[];
+  readonly #engines = new Map<number, Engine>();
 
   static {
     runtimeInternals = {
@@ -57,6 +59,34 @@ export class Runtime {
     this.schema = schema;
     this.#bridge = new Bridge(module, schema);
     this.#componentIds = schema.types.map((_, index) => module._olySchemaComponentId(index));
+    module.olyInvokeScript = (engineHandle, systemId) => {
+      const engine = this.#engines.get(engineHandle);
+      if (engine === undefined) {
+        throw new ContractError(`olyInvokeScript engine=${engineHandle}: Engine desconhecida ou já liberada`);
+      }
+
+      invokeSystem(engine, systemId);
+    };
+  }
+
+  createEngine(config: EngineConfig = {}): Engine {
+    const fixedHz = config.fixedHz ?? 60;
+    const maxStepsPerFrame = config.maxStepsPerFrame ?? 5;
+    if (!Number.isFinite(fixedHz) || fixedHz <= 0) {
+      throw new ContractError(`createEngine fixedHz=${fixedHz}: deve ser um número positivo`);
+    }
+    if (!Number.isInteger(maxStepsPerFrame) || maxStepsPerFrame < 1) {
+      throw new ContractError(`createEngine maxStepsPerFrame=${maxStepsPerFrame}: deve ser um inteiro positivo`);
+    }
+
+    const handle = this.#bridge.engineCreate(fixedHz, maxStepsPerFrame);
+    const world = new World(this, this.#bridge.engineWorld(handle), false);
+    const engine = new Engine(this, handle, world, () => {
+      this.#engines.delete(handle);
+    });
+    this.#engines.set(handle, engine);
+
+    return engine;
   }
 
   createWorld(): World {
