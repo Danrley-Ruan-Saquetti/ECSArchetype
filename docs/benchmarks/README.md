@@ -19,6 +19,7 @@ compare sempre razões medidas na mesma execução. Commit de referência dos n�
 | `bridge/boundary_fase1.json` | Fronteira WASM↔TS da engine; ver `bridge/README.md` (engine fase 1, task 8) | — |
 | `ecs/r1_iterate.json`, `ecs/r1_fragmented.json`, `ecs/r1_flush.json` | Reexecução após a modularização em módulos Oly (task 10) | NF-P1, NF-P2, NF-P5 |
 | `bridge/boundary_oly.json` | Fronteira WASM↔TS após a modularização; comparação em `bridge/README.md` | — |
+| `bridge/loop_fase2.json` | Custo do loop da fase 2: sistemas vazios, intercalação e fronteira dentro do loop; ver `bridge/README.md` | — |
 
 ## NF-P5 — situação
 

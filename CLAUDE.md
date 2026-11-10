@@ -11,10 +11,11 @@ cmake/            OlyOptions, OlyWarnings, OlyWasm, OlyModule (oly_add_module/te
 engine/runtime/   C++, um módulo por pasta: <m>/{include/oly/<m>, src, tests, bench}
   core/           assert, align, small_map, type_name           (sem dependências)
   ecs/            o ECS                                         (DEPENDS core)
-  bridge/         API C (oly*), OlyWorld, registro do esquema   (DEPENDS ecs core, módulo OBJECT)
+  app/            Engine: loop, fases, sistemas, pausa          (DEPENDS ecs core)
+  bridge/         API C (oly*), OlyWorld, registro do esquema   (DEPENDS app ecs core, módulo OBJECT)
 engine/packages/  TS, um pacote npm por pasta: core (@oly/core), client (@oly/client)
 engine/tools/     codegen (@oly/codegen: esquema TS -> C++)
-engine/testing/   @oly/testing (privado): fixture (único lugar com nomes de jogo), tests/wasm, bench/boundary.ts
+engine/testing/   @oly/testing (privado): fixture (único lugar com nomes de jogo), tests/wasm, bench/{boundary,loop}.ts
 games/            vazio até a fase 7
 tools/            scripts de medição e de lint (bench_ratio.py, bench_ladder.py, run_ladder.sh, check_boundaries.py, ...)
 docs/benchmarks/  resultados registrados: ecs/, bridge/, wasm/
@@ -36,7 +37,7 @@ $DC ./build/debug-asan/tests/ecs_unit_world -tc="nome do caso"   # um TEST_CASE 
 
 - Presets (`CMakePresets.json`): `debug-asan` (padrão), `release` (testes + bench, `OLY_ENABLE_ASSERTS=0`), `relwithdebinfo` (só bench, para `perf`), as variantes do estudo de custo WASM (`native-clang*`, `wasm-scalar`, `wasm-simd`), `wasm-debug`, `wasm-games` e `wasm-games-release`. Build em `build/<preset>/`; executáveis de teste em `build/<preset>/tests/<módulo>_<suíte>`, de benchmark em `build/<preset>/bench/ecs_bench_*`.
 - Opções: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR`, `OLY_VEC_REPORT`, `OLY_ENABLE_ASSERTS`, `OLY_BUILD_GAMES`.
-- Nomes no ctest levam o prefixo do módulo: `core.*`, `ecs.*`, `bridge.*`, `ts.<pacote>.<suíte>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`) e `oly.lint.boundaries`.
+- Nomes no ctest levam o prefixo do módulo: `core.*`, `ecs.*`, `app.*`, `bridge.*`, `ts.<pacote>.<suíte>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`) e `oly.lint.boundaries`.
 - `-Wall -Wextra -Wpedantic -Werror` estão ligados em todos os nossos alvos (`oly_warnings`); aviso quebra o build.
 - Cada suíte é um executável separado registrado com `oly_add_test(MODULE <m> NAME <suíte> SOURCES ... [SUPPORT <dirs>])` no `tests/CMakeLists.txt` do módulo; arquivo novo precisa ser adicionado lá. Fontes de `src/*.cpp` entram por glob.
 - `ecs_contract_death` (e `bridge_contract_death`) só existem com asserts ligados e são registrados com `oly_add_contract_death(MODULE <m> SOURCE <arq> CASES ...)`: cada caso é um argumento de linha de comando, o handler de assert confere substrings da mensagem e sai com 0. Novo caso = função no arquivo + nome na lista `CASES`.
@@ -55,7 +56,7 @@ Executáveis: `ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmente
 
 ## Módulos e fronteiras
 
-`oly_add_module(NAME <m> [DEPENDS <m...>] [OBJECT | HEADER_ONLY])` cria `oly_<m>` (alias `oly::<m>`) e liga só os `DEPENDS`. Dependências: `core` ← `ecs` ← `bridge` ← jogos (`oly_add_game`). Cada módulo e jogo declara em `DEPENDS` todo módulo que inclui diretamente.
+`oly_add_module(NAME <m> [DEPENDS <m...>] [OBJECT | HEADER_ONLY])` cria `oly_<m>` (alias `oly::<m>`) e liga só os `DEPENDS`. Dependências: `core` ← `ecs` ← `app` ← `bridge` ← jogos (`oly_add_game`). Cada módulo e jogo declara em `DEPENDS` todo módulo que inclui diretamente.
 
 O `oly.lint.boundaries` (`tools/check_boundaries.py`, roda no ctest) reprova:
 - `#include "oly/<x>/..."` num módulo ou jogo que não declarou `<x>` em `DEPENDS`;
@@ -73,6 +74,11 @@ Nada em `engine/runtime/ecs` conhece o `bridge`. Nomes de jogo só em `engine/te
 | adicionar / remover / ter | `add`, `remove`, `has` | `olyComponentAdd/Remove/Has` | `add`, `remove`, `has` |
 | ler (existe por contrato) / se existir | `get` -> `T&` / `tryGet` -> `T*` | `olyComponentGet` | `get` -> cópia |
 | query / iterar | `query<Ts...>`, `each`, `eachBlock` | `olyQueryCreate`, `olyQueryBegin/End` | `query`, `eachBlock` |
+| passo de jogo (fixo) / aba oculta | `Engine::frame(nowSeconds)`, `setHidden` | `olyEngineFrame`, `olyEngineSetHidden` | `Engine.frame`, `setHidden` |
+| pausar / retomar | `Engine::pause`, `resume`, `paused`; `SystemContext::pause/resume` | `olyEnginePause/Resume/IsPaused` | `pause`, `resume`, `paused` |
+| registrar sistema | `Engine::addSystem(phase, name, função)`, `OLY_SYSTEM(name)` (por nome) | `olyEngineAddNativeSystem` (por nome), `olyEngineAddScriptSystem` | `addSystem`, `addNativeSystem` |
+| sistema roda pausado | `Engine::setWhilePaused` | `olyEngineSetWhilePaused` | `SystemRegistration.whilePaused()` |
+| mudança estrutural adiada (dentro de sistema) | `SystemContext::spawn/destroy/add/remove` | `olySystemSpawn/Destroy/Add/Remove` | `context.spawn/destroy/add/remove` |
 | variante por ID | sufixo `ById`: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById` | (toda por ID) | — |
 
 O prefixo `oly` aparece só na API C (`oly*`, `OlyWorld`, `OLY_API`) e no que é interno à ponte (`OlyModule`). APIs C++ e TS não repetem `oly` nos nomes. `create` e "Raw" não existem mais como nomes.
@@ -92,12 +98,16 @@ Camadas estritas, cada uma só usa as de baixo: `component → entity → detail
 
 Validade: qualquer mudança estrutural invalida ponteiros/spans de qualquer entidade; só `Entity` é handle estável.
 
+## Engine: loop e sistemas (`engine/runtime/app`)
+
+`oly::app::Engine` guarda o relógio de passo fixo, os sistemas de cada fase (`UpdateBefore`, `Update`, `UpdateAfter`, `Render`), a pausa e a aba oculta. Toda regra do loop vive no C++; o TS só valida o uso e repassa. Um sistema é um ponteiro de função mais `userData`, então o `app` não conhece TS: o `bridge` registra um sistema TS como uma função C++ que chama a única função JS importada (`olyHostInvokeScript`), uma vez por sistema por passo, nunca por entidade. Mudanças estruturais feitas pelos sistemas (`context.spawn/destroy/add/remove`) ficam num `CommandBuffer` por `Engine` que não aparece na API e é aplicado ao fim de cada fase. Se um sistema TS lança, o `frame` seguinte descarta os comandos pendentes e se comporta como o primeiro frame (recuperação); o que as fases anteriores já aplicaram fica.
+
 ## Engine: ponte C e pacotes TS
 
 `bridge` expõe a API C `extern "C"` (`engine/runtime/bridge/src/c_api.cpp`): `OlyWorld` é opaco (guarda o `World` e uma pilha de slots de iteração; `oly::bridge::worldOf(OlyWorld*)` dá o `World` aos sistemas do jogo), `olyQueryBegin` devolve uma `OlyIteration*` com buffer próprio de descritores e `olyQueryEnd` precisa encerrar o slot do topo. Os pacotes TS são npm workspaces na raiz (`package.json`, `tsconfig.base.json`, project references; saída em `<pacote>/dist` e `dist-tests`):
 
 - `@oly/core`: `loadRuntime(factory, schema)` -> `Runtime` (`schema`, `createWorld()`), `World`, `Query`, `Block`, `ContractError`, `SchemaMismatchError`, `defineSchema`. Sem DOM nem node (`types: []`). A lista pública exata é `engine/packages/core/api/public-exports.txt`, conferida por `surface.test.ts`. `@oly/core/internal` (`bridgeOf`, `moduleOf`, `componentIdOf`, `Bridge`...) é só para `engine/`.
-- `@oly/client`: `moduleFactoryFromUrl(url)`, camada fina do navegador (usa DOM).
+- `@oly/client`: `moduleFactoryFromUrl(url)` e `runInBrowser(engine)` (rAF + `visibilitychange`), camada fina do navegador (usa DOM).
 - `@oly/codegen`: gera o C++ do esquema (`oly-codegen`); `static_assert` + hash conferido por `loadRuntime` (`SchemaMismatchError` se o WASM estiver desatualizado).
 - `@oly/testing` (privado): fixture, testes de integração WASM e benchmark da fronteira.
 

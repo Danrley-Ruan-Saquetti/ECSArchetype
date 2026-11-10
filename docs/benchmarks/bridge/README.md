@@ -74,3 +74,51 @@ Mesmo protocolo, executado com `OlyWorld`/`olyQueryBegin` e `@oly/core`; os rót
 | 1000000 | 2,05 → 1,94 | 9,59 → 10,48 | 1,45 → 1,38 |
 
 As razões ficam na mesma faixa da fase 1 (diferenças dentro da dispersão de ±15% do ambiente); a ponte nova não mudou o custo do laço.
+
+## Custo do loop — fase 2
+
+Resultado bruto: `loop_fase2.json` (commit `fca8946`, 2026-11-10). Gerado por `engine/testing/bench/loop.ts`:
+
+```sh
+WC="docker compose run --rm wasm"
+$WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
+$WC node engine/testing/dist/bench/loop.js --module build/wasm-games-release/games/fixture_game.mjs \
+  --out docs/benchmarks/bridge/loop_fase2.json --commit $(git rev-parse --short HEAD)
+```
+
+Ambiente: o mesmo das seções acima (Docker no WSL2, node 20.18, V8 11.3, Release com asserts desligados). Protocolo do `boundary.ts`:
+aquecimento, 10 rodadas com a ordem das variantes girando, mediana. Um passo fixo por `frame` (`frame(k / 60)`), sem sistema de `Render`.
+Sem meta numérica (§7).
+
+### Sistemas vazios (ns por passo)
+
+| K | zero | cpp (K × `noop`) | ts (K × sistema TS vazio) | ts / cpp | ns por chamada de volta |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 90 | 94 | 135 | 1,43 | 40,3 |
+| 4 | 108 | 119 | 315 | 2,66 | 49,1 |
+| 16 | 100 | 181 | 985 | 5,44 | 50,2 |
+| 64 | 86 | 407 | 2846 | 6,99 | 38,1 |
+
+### Intercalar sistemas C++ e TS (K/2 de cada, ns por passo)
+
+| K | alternado | agrupado | alternado / agrupado |
+|---:|---:|---:|---:|
+| 4 | 191 | 189 | 1,01 |
+| 16 | 473 | 490 | 0,97 |
+| 64 | 1797 | 1792 | 1,00 |
+
+### Fronteira dentro do loop (ns por entidade)
+
+| N | cpp-loop | ts-loop | ts-manual | ts-loop / ts-manual | ts-loop / cpp-loop |
+|---:|---:|---:|---:|---:|---:|
+| 1000 | 1,18 | 20,43 | 1,07 | 19,03 | 17,35 |
+| 10000 | 0,80 | 11,20 | 5,69 | 1,97 | 14,05 |
+| 100000 | 0,67 | 8,77 | 4,44 | 1,97 | 13,11 |
+| 1000000 | 1,32 | 9,77 | 5,61 | 1,74 | 7,39 |
+
+### Leitura
+
+- Uma chamada de volta para um sistema TS vazio custa ~40–50 ns. O `frame` sem sistema custa ~90–110 ns; o laço da engine em si é barato.
+- Intercalar não custa mais que o número de chamadas explica: `alternado` e `agrupado` empatam (razão ~1,0). Não vale agrupar sistemas TS por causa do custo da fronteira; a ordem das fases e do registro pode seguir a lógica do jogo.
+- Um sistema TS com `eachBlock` e views, dentro do loop, fica na mesma faixa do `ts-engine` do `boundary.ts` a N ≥ 10000 (8–11 ns/entidade contra ~8 ns). A ~2× do `ts-manual` e 7–14× do `move` em C++, o que repete a conclusão da fase 1: laço quente fica no C++.
+- A N = 1000 o `ts-loop` (20 ns/entidade) fica ~2× acima do `ts-engine` do `boundary.ts` (~10 ns). Não foi investigado; suspeitas: `context.query(...)` a cada passo e o aquecimento do JIT com 200 passos. Não leia a razão a N = 1000 como custo do passo (o `ts-manual` também é anômalo ali, como na fase 1).

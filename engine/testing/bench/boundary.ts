@@ -1,12 +1,11 @@
 import { writeFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 
-import schema, { Position, Velocity } from "../fixture/schema.js";
+import { Position, Velocity } from "../fixture/schema.js";
+import { expectedPositionX, loadBenchRuntime, median, parseOptions, rotated } from "./common.js";
 import type { Entity } from "@oly/core";
-import type { OlyModuleFactory } from "@oly/core";
 import { moduleOf, type OlyModule } from "@oly/core/internal";
 import type { Query } from "@oly/core";
-import { loadRuntime, type Runtime } from "@oly/core";
+import type { Runtime } from "@oly/core";
 import type { World } from "@oly/core";
 
 const DeltaTime = Math.fround(1 / 60);
@@ -24,46 +23,6 @@ interface Variant {
 
 interface FixtureModule extends OlyModule {
   _fixtureMove(world: number, deltaTime: number): void;
-}
-
-interface Options {
-  modulePath: string;
-  outPath: string;
-  sizes: number[];
-  rounds: number;
-  commit: string;
-}
-
-function parseOptions(argv: string[]): Options {
-  const values = new Map<string, string>();
-  for (let index = 0; index < argv.length; index += 2) {
-    values.set(argv[index]!, argv[index + 1] ?? "");
-  }
-
-  const modulePath = values.get("--module");
-  const outPath = values.get("--out");
-  if (!modulePath || !outPath) {
-    console.error("uso: node boundary.js --module <fixture_game.mjs> --out <json> [--sizes 1000,10000] [--rounds 10] [--commit <hash>]");
-    process.exit(1);
-  }
-
-  return {
-    modulePath,
-    outPath,
-    sizes: (values.get("--sizes") ?? "1000,10000,100000,1000000").split(",").map(Number),
-    rounds: Number(values.get("--rounds") ?? "10"),
-    commit: values.get("--commit") ?? "",
-  };
-}
-
-async function loadBoundaryRuntime(modulePath: string): Promise<Runtime> {
-  const factory: OlyModuleFactory = async () => {
-    const loaded: { default: OlyModuleFactory } = await import(pathToFileURL(modulePath).href);
-
-    return loaded.default();
-  };
-
-  return loadRuntime(factory, schema);
 }
 
 function spawnEntities(world: World, count: number): void {
@@ -167,30 +126,9 @@ function makeTsManual(count: number): Variant {
   };
 }
 
-function median(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = sorted.length >> 1;
-
-  return sorted.length % 2 === 1 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
-}
-
-// Mesma aritmética em f32 das variantes, para conferir o acumulado sem erro de comparação.
-function expectedPositionX(iterations: number): number {
-  let value = 0;
-  for (let iteration = 0; iteration < iterations; ++iteration) {
-    value = Math.fround(value + DeltaTime);
-  }
-
-  return value;
-}
-
-function rotated<T>(items: T[], shift: number): T[] {
-  return items.map((_, index) => items[(index + shift) % items.length]!);
-}
-
 async function main(): Promise<void> {
-  const options = parseOptions(process.argv.slice(2));
-  const runtime = await loadBoundaryRuntime(options.modulePath);
+  const options = parseOptions(process.argv.slice(2), "uso: node boundary.js --module <fixture_game.mjs> --out <json> [--sizes 1000,10000] [--rounds 10] [--commit <hash>]");
+  const runtime = await loadBenchRuntime(options.modulePath);
   const results: { size: number; variant: VariantName; nsPerEntity: number[]; median: number; min: number; max: number }[] = [];
   const ratios: { size: number; tsEngineOverTsManual: number; tsEngineOverCpp: number; tsEngineRawOverTsManual: number }[] = [];
   const iterationsPerSize: Record<number, number> = {};
@@ -223,7 +161,7 @@ async function main(): Promise<void> {
     }
 
     for (const variant of variants) {
-      const expected = expectedPositionX(executed.get(variant.name)!);
+      const expected = expectedPositionX(executed.get(variant.name)!, DeltaTime);
       const actual = variant.positionX();
       if (Math.abs(actual - expected) > 1e-3 * Math.abs(expected)) {
         console.error(`variante ${variant.name} N=${size}: x=${actual}, esperado ${expected}`);
