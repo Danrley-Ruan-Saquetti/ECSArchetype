@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "oly/bridge/c_api.hpp"
+#include "oly/bridge/engine_api.hpp"
 #include "oly/bridge/schema_registry.hpp"
 #include "oly/core/assert.hpp"
 #include "oly/ecs/component.hpp"
@@ -58,6 +59,19 @@ namespace {
     olyQueryEnd(world, first);
   }
 
+  void systemSpawnOutsideSystem() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5);
+    OlyEntity entity{};
+
+    olySystemSpawn(engine, &entity);
+  }
+
+  void enginePhaseOutOfRange() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5);
+
+    olyEngineAddScriptSystem(engine, 4, "x");
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -68,6 +82,8 @@ namespace {
 int main(int argumentCount, char** arguments) {
   static const std::vector<Case> cases = {
     {"query_end_out_of_order", queryEndOutOfOrder, {"olyQueryEnd", "fora de ordem"}},
+    {"system_spawn_outside_system", systemSpawnOutsideSystem, {"olySystemSpawn", "fora de sistema"}},
+    {"engine_phase_out_of_range", enginePhaseOutOfRange, {"phase"}},
   };
 
   if (argumentCount != 2) {

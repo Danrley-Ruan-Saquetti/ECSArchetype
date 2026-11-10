@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "handles.hpp"
 #include "oly/bridge/schema_registry.hpp"
 #include "oly/bridge/world.hpp"
 #include "oly/core/assert.hpp"
@@ -16,17 +17,6 @@
 
 static_assert(sizeof(OlyEntity) == sizeof(oly::ecs::Entity) && alignof(OlyEntity) == alignof(oly::ecs::Entity),
               "OlyEntity deve ter o mesmo layout de oly::ecs::Entity");
-
-struct OlyIteration {
-  std::optional<oly::ecs::QueryIteration> iteration;
-};
-
-struct OlyWorld {
-  oly::ecs::World world;
-  // Pilha de slots: cresce até a maior profundidade vista e não encolhe; os ponteiros são estáveis.
-  std::vector<std::unique_ptr<OlyIteration>> iterationSlots;
-  uint32_t activeIterations = 0;
-};
 
 namespace oly::bridge {
   namespace {
