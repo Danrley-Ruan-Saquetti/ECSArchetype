@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Roda a escada de variantes intercalada (V0, V1, ..., V0, V1, ...) e grava um JSON por rodada e variante.
 # Uso: tools/run_ladder.sh <rodadas> <bench> [variantes...]   (no host; os binários já precisam estar compilados)
-# ECS_LADDER_EXTRA_ARGS: argumentos extras para o benchmark (ex.: --benchmark_min_time=0.01s, só para teste).
+# OLY_LADDER_EXTRA_ARGS: argumentos extras para o benchmark (ex.: --benchmark_min_time=0.01s, só para teste).
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 
@@ -19,9 +19,9 @@ if [ "${#variants[@]}" -eq 0 ]; then
 fi
 
 cd "$(dirname "$0")/.."
-output_directory="bench/results/wasm/runs/$bench"
+output_directory="docs/benchmarks/wasm/runs/$bench"
 mkdir -p "$output_directory"
-protocol="--benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_format=json ${ECS_LADDER_EXTRA_ARGS:-}"
+protocol="--benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_format=json ${OLY_LADDER_EXTRA_ARGS:-}"
 
 command_for() {
   case $1 in

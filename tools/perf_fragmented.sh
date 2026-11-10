@@ -1,5 +1,5 @@
 #!/bin/sh
-# Uso: perf_fragmented.sh <bench_fragmented> <saida>
+# Uso: perf_fragmented.sh <ecs_bench_fragmented> <saida>
 # Para cada A roda BM_IterateFragmented/A sob `perf stat` e escreve uma linha CSV:
 #   A,ns_per_entity,cycles,instructions,cache_misses_per_entity,l1d_misses_per_entity
 # Os eventos são divididos por (iterações × 1M entidades). Eles incluem a montagem do mundo

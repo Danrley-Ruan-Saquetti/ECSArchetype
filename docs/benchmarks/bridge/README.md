@@ -1,12 +1,14 @@
 # Benchmark da fronteira WASM↔TS — engine fase 1
 
-Resultado bruto: `boundary_fase1.json` (commit `e8b564c`, 2026-11-09). Gerado por `engine/bench/boundary.ts`:
+> Os comandos abaixo usam os caminhos atuais; a fase 1 os rodou com `make engine-ts` e o preset `wasm-engine-release`.
+
+Resultado bruto: `boundary_fase1.json` (commit `e8b564c`, 2026-11-09). Gerado por `engine/testing/bench/boundary.ts`:
 
 ```sh
 WC="docker compose run --rm wasm"
-$WC sh -c 'make engine-ts && cmake --preset wasm-engine-release && cmake --build --preset wasm-engine-release -j'
-$WC node build/ts/bench/boundary.js --module build/wasm-engine-release/engine/fixture_game.mjs \
-  --out bench/results/engine/boundary_fase1.json --commit $(git rev-parse --short HEAD)
+$WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
+$WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs \
+  --out docs/benchmarks/bridge/boundary_fase1.json --commit $(git rev-parse --short HEAD)
 ```
 
 ## Ambiente
@@ -59,3 +61,16 @@ Conjunto de trabalho da engine = N × (8 + 8 + 8) B (`Position` lida e escrita +
 - Sobre a decisão SoA-por-campo (§4.2): o ganho de ter cada campo como typed array com passo é visível no `raw()` (próximo do manual) e some no
   acessor com chamada de método por elemento. Para laços quentes em TS, o caminho é `raw()` ou deixar o laço no C++; o `get`/`set` serve para
   código de jogo menos quente. Não há meta numérica nesta fase (§7).
+
+## Após a modularização (`boundary_oly.json`)
+
+Mesmo protocolo, executado com `OlyWorld`/`olyQueryBegin` e `@oly/core`; os rótulos `ts-engine` e `ts-engine-raw` ficam para comparar com a fase 1. Sem meta numérica.
+
+| N | ts-engine / ts-manual (fase 1 → Oly) | ts-engine / cpp | ts-engine-raw / ts-manual |
+|---:|---:|---:|---:|
+| 1000 | 8,93 → 9,34 | 11,90 → 12,85 | 6,37 → 5,41 |
+| 10000 | 2,01 → 2,17 | 13,43 → 13,79 | 1,11 → 1,22 |
+| 100000 | 1,87 → 1,70 | 15,75 → 14,42 | 1,19 → 1,07 |
+| 1000000 | 2,05 → 1,94 | 9,59 → 10,48 | 1,45 → 1,38 |
+
+As razões ficam na mesma faixa da fase 1 (diferenças dentro da dispersão de ±15% do ambiente); a ponte nova não mudou o custo do laço.
