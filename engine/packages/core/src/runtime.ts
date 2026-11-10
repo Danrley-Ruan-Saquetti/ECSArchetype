@@ -2,13 +2,14 @@ import { Bridge } from "./bridge.js";
 import { Engine, invokeSystem, type EngineConfig } from "./engine.js";
 import { ContractError, SchemaMismatchError } from "./errors.js";
 import type { OlyModule, OlyModuleFactory } from "./module.js";
-import type { Schema, SchemaType } from "./schema.js";
+import type { EventType, Schema, SchemaType } from "./schema.js";
 import { World } from "./world.js";
 
 interface RuntimeInternals {
   bridgeOf(runtime: Runtime): Bridge;
   moduleOf(runtime: Runtime): OlyModule;
   componentIdOf(runtime: Runtime, type: SchemaType): number;
+  eventIndexOf(runtime: Runtime, type: EventType): number;
 }
 
 let runtimeInternals!: RuntimeInternals;
@@ -17,7 +18,23 @@ function hex(value: number): string {
   return `0x${(value >>> 0).toString(16)}`;
 }
 
+function firstDivergentEvent(module: OlyModule, schema: Schema): string | null {
+  const count = Math.min(module._olySchemaEventCount(), schema.events.length);
+  for (let index = 0; index < count; ++index) {
+    const type = schema.events[index]!;
+    if (module._olySchemaEventSize(index) !== type.layout.size || module._olySchemaEventAlignment(index) !== type.layout.alignment) {
+      return type.name;
+    }
+  }
+
+  return null;
+}
+
 function firstDivergentType(module: OlyModule, schema: Schema): string | null {
+  return firstDivergentComponent(module, schema) ?? firstDivergentEvent(module, schema);
+}
+
+function firstDivergentComponent(module: OlyModule, schema: Schema): string | null {
   const count = Math.min(module._olySchemaComponentCount(), schema.types.length);
   for (let index = 0; index < count; ++index) {
     const type = schema.types[index]!;
@@ -50,6 +67,14 @@ export class Runtime {
         }
 
         return runtime.#componentIds[type.schemaIndex]!;
+      },
+      eventIndexOf: (runtime, type) => {
+        if (runtime.schema.events[type.schemaIndex] !== type) {
+          throw new ContractError(`event=${type.name}: tipo não pertence ao esquema deste runtime`);
+        }
+
+        // O WASM declara os eventos do esquema na ordem dele: o índice no esquema é o EventTypeId.
+        return type.schemaIndex;
       },
     };
   }
@@ -107,6 +132,10 @@ export function componentIdOf(runtime: Runtime, type: SchemaType): number {
   return runtimeInternals.componentIdOf(runtime, type);
 }
 
+export function eventIndexOf(runtime: Runtime, type: EventType): number {
+  return runtimeInternals.eventIndexOf(runtime, type);
+}
+
 /**
  * Carrega o módulo WASM e confere que ele foi compilado com `schema`. Rejeita com SchemaMismatchError se o
  * hash, o nº de tipos ou o tamanho/alinhamento de algum tipo diferirem.
@@ -116,12 +145,14 @@ export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Pr
 
   const wasmHash = module._olySchemaHash() >>> 0;
   const divergent = firstDivergentType(module, schema);
-  const countMatches = module._olySchemaComponentCount() === schema.types.length;
+  const countMatches =
+    module._olySchemaComponentCount() === schema.types.length && module._olySchemaEventCount() === schema.events.length;
   if (wasmHash !== schema.hash || !countMatches || divergent !== null) {
     throw new SchemaMismatchError(
       `esquema do WASM (${hex(wasmHash)}) difere do esquema TS (${hex(schema.hash)}); ` +
         `tipos no WASM: ${module._olySchemaComponentCount()}, no TS: ${schema.types.length}; ` +
-        `primeiro tipo divergente: ${divergent ?? "nenhum por tamanho (campos ou ordem mudaram)"}; recompile o WASM`,
+        `eventos no WASM: ${module._olySchemaEventCount()}, no TS: ${schema.events.length}; ` +
+        `primeiro tipo ou evento divergente: ${divergent ?? "nenhum por tamanho (campos ou ordem mudaram)"}; recompile o WASM`,
     );
   }
 

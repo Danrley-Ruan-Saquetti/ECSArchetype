@@ -30,6 +30,11 @@ OLY_API uint32_t olySchemaComponentCount();
 OLY_API uint32_t olySchemaComponentId(uint32_t schemaIndex);
 OLY_API uint32_t olyComponentSize(uint32_t componentId); // 0 para tag
 OLY_API uint32_t olyComponentAlignment(uint32_t componentId);
+OLY_API uint32_t olySchemaEventCount();
+// eventIndex < olySchemaEventCount(), sem verificação. O índice é o do evento no esquema, que é também o seu
+// tipo de evento na Engine (olyEngineEmit, olyEngineAdd*Handler).
+OLY_API uint32_t olySchemaEventSize(uint32_t eventIndex);
+OLY_API uint32_t olySchemaEventAlignment(uint32_t eventIndex);
 
 // Mudanças estruturais (spawn, destroy, add, remove) exigem nenhuma iteração aberta; destroy, add e remove
 // também exigem entidade viva (OLY_ASSERT). Qualquer mudança estrutural invalida os ponteiros de

@@ -7,6 +7,7 @@
 
 #include "components.hpp"
 #include "oly/bridge/world.hpp"
+#include "test_events.hpp"
 
 namespace {
   // 2 + readCount + writeCount para a query read A, write B: [count, entidades, coluna A, coluna B].
@@ -207,4 +208,10 @@ TEST_CASE("iteração repetida reaproveita o slot") {
   olyQueryEnd(fixture.world, second);
 
   CHECK(first == second);
+}
+
+TEST_CASE("eventos do esquema expostos pela API C") {
+  CHECK(olySchemaEventCount() == 1);
+  CHECK(olySchemaEventSize(0) == sizeof(BridgeTestEvent));
+  CHECK(olySchemaEventAlignment(0) == alignof(BridgeTestEvent));
 }

@@ -5,6 +5,7 @@ ContractError
 Engine
 EngineConfig
 Entity
+EventType
 FieldLayout
 Fields
 NullEntity
@@ -33,6 +34,7 @@ component
 defineSchema
 entityGeneration
 entityIndex
+event
 formatEntity
 loadRuntime
 tag

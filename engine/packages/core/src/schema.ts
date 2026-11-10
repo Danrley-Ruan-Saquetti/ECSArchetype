@@ -24,8 +24,20 @@ export interface TagType<Name extends string = string> {
 
 export type SchemaType = ComponentType | TagType;
 
+export interface EventType<Name extends string = string, F extends Fields = Fields> {
+  readonly kind: "event";
+  readonly name: Name;
+  readonly fields: F;
+  readonly layout: ComponentLayout;
+  /** Posição em `schema.events`; -1 até o evento entrar num esquema por defineSchema. */
+  readonly schemaIndex: number;
+}
+
 export interface Schema {
+  /** Componentes e tags; o índice deles é o do ComponentId. */
   readonly types: readonly SchemaType[];
+  /** Eventos na ordem de declaração, que é a ordem de despacho. */
+  readonly events: readonly EventType[];
   readonly hash: number;
 }
 
@@ -53,6 +65,17 @@ function validateFieldName(typeName: string, field: string): void {
   }
 }
 
+function validateFields(name: string, fields: Fields, emptyMessage: string): void {
+  validateTypeName(name);
+  const fieldNames = Object.keys(fields);
+  if (fieldNames.length === 0) {
+    throw new ContractError(emptyMessage);
+  }
+  for (const field of fieldNames) {
+    validateFieldName(name, field);
+  }
+}
+
 /**
  * Lança ContractError se o nome não for PascalCase, se algum campo não for camelCase ou for palavra reservada
  * do C++, ou se não houver campos (use `tag`).
@@ -61,16 +84,16 @@ export function component<const Name extends string, const F extends Fields>(
   name: Name,
   fields: F,
 ): ComponentType<Name, F> {
-  validateTypeName(name);
-  const fieldNames = Object.keys(fields);
-  if (fieldNames.length === 0) {
-    throw new ContractError(`componente ${name} sem campos: use tag("${name}")`);
-  }
-  for (const field of fieldNames) {
-    validateFieldName(name, field);
-  }
+  validateFields(name, fields, `componente ${name} sem campos: use tag("${name}")`);
 
   return { kind: "component", name, fields, layout: computeLayout(fields), schemaIndex: -1 };
+}
+
+/** Mesmas validações de `component`; um evento sem dados não existe. */
+export function event<const Name extends string, const F extends Fields>(name: Name, fields: F): EventType<Name, F> {
+  validateFields(name, fields, `evento ${name} sem campos: um evento precisa de ao menos um campo`);
+
+  return { kind: "event", name, fields, layout: computeLayout(fields), schemaIndex: -1 };
 }
 
 export function tag<const Name extends string>(name: Name): TagType<Name> {
@@ -80,27 +103,32 @@ export function tag<const Name extends string>(name: Name): TagType<Name> {
 }
 
 /**
- * Atribui `schemaIndex` na ordem de `types` e congela os tipos recebidos. Lança ContractError para nome repetido
- * ou para tipo que já pertence a outro esquema.
+ * Atribui `schemaIndex` na ordem de cada grupo (tipos, eventos) e congela o que recebeu. Lança ContractError para
+ * nome repetido (entre tipos e eventos também) ou para tipo/evento que já pertence a outro esquema.
  */
-export function defineSchema(types: readonly SchemaType[]): Schema {
+export function defineSchema(entries: readonly (SchemaType | EventType)[]): Schema {
   const names = new Set<string>();
-  for (const type of types) {
-    if (names.has(type.name)) {
-      throw new ContractError(`defineSchema: nome repetido "${type.name}"`);
+  for (const entry of entries) {
+    if (names.has(entry.name)) {
+      throw new ContractError(`defineSchema: nome repetido "${entry.name}"`);
     }
-    if (type.schemaIndex >= 0) {
-      throw new ContractError(`defineSchema: ${type.name} já pertence a outro esquema`);
+    if (entry.schemaIndex >= 0) {
+      throw new ContractError(`defineSchema: ${entry.name} já pertence a outro esquema`);
     }
-    names.add(type.name);
+    names.add(entry.name);
   }
 
-  types.forEach((type, index) => {
-    (type as { schemaIndex: number }).schemaIndex = index;
-    Object.freeze(type);
-  });
+  const types = entries.filter((entry): entry is SchemaType => entry.kind !== "event");
+  const events = entries.filter((entry): entry is EventType => entry.kind === "event");
+  for (const group of [types, events]) {
+    group.forEach((entry, index) => {
+      (entry as { schemaIndex: number }).schemaIndex = index;
+      Object.freeze(entry);
+    });
+  }
 
-  const frozen = Object.freeze([...types]);
+  const frozenTypes = Object.freeze([...types]);
+  const frozenEvents = Object.freeze([...events]);
 
-  return Object.freeze({ types: frozen, hash: schemaHash(frozen) });
+  return Object.freeze({ types: frozenTypes, events: frozenEvents, hash: schemaHash(frozenTypes, frozenEvents) });
 }

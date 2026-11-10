@@ -20,6 +20,10 @@ namespace oly::bridge {
   std::span<const oly::ecs::ComponentId> schemaComponentIds() {
     return {};
   }
+
+  std::span<const SchemaEvent> schemaEvents() {
+    return {};
+  }
 }
 
 namespace {

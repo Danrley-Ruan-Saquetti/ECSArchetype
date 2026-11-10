@@ -9,8 +9,8 @@ export type { RawField, ReadField, ReadView, WriteField, WriteView } from "./fie
 export { Block, Query } from "./query.js";
 export type { QuerySpec } from "./query.js";
 export { loadRuntime, Runtime } from "./runtime.js";
-export { component, defineSchema, tag } from "./schema.js";
-export type { ComponentType, Fields, Schema, SchemaType, TagType, ValueOf } from "./schema.js";
+export { component, defineSchema, event, tag } from "./schema.js";
+export type { ComponentType, EventType, Fields, Schema, SchemaType, TagType, ValueOf } from "./schema.js";
 export { SystemContext } from "./system_context.js";
 export type { SystemFunction } from "./system_context.js";
 export { World } from "./world.js";

@@ -1,4 +1,4 @@
-import type { ComponentType, ScalarType, Schema, SchemaType } from "@oly/core";
+import type { ComponentLayout, EventType, ScalarType, Schema, SchemaType } from "@oly/core";
 
 const cppTypes: Readonly<Record<ScalarType, string>> = {
   f32: "float",
@@ -12,37 +12,62 @@ const cppTypes: Readonly<Record<ScalarType, string>> = {
   entity: "oly::ecs::Entity",
 };
 
-function emitStruct(type: SchemaType): string {
+function emitStruct(type: SchemaType | EventType): string {
   if (type.kind === "tag") {
     return `struct ${type.name} {};\n`;
   }
 
   const fields = type.layout.fields.map((field) => `  ${cppTypes[field.type]} ${field.name};\n`).join("");
 
-  return `struct ${type.name} {\n${fields}};\n${emitLayoutAsserts(type)}`;
+  return `struct ${type.name} {\n${fields}};\n${emitLayoutAsserts(type.name, type.layout)}`;
 }
 
-function emitLayoutAsserts(type: ComponentType): string {
-  const { size, alignment, fields } = type.layout;
-  const message = `"esquema: layout de ${type.name} diverge do TS"`;
-  const sizeAssert = `static_assert(sizeof(${type.name}) == ${size} && alignof(${type.name}) == ${alignment}, ${message});\n`;
+function emitLayoutAsserts(name: string, layout: ComponentLayout): string {
+  const { size, alignment, fields } = layout;
+  const message = `"esquema: layout de ${name} diverge do TS"`;
+  const sizeAssert = `static_assert(sizeof(${name}) == ${size} && alignof(${name}) == ${alignment}, ${message});\n`;
   const offsetAsserts = fields
-    .map((field) => `static_assert(offsetof(${type.name}, ${field.name}) == ${field.offset}, ${message});\n`)
+    .map((field) => `static_assert(offsetof(${name}, ${field.name}) == ${field.offset}, ${message});\n`)
     .join("");
 
   return sizeAssert + offsetAsserts;
 }
 
 export function emitHeader(schema: Schema): string {
-  const structs = schema.types.map(emitStruct).join("\n");
+  const structs = [...schema.types, ...schema.events].map(emitStruct).join("\n");
 
   return `// Gerado por oly-codegen: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n\n${structs}`;
+}
+
+function emitEventsRegistry(schema: Schema): string {
+  if (schema.events.length === 0) {
+    return `  std::span<const SchemaEvent> schemaEvents() {
+    return {};
+  }
+`;
+  }
+
+  const entries = schema.events
+    .map(
+      (event) =>
+        `      {"${event.name}", sizeof(${event.name}), alignof(${event.name}), [](oly::app::Engine& engine) { engine.declareEvent<${event.name}>("${event.name}"); }}`,
+    )
+    .join(",\n");
+
+  return `  std::span<const SchemaEvent> schemaEvents() {
+    static const SchemaEvent events[] = {
+${entries},
+    };
+    return events;
+  }
+`;
 }
 
 export function emitRegistry(schema: Schema): string {
   const ids = schema.types.map((type) => `      oly::ecs::componentId<${type.name}>()`).join(",\n");
 
   return `// Gerado por oly-codegen: não edite.
+#include "oly/app/engine.hpp"
 #include "oly/bridge/schema_registry.hpp"
 #include "schema.generated.hpp"
 
@@ -56,6 +81,7 @@ namespace oly::bridge {
 ${ids}};
     return ids;
   }
-}
+
+${emitEventsRegistry(schema)}}
 `;
 }

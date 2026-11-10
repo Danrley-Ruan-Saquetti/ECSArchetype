@@ -75,6 +75,18 @@ uint32_t olyComponentAlignment(uint32_t componentId) {
   return oly::ecs::typeInfo(componentId).alignment;
 }
 
+uint32_t olySchemaEventCount() {
+  return static_cast<uint32_t>(oly::bridge::schemaEvents().size());
+}
+
+uint32_t olySchemaEventSize(uint32_t eventIndex) {
+  return oly::bridge::schemaEvents()[eventIndex].size;
+}
+
+uint32_t olySchemaEventAlignment(uint32_t eventIndex) {
+  return oly::bridge::schemaEvents()[eventIndex].alignment;
+}
+
 void olyEntitySpawn(OlyWorld* world, OlyEntity* out) {
   const oly::ecs::Entity entity = world->world.spawn();
   out->index = entity.index;

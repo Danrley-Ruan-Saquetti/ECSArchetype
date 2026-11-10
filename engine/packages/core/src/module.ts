@@ -11,6 +11,9 @@ export interface OlyModule {
   _olySchemaComponentId(schemaIndex: number): number;
   _olyComponentSize(componentId: number): number;
   _olyComponentAlignment(componentId: number): number;
+  _olySchemaEventCount(): number;
+  _olySchemaEventSize(eventIndex: number): number;
+  _olySchemaEventAlignment(eventIndex: number): number;
   _olyEntitySpawn(world: number, out: number): void;
   _olyEntityDestroy(world: number, index: number, generation: number): void;
   _olyEntityIsAlive(world: number, index: number, generation: number): number;

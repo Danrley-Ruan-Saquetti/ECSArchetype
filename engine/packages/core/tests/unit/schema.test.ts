@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ContractError, component, defineSchema, tag } from "@oly/core";
+import { ContractError, component, defineSchema, event, tag } from "@oly/core";
 import { canonicalSchema, fnv1a32, schemaHash } from "@oly/core/internal";
 
 test("component sem campos é erro", () => {
@@ -67,4 +67,66 @@ test("defineSchema guarda o hash dos seus tipos", () => {
   const schema = defineSchema([component("H", { x: "f32" }), tag("T")]);
 
   assert.equal(schema.hash, schemaHash(schema.types));
+});
+
+test("event sem campos é erro", () => {
+  assert.throws(() => event("Hit", {}), ContractError);
+});
+
+test("event valida nome e campos como component", () => {
+  assert.throws(() => event("hit", { x: "f32" }), ContractError);
+  assert.throws(() => event("Hit", { class: "f32" }), ContractError);
+});
+
+test("defineSchema separa tipos e eventos, cada um com o seu índice", () => {
+  const typeA = component("A", { x: "f32" });
+  const hit = event("Hit", { target: "entity", amount: "f32" });
+  const typeT = tag("T");
+  const boom = event("Boom", { power: "u32" });
+
+  const schema = defineSchema([typeA, hit, typeT, boom]);
+
+  assert.deepEqual(schema.types, [typeA, typeT]);
+  assert.deepEqual(schema.events, [hit, boom]);
+  assert.equal(hit.schemaIndex, 0);
+  assert.equal(boom.schemaIndex, 1);
+  assert.equal(typeA.schemaIndex, 0);
+  assert.equal(typeT.schemaIndex, 1);
+});
+
+test("evento fora de esquema tem schemaIndex -1 e o layout dos campos", () => {
+  const loose = event("Loose", { a: "u8", b: "f64" });
+
+  assert.equal(loose.kind, "event");
+  assert.equal(loose.schemaIndex, -1);
+  assert.equal(loose.layout.size, 16);
+});
+
+test("nome repetido entre componente e evento é erro", () => {
+  assert.throws(() => defineSchema([component("Dup", { x: "f32" }), event("Dup", { y: "f32" })]), ContractError);
+});
+
+test("evento já usado em outro esquema é erro", () => {
+  const shared = event("SharedEvent", { x: "f32" });
+  defineSchema([shared]);
+
+  assert.throws(() => defineSchema([shared]), ContractError);
+});
+
+test("hash de esquema sem eventos não muda", () => {
+  assert.equal(schemaHash([component("Position", { x: "f32", y: "f32" }), tag("Player")]), 0x837c124);
+});
+
+test("forma canônica acrescenta os eventos depois dos tipos", () => {
+  assert.equal(
+    canonicalSchema([component("Position", { x: "f32", y: "f32" })], [event("Hit", { target: "entity", amount: "f32" })]),
+    "Position{x:f32,y:f32};!Hit{target:entity,amount:f32};",
+  );
+});
+
+test("acrescentar um evento muda o hash", () => {
+  const types = [component("A", { x: "f32" })];
+
+  assert.notEqual(schemaHash(types), schemaHash(types, [event("E", { x: "f32" })]));
+  assert.equal(defineSchema([component("A2", { x: "f32" }), event("E2", { x: "f32" })]).hash, schemaHash([component("A2", { x: "f32" })], [event("E2", { x: "f32" })]));
 });
