@@ -1,6 +1,6 @@
 import { Bridge } from "./bridge.js";
 import { EngineContractError, SchemaMismatchError } from "./errors.js";
-import type { EngineModule, EngineModuleFactory } from "./module.js";
+import type { OlyModule, OlyModuleFactory } from "./module.js";
 import type { Schema, SchemaType } from "./schema.js";
 import { World } from "./world.js";
 
@@ -8,14 +8,14 @@ function hex(value: number): string {
   return `0x${(value >>> 0).toString(16)}`;
 }
 
-function firstDivergentType(module: EngineModule, schema: Schema): string | null {
-  const count = Math.min(module._engineSchemaComponentCount(), schema.types.length);
+function firstDivergentType(module: OlyModule, schema: Schema): string | null {
+  const count = Math.min(module._olySchemaComponentCount(), schema.types.length);
   for (let index = 0; index < count; ++index) {
     const type = schema.types[index]!;
-    const componentId = module._engineSchemaComponentId(index);
+    const componentId = module._olySchemaComponentId(index);
     const expectedSize = type.kind === "component" ? type.layout.size : 0;
     const expectedAlignment = type.kind === "component" ? type.layout.alignment : 1;
-    if (module._engineComponentSize(componentId) !== expectedSize || module._engineComponentAlignment(componentId) !== expectedAlignment) {
+    if (module._olyComponentSize(componentId) !== expectedSize || module._olyComponentAlignment(componentId) !== expectedAlignment) {
       return type.name;
     }
   }
@@ -25,16 +25,16 @@ function firstDivergentType(module: EngineModule, schema: Schema): string | null
 
 export class EngineRuntime {
   readonly schema: Schema;
-  readonly module: EngineModule;
+  readonly module: OlyModule;
   readonly bridge: Bridge;
 
   private readonly componentIds: number[];
 
-  constructor(module: EngineModule, schema: Schema) {
+  constructor(module: OlyModule, schema: Schema) {
     this.module = module;
     this.schema = schema;
     this.bridge = new Bridge(module, schema);
-    this.componentIds = schema.types.map((_, index) => module._engineSchemaComponentId(index));
+    this.componentIds = schema.types.map((_, index) => module._olySchemaComponentId(index));
   }
 
   componentId(type: SchemaType): number {
@@ -50,16 +50,16 @@ export class EngineRuntime {
   }
 }
 
-export async function loadEngine(factory: EngineModuleFactory, schema: Schema): Promise<EngineRuntime> {
+export async function loadEngine(factory: OlyModuleFactory, schema: Schema): Promise<EngineRuntime> {
   const module = await factory();
 
-  const wasmHash = module._engineSchemaHash() >>> 0;
+  const wasmHash = module._olySchemaHash() >>> 0;
   const divergent = firstDivergentType(module, schema);
-  const countMatches = module._engineSchemaComponentCount() === schema.types.length;
+  const countMatches = module._olySchemaComponentCount() === schema.types.length;
   if (wasmHash !== schema.hash || !countMatches || divergent !== null) {
     throw new SchemaMismatchError(
       `esquema do WASM (${hex(wasmHash)}) difere do esquema TS (${hex(schema.hash)}); ` +
-        `tipos no WASM: ${module._engineSchemaComponentCount()}, no TS: ${schema.types.length}; ` +
+        `tipos no WASM: ${module._olySchemaComponentCount()}, no TS: ${schema.types.length}; ` +
         `primeiro tipo divergente: ${divergent ?? "nenhum por tamanho (campos ou ordem mudaram)"}; recompile o WASM`,
     );
   }

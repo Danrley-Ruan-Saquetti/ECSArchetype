@@ -46,7 +46,7 @@ export class World {
       this.assertKnownFields("spawn", null, type, value);
     }
 
-    const entity = this.bridge.create(this.handle);
+    const entity = this.bridge.spawn(this.handle);
     for (const type of types) {
       this.addToEntity(entity, type, valuesByName[type.name]);
     }
@@ -152,7 +152,7 @@ export class World {
     const ids = [...read, ...write, ...withIndexes.map((index) => this.runtime.schema.types[index]!), ...withoutIndexes.map((index) => this.runtime.schema.types[index]!)].map(
       (type) => this.runtime.componentId(type),
     );
-    const handle = this.bridge.query(this.handle, ids, read.length, write.length, withIndexes.length, withoutIndexes.length);
+    const handle = this.bridge.queryCreate(this.handle, ids, read.length, write.length, withIndexes.length, withoutIndexes.length);
     const query = new Query(this, this.bridge, handle, read, write);
     this.queries.set(key, query);
 

@@ -1,6 +1,6 @@
 import { entityGeneration, entityIndex, packEntity, type Entity } from "./entity.js";
 import type { ScalarType } from "./layout.js";
-import type { EngineModule } from "./module.js";
+import type { OlyModule } from "./module.js";
 import type { Schema } from "./schema.js";
 
 // Views sobre o buffer inteiro do WASM. O buffer muda quando a memória cresce: `refresh` recria as views.
@@ -88,15 +88,16 @@ export function writeScalar(heap: Heap, type: ScalarType, address: number, value
   }
 }
 
-const OutputOffset = 0; // EngineEntity (8 B) e depois o ponteiro de descritores (4 B)
+const OutputOffset = 0; // OlyEntity (8 B), o ponteiro de descritores (4 B) e o nº de blocos (4 B)
 const DescriptorsOffset = 8;
+const BlockCountOffset = 12;
 const ValueOffset = 16;
 const MessageCapacity = 256;
 const InitialIdCapacity = 32;
 
 // Único lugar que chama exports do WASM. Toda chamada que pode alocar no WASM termina em `sync()`.
 export class Bridge {
-  readonly module: EngineModule;
+  readonly module: OlyModule;
   readonly heap: Heap;
 
   private scratch: number;
@@ -104,7 +105,7 @@ export class Bridge {
   private idsPointer: number;
   private idsCapacity = InitialIdCapacity;
 
-  constructor(module: EngineModule, schema: Schema) {
+  constructor(module: OlyModule, schema: Schema) {
     this.module = module;
     this.heap = new Heap(module.HEAPU8.buffer as ArrayBuffer);
 
@@ -141,18 +142,18 @@ export class Bridge {
   }
 
   worldCreate(): number {
-    const world = this.module._engineWorldCreate() >>> 0;
+    const world = this.module._olyWorldCreate() >>> 0;
     this.sync();
 
     return world;
   }
 
   worldDestroy(world: number): void {
-    this.module._engineWorldDestroy(world);
+    this.module._olyWorldDestroy(world);
   }
 
-  create(world: number): Entity {
-    this.module._engineCreate(world, this.scratch + OutputOffset);
+  spawn(world: number): Entity {
+    this.module._olyEntitySpawn(world, this.scratch + OutputOffset);
     this.sync();
     const base = (this.scratch + OutputOffset) >> 2;
 
@@ -160,34 +161,34 @@ export class Bridge {
   }
 
   destroy(world: number, entity: Entity): void {
-    this.module._engineDestroy(world, entityIndex(entity), entityGeneration(entity));
+    this.module._olyEntityDestroy(world, entityIndex(entity), entityGeneration(entity));
     this.sync();
   }
 
   isAlive(world: number, entity: Entity): boolean {
-    return this.module._engineIsAlive(world, entityIndex(entity), entityGeneration(entity)) === 1;
+    return this.module._olyEntityIsAlive(world, entityIndex(entity), entityGeneration(entity)) === 1;
   }
 
   add(world: number, entity: Entity, componentId: number, valuePointer: number): void {
-    this.module._engineAdd(world, entityIndex(entity), entityGeneration(entity), componentId, valuePointer);
+    this.module._olyComponentAdd(world, entityIndex(entity), entityGeneration(entity), componentId, valuePointer);
     this.sync();
   }
 
   remove(world: number, entity: Entity, componentId: number): void {
-    this.module._engineRemove(world, entityIndex(entity), entityGeneration(entity), componentId);
+    this.module._olyComponentRemove(world, entityIndex(entity), entityGeneration(entity), componentId);
     this.sync();
   }
 
   has(world: number, entity: Entity, componentId: number): boolean {
-    return this.module._engineHas(world, entityIndex(entity), entityGeneration(entity), componentId) === 1;
+    return this.module._olyComponentHas(world, entityIndex(entity), entityGeneration(entity), componentId) === 1;
   }
 
   // Endereço do componente, ou 0 se a entidade está morta, o componente ausente ou é tag.
   get(world: number, entity: Entity, componentId: number): number {
-    return this.module._engineGet(world, entityIndex(entity), entityGeneration(entity), componentId) >>> 0;
+    return this.module._olyComponentGet(world, entityIndex(entity), entityGeneration(entity), componentId) >>> 0;
   }
 
-  query(world: number, ids: readonly number[], readCount: number, writeCount: number, withCount: number, withoutCount: number): number {
+  queryCreate(world: number, ids: readonly number[], readCount: number, writeCount: number, withCount: number, withoutCount: number): number {
     if (ids.length > this.idsCapacity) {
       this.free(this.idsPointer);
       this.idsCapacity = Math.max(ids.length, this.idsCapacity * 2);
@@ -199,26 +200,30 @@ export class Bridge {
       this.heap.u32[base + position] = id;
     });
 
-    const query = this.module._engineQuery(world, this.idsPointer, readCount, writeCount, withCount, withoutCount) >>> 0;
+    const query = this.module._olyQueryCreate(world, this.idsPointer, readCount, writeCount, withCount, withoutCount) >>> 0;
     this.sync();
 
     return query;
   }
 
-  queryBegin(world: number, query: number): { blockCount: number; descriptors: number } {
-    const blockCount = this.module._engineQueryBegin(world, query, this.scratch + DescriptorsOffset) >>> 0;
+  queryBegin(world: number, query: number): { iteration: number; blockCount: number; descriptors: number } {
+    const iteration = this.module._olyQueryBegin(world, query, this.scratch + BlockCountOffset, this.scratch + DescriptorsOffset) >>> 0;
     this.sync();
 
-    return { blockCount, descriptors: this.heap.u32[(this.scratch + DescriptorsOffset) >> 2]! };
+    return {
+      iteration,
+      blockCount: this.heap.u32[(this.scratch + BlockCountOffset) >> 2]!,
+      descriptors: this.heap.u32[(this.scratch + DescriptorsOffset) >> 2]!,
+    };
   }
 
-  queryEnd(world: number, query: number): void {
-    this.module._engineQueryEnd(world, query);
+  queryEnd(world: number, iteration: number): void {
+    this.module._olyQueryEnd(world, iteration);
   }
 
   checkInvariants(world: number): string | null {
     const message = this.scratch + ValueOffset + this.valueCapacity;
-    const consistent = this.module._engineCheckInvariants(world, message, MessageCapacity) === 1;
+    const consistent = this.module._olyWorldCheckInvariants(world, message, MessageCapacity) === 1;
     this.sync();
     if (consistent) {
       return null;

@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 
 import schema, { Position, Velocity } from "../fixture/schema.js";
 import type { Entity } from "../ts/entity.js";
-import type { EngineModule, EngineModuleFactory } from "../ts/module.js";
+import type { OlyModule, OlyModuleFactory } from "../ts/module.js";
 import type { Query } from "../ts/query.js";
 import { loadEngine, type EngineRuntime } from "../ts/runtime.js";
 import type { World } from "../ts/world.js";
@@ -21,7 +21,7 @@ interface Variant {
   dispose(): void;
 }
 
-interface FixtureModule extends EngineModule {
+interface FixtureModule extends OlyModule {
   _fixtureMove(world: number, deltaTime: number): void;
 }
 
@@ -56,8 +56,8 @@ function parseOptions(argv: string[]): Options {
 }
 
 async function loadRuntime(modulePath: string): Promise<EngineRuntime> {
-  const factory: EngineModuleFactory = async () => {
-    const loaded: { default: EngineModuleFactory } = await import(pathToFileURL(modulePath).href);
+  const factory: OlyModuleFactory = async () => {
+    const loaded: { default: OlyModuleFactory } = await import(pathToFileURL(modulePath).href);
 
     return loaded.default();
   };

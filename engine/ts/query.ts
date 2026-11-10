@@ -107,7 +107,7 @@ export class Query {
   eachBlock(callback: (block: Block) => void): void {
     this.world.assertUsable("eachBlock");
 
-    const { blockCount, descriptors } = this.bridge.queryBegin(this.world.handle, this.handle);
+    const { iteration, blockCount, descriptors } = this.bridge.queryBegin(this.world.handle, this.handle);
     const stride = 2 + this.components.length;
     // Cópia: um eachBlock aninhado sobrescreve o buffer de descritores do lado C++.
     const start = descriptors >> 2;
@@ -125,7 +125,7 @@ export class Query {
     } finally {
       current?.invalidate();
       this.world.iterationDepth--;
-      this.bridge.queryEnd(this.world.handle, this.handle);
+      this.bridge.queryEnd(this.world.handle, iteration);
     }
   }
 }
