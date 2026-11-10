@@ -5,9 +5,13 @@ ContractError
 Engine
 EngineConfig
 Entity
+EventBatch
 EventType
 FieldLayout
 Fields
+HandlerContext
+HandlerFunction
+HandlerRegistration
 NullEntity
 OlyModuleFactory
 Phase

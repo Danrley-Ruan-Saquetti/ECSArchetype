@@ -89,7 +89,7 @@ export function writeScalar(heap: Heap, type: ScalarType, address: number, value
 }
 
 // Área de rascunho: OlyEntity de saída (8 B), ponteiro de descritores (4 B), nº de blocos (4 B), valor de um
-// componente (`valueCapacity` B) e, por último, a mensagem de checkInvariants.
+// componente ou evento (`valueCapacity` B) e, por último, a mensagem de checkInvariants.
 const OutputOffset = 0;
 const DescriptorsOffset = 8;
 const BlockCountOffset = 12;
@@ -115,13 +115,17 @@ export class Bridge {
     this.module = module;
     this.heap = new Heap(module.HEAPU8.buffer as ArrayBuffer);
 
-    this.valueCapacity = Math.max(8, ...schema.types.map((type) => (type.kind === "component" ? type.layout.size : 0)));
+    this.valueCapacity = Math.max(
+      8,
+      ...schema.types.map((type) => (type.kind === "component" ? type.layout.size : 0)),
+      ...schema.events.map((type) => type.layout.size),
+    );
     this.scratch = this.allocate(ValueOffset + this.valueCapacity + MessageCapacity);
     this.idsPointer = this.allocate(this.idsCapacity * 4);
     this.stringPointer = this.allocate(this.stringCapacity);
   }
 
-  // Área de rascunho para montar o valor de um componente (zerada pelo chamador).
+  // Área de rascunho para montar o valor de um componente ou evento (zerada pelo chamador).
   get valuePointer(): number {
     return this.scratch + ValueOffset;
   }
@@ -293,6 +297,27 @@ export class Bridge {
     this.sync();
 
     return id;
+  }
+
+  // 0xFFFFFFFF (OLY_INVALID_HANDLER) se o nome nativo não existe; 0xFFFFFFFE (OLY_HANDLER_TYPE_MISMATCH) se é de outro tipo.
+  addNativeHandler(engine: number, eventType: number, name: string): number {
+    const id = this.module._olyEngineAddNativeHandler(engine, eventType, this.writeString(name)) >>> 0;
+    this.sync();
+
+    return id;
+  }
+
+  addScriptHandler(engine: number, eventType: number, name: string): number {
+    const id = this.module._olyEngineAddScriptHandler(engine, eventType, this.writeString(name)) >>> 0;
+    this.sync();
+
+    return id;
+  }
+
+  // Copia o valor para a fila de eventos do WASM, que pode crescer a memória.
+  engineEmit(engine: number, eventType: number, valuePointer: number): void {
+    this.module._olyEngineEmit(engine, eventType, valuePointer);
+    this.sync();
   }
 
   setWhilePaused(engine: number, systemId: number, whilePaused: boolean): void {

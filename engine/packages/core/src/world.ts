@@ -4,7 +4,7 @@ import { ContractError } from "./errors.js";
 import { bridgeOf, componentIdOf, type Runtime } from "./runtime.js";
 import type { ComponentType, Fields, SchemaType, ValueOf } from "./schema.js";
 import { Query, type QuerySpec } from "./query.js";
-import { assertKnownFields, assertSpawnArguments, contractError, writeComponentValue } from "./values.js";
+import { assertKnownFields, assertSpawnArguments, contractError, writeValue } from "./values.js";
 
 export type SpawnValues<Ts extends readonly SchemaType[]> = {
   [C in Extract<Ts[number], ComponentType> as C["name"]]?: Partial<ValueOf<C["fields"]>>;
@@ -208,7 +208,7 @@ export class World {
 
   #addToEntity(entity: Entity, type: SchemaType, value: Partial<Record<string, number>> | undefined): void {
     const componentId = componentIdOf(this.#runtime, type);
-    const address = writeComponentValue(this.#bridge, type, value);
+    const address = writeValue(this.#bridge, type.kind === "tag" ? null : type.layout, value);
 
     this.#bridge.add(this.handle, entity, componentId, address);
   }

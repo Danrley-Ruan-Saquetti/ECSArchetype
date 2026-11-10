@@ -1,5 +1,5 @@
 import { Bridge } from "./bridge.js";
-import { Engine, invokeSystem, type EngineConfig } from "./engine.js";
+import { Engine, invokeScript, type EngineConfig } from "./engine.js";
 import { ContractError, SchemaMismatchError } from "./errors.js";
 import type { OlyModule, OlyModuleFactory } from "./module.js";
 import type { EventType, Schema, SchemaType } from "./schema.js";
@@ -85,19 +85,20 @@ export class Runtime {
     this.#bridge = new Bridge(module, schema);
     this.#componentIds = schema.types.map((_, index) => module._olySchemaComponentId(index));
 
-    module.olyInvokeScript = (engineHandle, _kind, systemId) => {
+    module.olyInvokeScript = (engineHandle, kind, id, events, eventCount) => {
       const engine = this.#engines.get(engineHandle);
       if (engine === undefined) {
         throw new ContractError(`olyInvokeScript engine=${engineHandle}: Engine desconhecida ou já liberada`);
       }
 
-      invokeSystem(engine, systemId);
+      invokeScript(engine, kind, id, events, eventCount);
     };
   }
 
   createEngine(config: EngineConfig = {}): Engine {
     const fixedHz = config.fixedHz ?? 60;
     const maxStepsPerFrame = config.maxStepsPerFrame ?? 5;
+    const maxEventRounds = config.maxEventRounds ?? 16;
     if (!Number.isFinite(fixedHz) || fixedHz <= 0) {
       throw new ContractError(`createEngine fixedHz=${fixedHz}: deve ser um número positivo`);
     }
@@ -105,7 +106,11 @@ export class Runtime {
       throw new ContractError(`createEngine maxStepsPerFrame=${maxStepsPerFrame}: deve ser um inteiro positivo`);
     }
 
-    const handle = this.#bridge.engineCreate(fixedHz, maxStepsPerFrame, 16);
+    if (!Number.isInteger(maxEventRounds) || maxEventRounds < 1) {
+      throw new ContractError(`createEngine maxEventRounds=${maxEventRounds}: deve ser um inteiro positivo`);
+    }
+
+    const handle = this.#bridge.engineCreate(fixedHz, maxStepsPerFrame, maxEventRounds);
     const world = new World(this, this.#bridge.engineWorld(handle), false);
     const engine = new Engine(this, handle, world, () => {
       this.#engines.delete(handle);

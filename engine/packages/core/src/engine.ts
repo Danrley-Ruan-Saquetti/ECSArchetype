@@ -1,7 +1,11 @@
 import type { Bridge } from "./bridge.js";
+import { setContextActive } from "./context.js";
 import { ContractError } from "./errors.js";
-import { bridgeOf, type Runtime } from "./runtime.js";
-import { setContextActive, SystemContext, type SystemFunction } from "./system_context.js";
+import { EventBatch, endBatch } from "./event_batch.js";
+import { HandlerContext, type HandlerFunction } from "./handler_context.js";
+import { bridgeOf, eventIndexOf, type Runtime } from "./runtime.js";
+import type { EventType, Fields } from "./schema.js";
+import { SystemContext, type SystemFunction } from "./system_context.js";
 import { releaseOwnedWorld, setStructureLocked, type World } from "./world.js";
 
 export const Phase = { UpdateBefore: 0, Update: 1, UpdateAfter: 2, Render: 3 } as const;
@@ -10,6 +14,11 @@ export type Phase = (typeof Phase)[keyof typeof Phase];
 export interface EngineConfig {
   fixedHz?: number;
   maxStepsPerFrame?: number;
+  maxEventRounds?: number;
+}
+
+export interface HandlerRegistration {
+  readonly id: number;
 }
 
 export interface SystemRegistration {
@@ -22,13 +31,22 @@ export interface SystemRegistration {
 }
 
 const InvalidSystem = 0xffffffff;
+const InvalidHandler = 0xffffffff;
+const HandlerTypeMismatch = 0xfffffffe;
+const ScriptHandler = 1;
 
 interface ScriptSystem {
   readonly function: SystemFunction;
   readonly context: SystemContext;
 }
 
-let invokeSystemInternal!: (engine: Engine, systemId: number) => void;
+interface ScriptHandlerEntry {
+  readonly function: HandlerFunction;
+  readonly context: HandlerContext;
+  readonly type: EventType;
+}
+
+let invokeScriptInternal!: (engine: Engine, kind: number, id: number, events: number, eventCount: number) => void;
 
 // Regras do loop vivem no núcleo C++; aqui só validação de uso e a chamada de volta dos sistemas TS.
 export class Engine {
@@ -39,12 +57,19 @@ export class Engine {
   readonly #handle: number;
   readonly #onDispose: () => void;
   readonly #scriptSystems = new Map<number, ScriptSystem>();
+  readonly #scriptHandlers = new Map<number, ScriptHandlerEntry>();
   #inFrame = false;
   #disposed = false;
   #lastFrameTime = -Infinity;
 
   static {
-    invokeSystemInternal = (engine, systemId) => engine.#invoke(systemId);
+    invokeScriptInternal = (engine, kind, id, events, eventCount) => {
+      if (kind === ScriptHandler) {
+        engine.#invokeHandler(id, events, eventCount);
+      } else {
+        engine.#invoke(id);
+      }
+    };
   }
 
   constructor(runtime: Runtime, handle: number, world: World, onDispose: () => void) {
@@ -141,6 +166,34 @@ export class Engine {
     return this.#registration(id, phase, name);
   }
 
+  /**
+   * Registra um handler TS: chamado uma vez por lote de `type` em cada rodada, na ordem de registro. Lança
+   * ContractError durante frame.
+   */
+  on<F extends Fields>(type: EventType<string, F>, name: string, handler: HandlerFunction<F>): HandlerRegistration {
+    const eventType = this.#assertCanRegisterHandler("on", type, name);
+
+    const id = this.#bridge.addScriptHandler(this.#handle, eventType, name);
+    const context = new HandlerContext(type, name, this.#runtime, this.#bridge, this.#handle, this.world);
+    this.#scriptHandlers.set(id, { function: handler as unknown as HandlerFunction, context, type });
+
+    return { id };
+  }
+
+  addNativeHandler(type: EventType, name: string): HandlerRegistration {
+    const eventType = this.#assertCanRegisterHandler("addNativeHandler", type, name);
+
+    const id = this.#bridge.addNativeHandler(this.#handle, eventType, name);
+    if (id === InvalidHandler) {
+      throw new ContractError(`addNativeHandler name=${name}: não há handler nativo com esse nome (declare com OLY_HANDLER)`);
+    }
+    if (id === HandlerTypeMismatch) {
+      throw new ContractError(`addNativeHandler name=${name} event=${type.name}: o handler nativo é de outro tipo de evento`);
+    }
+
+    return { id };
+  }
+
   dispose(): void {
     if (this.#disposed) {
       return;
@@ -189,6 +242,35 @@ export class Engine {
     }
   }
 
+  #invokeHandler(id: number, address: number, count: number): void {
+    const entry = this.#scriptHandlers.get(id);
+    if (entry === undefined) {
+      throw new ContractError(`handler id=${id}: não é um handler TS desta Engine`);
+    }
+
+    // Um handler ou sistema C++ anterior pode ter crescido a memória do WASM.
+    this.#bridge.sync();
+    const batch = new EventBatch(entry.type, count, address, this.#bridge);
+    setContextActive(entry.context, true);
+    setStructureLocked(this.world, false);
+    try {
+      entry.function(entry.context, batch);
+    } finally {
+      endBatch(batch);
+      setContextActive(entry.context, false);
+      setStructureLocked(this.world, true);
+    }
+  }
+
+  #assertCanRegisterHandler(operation: string, type: EventType, name: string): number {
+    this.#assertUsable(operation);
+    if (this.#inFrame) {
+      throw new ContractError(`${operation} handler=${name}: registro durante frame`);
+    }
+
+    return eventIndexOf(this.#runtime, type);
+  }
+
   #assertCanRegister(operation: string, phase: Phase, name: string): void {
     this.#assertUsable(operation);
     if (this.#inFrame) {
@@ -206,6 +288,6 @@ export class Engine {
   }
 }
 
-export function invokeSystem(engine: Engine, systemId: number): void {
-  invokeSystemInternal(engine, systemId);
+export function invokeScript(engine: Engine, kind: number, id: number, events: number, eventCount: number): void {
+  invokeScriptInternal(engine, kind, id, events, eventCount);
 }

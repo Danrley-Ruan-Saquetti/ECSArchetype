@@ -36,6 +36,9 @@ export interface OlyModule {
   _olyEngineCreate(fixedHz: number, maxStepsPerFrame: number, maxEventRounds: number): number;
   _olyEngineDestroy(engine: number): void;
   _olyEngineWorld(engine: number): number;
+  _olyEngineEmit(engine: number, eventType: number, value: number): void;
+  _olyEngineAddNativeHandler(engine: number, eventType: number, name: number): number;
+  _olyEngineAddScriptHandler(engine: number, eventType: number, name: number): number;
   _olyEngineFrame(engine: number, nowSeconds: number): void;
   _olyEngineSetHidden(engine: number, hidden: number): void;
   _olyEnginePause(engine: number): void;

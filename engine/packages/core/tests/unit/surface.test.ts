@@ -70,11 +70,13 @@ test("Runtime expõe só schema, createWorld e createEngine", () => {
 
 test("Engine expõe só a API do glossário", () => {
   assert.deepEqual(memberNames("Engine"), [
+    "addNativeHandler",
     "addNativeSystem",
     "addSystem",
     "dispose",
     "fixedDeltaTime",
     "frame",
+    "on",
     "pause",
     "paused",
     "resume",
@@ -92,6 +94,7 @@ test("SystemContext expõe só a API do glossário", () => {
     "get",
     "has",
     "interpolation",
+    "emit",
     "isAlive",
     "name",
     "pause",
@@ -104,6 +107,32 @@ test("SystemContext expõe só a API do glossário", () => {
     "spawn",
     "time",
   ]);
+});
+
+test("HandlerContext expõe só a API do glossário", () => {
+  assert.deepEqual(memberNames("HandlerContext"), [
+    "add",
+    "destroy",
+    "emit",
+    "eventType",
+    "fixedDeltaTime",
+    "get",
+    "has",
+    "isAlive",
+    "name",
+    "pause",
+    "paused",
+    "query",
+    "remove",
+    "resume",
+    "set",
+    "spawn",
+    "time",
+  ]);
+});
+
+test("EventBatch expõe só type, count e read", () => {
+  assert.deepEqual(memberNames("EventBatch"), ["count", "read", "type"]);
 });
 
 test("ContractError tem name ContractError", () => {

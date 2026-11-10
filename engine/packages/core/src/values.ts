@@ -2,18 +2,19 @@ import { writeScalar, type Bridge } from "./bridge.js";
 import { formatEntity, type Entity } from "./entity.js";
 import { ContractError } from "./errors.js";
 import { componentIdOf, type Runtime } from "./runtime.js";
-import type { ComponentType, SchemaType } from "./schema.js";
+import type { ComponentLayout } from "./layout.js";
+import type { ComponentType, EventType, SchemaType } from "./schema.js";
 
-// Validações e escrita de valores compartilhadas por World e SystemContext (mesmas regras e mensagens).
+// Validações e escrita de valores compartilhadas por World e pelos contextos (mesmas regras e mensagens).
 
-export function contractError(operation: string, entity: Entity | null, type: SchemaType | null, reason: string): ContractError {
+export function contractError(operation: string, entity: Entity | null, type: { readonly name: string } | null, reason: string): ContractError {
   const entityPart = entity === null ? "" : ` e=${formatEntity(entity)}`;
   const typePart = type === null ? "" : ` type=${type.name}`;
 
   return new ContractError(`${operation}${entityPart}${typePart}: ${reason}`);
 }
 
-export function assertKnownFields(operation: string, entity: Entity | null, type: ComponentType, value: Partial<Record<string, number>>): void {
+export function assertKnownFields(operation: string, entity: Entity | null, type: ComponentType | EventType, value: Partial<Record<string, number>>): void {
   const known = new Set(type.layout.fields.map((field) => field.name));
   for (const name of Object.keys(value)) {
     if (!known.has(name)) {
@@ -45,15 +46,15 @@ export function assertSpawnArguments(
   }
 }
 
-// Monta o valor na área de rascunho da ponte e devolve o endereço (0 para tag).
-export function writeComponentValue(bridge: Bridge, type: SchemaType, value: Partial<Record<string, number>> | undefined): number {
-  if (type.kind === "tag") {
+// Monta o valor na área de rascunho da ponte e devolve o endereço (0 para tag, que não tem layout).
+export function writeValue(bridge: Bridge, layout: ComponentLayout | null, value: Partial<Record<string, number>> | undefined): number {
+  if (layout === null) {
     return 0;
   }
 
   const address = bridge.valuePointer;
-  bridge.heap.u8.fill(0, address, address + type.layout.size);
-  for (const field of type.layout.fields) {
+  bridge.heap.u8.fill(0, address, address + layout.size);
+  for (const field of layout.fields) {
     const fieldValue = value?.[field.name];
     if (fieldValue !== undefined) {
       writeScalar(bridge.heap, field.type, address + field.offset, fieldValue);

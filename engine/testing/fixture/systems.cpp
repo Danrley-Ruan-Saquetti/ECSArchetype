@@ -1,10 +1,16 @@
 #include <cstdint>
 
+#include "oly/app/handler.hpp"
 #include "oly/app/system.hpp"
 #include "oly/bridge/c_api.hpp"
 #include "oly/bridge/world.hpp"
 #include "oly/ecs/entity.hpp"
 #include "schema.generated.hpp"
+
+namespace {
+  uint32_t fixturePingCount = 0;
+  double fixturePingSum = 0;
+}
 
 extern "C" {
 OLY_API void fixtureMove(OlyWorld* world, float deltaTime) {
@@ -17,6 +23,17 @@ OLY_API void fixtureMove(OlyWorld* world, float deltaTime) {
 OLY_API double fixtureSumPositionX(OlyWorld* world) {
   double sum = 0;
   oly::bridge::worldOf(world).query<const Position>().each([&sum](const Position& position) { sum += position.x; });
+
+  return sum;
+}
+
+OLY_API void fixtureSetPingCount(uint32_t count) {
+  fixturePingCount = count;
+}
+
+OLY_API double fixtureTakePingSum() {
+  const double sum = fixturePingSum;
+  fixturePingSum = 0;
 
   return sum;
 }
@@ -46,5 +63,24 @@ OLY_SYSTEM(appendNine) {
 OLY_SYSTEM(spawnBatch) {
   for (uint32_t count = 0; count < 400000; ++count) {
     context.spawn(Position{1, 0});
+  }
+}
+
+OLY_HANDLER(appendNineOnPing, Ping) {
+  for (const Ping& ping : events) {
+    Trace& trace = context.get<Trace>(ping.target);
+    trace.value = trace.value * 10 + 9;
+  }
+}
+
+OLY_HANDLER(sumPing, Ping) {
+  for (const Ping& ping : events) {
+    fixturePingSum += ping.value;
+  }
+}
+
+OLY_SYSTEM(emitPings) {
+  for (uint32_t count = 0; count < fixturePingCount; ++count) {
+    context.emit(Ping{oly::ecs::NullEntity, 1});
   }
 }
