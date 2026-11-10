@@ -1,8 +1,8 @@
 #include <cstdint>
 
-#include "ecs/entity.hpp"
-#include "engine/c_api.hpp"
-#include "engine/world_handle.hpp"
+#include "oly/ecs/entity.hpp"
+#include "oly/bridge/c_api.hpp"
+#include "oly/bridge/world_handle.hpp"
 #include "schema.generated.hpp"
 
 extern "C" {

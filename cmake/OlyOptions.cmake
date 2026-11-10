@@ -1,0 +1,31 @@
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(OLY_BUILD_TESTS "Compila os testes" ON)
+option(OLY_BUILD_BENCH "Compila os benchmarks" OFF)
+option(OLY_SANITIZE "ASan + UBSan" OFF)
+option(OLY_WERROR "Avisos viram erros" ON)
+option(OLY_VEC_REPORT "Relatório de vetorização nos benchmarks" OFF)
+option(OLY_BUILD_GAMES "Compila os jogos (exige make ts antes)" OFF)
+set(OLY_ENABLE_ASSERTS "" CACHE STRING "0/1; vazio = 0 com NDEBUG, senão 1")
+
+if(EMSCRIPTEN)
+  add_link_options(-sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1)
+endif()
+
+if(OLY_ENABLE_ASSERTS STREQUAL "")
+  if(CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
+    set(OLY_ASSERTS_ENABLED 0)
+  else()
+    set(OLY_ASSERTS_ENABLED 1)
+  endif()
+else()
+  set(OLY_ASSERTS_ENABLED ${OLY_ENABLE_ASSERTS})
+endif()
+
+if(OLY_SANITIZE)
+  # Global: as dependências também são instrumentadas, evitando mistura de runtimes.
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
+endif()

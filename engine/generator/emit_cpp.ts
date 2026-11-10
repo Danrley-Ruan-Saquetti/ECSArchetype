@@ -37,14 +37,14 @@ function emitLayoutAsserts(type: ComponentType): string {
 export function emitHeader(schema: Schema): string {
   const structs = schema.types.map(emitStruct).join("\n");
 
-  return `// Gerado por engine/generator: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "ecs/entity.hpp"\n\n${structs}`;
+  return `// Gerado por engine/generator: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n\n${structs}`;
 }
 
 export function emitRegistry(schema: Schema): string {
   const ids = schema.types.map((type) => `      ecs::componentId<${type.name}>()`).join(",\n");
 
   return `// Gerado por engine/generator: não edite.
-#include "engine/schema_registry.hpp"
+#include "oly/bridge/schema_registry.hpp"
 #include "schema.generated.hpp"
 
 namespace engine {

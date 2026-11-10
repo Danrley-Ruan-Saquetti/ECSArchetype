@@ -5,34 +5,34 @@
     {
       "name": "base", "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": { "CMAKE_CXX_STANDARD": "20", "ECS_WERROR": "ON" }
+      "cacheVariables": { "CMAKE_CXX_STANDARD": "20", "OLY_WERROR": "ON" }
     },
     {
       "name": "debug-asan", "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug", "ECS_SANITIZE": "ON",
-        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "OFF"
+        "CMAKE_BUILD_TYPE": "Debug", "OLY_SANITIZE": "ON",
+        "OLY_BUILD_TESTS": "ON", "OLY_BUILD_BENCH": "OFF"
       }
     },
     {
       "name": "release", "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release", "ECS_SANITIZE": "OFF",
-        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "ON", "ECS_ENABLE_ASSERTS": "0"
+        "CMAKE_BUILD_TYPE": "Release", "OLY_SANITIZE": "OFF",
+        "OLY_BUILD_TESTS": "ON", "OLY_BUILD_BENCH": "ON", "OLY_ENABLE_ASSERTS": "0"
       }
     },
     {
       "name": "relwithdebinfo", "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ECS_SANITIZE": "OFF",
-        "ECS_BUILD_TESTS": "OFF", "ECS_BUILD_BENCH": "ON", "ECS_ENABLE_ASSERTS": "0"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo", "OLY_SANITIZE": "OFF",
+        "OLY_BUILD_TESTS": "OFF", "OLY_BUILD_BENCH": "ON", "OLY_ENABLE_ASSERTS": "0"
       }
     },
     {
       "name": "variant", "hidden": true, "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release", "ECS_SANITIZE": "OFF",
-        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "ON", "ECS_ENABLE_ASSERTS": "0",
+        "CMAKE_BUILD_TYPE": "Release", "OLY_SANITIZE": "OFF",
+        "OLY_BUILD_TESTS": "ON", "OLY_BUILD_BENCH": "ON", "OLY_ENABLE_ASSERTS": "0",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
@@ -75,18 +75,18 @@
       "name": "wasm-debug", "inherits": "base",
       "toolchainFile": "/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug", "ECS_SANITIZE": "OFF",
-        "ECS_BUILD_TESTS": "ON", "ECS_BUILD_BENCH": "OFF"
+        "CMAKE_BUILD_TYPE": "Debug", "OLY_SANITIZE": "OFF",
+        "OLY_BUILD_TESTS": "ON", "OLY_BUILD_BENCH": "OFF"
       }
     },
     {
-      "name": "wasm-engine", "inherits": "wasm-debug",
-      "cacheVariables": { "ENGINE_BUILD_FIXTURE": "ON" }
+      "name": "wasm-games", "inherits": "wasm-debug",
+      "cacheVariables": { "OLY_BUILD_GAMES": "ON" }
     },
     {
-      "name": "wasm-engine-release", "inherits": "wasm-debug",
+      "name": "wasm-games-release", "inherits": "wasm-debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release", "ECS_ENABLE_ASSERTS": "0", "ENGINE_BUILD_FIXTURE": "ON"
+        "CMAKE_BUILD_TYPE": "Release", "OLY_ENABLE_ASSERTS": "0", "OLY_BUILD_GAMES": "ON"
       }
     }
   ],
@@ -101,8 +101,8 @@
     { "name": "wasm-scalar", "configurePreset": "wasm-scalar" },
     { "name": "wasm-simd", "configurePreset": "wasm-simd" },
     { "name": "wasm-debug", "configurePreset": "wasm-debug" },
-    { "name": "wasm-engine", "configurePreset": "wasm-engine" },
-    { "name": "wasm-engine-release", "configurePreset": "wasm-engine-release" }
+    { "name": "wasm-games", "configurePreset": "wasm-games" },
+    { "name": "wasm-games-release", "configurePreset": "wasm-games-release" }
   ],
   "testPresets": [
     { "name": "debug-asan", "configurePreset": "debug-asan", "output": { "outputOnFailure": true } },
@@ -114,7 +114,7 @@
     { "name": "wasm-scalar", "configurePreset": "wasm-scalar", "output": { "outputOnFailure": true } },
     { "name": "wasm-simd", "configurePreset": "wasm-simd", "output": { "outputOnFailure": true } },
     { "name": "wasm-debug", "configurePreset": "wasm-debug", "output": { "outputOnFailure": true } },
-    { "name": "wasm-engine", "configurePreset": "wasm-engine", "output": { "outputOnFailure": true } },
-    { "name": "wasm-engine-release", "configurePreset": "wasm-engine-release", "output": { "outputOnFailure": true } }
+    { "name": "wasm-games", "configurePreset": "wasm-games", "output": { "outputOnFailure": true } },
+    { "name": "wasm-games-release", "configurePreset": "wasm-games-release", "output": { "outputOnFailure": true } }
   ]
 }

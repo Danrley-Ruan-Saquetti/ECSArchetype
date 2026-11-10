@@ -24,10 +24,10 @@ run: test
 
 all: test
 
-engine-ts:
+ts:
 	cd engine && ([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build
-.PHONY: engine-ts
+.PHONY: ts
 
-engine-test: engine-ts
-	$(MAKE) test PRESET=wasm-engine
-.PHONY: engine-test
+games-test: ts
+	$(MAKE) test PRESET=wasm-games
+.PHONY: games-test
