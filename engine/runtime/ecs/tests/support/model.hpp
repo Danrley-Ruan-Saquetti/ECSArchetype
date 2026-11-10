@@ -61,7 +61,7 @@ inline void addToWorld(oly::ecs::World& world, oly::ecs::Entity entity, oly::ecs
 
 // Devolve false se a entidade não tem o componente. Tag devolve 0.
 inline bool readFromWorld(oly::ecs::World& world, oly::ecs::Entity entity, oly::ecs::ComponentId componentId, uint64_t& out) {
-  if (!world.hasRaw(entity, componentId)) {
+  if (!world.hasById(entity, componentId)) {
     return false;
   }
 

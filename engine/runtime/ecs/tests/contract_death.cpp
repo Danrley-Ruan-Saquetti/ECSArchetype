@@ -4,13 +4,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
 
 #include "components.hpp"
 #include "oly/core/assert.hpp"
-#include "oly/ecs/raw_query.hpp"
+#include "oly/ecs/query_by_id.hpp"
 #include "oly/ecs/world.hpp"
 
 namespace {
@@ -35,7 +36,7 @@ namespace {
 
   void addDuringEach() {
     oly::ecs::World world;
-    auto entity = world.create(A{1});
+    auto entity = world.spawn(A{1});
     world.query<A>().each([&](A&) { world.add(entity, B{}); });
   }
 
@@ -45,21 +46,21 @@ namespace {
     };
 
     oly::ecs::World world;
-    auto entity = world.create(Position{1.f});
+    auto entity = world.spawn(Position{1.f});
     world.destroy(entity);
     (void)world.get<Position>(entity);
   }
 
   void flushDuringEach() {
     oly::ecs::World world;
-    world.create(A{1});
+    world.spawn(A{1});
     auto commandBuffer = world.commands();
     world.query<A>().each([&](A&) { world.flush(commandBuffer); });
   }
 
   void commandAfterDestroy() {
     oly::ecs::World world;
-    auto entity = world.create(A{1});
+    auto entity = world.spawn(A{1});
     auto commandBuffer = world.commands();
     commandBuffer.destroy(entity);
     commandBuffer.add(entity, A{});
@@ -68,35 +69,50 @@ namespace {
 
   void destroyDuringEachBlock() {
     oly::ecs::World world;
-    auto entity = world.create(A{1});
+    auto entity = world.spawn(A{1});
     world.query<A>().eachBlock([&](std::span<A>) { world.destroy(entity); });
   }
 
-  void rawQueryTagInRead() {
+  void queryByIdTagInRead() {
     oly::ecs::World world;
-    world.rawQuery({.read = {oly::ecs::componentId<Tag>()}});
+    world.queryById({.read = {oly::ecs::componentId<Tag>()}});
   }
 
-  void rawQueryRepeatedComponent() {
+  void queryByIdRepeatedComponent() {
     oly::ecs::World world;
-    world.rawQuery({.read = {oly::ecs::componentId<A>()}, .write = {oly::ecs::componentId<A>()}});
+    world.queryById({.read = {oly::ecs::componentId<A>()}, .write = {oly::ecs::componentId<A>()}});
   }
 
-  void rawQueryUnknownComponent() {
+  void queryByIdUnknownComponent() {
     oly::ecs::World world;
-    world.rawQuery({.read = {oly::ecs::registeredTypeCount() + 5}});
+    world.queryById({.read = {oly::ecs::registeredTypeCount() + 5}});
   }
 
-  void rawQueryEndWithoutBegin() {
+  void queryByIdIterationOutOfOrder() {
     oly::ecs::World world;
-    world.rawQuery({.read = {oly::ecs::componentId<A>()}}).endIteration();
+    auto& query = world.queryById({.read = {oly::ecs::componentId<A>()}});
+    std::optional<oly::ecs::QueryIteration> first(query.iterate());
+    std::optional<oly::ecs::QueryIteration> second(query.iterate());
+    first.reset();
   }
 
-  void addDuringRawIteration() {
+  void addDuringQueryByIdIteration() {
     oly::ecs::World world;
-    auto entity = world.create(A{1});
-    world.rawQuery({.read = {oly::ecs::componentId<A>()}}).beginIteration();
+    auto entity = world.spawn(A{1});
+    auto iteration = world.queryById({.read = {oly::ecs::componentId<A>()}}).iterate();
     world.add(entity, B{});
+  }
+
+  void getByIdMissing() {
+    oly::ecs::World world;
+    auto entity = world.spawn(A{1});
+    world.getById(entity, oly::ecs::componentId<B>());
+  }
+
+  void spawnDuringEach() {
+    oly::ecs::World world;
+    world.spawn(A{1});
+    world.query<A>().each([&](A&) { world.spawn(); });
   }
 
   struct Case {
@@ -113,11 +129,13 @@ int main(int argumentCount, char** arguments) {
     {"flush_during_each", flushDuringEach, {"flush"}},
     {"command_after_destroy", commandAfterDestroy, {"after destroy"}},
     {"destroy_during_each_block", destroyDuringEachBlock, {"destroy"}},
-    {"raw_query_tag_in_read", rawQueryTagInRead, {"rawQuery", "tag"}},
-    {"raw_query_repeated_component", rawQueryRepeatedComponent, {"rawQuery", "repetido"}},
-    {"raw_query_unknown_component", rawQueryUnknownComponent, {"rawQuery", "desconhecido"}},
-    {"raw_query_end_without_begin", rawQueryEndWithoutBegin, {"endIteration"}},
-    {"add_during_raw_iteration", addDuringRawIteration, {"add"}},
+    {"query_by_id_tag_in_read", queryByIdTagInRead, {"queryById", "tag"}},
+    {"query_by_id_repeated_component", queryByIdRepeatedComponent, {"queryById", "repetido"}},
+    {"query_by_id_unknown_component", queryByIdUnknownComponent, {"queryById", "desconhecido"}},
+    {"query_by_id_iteration_out_of_order", queryByIdIterationOutOfOrder, {"iterate", "fora de ordem"}},
+    {"add_during_query_by_id_iteration", addDuringQueryByIdIteration, {"add"}},
+    {"get_by_id_missing", getByIdMissing, {"getById", "e="}},
+    {"spawn_during_each", spawnDuringEach, {"spawn", "iteração"}},
   };
 
   if (argumentCount != 2) {

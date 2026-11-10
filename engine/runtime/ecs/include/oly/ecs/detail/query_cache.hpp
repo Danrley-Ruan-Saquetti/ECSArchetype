@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <span>
+#include <vector>
 
 #include "oly/ecs/component.hpp"
 #include "oly/ecs/detail/archetype.hpp"
@@ -54,5 +55,10 @@ namespace oly::ecs::detail {
   struct MatchedTable {
     Archetype* archetype;
     std::array<uint16_t, sizeof...(Ts)> columns;
+  };
+
+  struct MatchedTableById {
+    Archetype* archetype;
+    std::vector<uint16_t> columns; // columns[i] é a coluna de components()[i]
   };
 }

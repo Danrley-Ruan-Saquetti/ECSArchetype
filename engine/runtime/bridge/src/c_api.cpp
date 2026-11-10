@@ -4,8 +4,9 @@
 #include <cstring>
 #include <string>
 
+#include "oly/core/assert.hpp"
 #include "oly/ecs/entity.hpp"
-#include "oly/ecs/raw_query.hpp"
+#include "oly/ecs/query_by_id.hpp"
 #include "oly/bridge/schema_registry.hpp"
 #include "oly/bridge/world_handle.hpp"
 
@@ -17,8 +18,8 @@ namespace {
     return oly::ecs::Entity{index, generation};
   }
 
-  oly::ecs::RawQuery& queryOf(EngineQuery* query) {
-    return *reinterpret_cast<oly::ecs::RawQuery*>(query);
+  oly::ecs::QueryById& queryOf(EngineQuery* query) {
+    return *reinterpret_cast<oly::ecs::QueryById*>(query);
   }
 }
 
@@ -52,7 +53,7 @@ uint32_t engineComponentAlignment(uint32_t componentId) {
 }
 
 void engineCreate(EngineWorld* world, EngineEntity* out) {
-  const oly::ecs::Entity entity = world->world.create();
+  const oly::ecs::Entity entity = world->world.spawn();
   out->index = entity.index;
   out->generation = entity.generation;
 }
@@ -66,23 +67,23 @@ int32_t engineIsAlive(EngineWorld* world, uint32_t index, uint32_t generation) {
 }
 
 void engineAdd(EngineWorld* world, uint32_t index, uint32_t generation, uint32_t componentId, void* value) {
-  world->world.addRaw(entityOf(index, generation), componentId, value);
+  world->world.addById(entityOf(index, generation), componentId, value);
 }
 
 void engineRemove(EngineWorld* world, uint32_t index, uint32_t generation, uint32_t componentId) {
-  world->world.removeRaw(entityOf(index, generation), componentId);
+  world->world.removeById(entityOf(index, generation), componentId);
 }
 
 int32_t engineHas(EngineWorld* world, uint32_t index, uint32_t generation, uint32_t componentId) {
-  return world->world.hasRaw(entityOf(index, generation), componentId) ? 1 : 0;
+  return world->world.hasById(entityOf(index, generation), componentId) ? 1 : 0;
 }
 
 void* engineGet(EngineWorld* world, uint32_t index, uint32_t generation, uint32_t componentId) {
-  return world->world.getRaw(entityOf(index, generation), componentId);
+  return world->world.tryGetById(entityOf(index, generation), componentId);
 }
 
 EngineQuery* engineQuery(EngineWorld* world, const uint32_t* componentIds, uint32_t readCount, uint32_t writeCount, uint32_t withCount, uint32_t withoutCount) {
-  oly::ecs::RawQuerySpec spec;
+  oly::ecs::QueryByIdSpec spec;
   const uint32_t* cursor = componentIds;
   spec.read.assign(cursor, cursor + readCount);
   cursor += readCount;
@@ -92,37 +93,20 @@ EngineQuery* engineQuery(EngineWorld* world, const uint32_t* componentIds, uint3
   cursor += withCount;
   spec.without.assign(cursor, cursor + withoutCount);
 
-  return reinterpret_cast<EngineQuery*>(&world->world.rawQuery(spec));
+  return reinterpret_cast<EngineQuery*>(&world->world.queryById(spec));
 }
 
 uint32_t engineQueryBegin(EngineWorld* world, EngineQuery* query, const uintptr_t** outDescriptors) {
-  oly::ecs::RawQuery& rawQuery = queryOf(query);
-  rawQuery.beginIteration();
+  world->activeIterations.push_back(queryOf(query).iterate());
 
-  std::vector<uintptr_t>& descriptors = world->blockDescriptors;
-  descriptors.clear();
-
-  uint32_t blockCount = 0;
-  for (const oly::ecs::RawMatchedTable& matched : rawQuery.matchedTables()) {
-    oly::ecs::detail::Table& table = matched.archetype->table;
-    if (table.count() == 0) {
-      continue;
-    }
-
-    descriptors.push_back(table.count());
-    descriptors.push_back(reinterpret_cast<uintptr_t>(table.entities().data()));
-    for (uint16_t column : matched.columns) {
-      descriptors.push_back(reinterpret_cast<uintptr_t>(table.column(column).data));
-    }
-    ++blockCount;
-  }
-
-  *outDescriptors = descriptors.data();
-  return blockCount;
+  const oly::ecs::QueryIteration& iteration = world->activeIterations.back();
+  *outDescriptors = iteration.descriptors().data();
+  return iteration.blockCount();
 }
 
-void engineQueryEnd(EngineWorld*, EngineQuery* query) {
-  queryOf(query).endIteration();
+void engineQueryEnd(EngineWorld* world, EngineQuery*) {
+  OLY_ASSERT(!world->activeIterations.empty(), "engineQueryEnd sem engineQueryBegin correspondente");
+  world->activeIterations.pop_back();
 }
 
 int32_t engineCheckInvariants(EngineWorld* world, char* message, uint32_t capacity) {

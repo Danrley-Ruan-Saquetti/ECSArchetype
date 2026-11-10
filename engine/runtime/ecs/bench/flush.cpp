@@ -18,7 +18,7 @@ namespace {
     std::vector<oly::ecs::Entity> entities;
 
     explicit Setup(int64_t entityCount, bool coalesced) {
-      auto warm = world->create();
+      auto warm = world->spawn();
       if (coalesced) {
         auto commandBuffer = world->commands();
         commandBuffer.add(warm, Component<0>{0});
@@ -34,7 +34,7 @@ namespace {
 
       entities.reserve(static_cast<size_t>(entityCount));
       for (int64_t i = 0; i < entityCount; ++i) {
-        entities.push_back(world->create());
+        entities.push_back(world->spawn());
       }
     }
   };

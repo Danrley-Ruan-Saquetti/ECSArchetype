@@ -23,7 +23,7 @@
 #include "oly/ecs/diagnostics.hpp"
 #include "oly/ecs/entity.hpp"
 #include "oly/ecs/query.hpp"
-#include "oly/ecs/raw_query.hpp"
+#include "oly/ecs/query_by_id.hpp"
 
 namespace oly::ecs {
   namespace detail {
@@ -57,7 +57,7 @@ namespace oly::ecs {
     uint32_t iterating_ = 0;
     mutable uint64_t signatureLookups_ = 0;
     std::map<QueryKey, std::unique_ptr<detail::QueryCacheBase>> queryCache_;
-    std::map<QueryKey, std::unique_ptr<RawQuery>> rawQueryCache_; // separado: o static_cast de queryCache_ confundiria os tipos
+    std::map<QueryKey, std::unique_ptr<QueryById>> queryByIdCache_; // separado: o static_cast de queryCache_ confundiria os tipos
     std::vector<detail::QueryCacheBase*> queries_;
     std::unordered_map<uint64_t, detail::Edge> jumpEdges_; // (source.id << 32) | destination.id
 
@@ -67,10 +67,10 @@ namespace oly::ecs {
     World(const World&) = delete;
     World& operator=(const World&) = delete;
 
-    Entity create();
+    Entity spawn();
     // Nasce direto no arquétipo final. Lvalues são copiados.
     template <class... Ts>
-    Entity create(Ts&&... components);
+    Entity spawn(Ts&&... components);
     void destroy(Entity entity);
     bool isAlive(Entity entity) const noexcept {
       return store_.isAlive(entity);
@@ -90,8 +90,8 @@ namespace oly::ecs {
     template <class T>
     T* tryGet(Entity entity) noexcept;
 
-    void addRaw(Entity entity, ComponentId componentId, void* value); // move de `value`; ignorado para tags
-    void removeRaw(Entity entity, ComponentId componentId);
+    void addById(Entity entity, ComponentId componentId, void* value); // move de `value`; ignorado para tags
+    void removeById(Entity entity, ComponentId componentId);
 
     CommandBuffer commands() {
       return CommandBuffer(store_);
@@ -104,9 +104,12 @@ namespace oly::ecs {
     Query<Ts...>& query(Filters... filters);
 
     // Query por ComponentId, cacheada pela spec (read/write mantêm a ordem dada).
-    RawQuery& rawQuery(const RawQuerySpec& spec);
+    QueryById& queryById(const QueryByIdSpec& spec);
 
-    void* getRaw(Entity entity, ComponentId componentId) noexcept {
+    // Assert se a entidade está morta ou o componente ausente (tag também é erro).
+    void* getById(Entity entity, ComponentId componentId);
+
+    void* tryGetById(Entity entity, ComponentId componentId) noexcept {
       if (!store_.isAlive(entity)) {
         return nullptr;
       }
@@ -123,7 +126,7 @@ namespace oly::ecs {
       return record.archetype->table.column(*column).at(record.row);
     }
 
-    bool hasRaw(Entity entity, ComponentId componentId) const noexcept {
+    bool hasById(Entity entity, ComponentId componentId) const noexcept {
       if (!store_.isAlive(entity) || componentId >= componentIndex_.size()) {
         return false;
       }
@@ -163,9 +166,9 @@ namespace oly::ecs {
   };
 
   template <class... Ts>
-  Entity World::create(Ts&&... components) {
-    static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "create<Ts...>: tipos repetidos");
-    OLY_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
+  Entity World::spawn(Ts&&... components) {
+    static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "spawn<Ts...>: tipos repetidos");
+    OLY_ASSERT(iterating_ == 0, "spawn durante iteração=%u", iterating_);
 
     detail::Signature signature{componentId<Ts>()...};
     std::sort(signature.begin(), signature.end());
@@ -194,12 +197,12 @@ namespace oly::ecs {
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
     if constexpr (std::is_empty_v<U>) {
-      addRaw(entity, componentId, nullptr);
+      addById(entity, componentId, nullptr);
     } else {
       // Temporário construído ANTES de qualquer mudança estrutural: `value` pode apontar
       // para dentro do próprio World (ex.: get<B>(outra)).
       U temporary(std::forward<T>(value));
-      addRaw(entity, componentId, &temporary);
+      addById(entity, componentId, &temporary);
     }
   }
 
@@ -209,12 +212,12 @@ namespace oly::ecs {
     OLY_ASSERT(isAlive(entity), "remove e=%u:%u type=%.*s", entity.index, entity.generation, int(typeInfo(componentId).name.size()),
                typeInfo(componentId).name.data());
 
-    removeRaw(entity, componentId);
+    removeById(entity, componentId);
   }
 
   template <class T>
   bool World::has(Entity entity) const noexcept {
-    return hasRaw(entity, componentId<T>());
+    return hasById(entity, componentId<T>());
   }
 
   template <class T>
@@ -222,17 +225,17 @@ namespace oly::ecs {
     using U = std::remove_cvref_t<T>;
     static_assert(!std::is_empty_v<U>, "get<Tag> não é permitido");
     const ComponentId componentId = oly::ecs::componentId<U>();
-    OLY_ASSERT(isAlive(entity) && hasRaw(entity, componentId), "get e=%u:%u type=%.*s", entity.index, entity.generation,
+    OLY_ASSERT(isAlive(entity) && hasById(entity, componentId), "get e=%u:%u type=%.*s", entity.index, entity.generation,
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
-    return *static_cast<U*>(getRaw(entity, componentId));
+    return *static_cast<U*>(tryGetById(entity, componentId));
   }
 
   template <class T>
   T* World::tryGet(Entity entity) noexcept {
     using U = std::remove_cvref_t<T>;
     static_assert(!std::is_empty_v<U>, "tryGet<Tag> não é permitido");
-    return static_cast<U*>(getRaw(entity, componentId<U>()));
+    return static_cast<U*>(tryGetById(entity, componentId<U>()));
   }
 
   namespace detail {

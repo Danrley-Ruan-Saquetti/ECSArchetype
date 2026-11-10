@@ -72,10 +72,10 @@ TEST_CASE("engineQueryBegin entrega descritores por bloco") {
   WorldFixture fixture;
   EngineWorld* world = fixture.world;
   for (uint64_t i = 1; i <= 3; ++i) {
-    world->world.create(A{i}, B{0, 0});
+    world->world.spawn(A{i}, B{0, 0});
   }
   for (uint64_t i = 10; i <= 20; i += 10) {
-    world->world.create(A{i}, B{0, 0}, Tag{});
+    world->world.spawn(A{i}, B{0, 0}, Tag{});
   }
 
   const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
@@ -120,7 +120,7 @@ TEST_CASE("engineQueryBegin aninhado na mesma query") {
   WorldFixture fixture;
   EngineWorld* world = fixture.world;
   for (uint64_t i = 0; i < 4; ++i) {
-    world->world.create(A{i}, B{0, 0});
+    world->world.spawn(A{i}, B{0, 0});
   }
 
   const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};

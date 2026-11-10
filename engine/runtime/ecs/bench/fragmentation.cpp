@@ -54,11 +54,11 @@ namespace {
     const auto tags = fragmentIds(std::make_index_sequence<kFragmentTags>{});
     oly::ecs::World world;
     for (uint32_t i = 0; i < kEntityCount; ++i) {
-      oly::ecs::Entity entity = world.create(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
+      oly::ecs::Entity entity = world.spawn(Position{float3{0.f, 0.f, 0.f}}, Velocity{float3{1.f, 2.f, 3.f}});
       const uint32_t mask = i % archetypeCount;
       for (int j = 0; j < kFragmentTags; ++j) {
         if (mask & (1u << j)) {
-          world.addRaw(entity, tags[j], nullptr);
+          world.addById(entity, tags[j], nullptr);
         }
       }
     }

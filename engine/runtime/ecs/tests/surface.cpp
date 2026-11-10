@@ -35,7 +35,7 @@ TEST_CASE("World e CommandBuffer não expõem diagnóstico nem ganchos de teste"
 
 TEST_CASE("diagnóstico por funções livres") {
   oly::ecs::World world;
-  world.create(A{1});
+  world.spawn(A{1});
 
   CHECK(oly::ecs::checkInvariants(world));
   CHECK(oly::ecs::archetypeCount(world) == 2);

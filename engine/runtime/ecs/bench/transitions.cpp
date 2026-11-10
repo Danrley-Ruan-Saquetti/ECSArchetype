@@ -23,7 +23,7 @@ namespace {
 
   template <bool NT, size_t... Is>
   oly::ecs::Entity createWithComponents(oly::ecs::World& world, uint64_t value, std::index_sequence<Is...>) {
-    return world.create(makeComponent<NT, int(Is)>(value)...);
+    return world.spawn(makeComponent<NT, int(Is)>(value)...);
   }
 
   constexpr int kExtra = 31; // componente que entra e sai
@@ -68,7 +68,7 @@ namespace {
     for (auto _ : state) {
       state.PauseTiming();
       auto world = std::make_unique<oly::ecs::World>();
-      auto entity = world->create(Component<0>{1}, Component<1>{2}, Component<2>{3}, Component<3>{4});
+      auto entity = world->spawn(Component<0>{1}, Component<1>{2}, Component<2>{3}, Component<3>{4});
       state.ResumeTiming();
 
       world->add(entity, Component<kExtra>{5});
@@ -100,7 +100,7 @@ namespace {
     std::vector<oly::ecs::Entity> entities;
     entities.reserve(kGetCount);
     for (uint32_t i = 0; i < kGetCount; ++i) {
-      entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
+      entities.push_back(world.spawn(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
     }
 
     const auto shuffledIndices = permutation(kGetCount);
@@ -144,7 +144,7 @@ namespace {
     std::vector<oly::ecs::Entity> entities;
     entities.reserve(kEntityCount);
     for (uint32_t i = 0; i < kEntityCount; ++i) {
-      entities.push_back(world.create(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
+      entities.push_back(world.spawn(Component<0>{i}, Component<1>{i}, Component<2>{i}, Component<3>{i}));
     }
 
     std::mt19937 generator(99);
@@ -152,7 +152,7 @@ namespace {
       for (uint32_t churn = 0; churn < kChurnPerIteration; ++churn) {
         const uint32_t i = generator() % kEntityCount;
         world.destroy(entities[i]);
-        entities[i] = world.create(Component<0>{churn}, Component<1>{churn}, Component<2>{churn}, Component<3>{churn});
+        entities[i] = world.spawn(Component<0>{churn}, Component<1>{churn}, Component<2>{churn}, Component<3>{churn});
       }
     }
 

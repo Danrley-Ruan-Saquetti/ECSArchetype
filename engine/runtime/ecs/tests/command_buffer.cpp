@@ -45,15 +45,15 @@ TEST_CASE("spawn referenciado no mesmo buffer") {
 
 TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") {
   oly::ecs::World world;
-  auto entity = world.create();
-  auto shortEntity = world.create();
+  auto entity = world.spawn();
+  auto shortEntity = world.spawn();
   auto commandBuffer = world.commands();
   std::string big = "payload-que-nao-cabe-no-sso-0123456789";
 
   commandBuffer.add(entity, FuzzState{big});
   commandBuffer.add(shortEntity, FuzzState{"abc"}); // SSO: um memcpy deixaria o ponteiro interno apontando para o bloco antigo
   for (int i = 0; i < 500; ++i) {
-    commandBuffer.add(world.create(), A{uint64_t(i)}); // força várias realocações
+    commandBuffer.add(world.spawn(), A{uint64_t(i)}); // força várias realocações
   }
   oly::ecs::detail::WorldTestAccess::flushSequential(world, commandBuffer);
 
@@ -64,7 +64,7 @@ TEST_CASE("payload não trivial sobrevive ao crescimento do buffer") {
 
 TEST_CASE("payload alignas(64) fica alinhado") {
   oly::ecs::World world;
-  auto entity = world.create();
+  auto entity = world.spawn();
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, A{1}); // desloca o offset do próximo registro
   commandBuffer.add(entity, Wide{});
@@ -84,7 +84,7 @@ TEST_CASE("payload alignas(64) fica alinhado") {
 
 TEST_CASE("forEach reproduz a ordem de gravação") {
   oly::ecs::World world;
-  auto entity = world.create();
+  auto entity = world.spawn();
   auto commandBuffer = world.commands();
   auto spawned = commandBuffer.spawn();
   commandBuffer.add(entity, A{7});
@@ -111,7 +111,7 @@ TEST_CASE("buffer descartado sem flush não vaza") {
     }
     CHECK(LifeCounter::alive == 0);
 
-    auto entity = world.create();
+    auto entity = world.spawn();
     CHECK(entity.index == 0); // índice reservado voltou à freeList (geração + 1)
     CHECK(entity.generation == 1);
   }
@@ -119,7 +119,7 @@ TEST_CASE("buffer descartado sem flush não vaza") {
 
 TEST_CASE("flushSequential ignora handles que não estão vivos nem reservados") {
   oly::ecs::World world;
-  auto entity = world.create(A{1});
+  auto entity = world.spawn(A{1});
   world.destroy(entity);
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, B{0, 0});
@@ -166,12 +166,12 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
       } else if (roll < 95) {
         oly::ecs::Entity entity = live[generator() % live.size()];
         oly::ecs::ComponentId componentId = fuzz::universe()[generator() % 5];
-        commandBuffer.removeRaw(entity, componentId);
+        commandBuffer.removeById(entity, componentId);
         model[entity].erase(componentId);
       } else if (!dead.empty()) {
         oly::ecs::Entity old = dead[generator() % dead.size()]; // obsoleto: ignorado no flush
         addToCommandBuffer(commandBuffer, old, oly::ecs::componentId<A>(), 1);
-        commandBuffer.removeRaw(old, oly::ecs::componentId<B>());
+        commandBuffer.removeById(old, oly::ecs::componentId<B>());
       }
     }
 
@@ -190,7 +190,7 @@ TEST_CASE("fuzz sequencial == aplicar direto") {
 
 TEST_CASE("R-CB-4: add seguido de remove não deixa nada") {
   oly::ecs::World world;
-  auto entity = world.create(B{1, 2});
+  auto entity = world.spawn(B{1, 2});
   auto before = oly::ecs::archetypeCount(world);
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, A{1});
@@ -206,7 +206,7 @@ TEST_CASE("R-CB-4: add seguido de remove não deixa nada") {
 
 TEST_CASE("R-CB-4: remove seguido de add atribui o valor novo") {
   oly::ecs::World world;
-  auto entity = world.create(A{1});
+  auto entity = world.spawn(A{1});
   auto commandBuffer = world.commands();
   commandBuffer.remove<A>(entity);
   commandBuffer.add(entity, A{9});
@@ -219,7 +219,7 @@ TEST_CASE("R-CB-4: remove seguido de add atribui o valor novo") {
 
 TEST_CASE("R-CB-4: add repetido mantém o último valor") {
   oly::ecs::World world;
-  auto entity = world.create();
+  auto entity = world.spawn();
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, A{1});
   commandBuffer.add(entity, A{2});
@@ -237,7 +237,7 @@ TEST_CASE("R-CB-4: add sobre T existente atribui") {
   LifeCounter::alive = 0;
   {
     oly::ecs::World world;
-    auto entity = world.create(LifeCounter{1}, A{1});
+    auto entity = world.spawn(LifeCounter{1}, A{1});
     auto commandBuffer = world.commands();
     commandBuffer.add(entity, LifeCounter{2});
 
@@ -253,8 +253,8 @@ TEST_CASE("R-CB-4: add sobre T existente atribui") {
 TEST_CASE("R-CB-4: destroy descarta comandos anteriores; spawn+destroy libera o índice") {
   LifeCounter::alive = 0;
   oly::ecs::World world;
-  world.create();
-  auto entity = world.create(A{1});
+  world.spawn();
+  auto entity = world.spawn(A{1});
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, B{0, 0});
   commandBuffer.add(entity, LifeCounter{1});
@@ -269,7 +269,7 @@ TEST_CASE("R-CB-4: destroy descarta comandos anteriores; spawn+destroy libera o 
   CHECK_FALSE(world.isAlive(spawned));
   CHECK(LifeCounter::alive == 0);
 
-  auto created = world.create();
+  auto created = world.spawn();
   CHECK(created.index == spawned.index);
   CHECK(created.generation == spawned.generation + 1);
   CHECK_INVARIANTS(world);
@@ -277,7 +277,7 @@ TEST_CASE("R-CB-4: destroy descarta comandos anteriores; spawn+destroy libera o 
 
 TEST_CASE("R-CB-3: uma única transição por entidade") {
   oly::ecs::World world;
-  auto entity = world.create();
+  auto entity = world.spawn();
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, A{1});
   commandBuffer.add(entity, B{2, 3});
@@ -309,11 +309,11 @@ TEST_CASE("flush: entidade com dados nasce direto no arquétipo final") {
 
 TEST_CASE("comandos para handle destruído diretamente são ignorados") {
   oly::ecs::World world;
-  auto entity = world.create(A{1});
+  auto entity = world.spawn(A{1});
   auto commandBuffer = world.commands();
   commandBuffer.add(entity, B{0, 0});
   world.destroy(entity);
-  auto reused = world.create(A{9}); // mesmo índice, geração nova
+  auto reused = world.spawn(A{9}); // mesmo índice, geração nova
   CHECK(reused.index == entity.index);
 
   world.flush(commandBuffer);
@@ -330,7 +330,7 @@ TEST_CASE("spawn+destroy no mesmo buffer devolve o índice com geração + 1") {
   commandBuffer.destroy(spawned);
   world.flush(commandBuffer);
 
-  auto again = world.create();
+  auto again = world.spawn();
 
   CHECK(again.index == spawned.index);
   CHECK(again.generation == spawned.generation + 1);
@@ -386,8 +386,8 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
         } else {
           size_t i = generator() % live.size();
           oly::ecs::ComponentId componentId = fuzz::universe()[generator() % 5];
-          coalescedCommands.removeRaw(live[i].first, componentId);
-          sequentialCommands.removeRaw(live[i].second, componentId);
+          coalescedCommands.removeById(live[i].first, componentId);
+          sequentialCommands.removeById(live[i].second, componentId);
         }
       }
 
@@ -408,8 +408,8 @@ TEST_CASE("fuzz: flush coalescido == flushSequential") {
 
 TEST_CASE("R-CB-3: comandos intercalados entre entidades ainda coalescem por entidade") {
   oly::ecs::World world;
-  auto first = world.create();
-  auto second = world.create();
+  auto first = world.spawn();
+  auto second = world.spawn();
   auto commandBuffer = world.commands();
   commandBuffer.add(first, A{1});
   commandBuffer.add(second, A{2});
@@ -430,8 +430,8 @@ TEST_CASE("R-CB-3: comandos intercalados entre entidades ainda coalescem por ent
 
 TEST_CASE("buffer reutilizado depois do flush agrupa de novo") {
   oly::ecs::World world;
-  auto first = world.create();
-  auto second = world.create();
+  auto first = world.spawn();
+  auto second = world.spawn();
   auto commandBuffer = world.commands();
   commandBuffer.add(first, A{1});
   commandBuffer.add(second, A{2});
@@ -448,40 +448,40 @@ TEST_CASE("buffer reutilizado depois do flush agrupa de novo") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("addRaw grava componente trivial por ID") {
+TEST_CASE("addById grava componente trivial por ID") {
   oly::ecs::World world;
-  auto entity = world.create();
+  auto entity = world.spawn();
   auto commandBuffer = world.commands();
 
   A value{7};
-  commandBuffer.addRaw(entity, oly::ecs::componentId<A>(), &value);
+  commandBuffer.addById(entity, oly::ecs::componentId<A>(), &value);
   world.flush(commandBuffer);
 
   CHECK(world.get<A>(entity).value == 7);
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("addRaw de tag ignora o valor") {
+TEST_CASE("addById de tag ignora o valor") {
   oly::ecs::World world;
-  auto entity = world.create();
+  auto entity = world.spawn();
   auto commandBuffer = world.commands();
 
-  commandBuffer.addRaw(entity, oly::ecs::componentId<Tag>(), nullptr);
+  commandBuffer.addById(entity, oly::ecs::componentId<Tag>(), nullptr);
   world.flush(commandBuffer);
 
   CHECK(world.has<Tag>(entity));
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("addRaw move tipo não trivial") {
+TEST_CASE("addById move tipo não trivial") {
   const int64_t aliveBefore = LifeCounter::alive;
   {
     oly::ecs::World world;
-    auto entity = world.create();
+    auto entity = world.spawn();
     auto commandBuffer = world.commands();
     {
       LifeCounter source{9};
-      commandBuffer.addRaw(entity, oly::ecs::componentId<LifeCounter>(), &source);
+      commandBuffer.addById(entity, oly::ecs::componentId<LifeCounter>(), &source);
     }
     world.flush(commandBuffer);
 
@@ -493,17 +493,17 @@ TEST_CASE("addRaw move tipo não trivial") {
   CHECK(LifeCounter::alive == aliveBefore);
 }
 
-TEST_CASE("addRaw coalesce igual a add<T> no flush") {
+TEST_CASE("addById coalesce igual a add<T> no flush") {
   oly::ecs::World rawWorld, typedWorld;
-  auto rawEntity = rawWorld.create();
-  auto typedEntity = typedWorld.create();
+  auto rawEntity = rawWorld.spawn();
+  auto typedEntity = typedWorld.spawn();
 
   auto rawBuffer = rawWorld.commands();
   A rawA{1};
   B rawB{2, 3};
-  rawBuffer.addRaw(rawEntity, oly::ecs::componentId<A>(), &rawA);
-  rawBuffer.removeRaw(rawEntity, oly::ecs::componentId<A>());
-  rawBuffer.addRaw(rawEntity, oly::ecs::componentId<B>(), &rawB);
+  rawBuffer.addById(rawEntity, oly::ecs::componentId<A>(), &rawA);
+  rawBuffer.removeById(rawEntity, oly::ecs::componentId<A>());
+  rawBuffer.addById(rawEntity, oly::ecs::componentId<B>(), &rawB);
   rawWorld.flush(rawBuffer);
 
   auto typedBuffer = typedWorld.commands();

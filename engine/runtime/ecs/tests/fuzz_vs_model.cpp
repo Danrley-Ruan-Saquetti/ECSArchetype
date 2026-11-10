@@ -32,28 +32,28 @@ TEST_CASE("fuzz: World == modelo de referência") {
       std::map<oly::ecs::ComponentId, uint64_t> components;
       switch (generator() % 6) {
       case 0:
-        entity = world.create();
+        entity = world.spawn();
         break;
       case 1:
-        entity = world.create(A{value});
+        entity = world.spawn(A{value});
         components[oly::ecs::componentId<A>()] = value;
         break;
       case 2:
-        entity = world.create(A{value}, B{value, ~value});
+        entity = world.spawn(A{value}, B{value, ~value});
         components[oly::ecs::componentId<A>()] = value;
         components[oly::ecs::componentId<B>()] = value;
         break;
       case 3:
-        entity = world.create(fuzz::makeFuzzState(value));
+        entity = world.spawn(fuzz::makeFuzzState(value));
         components[oly::ecs::componentId<FuzzState>()] = value;
         break;
       case 4:
-        entity = world.create(A{value}, Tag{});
+        entity = world.spawn(A{value}, Tag{});
         components[oly::ecs::componentId<A>()] = value;
         components[oly::ecs::componentId<Tag>()] = 0;
         break;
       default:
-        entity = world.create(LifeCounter{value}, fuzz::makeFuzzState(value), B{value, ~value});
+        entity = world.spawn(LifeCounter{value}, fuzz::makeFuzzState(value), B{value, ~value});
         components[oly::ecs::componentId<LifeCounter>()] = value;
         components[oly::ecs::componentId<FuzzState>()] = value;
         components[oly::ecs::componentId<B>()] = value;
@@ -95,7 +95,7 @@ TEST_CASE("fuzz: World == modelo de referência") {
         if (!live.empty()) {
           oly::ecs::Entity entity = live[pickIndex()];
           oly::ecs::ComponentId componentId = pickComponentId();
-          world.removeRaw(entity, componentId);
+          world.removeById(entity, componentId);
           model[entity].erase(componentId);
         }
       } else {

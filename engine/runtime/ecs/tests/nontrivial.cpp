@@ -20,7 +20,7 @@ TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e 
     oly::ecs::World world;
     std::vector<oly::ecs::Entity> entities;
     for (uint64_t i = 0; i < 300; ++i) {
-      entities.push_back(world.create(longString(i), std::make_unique<int>(int(i)), std::vector<int>(i % 7 + 1, int(i)),
+      entities.push_back(world.spawn(longString(i), std::make_unique<int>(int(i)), std::vector<int>(i % 7 + 1, int(i)),
                                       LifeCounter{i}));
     }
     CHECK(LifeCounter::alive == 300);
@@ -60,7 +60,7 @@ TEST_CASE("remover componente não trivial destrói o valor") {
   LifeCounter::alive = 0;
   {
     oly::ecs::World world;
-    auto entity = world.create(LifeCounter{1}, A{2});
+    auto entity = world.spawn(LifeCounter{1}, A{2});
     CHECK(LifeCounter::alive == 1);
 
     world.remove<LifeCounter>(entity);

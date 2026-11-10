@@ -12,7 +12,7 @@ TEST_CASE("sequência create/add/remove/destroy mantém invariantes") {
 
   std::vector<oly::ecs::Entity> entities;
   for (uint64_t i = 0; i < 100; ++i) {
-    entities.push_back(world.create());
+    entities.push_back(world.spawn());
     CHECK_INVARIANTS(world);
   }
 
@@ -37,7 +37,7 @@ TEST_CASE("sequência create/add/remove/destroy mantém invariantes") {
   }
 
   for (int i = 0; i < 20; ++i) {
-    world.create(A{1}, LifeCounter{}); // reusa slots da freeList
+    world.spawn(A{1}, LifeCounter{}); // reusa slots da freeList
     CHECK_INVARIANTS(world);
   }
 }
@@ -58,7 +58,7 @@ TEST_CASE("I-2: LifeCounter bate com linhas vivas") {
     };
 
     for (int i = 0; i < kEntityCount; ++i) {
-      entities.push_back(world.create(A{uint64_t(i)}));
+      entities.push_back(world.spawn(A{uint64_t(i)}));
     }
 
     for (int i = 0; i < kEntityCount; i += 2) {

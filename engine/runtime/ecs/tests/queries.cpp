@@ -20,14 +20,14 @@ TEST_CASE("mesma instância para a mesma combinação; filtros mudam a chave") {
 
 TEST_CASE("arquétipos criados antes e depois da query; with/without de tag") {
   oly::ecs::World world;
-  world.create(A{1});
-  world.create(A{2}, Tag{});
+  world.spawn(A{1});
+  world.spawn(A{2}, Tag{});
   auto& all = world.query<A>();
   auto& tagged = world.query<A>(oly::ecs::With<Tag>{});
   auto& untagged = world.query<A>(oly::ecs::Without<Tag>{});
 
-  world.create(A{3}, B{0, 0});
-  world.create(A{4}, B{0, 0}, Tag{}); // arquétipos novos depois
+  world.spawn(A{3}, B{0, 0});
+  world.spawn(A{4}, B{0, 0}, Tag{}); // arquétipos novos depois
 
   CHECK(all.matchedCount() == 4);
   CHECK(tagged.matchedCount() == 2);
@@ -40,10 +40,10 @@ TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") {
   auto& query = world.query<A, B>();
   CHECK(query.matchedCount() == 0);
 
-  world.create(A{1}, B{2, 3});
+  world.spawn(A{1}, B{2, 3});
   CHECK(query.matchedCount() == 1);
 
-  world.create(A{1});
+  world.spawn(A{1});
   CHECK(query.matchedCount() == 1);
   CHECK_INVARIANTS(world);
 }
@@ -60,15 +60,15 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
   std::set<uint32_t> expected;
   std::vector<oly::ecs::Entity> withB;
   for (uint64_t i = 0; i < 300; ++i) {
-    auto entity = (i % 3) ? world.create(A{i}, B{i, 0}) : world.create(A{i});
+    auto entity = (i % 3) ? world.spawn(A{i}, B{i, 0}) : world.spawn(A{i});
     if (i % 3) {
       expected.insert(entity.index);
       withB.push_back(entity);
     }
   }
 
-  world.create(B{0, 0}); // arquétipo sem A
-  auto empty = world.create(A{0}, B{0, 0}, Tag{});
+  world.spawn(B{0, 0}); // arquétipo sem A
+  auto empty = world.spawn(A{0}, B{0, 0}, Tag{});
   world.destroy(empty); // arquétipo vazio é pulado
 
   std::set<uint32_t> seen;
@@ -89,7 +89,7 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
 TEST_CASE("each sem entidade no lambda") {
   oly::ecs::World world;
   for (uint64_t i = 0; i < 10; ++i) {
-    world.create(A{i});
+    world.spawn(A{i});
   }
 
   uint64_t sum = 0;
@@ -103,10 +103,10 @@ TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
   size_t expected = 0;
   for (uint64_t i = 0; i < 200; ++i) {
     if (i % 2) {
-      world.create(A{i}, B{i, i});
+      world.spawn(A{i}, B{i, i});
       ++expected;
     } else {
-      world.create(A{i});
+      world.spawn(A{i});
     }
   }
 
@@ -126,7 +126,7 @@ TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
 
 TEST_CASE("iterating_ aninha e volta a zero, inclusive com exceção") {
   oly::ecs::World world;
-  world.create(A{1});
+  world.spawn(A{1});
 
   world.query<A>().each([&](A&) {
     CHECK(world.isIterating());
@@ -138,6 +138,6 @@ TEST_CASE("iterating_ aninha e volta a zero, inclusive com exceção") {
   CHECK_THROWS(world.query<A>().each([](A&) { throw 42; }));
   CHECK_FALSE(world.isIterating());
 
-  world.create(A{2});
+  world.spawn(A{2});
   CHECK_INVARIANTS(world);
 }

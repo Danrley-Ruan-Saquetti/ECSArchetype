@@ -240,8 +240,8 @@ namespace oly::ecs {
     return entity;
   }
 
-  Entity World::create() {
-    OLY_ASSERT(iterating_ == 0, "create durante iteração=%u", iterating_);
+  Entity World::spawn() {
+    OLY_ASSERT(iterating_ == 0, "spawn durante iteração=%u", iterating_);
     return place(root());
   }
 
@@ -285,7 +285,7 @@ namespace oly::ecs {
     return destinationRow;
   }
 
-  void World::addRaw(Entity entity, ComponentId componentId, void* value) {
+  void World::addById(Entity entity, ComponentId componentId, void* value) {
     const TypeInfo& info = typeInfo(componentId);
     OLY_ASSERT(isAlive(entity) && iterating_ == 0, "add e=%u:%u type=%.*s", entity.index, entity.generation, int(info.name.size()),
                info.name.data());
@@ -314,7 +314,15 @@ namespace oly::ecs {
     }
   }
 
-  void World::removeRaw(Entity entity, ComponentId componentId) {
+  void* World::getById(Entity entity, ComponentId componentId) {
+    void* value = tryGetById(entity, componentId);
+    OLY_ASSERT(value != nullptr, "getById e=%u:%u type=%.*s", entity.index, entity.generation, int(typeInfo(componentId).name.size()),
+               typeInfo(componentId).name.data());
+
+    return value;
+  }
+
+  void World::removeById(Entity entity, ComponentId componentId) {
     OLY_ASSERT(isAlive(entity) && iterating_ == 0, "remove e=%u:%u type=%.*s", entity.index, entity.generation,
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
 
@@ -492,14 +500,14 @@ namespace oly::ecs {
   }
 
   namespace {
-    void validateRawQueryComponents(const std::vector<ComponentId>& read, const std::vector<ComponentId>& write) {
+    void validateQueryByIdComponents(const std::vector<ComponentId>& read, const std::vector<ComponentId>& write) {
       std::vector<ComponentId> seen;
       for (const std::vector<ComponentId>* group : {&read, &write}) {
         for (ComponentId componentId : *group) {
-          OLY_ASSERT(componentId < registeredTypeCount(), "rawQuery componente desconhecido cid=%u", componentId);
+          OLY_ASSERT(componentId < registeredTypeCount(), "queryById: componente desconhecido id=%u", componentId);
           [[maybe_unused]] const TypeInfo& info = typeInfo(componentId);
-          OLY_ASSERT(!info.tag, "rawQuery tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
-          OLY_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "rawQuery componente repetido type=%.*s",
+          OLY_ASSERT(!info.tag, "queryById: tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
+          OLY_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "queryById: componente repetido type=%.*s",
                      int(info.name.size()), info.name.data());
           seen.push_back(componentId);
         }
@@ -507,8 +515,8 @@ namespace oly::ecs {
     }
   }
 
-  RawQuery& World::rawQuery(const RawQuerySpec& spec) {
-    validateRawQueryComponents(spec.read, spec.write);
+  QueryById& World::queryById(const QueryByIdSpec& spec) {
+    validateQueryByIdComponents(spec.read, spec.write);
 
     std::vector<ComponentId> components = spec.read;
     components.insert(components.end(), spec.write.begin(), spec.write.end());
@@ -525,15 +533,15 @@ namespace oly::ecs {
     for (ComponentId componentId : spec.write) {
       key.components.push_back(uint64_t(componentId) << 1);
     }
-    if (auto it = rawQueryCache_.find(key); it != rawQueryCache_.end()) {
+    if (auto it = queryByIdCache_.find(key); it != queryByIdCache_.end()) {
       return *it->second;
     }
 
-    auto created = std::make_unique<RawQuery>(&iterating_, std::move(components), with, std::move(without));
+    auto created = std::make_unique<QueryById>(&iterating_, std::move(components), with, std::move(without));
     created->initialize(archetypes_, smallestIndex(with));
-    RawQuery& reference = *created;
+    QueryById& reference = *created;
     queries_.push_back(&reference);
-    rawQueryCache_.emplace(std::move(key), std::move(created));
+    queryByIdCache_.emplace(std::move(key), std::move(created));
     return reference;
   }
 
@@ -608,12 +616,12 @@ namespace oly::ecs {
         break;
       case detail::CommandOperation::Add:
         if (store_.isAlive(command.entity)) {
-          addRaw(command.entity, command.componentId, command.payload);
+          addById(command.entity, command.componentId, command.payload);
         }
         break;
       case detail::CommandOperation::Remove:
         if (store_.isAlive(command.entity)) {
-          removeRaw(command.entity, command.componentId);
+          removeById(command.entity, command.componentId);
         }
         break;
       }

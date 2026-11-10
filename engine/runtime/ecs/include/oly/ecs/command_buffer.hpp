@@ -56,11 +56,11 @@ namespace oly::ecs {
     void add(Entity entity, T&& value);
     template <class T>
     void remove(Entity entity) {
-      removeRaw(entity, componentId<T>());
+      removeById(entity, componentId<T>());
     }
     // Move de `value` (quem chamou segue dono do moved-from); ignorado para tags.
-    void addRaw(Entity entity, ComponentId componentId, void* value);
-    void removeRaw(Entity entity, ComponentId componentId);
+    void addById(Entity entity, ComponentId componentId, void* value);
+    void removeById(Entity entity, ComponentId componentId);
 
     size_t commandCount() const noexcept {
       return count_;

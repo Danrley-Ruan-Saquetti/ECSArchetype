@@ -207,7 +207,7 @@ namespace oly::ecs {
     pushRecord(detail::CommandOperation::Destroy, entity, 0, 0, 1, true);
   }
 
-  void CommandBuffer::addRaw(Entity entity, ComponentId componentId, void* value) {
+  void CommandBuffer::addById(Entity entity, ComponentId componentId, void* value) {
     const TypeInfo& info = typeInfo(componentId);
     void* payload = pushRecord(detail::CommandOperation::Add, entity, componentId, info.size, info.tag ? 1 : info.alignment, info.trivial);
     if (info.tag) {
@@ -221,7 +221,7 @@ namespace oly::ecs {
     }
   }
 
-  void CommandBuffer::removeRaw(Entity entity, ComponentId componentId) {
+  void CommandBuffer::removeById(Entity entity, ComponentId componentId) {
     pushRecord(detail::CommandOperation::Remove, entity, componentId, 0, 1, true);
   }
 
