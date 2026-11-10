@@ -13,13 +13,16 @@ import sys
 IGNORED_DIRECTORIES = {"build", "node_modules", ".git", ".superpowers", "dist", "dist-tests"}
 CPP_EXTENSIONS = (".hpp", ".cpp")
 TS_EXTENSION = ".ts"
-TS_IMPORT_PATTERN = re.compile(r"""(?:\bfrom\s+|\bimport\s*\(?\s*)["'](\.{1,2}/[^"']*|@oly/[^"']*)["']""")
+
 INCLUDE_PATTERN = re.compile(r'^\s*#\s*include\s+"oly/([a-z_]+)/([^"]*)"')
 RUNTIME_PREFIX = "engine/runtime/"
+
+TS_IMPORT_PATTERN = re.compile(r"""(?:\bfrom\s+|\bimport\s*\(?\s*)["'](\.{1,2}/[^"']*|@oly/[^"']*)["']""")
 
 
 def load_owners(manifest):
     owners = [(entry["directory"].rstrip("/") + "/", entry["name"], set(entry["depends"])) for entry in manifest["modules"] + manifest["games"]]
+    # Prefixo mais longo primeiro: owner_of fica com o primeiro que casa, que assim é o diretório mais específico.
     return sorted(owners, key=lambda owner: len(owner[0]), reverse=True)
 
 
@@ -52,6 +55,7 @@ def check_cpp_file(path, relative_path, owners):
             inside_included_module = relative_path.startswith(f"{RUNTIME_PREFIX}{included_module}/")
             if included_path.startswith("detail/") and not inside_included_module:
                 violations.append(f"{relative_path}:{line_number}: oly/{included_module}/detail é interno ao módulo {included_module}")
+
     return violations
 
 
@@ -81,6 +85,7 @@ def check_ts_file(path, relative_path, root):
                     resolved = os.path.abspath(os.path.join(os.path.dirname(path), specifier))
                     if os.path.commonpath([resolved, os.path.abspath(package_directory)]) != os.path.abspath(package_directory):
                         violations.append(f"{relative_path}:{line_number}: import relativo atravessa pacotes; use o nome do pacote")
+
     return violations
 
 
@@ -93,6 +98,7 @@ def check(root, manifest):
             violations.extend(check_ts_file(path, relative_path, root))
         else:
             violations.extend(check_cpp_file(path, relative_path, owners))
+
     return sorted(violations)
 
 

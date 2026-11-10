@@ -11,6 +11,8 @@ option(OLY_BUILD_GAMES "Compila os jogos (exige make ts antes)" OFF)
 set(OLY_ENABLE_ASSERTS "" CACHE STRING "0/1; vazio = 0 com NDEBUG, senão 1")
 
 if(EMSCRIPTEN)
+  # ALLOW_MEMORY_GROWTH: os benchmarks criam 1M entidades. EXIT_RUNTIME=1: sem ele o ctest não vê o código de
+  # saída do programa rodando no node.
   add_link_options(-sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1)
 endif()
 

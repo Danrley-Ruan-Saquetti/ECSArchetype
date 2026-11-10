@@ -1,3 +1,4 @@
+# O npm é o que fica ao lado do node: na imagem do emsdk ele não está no PATH.
 NPM = $(dir $(shell command -v node))npm
 
 PRESET ?= debug-asan

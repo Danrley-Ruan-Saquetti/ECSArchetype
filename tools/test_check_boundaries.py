@@ -31,6 +31,7 @@ class CheckBoundariesTest(unittest.TestCase):
         manifestPath = os.path.join(self.root, "manifest.json")
         with open(manifestPath, "w", encoding="utf-8") as handle:
             json.dump(manifest, handle)
+
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             code = check_boundaries.main(["--root", self.root, "--manifest", manifestPath])
@@ -79,7 +80,6 @@ class CheckBoundariesTest(unittest.TestCase):
 
         self.assertEqual(code, 1)
         self.assertIn("engine/fixture/systems.cpp:1:", output)
-
 
     def test_internal_fora_de_engine_falha(self):
         self.write("games/x/src/a.ts", 'import { Bridge } from "@oly/core/internal";\n')

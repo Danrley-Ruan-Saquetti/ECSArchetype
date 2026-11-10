@@ -5,6 +5,7 @@ set -euo pipefail
 
 input=$(cat)
 file=$(printf '%s' "$input" | sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+# O JSON escapa as barras invertidas dos caminhos Windows.
 file=${file//\\\\/\\}
 
 case "$file" in
@@ -14,14 +15,14 @@ esac
 
 project=$(cygpath -m "$CLAUDE_PROJECT_DIR" 2>/dev/null || printf '%s' "$CLAUDE_PROJECT_DIR")
 absolute=$(cygpath -m "$file" 2>/dev/null || printf '%s' "$file")
-REL_PATH=${absolute#"$project"/}
-
-if [ "$REL_PATH" = "$absolute" ]; then
+relative=${absolute#"$project"/}
+# Fora do projeto: o container só enxerga o que está montado em /app.
+if [ "$relative" = "$absolute" ]; then
   exit 0
 fi
 
 cd "$CLAUDE_PROJECT_DIR"
-if ! output=$(docker compose run --rm -T dev clang-format -i "$REL_PATH" 2>&1); then
+if ! output=$(docker compose run --rm -T dev clang-format -i "$relative" 2>&1); then
   printf '%s\n' "$output" | grep -v '^ Container ' >&2
   exit 1
 fi

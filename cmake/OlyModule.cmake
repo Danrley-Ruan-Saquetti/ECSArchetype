@@ -44,15 +44,18 @@ function(oly_add_test)
 
   add_executable(${target} ${TEST_SOURCES} ${PROJECT_SOURCE_DIR}/engine/runtime/core/tests/support/doctest_main.cpp)
   target_link_libraries(${target} PRIVATE oly::${TEST_MODULE} doctest::doctest)
+
   target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
   foreach(supportDirectory IN LISTS TEST_SUPPORT)
     cmake_path(ABSOLUTE_PATH supportDirectory BASE_DIRECTORY ${PROJECT_SOURCE_DIR})
     target_include_directories(${target} PRIVATE ${supportDirectory})
   endforeach()
+
   set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
   oly_warnings(${target})
   oly_wasm_exceptions(${target})
   oly_wasm_node_env(${target})
+
   add_test(NAME ${TEST_MODULE}.${TEST_NAME} COMMAND ${target})
 endfunction()
 
@@ -63,13 +66,14 @@ function(oly_add_contract_death)
   if(NOT OLY_ASSERTS_ENABLED)
     return()
   endif()
-  set(target ${DEATH_MODULE}_contract_death)
 
+  set(target ${DEATH_MODULE}_contract_death)
   add_executable(${target} ${DEATH_SOURCE})
   target_link_libraries(${target} PRIVATE oly::${DEATH_MODULE})
   target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
   set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
   oly_warnings(${target})
+
   foreach(deathCase IN LISTS DEATH_CASES)
     add_test(NAME ${DEATH_MODULE}.contract_death.${deathCase} COMMAND ${target} ${deathCase})
   endforeach()
@@ -85,10 +89,12 @@ function(oly_add_bench)
   target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   set_target_properties(${target} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bench)
   oly_warnings(${target})
+
   if(EMSCRIPTEN)
     # benchmark 1.8.3 desliga o inline asm no Emscripten: lá só existe DoNotOptimize(const&), obsoleta.
     target_compile_options(${target} PRIVATE -Wno-deprecated-declarations)
   endif()
+
   if(OLY_VEC_REPORT)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       target_compile_options(${target} PRIVATE -fopt-info-vec-optimized)

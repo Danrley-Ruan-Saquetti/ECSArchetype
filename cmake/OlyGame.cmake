@@ -32,6 +32,7 @@ function(oly_add_game target)
   set_target_properties(${target} PROPERTIES SUFFIX ".mjs" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/games)
 
   if(EMSCRIPTEN)
+    # EXIT_RUNTIME=0 anula o =1 global: o TS chama o módulo depois de carregado, então o runtime não pode encerrar.
     target_link_options(${target} PRIVATE
       -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=node,web
       -sEXPORTED_FUNCTIONS=_malloc,_free -sEXPORTED_RUNTIME_METHODS=HEAPU8 -sEXIT_RUNTIME=0)

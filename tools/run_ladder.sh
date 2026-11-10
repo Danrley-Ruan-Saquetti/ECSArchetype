@@ -3,6 +3,7 @@
 # Uso: tools/run_ladder.sh <rodadas> <bench> [variantes...]   (no host; os binários já precisam estar compilados)
 # OLY_LADDER_EXTRA_ARGS: argumentos extras para o benchmark (ex.: --benchmark_min_time=0.01s, só para teste).
 set -euo pipefail
+# Git Bash no host Windows converteria os caminhos POSIX passados ao docker compose.
 export MSYS_NO_PATHCONV=1
 
 if [ "$#" -lt 2 ]; then
@@ -21,7 +22,6 @@ fi
 cd "$(dirname "$0")/.."
 output_directory="docs/benchmarks/wasm/runs/$bench"
 mkdir -p "$output_directory"
-protocol="--benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_format=json ${OLY_LADDER_EXTRA_ARGS:-}"
 
 command_for() {
   case $1 in
@@ -36,10 +36,12 @@ command_for() {
   esac
 }
 
+# Recusa variante desconhecida antes da primeira rodada, não no meio da escada.
 for variant in "${variants[@]}"; do
   command_for "$variant" > /dev/null
 done
 
+protocol="--benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_format=json ${OLY_LADDER_EXTRA_ARGS:-}"
 for round in $(seq 1 "$rounds"); do
   for variant in "${variants[@]}"; do
     read -r service command <<< "$(command_for "$variant")"

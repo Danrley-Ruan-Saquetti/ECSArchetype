@@ -11,9 +11,12 @@ import re
 import statistics
 import sys
 
+# Variantes e degraus do estudo de custo WASM: docs/superpowers/specs/2026-11-06-wasm-cost-study-design.md §4.
 VARIANT_ORDER = ["V0", "V1", "V2", "V2S", "V3", "V4", "VX"]
 STEPS = [("V1", "V0"), ("V2", "V1"), ("V3", "V2"), ("V3", "V2S"), ("V4", "V3"), ("V4", "V2"), ("V4", "V0"), ("VX", "V1")]
+
 NANOSECONDS_PER_UNIT = {"ns": 1, "us": 1e3, "ms": 1e6, "s": 1e9}
+
 DASH = "—"
 HEADER = "Razões entre variantes vêm de execuções diferentes (intercaladas); ver dispersão."
 
@@ -43,6 +46,7 @@ def load_medians(path):
         if unit not in NANOSECONDS_PER_UNIT:
             raise LadderError(f"{path}: time_unit desconhecida '{unit}' em {name}")
         medians[name[: -len("_median")]] = entry["real_time"] * NANOSECONDS_PER_UNIT[unit]
+
     if not medians:
         raise LadderError(f"{path}: nenhuma mediana encontrada (faltou --benchmark_report_aggregates_only?)")
     return medians
@@ -69,6 +73,7 @@ def ratio_of(rounds_a, name_a, rounds_b, name_b):
         if name_a not in round_a or name_b not in round_b or round_b[name_b] == 0:
             return None
         ratios.append(round_a[name_a] / round_b[name_b])
+
     if not ratios:
         return None
     return statistics.median(ratios), min(ratios), max(ratios)
@@ -89,6 +94,7 @@ def table(title, columns, rows):
     lines = [f"### {title}", "", "| Benchmark | " + " | ".join(columns) + " |", "|---|" + "---|" * len(columns)]
     for name, cells in rows:
         lines.append(f"| {name} | " + " | ".join(cells) + " |")
+
     return "\n".join(lines)
 
 
@@ -104,6 +110,7 @@ def benchmark_names(runs, variants, name_filter):
             for name in round_:
                 if name not in names and (name_filter is None or re.search(name_filter, name)):
                     names.append(name)
+
     return names
 
 
@@ -116,18 +123,18 @@ def render_markdown(runs, pair=None, name_filter=None):
     rows = [(name, [format_spread(spread_across_rounds(runs[variant], name), 1) for variant in variants]) for name in names]
     sections.append(table(f"Mediana de real_time por variante (ns; mediana entre {rounds_count} rodadas [mín–máx])", variants, rows))
 
-    steps = [(a, b) for a, b in STEPS if a in runs and b in runs]
+    steps = [(variant_a, variant_b) for variant_a, variant_b in STEPS if variant_a in runs and variant_b in runs]
     if steps:
-        rows = [(name, [format_spread(step_ratio(runs[a], runs[b], name), 2) for a, b in steps]) for name in names]
-        sections.append(table("Degraus (razão rodada a rodada: mediana [mín–máx])", [f"{a}/{b}" for a, b in steps], rows))
+        rows = [(name, [format_spread(step_ratio(runs[variant_a], runs[variant_b], name), 2) for variant_a, variant_b in steps]) for name in names]
+        sections.append(table("Degraus (razão rodada a rodada: mediana [mín–máx])", [f"{variant_a}/{variant_b}" for variant_a, variant_b in steps], rows))
 
     if pair is not None:
         numerator, baseline = pair
         rows = []
         for name in names:
             if numerator in name:
-                base = name.replace(numerator, baseline)
-                rows.append((name, [format_spread(ratio_of(runs[v], name, runs[v], base), 2) for v in variants]))
+                baseline_name = name.replace(numerator, baseline)
+                rows.append((name, [format_spread(ratio_of(runs[variant], name, runs[variant], baseline_name), 2) for variant in variants]))
         sections.append(table(f"Razão {numerator}/{baseline} por variante (mesma rodada)", variants, rows))
 
     return "\n\n".join(sections) + "\n"
@@ -158,9 +165,11 @@ def main(argv=None):
         runs = {}
         for variant, path in arguments.run:
             runs.setdefault(variant, []).append(load_medians(path))
+
         counts = {variant: len(rounds) for variant, rounds in runs.items()}
         if len(set(counts.values())) != 1:
             raise LadderError(f"nº de rodadas diferente entre variantes: {counts}")
+
         output = render_markdown(runs, arguments.pair, arguments.filter)
     except LadderError as error:
         print(f"bench_ladder: {error}", file=sys.stderr)
