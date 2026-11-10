@@ -8,8 +8,10 @@
 #include "components.hpp"
 #include "log.hpp"
 #include "oly/app/engine.hpp"
+#include "oly/app/handler.hpp"
 
 using oly::app::Engine;
+using oly::app::HandlerContext;
 using oly::app::Phase;
 using oly::app::SystemContext;
 
@@ -29,6 +31,32 @@ namespace {
     }
 
     ++shared.stepsAfterFailure;
+  }
+
+  struct Ping {
+    uint32_t value;
+  };
+  struct Echo {
+    uint32_t depth;
+  };
+
+  struct EventShared {
+    int throwerCalls = 0;
+    int echoes = 0;
+  };
+
+  void emitEchoThenThrowOnce(HandlerContext& context) {
+    EventShared& shared = *static_cast<EventShared*>(context.userData());
+    ++shared.throwerCalls;
+
+    context.emit(Echo{0});
+    if (shared.throwerCalls == 1) {
+      throw std::runtime_error("boom");
+    }
+  }
+
+  void countEchoes(HandlerContext& context) {
+    static_cast<EventShared*>(context.userData())->echoes += static_cast<int>(context.eventCount());
   }
 }
 
@@ -57,6 +85,30 @@ TEST_CASE("frame seguinte à exceção só registra o tempo e o próximo volta a
   engine.frame(3.0 / 60);
 
   CHECK(shared.stepsAfterFailure == 1);
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("exceção num handler descarta os eventos pendentes no frame seguinte") {
+  oly::ecs::World world;
+  Engine engine(world);
+  EventShared shared;
+  engine.declareEvent<Ping>();
+  engine.declareEvent<Echo>();
+  engine.on<Ping>("thrower", emitEchoThenThrowOnce, &shared);
+  engine.on<Echo>("echo", countEchoes, &shared);
+  engine.frame(0.0);
+  engine.emit(Ping{1});
+
+  CHECK_THROWS(engine.frame(1.0 / 60));
+  engine.frame(2.0 / 60);
+  engine.frame(3.0 / 60);
+
+  CHECK(shared.echoes == 0);
+
+  engine.emit(Ping{2});
+  engine.frame(4.0 / 60);
+
+  CHECK(shared.echoes == 1);
   CHECK_INVARIANTS(world);
 }
 #endif

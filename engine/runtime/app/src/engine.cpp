@@ -79,6 +79,7 @@ namespace oly::app {
   // Uma exceção de sistema (ex.: JS desenrolando o WASM sem destrutores) deixa inFrame_ ligado.
   void Engine::recoverFromInterruptedFrame() {
     commands_ = world_.commands();
+    queues_.clear();
     inFrame_ = false;
     restartClock();
   }
@@ -140,12 +141,13 @@ namespace oly::app {
     runPhase(Phase::Update);
     runPhase(Phase::UpdateAfter);
 
+    dispatchEvents();
+    applyStateTransition();
+
+    // O relógio só avança depois do despacho: os handlers veem o mesmo time() dos sistemas do passo.
     if (!pausedThisStep_) {
       ++steps_;
     }
-
-    dispatchEvents();
-    applyStateTransition();
   }
 
   void Engine::dispatchEvents() {

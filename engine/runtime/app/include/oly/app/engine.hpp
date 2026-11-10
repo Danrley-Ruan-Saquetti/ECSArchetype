@@ -123,8 +123,8 @@ namespace oly::app {
 
     // nowSeconds não pode recuar (OLY_ASSERT). Roda até maxStepsPerFrame passos fixos e depois a fase Render uma
     // vez; os passos inteiros que não couberam são descartados e só a fração fica acumulada. O primeiro frame só
-    // registra o tempo. Se o frame anterior foi interrompido por exceção, este descarta os comandos pendentes e
-    // também só registra o tempo.
+    // registra o tempo. Se o frame anterior foi interrompido por exceção, este descarta os comandos e os eventos
+    // pendentes (inclusive os emitidos depois da exceção) e também só registra o tempo.
     void frame(double nowSeconds);
     // Oculto, frame não faz nada; ao mostrar, o próximo frame só registra o tempo. Não mexe na pausa do jogo.
     void setHidden(bool hidden);
