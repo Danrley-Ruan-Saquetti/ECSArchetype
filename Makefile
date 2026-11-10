@@ -25,7 +25,7 @@ run: test
 all: test
 
 ts:
-	cd engine && ([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build
+	([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build
 .PHONY: ts
 
 games-test: ts

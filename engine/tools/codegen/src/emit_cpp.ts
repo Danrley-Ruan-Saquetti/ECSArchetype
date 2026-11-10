@@ -1,5 +1,4 @@
-import type { ScalarType } from "../ts/layout.js";
-import type { ComponentType, Schema, SchemaType } from "../ts/schema.js";
+import type { ComponentType, ScalarType, Schema, SchemaType } from "@oly/core";
 
 const cppTypes: Readonly<Record<ScalarType, string>> = {
   f32: "float",

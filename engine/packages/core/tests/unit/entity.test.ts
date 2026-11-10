@@ -1,15 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import {
-  MaxEntityGeneration,
-  NullEntity,
-  entityGeneration,
-  entityIndex,
-  formatEntity,
-  packEntity,
-} from "../../ts/entity.js";
-import { EngineContractError } from "../../ts/errors.js";
+import { EngineContractError, NullEntity, entityGeneration, entityIndex, formatEntity } from "@oly/core";
+import { MaxEntityGeneration, packEntity } from "@oly/core/internal";
 
 test("empacota e desempacota", () => {
   const entity = packEntity(5, 3);

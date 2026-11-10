@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { computeLayout } from "../../ts/layout.js";
+import { computeLayout } from "@oly/core/internal";
 
 function offsets(layout: ReturnType<typeof computeLayout>): number[] {
   return layout.fields.map((field) => field.offset);

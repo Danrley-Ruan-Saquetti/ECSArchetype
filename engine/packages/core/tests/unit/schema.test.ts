@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { EngineContractError } from "../../ts/errors.js";
-import { component, defineSchema, tag } from "../../ts/schema.js";
-import { canonicalSchema, fnv1a32, schemaHash } from "../../ts/schema_hash.js";
+import { EngineContractError, component, defineSchema, tag } from "@oly/core";
+import { canonicalSchema, fnv1a32, schemaHash } from "@oly/core/internal";
 
 test("component sem campos é erro", () => {
   assert.throws(() => component("Empty", {}), /tag/);

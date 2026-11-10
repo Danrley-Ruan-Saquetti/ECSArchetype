@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "engine/packages/core" },
+    { "path": "engine/packages/core/tests" },
+    { "path": "engine/tools/codegen" },
+    { "path": "engine/tools/codegen/tests" },
+    { "path": "engine/testing" }
+  ]
+}

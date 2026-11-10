@@ -4,3 +4,6 @@ build
 *.log
 __pycache__
 node_modules
+dist
+dist-tests
+*.tsbuildinfo

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { emitHeader, emitRegistry } from "../../generator/emit_cpp.js";
-import { component, defineSchema, tag } from "../../ts/schema.js";
+import { component, defineSchema, tag } from "@oly/core";
+
+import { emitHeader, emitRegistry } from "../dist/emit_cpp.js";
 
 const P = component("P", { a: "u8", b: "f64", owner: "entity" });
 const T = tag("T");

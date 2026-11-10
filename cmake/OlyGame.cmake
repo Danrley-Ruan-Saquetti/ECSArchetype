@@ -1,5 +1,5 @@
 find_program(OLY_NODE node)
-set(OLY_GENERATOR ${PROJECT_SOURCE_DIR}/build/ts/generator/main.js)
+set(OLY_GENERATOR ${PROJECT_SOURCE_DIR}/engine/tools/codegen/dist/main.js)
 
 # oly_add_game(<alvo> SCHEMA_JS <schema.js compilado> SOURCES <cpp...> DEPENDS <m...>)
 # Gera os structs e o registro do esquema, compila o jogo com os módulos e liga o módulo WASM (.mjs).
@@ -10,7 +10,7 @@ function(oly_add_game target)
     message(FATAL_ERROR "node não encontrado: ele roda o gerador do esquema")
   endif()
   if(NOT EXISTS ${OLY_GENERATOR})
-    message(FATAL_ERROR "rode make ts antes de configurar com OLY_BUILD_GAMES=ON")
+    message(FATAL_ERROR "rode 'make ts' antes de configurar com OLY_BUILD_GAMES=ON")
   endif()
 
   set(generatedDirectory ${CMAKE_CURRENT_BINARY_DIR}/${target}_generated)

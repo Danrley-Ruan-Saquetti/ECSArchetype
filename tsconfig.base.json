@@ -4,11 +4,9 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "rootDir": ".",
-    "outDir": "../build/ts",
-    "types": ["node"],
+    "composite": true,
+    "declaration": true,
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": false
-  },
-  "include": ["ts", "generator", "fixture", "test", "bench"]
+  }
 }

@@ -2,11 +2,12 @@ import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 import schema, { Position, Velocity } from "../fixture/schema.js";
-import type { Entity } from "../ts/entity.js";
-import type { OlyModule, OlyModuleFactory } from "../ts/module.js";
-import type { Query } from "../ts/query.js";
-import { loadEngine, type EngineRuntime } from "../ts/runtime.js";
-import type { World } from "../ts/world.js";
+import type { Entity } from "@oly/core";
+import type { OlyModuleFactory } from "@oly/core";
+import type { OlyModule } from "@oly/core/internal";
+import type { Query } from "@oly/core";
+import { loadEngine, type EngineRuntime } from "@oly/core";
+import type { World } from "@oly/core";
 
 const DeltaTime = Math.fround(1 / 60);
 const WarmupIterations = 50;

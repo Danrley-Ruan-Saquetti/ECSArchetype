@@ -1,8 +1,9 @@
+#!/usr/bin/env node
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { Schema } from "../ts/schema.js";
+import type { Schema } from "@oly/core";
 import { emitHeader, emitRegistry } from "./emit_cpp.js";
 
 function argumentValue(name: string): string {
