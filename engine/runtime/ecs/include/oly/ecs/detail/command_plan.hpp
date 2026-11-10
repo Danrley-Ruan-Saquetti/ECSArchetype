@@ -9,15 +9,15 @@
 
 namespace oly::ecs::detail {
   enum class CommandOperation : uint8_t { Spawn,
-                                   Destroy,
-                                   Add,
-                                   Remove };
+                                          Destroy,
+                                          Add,
+                                          Remove };
 
   struct CommandView {
     CommandOperation operation;
     Entity entity;
     ComponentId componentId;
-    void* payload; // nullptr se não há payload (Spawn/Destroy/Remove/tag)
+    void* payload; // nullptr em Spawn, Destroy, Remove e em Add de tag
   };
 
   struct NetComponentOperation {
@@ -41,7 +41,9 @@ namespace oly::ecs::detail {
   // netEffect, uma entidade por vez.
   struct CommandPlan {
     std::vector<EntityPlan> owned;
-    std::span<const EntityPlan> entities; // na ordem da primeira aparição
+    // Na ordem da primeira aparição. Aponta para `owned` ou para os trechos guardados no CommandBuffer,
+    // então o plano só vale enquanto o buffer não mudar.
+    std::span<const EntityPlan> entities;
     // Vazio quando os comandos de cada entidade já são consecutivos no buffer (caso comum de lotes):
     // então `EntityPlan::begin` é o offset/8 do primeiro registro e basta andar `count` registros.
     // Senão, o offset/8 de cada registro, agrupado por entidade e na ordem de gravação.

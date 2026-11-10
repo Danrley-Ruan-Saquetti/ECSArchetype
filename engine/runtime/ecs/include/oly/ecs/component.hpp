@@ -21,6 +21,8 @@ namespace oly::ecs {
     std::string_view name;
   };
 
+  // `id` precisa ser menor que registeredTypeCount() (sem verificação). A referência vale até o
+  // fim do processo.
   const TypeInfo& typeInfo(ComponentId id);
   uint32_t registeredTypeCount() noexcept;
 
@@ -55,6 +57,8 @@ namespace oly::ecs {
     }
   }
 
+  // ID denso, atribuído na primeira chamada para cada tipo: depende da ordem dessas chamadas,
+  // então não serve para persistir. Ignora const, volatile e referência.
   template <class T>
   ComponentId componentId() {
     return detail::componentIdOf<std::remove_cvref_t<T>>();

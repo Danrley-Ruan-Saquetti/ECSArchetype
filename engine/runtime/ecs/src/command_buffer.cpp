@@ -12,6 +12,7 @@ namespace oly::ecs {
   namespace {
     constexpr size_t kHeaderSize = 24;
     constexpr size_t kBlockAlignment = 64;
+    constexpr size_t kInitialBlockBytes = 1024;
   }
 
   CommandBuffer::~CommandBuffer() {
@@ -115,7 +116,7 @@ namespace oly::ecs {
   }
 
   void CommandBuffer::grow(size_t need) {
-    size_t newCapacity = std::max<size_t>(1024, capacity_ * 2);
+    size_t newCapacity = std::max<size_t>(kInitialBlockBytes, capacity_ * 2);
     while (newCapacity < need) {
       newCapacity *= 2;
     }
@@ -246,25 +247,25 @@ namespace oly::ecs {
   }
 
   detail::CommandPlan CommandBuffer::plan() const {
-    constexpr uint32_t None = UINT32_MAX;
     detail::CommandPlan result;
     if (grouped_) {
       result.entities = runs_;
       return result;
     }
 
-    std::vector<uint32_t> planBySlot(store_->slotCount(), None);
+    constexpr uint32_t kNoPlan = UINT32_MAX;
+    std::vector<uint32_t> planBySlot(store_->slotCount(), kNoPlan);
     std::unordered_map<uint64_t, uint32_t> overflow; // geração diferente no mesmo índice / índice fora da faixa
     auto planOf = [&](Entity entity) -> uint32_t {
-      auto make = [&] {
+      auto appendPlan = [&] {
         result.owned.push_back(detail::EntityPlan{entity});
         return static_cast<uint32_t>(result.owned.size() - 1);
       };
 
       if (entity.index < planBySlot.size()) {
         uint32_t& planIndex = planBySlot[entity.index];
-        if (planIndex == None) {
-          planIndex = make();
+        if (planIndex == kNoPlan) {
+          planIndex = appendPlan();
         }
         if (result.owned[planIndex].entity == entity) {
           return planIndex;
@@ -272,9 +273,9 @@ namespace oly::ecs {
       }
 
       const uint64_t key = (uint64_t(entity.generation) << 32) | entity.index;
-      auto [it, inserted] = overflow.try_emplace(key, None);
+      auto [it, inserted] = overflow.try_emplace(key, kNoPlan);
       if (inserted) {
-        it->second = make();
+        it->second = appendPlan();
       }
       return it->second;
     };

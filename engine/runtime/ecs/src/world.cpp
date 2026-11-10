@@ -51,14 +51,14 @@ namespace oly::ecs {
         return fail(why, "I-5", archetypeLabel(archetype) + " signature");
       }
 
-      std::vector<ComponentId> data;
+      std::vector<ComponentId> dataComponents;
       for (ComponentId componentId : archetype.signature) {
         if (!typeInfo(componentId).tag) {
-          data.push_back(componentId);
+          dataComponents.push_back(componentId);
         }
       }
 
-      if (data != archetype.columnTypes) {
+      if (dataComponents != archetype.columnTypes) {
         return fail(why, "I-5", archetypeLabel(archetype) + " columnTypes");
       }
 
@@ -113,6 +113,7 @@ namespace oly::ecs {
       bool valid = false;
       const detail::Archetype* source = nullptr;
       std::vector<std::pair<ComponentId, bool>> key;
+
       detail::Archetype* destination = nullptr;
       const detail::Edge* edge = nullptr; // nullptr se source == destination ou entidade reservada
       std::vector<detail::Column*> columns; // por operação: coluna no destino (nullptr: sem valor a construir)
@@ -171,7 +172,7 @@ namespace oly::ecs {
         return;
       }
 
-      // tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável
+      // Tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável.
       switch (info.size) {
       case 4: std::memcpy(slot, value, 4); break;
       case 8: std::memcpy(slot, value, 8); break;
@@ -196,6 +197,20 @@ namespace oly::ecs {
         constructValue(*column.info, slot, operations[i].payload);
       }
     }
+
+    void validateQueryByIdComponents(const std::vector<ComponentId>& read, const std::vector<ComponentId>& write) {
+      std::vector<ComponentId> seen;
+      for (const std::vector<ComponentId>* group : {&read, &write}) {
+        for (ComponentId componentId : *group) {
+          OLY_ASSERT(componentId < registeredTypeCount(), "queryById: componente desconhecido id=%u", componentId);
+          [[maybe_unused]] const TypeInfo& info = typeInfo(componentId);
+          OLY_ASSERT(!info.tag, "queryById: tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
+          OLY_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "queryById: componente repetido type=%.*s",
+                     int(info.name.size()), info.name.data());
+          seen.push_back(componentId);
+        }
+      }
+    }
   }
 
   World::World() {
@@ -206,7 +221,6 @@ namespace oly::ecs {
 
   detail::Archetype* World::findOrCreate(detail::Signature signature) {
     ++signatureLookups_;
-
     if (auto it = bySignature_.find(signature); it != bySignature_.end()) {
       return it->second;
     }
@@ -328,7 +342,6 @@ namespace oly::ecs {
 
     detail::EntityRecord& record = store_.record(entity.index);
     detail::Archetype& source = *record.archetype;
-
     if (!std::binary_search(source.signature.begin(), source.signature.end(), componentId)) {
       return;
     }
@@ -499,22 +512,6 @@ namespace oly::ecs {
     return true;
   }
 
-  namespace {
-    void validateQueryByIdComponents(const std::vector<ComponentId>& read, const std::vector<ComponentId>& write) {
-      std::vector<ComponentId> seen;
-      for (const std::vector<ComponentId>* group : {&read, &write}) {
-        for (ComponentId componentId : *group) {
-          OLY_ASSERT(componentId < registeredTypeCount(), "queryById: componente desconhecido id=%u", componentId);
-          [[maybe_unused]] const TypeInfo& info = typeInfo(componentId);
-          OLY_ASSERT(!info.tag, "queryById: tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
-          OLY_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "queryById: componente repetido type=%.*s",
-                     int(info.name.size()), info.name.data());
-          seen.push_back(componentId);
-        }
-      }
-    }
-  }
-
   QueryById& World::queryById(const QueryByIdSpec& spec) {
     validateQueryByIdComponents(spec.read, spec.write);
 
@@ -547,10 +544,8 @@ namespace oly::ecs {
 
   detail::QueryCacheBase* World::registerQuery(QueryKey key, std::unique_ptr<detail::QueryCacheBase> query) {
     detail::QueryCacheBase* registered = query.get();
-
     queries_.push_back(registered);
     queryCache_.emplace(std::move(key), std::move(query));
-
     return registered;
   }
 

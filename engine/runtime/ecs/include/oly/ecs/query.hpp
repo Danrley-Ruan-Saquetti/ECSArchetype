@@ -24,6 +24,9 @@ namespace oly::ecs {
   template <class... Us>
   struct Without {};
 
+  // Possuída pelo World e válida enquanto ele existir. Durante each/eachBlock o World fica marcado
+  // como iterando: mudança estrutural direta é erro de contrato (OLY_ASSERT) e deve passar por um
+  // CommandBuffer. Spans e referências entregues ao callback só valem dentro dele.
   template <class... Ts>
   class Query : public detail::QueryCacheBase {
     static_assert((!std::is_empty_v<std::remove_const_t<Ts>> && ...),

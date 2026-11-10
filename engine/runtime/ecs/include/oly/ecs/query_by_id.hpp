@@ -19,6 +19,8 @@ namespace oly::ecs {
   class QueryById;
   class World;
 
+  // `read` e `write`: componentes registrados, com dados e sem repetição (OLY_ASSERT); a ordem dos dois,
+  // nessa sequência, define as colunas de BlockById. `with` e `without` só filtram e aceitam tags.
   struct QueryByIdSpec {
     std::vector<ComponentId> read{}, write{}, with{}, without{};
   };
@@ -45,6 +47,7 @@ namespace oly::ecs {
   };
 
   // Marca o World como iterando até ser destruída. Só movível; o objeto movido não encerra de novo.
+  // Iterações aninhadas precisam terminar na ordem inversa da abertura (OLY_ASSERT).
   class QueryIteration {
    private:
     friend class QueryById;
@@ -88,6 +91,7 @@ namespace oly::ecs {
   };
 
   // Query por ComponentId, sem tipos em tempo de compilação: serve a camadas que só conhecem IDs.
+  // Possuída pelo World e válida enquanto ele existir.
   class QueryById : public detail::QueryCacheBase {
    private:
     friend class World;
@@ -197,5 +201,4 @@ namespace oly::ecs {
       query_->endIteration(level_);
     }
   }
-
 }

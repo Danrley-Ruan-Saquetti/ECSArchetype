@@ -32,6 +32,19 @@ namespace oly::ecs {
     template <class T, class... Rest>
     inline constexpr bool distinctTypes<T, Rest...> = (!(std::is_same_v<T, Rest> || ...)) && distinctTypes<Rest...>;
 
+    template <class... Us>
+    void addFilter(std::vector<ComponentId>& with, std::vector<ComponentId>&, With<Us...>) {
+      (with.push_back(componentId<Us>()), ...);
+    }
+    template <class... Us>
+    void addFilter(std::vector<ComponentId>&, std::vector<ComponentId>& without, Without<Us...>) {
+      (without.push_back(componentId<Us>()), ...);
+    }
+    inline void sortUnique(std::vector<ComponentId>& ids) {
+      std::sort(ids.begin(), ids.end());
+      ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+    }
+
     struct WorldTestAccess;
   }
 
@@ -44,7 +57,7 @@ namespace oly::ecs {
     friend uint32_t archetypeCount(const World& world);
 
     struct QueryKey {
-      std::vector<uint64_t> components; // (componentId << 1) | isConst, na ordem de Ts
+      std::vector<uint64_t> components; // (componentId << 1) | somenteLeitura, na ordem de Ts (ou read seguido de write)
       detail::Signature with, without;
 
       auto operator<=>(const QueryKey&) const = default;
@@ -54,11 +67,14 @@ namespace oly::ecs {
     std::vector<std::unique_ptr<detail::Archetype>> archetypes_;
     std::unordered_map<detail::Signature, detail::Archetype*, detail::SignatureHash> bySignature_;
     std::vector<core::SmallMap<detail::ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
+
     uint32_t iterating_ = 0;
     mutable uint64_t signatureLookups_ = 0;
+
     std::map<QueryKey, std::unique_ptr<detail::QueryCacheBase>> queryCache_;
     std::map<QueryKey, std::unique_ptr<QueryById>> queryByIdCache_; // separado: o static_cast de queryCache_ confundiria os tipos
     std::vector<detail::QueryCacheBase*> queries_;
+
     std::unordered_map<uint64_t, detail::Edge> jumpEdges_; // (source.id << 32) | destination.id
 
    public:
@@ -67,6 +83,9 @@ namespace oly::ecs {
     World(const World&) = delete;
     World& operator=(const World&) = delete;
 
+    // Mudanças estruturais (spawn, destroy, add, remove, as variantes ById e flush) são erro de contrato
+    // durante uma iteração e, exceto spawn e flush, com entidade morta (OLY_ASSERT). Cada uma invalida
+    // ponteiros e spans de qualquer entidade (R-API-1); só Entity é handle estável.
     Entity spawn();
     // Nasce direto no arquétipo final. Lvalues são copiados.
     template <class... Ts>
@@ -82,28 +101,30 @@ namespace oly::ecs {
     template <class T>
     void add(Entity entity, T&& value); // ou atribui, se já tiver T
     template <class T>
-    void remove(Entity entity);
+    void remove(Entity entity); // sem efeito se a entidade não tiver T
     template <class T>
     bool has(Entity entity) const noexcept;
     template <class T>
-    T& get(Entity entity);
+    T& get(Entity entity); // OLY_ASSERT se a entidade estiver morta ou não tiver T
     template <class T>
-    T* tryGet(Entity entity) noexcept;
+    T* tryGet(Entity entity) noexcept; // nullptr se a entidade estiver morta ou não tiver T
 
-    void addById(Entity entity, ComponentId componentId, void* value); // move de `value`; ignorado para tags
+    void addById(Entity entity, ComponentId componentId, void* value); // move de `value` (quem chamou segue dono do moved-from); ignorado para tags
     void removeById(Entity entity, ComponentId componentId);
 
+    // O buffer só pode ser aplicado neste World (OLY_ASSERT no flush) e não pode sobreviver a ele.
     CommandBuffer commands() {
       return CommandBuffer(store_);
     }
     // Duas passadas (R-CB-3): agrupa por entidade e faz uma única transição para o arquétipo final.
+    // Comandos de handles obsoletos são ignorados; o buffer termina vazio.
     void flush(CommandBuffer& commandBuffer);
 
-    // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação.
+    // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação, válida enquanto o World existir.
     template <class... Ts, class... Filters>
     Query<Ts...>& query(Filters... filters);
 
-    // Query por ComponentId, cacheada pela spec (read/write mantêm a ordem dada).
+    // Query por ComponentId, cacheada pela spec (read/write mantêm a ordem dada), válida enquanto o World existir.
     QueryById& queryById(const QueryByIdSpec& spec);
 
     // Assert se a entidade está morta ou o componente ausente (tag também é erro).
@@ -144,12 +165,15 @@ namespace oly::ecs {
     detail::QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<detail::QueryCacheBase> query);
     const core::SmallMap<detail::ArchetypeId, uint16_t>* smallestIndex(const detail::Signature& with) const;
 
+    // Ao remover, `componentId` precisa estar em source.signature (quem chama confere).
     const detail::Edge& edgeFor(detail::Archetype& source, ComponentId componentId, bool adding);
     const detail::Edge& jumpEdge(detail::Archetype& source, detail::Archetype& destination);
+
     void materialize(Entity reserved);
     void destroyOrRelease(Entity entity, bool alive); // reservada (não viva) só devolve o índice
     // A linha nasce morta se a entidade estava reservada. `edge` nullptr: reservada ou já em `destination`.
     uint32_t transitionTo(Entity entity, detail::EntityRecord& record, detail::Archetype& destination, const detail::Edge* edge);
+
     Entity place(detail::Archetype& archetype); // a linha nasce morta: o chamador constrói as colunas
     detail::Archetype& root() noexcept {
       return *archetypes_[0];
@@ -236,21 +260,6 @@ namespace oly::ecs {
     using U = std::remove_cvref_t<T>;
     static_assert(!std::is_empty_v<U>, "tryGet<Tag> não é permitido");
     return static_cast<U*>(tryGetById(entity, componentId<U>()));
-  }
-
-  namespace detail {
-    template <class... Us>
-    void addFilter(std::vector<ComponentId>& with, std::vector<ComponentId>&, With<Us...>) {
-      (with.push_back(componentId<Us>()), ...);
-    }
-    template <class... Us>
-    void addFilter(std::vector<ComponentId>&, std::vector<ComponentId>& without, Without<Us...>) {
-      (without.push_back(componentId<Us>()), ...);
-    }
-    inline void sortUnique(std::vector<ComponentId>& ids) {
-      std::sort(ids.begin(), ids.end());
-      ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
-    }
   }
 
   template <class... Ts, class... Filters>

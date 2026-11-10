@@ -5,14 +5,14 @@
 namespace oly::ecs::detail {
   namespace {
     std::vector<ComponentId> dataTypes(const Signature& signature) {
-      std::vector<ComponentId> out;
-      for (ComponentId id : signature) {
-        if (!typeInfo(id).tag) {
-          out.push_back(id);
+      std::vector<ComponentId> dataComponents;
+      for (ComponentId componentId : signature) {
+        if (!typeInfo(componentId).tag) {
+          dataComponents.push_back(componentId);
         }
       }
 
-      return out;
+      return dataComponents;
     }
   }
 

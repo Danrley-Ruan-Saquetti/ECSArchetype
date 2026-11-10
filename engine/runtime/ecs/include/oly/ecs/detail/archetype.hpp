@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "oly/core/small_map.hpp"
-#include "oly/ecs/detail/table.hpp"
 #include "oly/ecs/component.hpp"
+#include "oly/ecs/detail/table.hpp"
 
 namespace oly::ecs::detail {
   using ArchetypeId = uint32_t;
@@ -37,7 +37,7 @@ namespace oly::ecs::detail {
   struct Edge {
     Archetype* target = nullptr;
     std::vector<int16_t> sourceToDestination; // por coluna da origem: coluna no destino, ou -1
-    int16_t addedColumn = -1; // add de componente com dados: coluna no destino
+    int16_t addedColumn = -1; // coluna do componente adicionado, ou -1 se a aresta não constrói valor (remoção, tag, salto)
   };
 
   struct Archetype {
@@ -50,7 +50,7 @@ namespace oly::ecs::detail {
     Archetype(ArchetypeId id, Signature signature);
   };
 
-  // Coluna de `componentId` em `archetype`, ou NoColumn se ausente ou tag.
+  // NoColumn se `componentId` estiver ausente ou for tag.
   uint16_t columnOf(const Archetype& archetype, ComponentId componentId) noexcept;
 
   // `added` = componente recém-adicionado; NoComponent para remoção ou salto arbitrário.

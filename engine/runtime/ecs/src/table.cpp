@@ -7,8 +7,12 @@
 
 namespace oly::ecs::detail {
   namespace {
+    constexpr size_t kCacheLineBytes = 64;
+    constexpr uint32_t kInitialRowCapacity = 64;
+
+    // R-TB-3: alinhada pelo menos à linha de cache, para favorecer a vetorização.
     size_t columnAlignment(const TypeInfo& info) {
-      return std::max<size_t>(info.alignment, 64);
+      return std::max<size_t>(info.alignment, kCacheLineBytes);
     }
   }
 
@@ -119,7 +123,7 @@ namespace oly::ecs::detail {
 
   uint32_t Table::pushUninitialized(Entity entity) {
     if (count_ == capacity_) {
-      reserve(std::max<uint32_t>(64, capacity_ * 2));
+      reserve(std::max<uint32_t>(kInitialRowCapacity, capacity_ * 2));
     }
 
     entities_.push_back(entity);

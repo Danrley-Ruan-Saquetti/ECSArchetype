@@ -24,6 +24,7 @@ namespace oly::ecs::detail {
     virtual bool isMatched(const Archetype* archetype) const = 0;
   };
 
+  // `signature`, `with` e `without` precisam estar ordenados.
   inline bool signatureMatches(const Signature& signature, std::span<const ComponentId> with, std::span<const ComponentId> without) {
     if (!std::includes(signature.begin(), signature.end(), with.begin(), with.end())) {
       return false;

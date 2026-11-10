@@ -7,8 +7,8 @@
 #include <span>
 #include <vector>
 
-#include "oly/ecs/entity.hpp"
 #include "oly/ecs/component.hpp"
+#include "oly/ecs/entity.hpp"
 
 namespace oly::ecs::detail {
   // `destination` não pode estar construído; `source` termina destruído.
@@ -20,6 +20,7 @@ namespace oly::ecs::detail {
       info.destroy(source);
     }
   }
+
   inline void destroyValue(const TypeInfo& info, void* value) noexcept {
     if (!info.trivial) {
       info.destroy(value);
@@ -60,9 +61,9 @@ namespace oly::ecs::detail {
       return capacity_;
     }
 
-    uint32_t pushUninitialized(Entity entity); // linha nova MORTA no fim; pode realocar
+    uint32_t pushUninitialized(Entity entity); // devolve a linha nova, MORTA (o chamador a constrói); pode realocar as colunas
     void destroyRow(uint32_t row) noexcept; // linha viva → morta
-    std::optional<Entity> fillHole(uint32_t row) noexcept; // tapa linha morta com a última
+    std::optional<Entity> fillHole(uint32_t row) noexcept; // tapa a linha morta com a última; devolve a entidade deslocada, se houve
 
     std::span<const Entity> entities() const noexcept {
       return entities_;

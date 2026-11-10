@@ -52,12 +52,14 @@ namespace oly::ecs {
     // Reserva um índice imediatamente (R-CB-1); a entidade só fica viva no flush.
     Entity spawn();
     void destroy(Entity entity);
+
     template <class T>
     void add(Entity entity, T&& value);
     template <class T>
     void remove(Entity entity) {
       removeById(entity, componentId<T>());
     }
+
     // Move de `value` (quem chamou segue dono do moved-from); ignorado para tags.
     void addById(Entity entity, ComponentId componentId, void* value);
     void removeById(Entity entity, ComponentId componentId);

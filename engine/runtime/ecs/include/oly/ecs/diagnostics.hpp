@@ -29,7 +29,8 @@ namespace oly::ecs {
     uint64_t signatureLookups;
   };
 
-  // Verifica as invariantes I-1, I-3..I-7, I-10, I-11 (compilado em todos os builds).
+  // Verifica as invariantes I-1 e I-3..I-11 (compilado em todos os builds); I-2 depende do
+  // LifeCounter dos testes.
   // Em falha escreve em *why o ID e o objeto (ex.: "I-3 e=4:1") e devolve false.
   bool checkInvariants(const World& world, std::string* why = nullptr);
   WorldStats stats(const World& world);
