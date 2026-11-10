@@ -6,10 +6,12 @@
 #include <vector>
 
 #include "oly/app/engine.hpp"
+#include "oly/app/handler.hpp"
 #include "oly/core/assert.hpp"
 
 namespace {
   using oly::app::Engine;
+  using oly::app::HandlerContext;
   using oly::app::Phase;
   using oly::app::SystemContext;
 
@@ -62,6 +64,97 @@ namespace {
     engine.frame(0.5);
   }
 
+  struct Ping {
+    uint32_t value;
+  };
+  struct Echo {
+    uint32_t depth;
+  };
+
+  void nothing(HandlerContext&) {}
+
+  void emitUndeclaredEvent() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.emit(Ping{});
+  }
+
+  void onUndeclaredEvent() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.on<Ping>("h", nothing);
+  }
+
+  void declareEventTwice() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.declareEvent<Ping>();
+    engine.declareEvent<Ping>();
+  }
+
+  void onFromSystem(SystemContext& context) {
+    Engine& engine = *static_cast<Engine*>(context.userData());
+    engine.on<Ping>("tarde", nothing);
+  }
+
+  void onDuringFrame() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareEvent<Ping>();
+    engine.addSystem(Phase::Update, "registrador", onFromSystem, &engine);
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
+  void declareEventFromSystem(SystemContext& context) {
+    Engine& engine = *static_cast<Engine*>(context.userData());
+    engine.declareEvent<Echo>();
+  }
+
+  void declareEventDuringFrame() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.addSystem(Phase::Update, "declarador", declareEventFromSystem, &engine);
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
+  void emitEchoAgain(HandlerContext& context) {
+    context.emit(Echo{0});
+  }
+
+  void eventRoundLimit() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareEvent<Echo>("Echo");
+    engine.on<Echo>("loop", emitEchoAgain);
+    engine.emit(Echo{0});
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
+  void readWrongType(HandlerContext& context) {
+    context.events<Echo>();
+  }
+
+  void eventsWrongType() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareEvent<Ping>();
+    engine.declareEvent<Echo>();
+    engine.on<Ping>("errado", readWrongType);
+    engine.emit(Ping{});
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -74,6 +167,13 @@ int main(int argumentCount, char** arguments) {
     {"add_system_during_frame", addSystemDuringFrame, {"addSystem", "durante frame"}},
     {"while_paused_render", whilePausedRender, {"whilePaused", "render"}},
     {"frame_time_backwards", frameTimeBackwards, {"frame", "tempo"}},
+    {"emit_undeclared_event", emitUndeclaredEvent, {"emit", "não declarado"}},
+    {"on_undeclared_event", onUndeclaredEvent, {"on", "não declarado"}},
+    {"declare_event_twice", declareEventTwice, {"declareEvent", "já declarado"}},
+    {"on_during_frame", onDuringFrame, {"on", "durante frame"}},
+    {"declare_event_during_frame", declareEventDuringFrame, {"declareEvent", "durante frame"}},
+    {"event_round_limit", eventRoundLimit, {"dispatchEvents", "rodadas", "Echo"}},
+    {"events_wrong_type", eventsWrongType, {"events", "tipo"}},
   };
 
   if (argumentCount != 2) {

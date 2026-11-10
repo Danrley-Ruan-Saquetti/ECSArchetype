@@ -4,6 +4,7 @@
 #include <string_view>
 #include <utility>
 
+#include "oly/app/context.hpp"
 #include "oly/app/phase.hpp"
 #include "oly/ecs/world.hpp"
 
@@ -15,12 +16,10 @@ namespace oly::app {
   using SystemFunction = void (*)(SystemContext& context);
 
   // Válido só durante a chamada do sistema. Mudanças estruturais são adiadas até o fim da fase.
-  class SystemContext {
+  class SystemContext : public EngineContext {
    private:
     friend class Engine;
 
-    Engine* engine_;
-    ecs::World* world_;
     ecs::CommandBuffer* commands_;
     Phase phase_;
     SystemId systemId_;
@@ -28,8 +27,7 @@ namespace oly::app {
     void* userData_;
 
     SystemContext(Engine& engine, ecs::World& world, ecs::CommandBuffer& commands, Phase phase, SystemId systemId, std::string_view name, void* userData) noexcept
-      : engine_(&engine),
-        world_(&world),
+      : EngineContext(engine, world),
         commands_(&commands),
         phase_(phase),
         systemId_(systemId),
@@ -50,33 +48,7 @@ namespace oly::app {
       return userData_;
     }
 
-    float fixedDeltaTime() const noexcept;
-    double time() const noexcept;
     float interpolation() const noexcept;
-
-    void pause() noexcept;
-    void resume() noexcept;
-    bool paused() const noexcept;
-
-    template <class... Ts, class... Filters>
-    ecs::Query<Ts...>& query(Filters... filters) {
-      return world_->template query<Ts...>(filters...);
-    }
-    template <class T>
-    T& get(ecs::Entity entity) {
-      return world_->template get<T>(entity);
-    }
-    template <class T>
-    T* tryGet(ecs::Entity entity) noexcept {
-      return world_->template tryGet<T>(entity);
-    }
-    template <class T>
-    bool has(ecs::Entity entity) const noexcept {
-      return world_->template has<T>(entity);
-    }
-    bool isAlive(ecs::Entity entity) const noexcept {
-      return world_->isAlive(entity);
-    }
 
     ecs::Entity spawn() {
       return commands_->spawn();

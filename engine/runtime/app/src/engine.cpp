@@ -17,6 +17,7 @@ namespace oly::app {
       commands_(world.commands()) {
     OLY_ASSERT(config.fixedHz > 0.0, "Engine: fixedHz=%f deve ser positivo", config.fixedHz);
     OLY_ASSERT(config.maxStepsPerFrame > 0, "Engine: maxStepsPerFrame deve ser positivo");
+    OLY_ASSERT(config.maxEventRounds > 0, "Engine: maxEventRounds deve ser positivo");
   }
 
   SystemId Engine::addSystem(Phase phase, std::string_view name, SystemFunction function, void* userData) {
@@ -37,6 +38,32 @@ namespace oly::app {
     OLY_ASSERT(isGameplayPhase(phase), "setWhilePaused: sistema \"%s\" de render não pode ter whilePaused", entry.name.c_str());
 
     entry.whilePaused = whilePaused;
+  }
+
+  EventTypeId Engine::declareEventType(EventKey key, std::string_view name, uint32_t size) {
+    OLY_ASSERT(!inFrame_, "declareEvent: evento \"%.*s\" declarado durante frame", static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(queues_.typeOf(key) == InvalidEventType, "declareEvent: evento \"%.*s\" já declarado", static_cast<int>(name.size()), name.data());
+
+    const EventTypeId type = queues_.declare(key, name, size);
+    handlers_.emplace_back();
+
+    return type;
+  }
+
+  HandlerId Engine::onById(EventTypeId type, std::string_view name, HandlerFunction function, void* userData) {
+    OLY_ASSERT(!inFrame_, "on: handler \"%.*s\" registrado durante frame", static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(type < queues_.typeCount(), "on: handler \"%.*s\" para o tipo de evento %u não declarado", static_cast<int>(name.size()), name.data(), type);
+
+    const HandlerId id = handlerCount_++;
+    handlers_[type].push_back(HandlerEntry{function, userData, std::string(name), id});
+
+    return id;
+  }
+
+  void Engine::emitById(EventTypeId type, const void* event) {
+    OLY_ASSERT(type < queues_.typeCount(), "emit: tipo de evento %u não declarado", type);
+
+    queues_.push(type, event);
   }
 
   void Engine::setHidden(bool hidden) {
@@ -102,6 +129,7 @@ namespace oly::app {
   void Engine::runFixedStep() {
     // Fixada no início: pause/resume pedidos por um sistema só valem no próximo passo.
     pausedThisStep_ = pauseRequested_;
+    eventRoundsThisStep_ = 0;
 
     captureActions();
     if (!pausedThisStep_) {
@@ -118,6 +146,34 @@ namespace oly::app {
 
     dispatchEvents();
     applyStateTransition();
+  }
+
+  void Engine::dispatchEvents() {
+    while (queues_.beginRound()) {
+      if (eventRoundsThisStep_ == config_.maxEventRounds) {
+        OLY_ASSERT(false, "dispatchEvents: limite de %u rodadas de eventos estourado; pendentes: %s", config_.maxEventRounds, queues_.pendingNames().c_str());
+
+        // Sem asserts, descarta o que sobrou para o passo seguir com estado definido.
+        queues_.clear();
+        return;
+      }
+      ++eventRoundsThisStep_;
+
+      for (EventTypeId type = 0; type < queues_.typeCount(); ++type) {
+        const uint32_t count = queues_.batchCount(type);
+        if (count == 0) {
+          continue;
+        }
+
+        const std::byte* data = queues_.batchData(type);
+        for (HandlerEntry& entry : handlers_[type]) {
+          HandlerContext context(*this, world_, type, entry.id, entry.name, entry.userData, data, count);
+          entry.function(context);
+        }
+      }
+
+      queues_.endRound();
+    }
   }
 
   void Engine::runPhase(Phase phase) {

@@ -4,17 +4,24 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "oly/app/detail/event_queues.hpp"
+#include "oly/app/event.hpp"
+#include "oly/app/handler.hpp"
 #include "oly/app/phase.hpp"
 #include "oly/app/system.hpp"
+#include "oly/core/assert.hpp"
+#include "oly/core/type_name.hpp"
 #include "oly/ecs/world.hpp"
 
 namespace oly::app {
   struct EngineConfig {
     double fixedHz = 60.0;
     uint32_t maxStepsPerFrame = 5;
+    uint32_t maxEventRounds = 16;
   };
 
   class Engine {
@@ -27,6 +34,13 @@ namespace oly::app {
       bool whilePaused;
     };
 
+    struct HandlerEntry {
+      HandlerFunction function;
+      void* userData;
+      std::string name;
+      HandlerId id;
+    };
+
     ecs::World& world_;
     EngineConfig config_;
     double fixedDeltaTime_;
@@ -34,6 +48,11 @@ namespace oly::app {
     std::array<std::vector<SystemEntry>, PhaseCount> phases_;
     std::vector<std::pair<Phase, uint32_t>> systemLocations_; // [SystemId]: (fase, posição na fase)
     ecs::CommandBuffer commands_;
+
+    detail::EventQueues queues_;
+    std::vector<std::vector<HandlerEntry>> handlers_; // [EventTypeId]
+    HandlerId handlerCount_ = 0;
+    uint32_t eventRoundsThisStep_ = 0;
 
     double accumulator_ = 0.0;
     double lastTime_ = 0.0;
@@ -47,7 +66,7 @@ namespace oly::app {
     bool hidden_ = false;
 
    public:
-    // fixedHz e maxStepsPerFrame precisam ser positivos (OLY_ASSERT).
+    // fixedHz, maxStepsPerFrame e maxEventRounds precisam ser positivos (OLY_ASSERT).
     explicit Engine(ecs::World& world, EngineConfig config = {});
     Engine(const Engine&) = delete;
     Engine& operator=(const Engine&) = delete;
@@ -61,6 +80,46 @@ namespace oly::app {
     // Nas fases de gameplay, um sistema whilePaused roda só nos passos pausados e os demais só nos não pausados.
     // Render não aceita whilePaused (OLY_ASSERT).
     void setWhilePaused(SystemId system, bool whilePaused);
+
+    // A ordem de declaração é a ordem de despacho dos tipos. Não pode ser chamado durante frame nem repetido para o
+    // mesmo tipo (OLY_ASSERT). O nome aparece nas mensagens de erro.
+    template <class T>
+    EventTypeId declareEvent(std::string_view name = oly::core::typeName<T>()) {
+      static_assert(std::is_trivially_copyable_v<T>, "declareEvent: o evento precisa ser trivialmente copiável");
+      static_assert(alignof(T) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "declareEvent: alinhamento do evento maior que o da fila");
+
+      return declareEventType(eventKey<T>(), name, static_cast<uint32_t>(sizeof(T)));
+    }
+    // InvalidEventType se o tipo não foi declarado nesta Engine.
+    EventTypeId eventTypeOf(EventKey key) const noexcept {
+      return queues_.typeOf(key);
+    }
+    uint32_t eventTypeCount() const noexcept {
+      return queues_.typeCount();
+    }
+
+    // O tipo precisa estar declarado e não pode ser durante frame (OLY_ASSERT). Handlers do mesmo tipo rodam na ordem
+    // de registro, uma vez por rodada, com o lote inteiro.
+    template <class T>
+    HandlerId on(std::string_view name, HandlerFunction function, void* userData = nullptr) {
+      const EventTypeId type = eventTypeOf(eventKey<T>());
+      constexpr std::string_view typeName = oly::core::typeName<T>();
+      OLY_ASSERT(type != InvalidEventType, "on: handler \"%.*s\" para o evento \"%.*s\" não declarado", static_cast<int>(name.size()), name.data(), static_cast<int>(typeName.size()), typeName.data());
+
+      return onById(type, name, function, userData);
+    }
+    HandlerId onById(EventTypeId type, std::string_view name, HandlerFunction function, void* userData = nullptr);
+
+    // Vale dentro e fora de frame; fora, o evento é despachado no próximo passo fixo.
+    template <class T>
+    void emit(const T& event) {
+      const EventTypeId type = eventTypeOf(eventKey<T>());
+      constexpr std::string_view typeName = oly::core::typeName<T>();
+      OLY_ASSERT(type != InvalidEventType, "emit: evento \"%.*s\" não declarado", static_cast<int>(typeName.size()), typeName.data());
+
+      emitById(type, &event);
+    }
+    void emitById(EventTypeId type, const void* event);
 
     // nowSeconds não pode recuar (OLY_ASSERT). Roda até maxStepsPerFrame passos fixos e depois a fase Render uma
     // vez; os passos inteiros que não couberam são descartados e só a fração fica acumulada. O primeiro frame só
@@ -96,16 +155,17 @@ namespace oly::app {
     }
 
    private:
+    EventTypeId declareEventType(EventKey key, std::string_view name, uint32_t size);
     void restartClock();
     void recoverFromInterruptedFrame();
     void runFixedStep();
     void runPhase(Phase phase);
+    void dispatchEvents();
 
     // Etapas do passo fixo previstas na spec (2026-11-09-game-engine-design.md §4.3); vazias até existirem
-    // ações de input, schedule, eventos e estados de jogo.
+    // ações de input, schedule e estados de jogo.
     void captureActions() {}
     void runDueSchedule() {}
-    void dispatchEvents() {}
     void applyStateTransition() {}
   };
 }
