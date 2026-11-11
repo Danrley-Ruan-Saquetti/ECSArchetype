@@ -1,0 +1,3 @@
+oly_add_test(MODULE input NAME unit SOURCES physical_button.cpp action_map.cpp)
+
+oly_add_contract_death(MODULE input SOURCE contract_death.cpp CASES declare_duplicate_name declare_while_locked bind_wrong_kind action_out_of_range button_usage_zero pointer_not_finite)
