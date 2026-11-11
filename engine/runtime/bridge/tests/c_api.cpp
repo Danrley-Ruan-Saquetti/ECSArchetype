@@ -215,3 +215,10 @@ TEST_CASE("eventos do esquema expostos pela API C") {
   CHECK(olySchemaEventSize(0) == sizeof(BridgeTestEvent));
   CHECK(olySchemaEventAlignment(0) == alignof(BridgeTestEvent));
 }
+
+TEST_CASE("ações do esquema expostas pela API C") {
+  CHECK(olySchemaActionCount() == 3);
+  CHECK(olySchemaActionKind(0) == OLY_ACTION_BUTTON);
+  CHECK(olySchemaActionKind(1) == OLY_ACTION_AXIS2D);
+  CHECK(olySchemaActionKind(2) == OLY_ACTION_POINTER);
+}

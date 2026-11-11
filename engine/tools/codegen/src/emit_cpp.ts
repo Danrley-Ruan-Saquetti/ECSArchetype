@@ -1,4 +1,4 @@
-import type { ComponentLayout, EventType, ScalarType, Schema, SchemaType } from "@oly/core";
+import type { ActionKind, ActionType, ComponentLayout, EventType, ScalarType, Schema, SchemaType } from "@oly/core";
 
 const cppTypes: Readonly<Record<ScalarType, string>> = {
   f32: "float",
@@ -33,10 +33,38 @@ function emitLayoutAsserts(name: string, layout: ComponentLayout): string {
   return sizeAssert + offsetAsserts;
 }
 
+const cppActionHandles: Readonly<Record<ActionKind, string>> = {
+  button: "ButtonAction",
+  axis2d: "Axis2dAction",
+  pointer: "PointerAction",
+};
+
+const cppActionKinds: Readonly<Record<ActionKind, string>> = {
+  button: "Button",
+  axis2d: "Axis2d",
+  pointer: "Pointer",
+};
+
+function emitActions(actions: readonly ActionType[]): string {
+  if (actions.length === 0) {
+    return "";
+  }
+
+  const handles = actions
+    .map(
+      (action) =>
+        `  inline constexpr oly::input::${cppActionHandles[action.actionKind]} ${action.name}{${action.schemaIndex}};\n`,
+    )
+    .join("");
+
+  return `\nnamespace actions {\n${handles}}\n`;
+}
+
 export function emitHeader(schema: Schema): string {
   const structs = [...schema.types, ...schema.events].map(emitStruct).join("\n");
+  const inputInclude = schema.actions.length === 0 ? "" : '#include "oly/input/action_map.hpp"\n';
 
-  return `// Gerado por oly-codegen: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n\n${structs}`;
+  return `// Gerado por oly-codegen: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n${inputInclude}\n${structs}${emitActions(schema.actions)}`;
 }
 
 function emitEventsRegistry(schema: Schema): string {
@@ -63,6 +91,27 @@ ${entries},
 `;
 }
 
+function emitActionsRegistry(schema: Schema): string {
+  if (schema.actions.length === 0) {
+    return `  std::span<const SchemaAction> schemaActions() {
+    return {};
+  }
+`;
+  }
+
+  const entries = schema.actions
+    .map((action) => `      {"${action.name}", oly::input::ActionKind::${cppActionKinds[action.actionKind]}}`)
+    .join(",\n");
+
+  return `  std::span<const SchemaAction> schemaActions() {
+    static const SchemaAction actions[] = {
+${entries},
+    };
+    return actions;
+  }
+`;
+}
+
 export function emitRegistry(schema: Schema): string {
   const ids = schema.types.map((type) => `      oly::ecs::componentId<${type.name}>()`).join(",\n");
 
@@ -82,6 +131,7 @@ ${ids}};
     return ids;
   }
 
-${emitEventsRegistry(schema)}}
+${emitEventsRegistry(schema)}
+${emitActionsRegistry(schema)}}
 `;
 }

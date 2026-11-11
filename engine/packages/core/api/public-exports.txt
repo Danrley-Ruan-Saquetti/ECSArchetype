@@ -1,4 +1,8 @@
+ActionKind
+ActionType
+Axis2dAction
 Block
+ButtonAction
 ComponentLayout
 ComponentType
 ContractError
@@ -15,6 +19,7 @@ HandlerRegistration
 NullEntity
 OlyModuleFactory
 Phase
+PointerAction
 Query
 QuerySpec
 RawField
@@ -34,6 +39,7 @@ ValueOf
 World
 WriteField
 WriteView
+action
 component
 defineSchema
 entityGeneration

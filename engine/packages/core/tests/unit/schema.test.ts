@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ContractError, component, defineSchema, event, tag } from "@oly/core";
+import { ContractError, action, component, defineSchema, event, tag } from "@oly/core";
 import { canonicalSchema, fnv1a32, schemaHash } from "@oly/core/internal";
 
 test("component sem campos é erro", () => {
@@ -129,4 +129,41 @@ test("acrescentar um evento muda o hash", () => {
 
   assert.notEqual(schemaHash(types), schemaHash(types, [event("E", { x: "f32" })]));
   assert.equal(defineSchema([component("A2", { x: "f32" }), event("E2", { x: "f32" })]).hash, schemaHash([component("A2", { x: "f32" })], [event("E2", { x: "f32" })]));
+});
+
+test("action valida o nome e o tipo", () => {
+  assert.throws(() => action("Fire", "button"), ContractError);
+  assert.throws(() => action("for", "button"), ContractError);
+  assert.throws(() => action("fire", "trigger" as never), ContractError);
+  assert.equal(action("fire", "button").schemaIndex, -1);
+});
+
+test("defineSchema separa as ações dos tipos e dos eventos", () => {
+  const A = component("ActA", { x: "f32" });
+  const fire = action("fire", "button");
+  const Hit = event("ActHit", { x: "f32" });
+  const move = action("move", "axis2d");
+
+  const schema = defineSchema([A, fire, Hit, move]);
+
+  assert.deepEqual(schema.actions, [fire, move]);
+  assert.equal(fire.schemaIndex, 0);
+  assert.equal(move.schemaIndex, 1);
+  assert.equal(schema.types.length, 1);
+  assert.equal(schema.events.length, 1);
+});
+
+test("nome de ação repetido entre ação e componente ou evento é erro", () => {
+  assert.throws(() => defineSchema([component("Dup1", { x: "f32" }), action("Dup1", "button")]), ContractError);
+  assert.throws(() => defineSchema([action("dup2", "button"), action("dup2", "pointer")]), ContractError);
+});
+
+test("acrescentar uma ação ou trocar o tipo dela muda o hash", () => {
+  const base = [component("HashAct", { x: "f32" })];
+  const withoutActions = defineSchema([...base]).hash;
+  const button = defineSchema([component("HashAct2", { x: "f32" }), action("go", "button")]).hash;
+  const axis = defineSchema([component("HashAct3", { x: "f32" }), action("go", "axis2d")]).hash;
+
+  assert.notEqual(withoutActions, button);
+  assert.notEqual(button, axis);
 });

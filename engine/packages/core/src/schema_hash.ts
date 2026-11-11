@@ -1,4 +1,4 @@
-import type { EventType, SchemaType } from "./schema.js";
+import type { ActionType, EventType, SchemaType } from "./schema.js";
 
 // FNV-1a 32 bits sobre as unidades de código do texto; resultado sem sinal.
 export function fnv1a32(text: string): number {
@@ -10,8 +10,12 @@ export function fnv1a32(text: string): number {
   return hash;
 }
 
-// Forma canônica: `Nome{campo:tipo,...};Tag;` na ordem de declaração, seguida de `!Nome{campo:tipo,...};` por evento.
-export function canonicalSchema(types: readonly SchemaType[], events: readonly EventType[] = []): string {
+// Forma canônica: `Nome{campo:tipo,...};Tag;` na ordem de declaração, seguida de `!Nome{campo:tipo,...};` por evento e de `@nome:tipo;` por ação.
+export function canonicalSchema(
+  types: readonly SchemaType[],
+  events: readonly EventType[] = [],
+  actions: readonly ActionType[] = [],
+): string {
   let text = "";
   for (const type of types) {
     if (type.kind === "tag") {
@@ -25,10 +29,17 @@ export function canonicalSchema(types: readonly SchemaType[], events: readonly E
     const fields = event.layout.fields.map((field) => `${field.name}:${field.type}`).join(",");
     text += `!${event.name}{${fields}};`;
   }
+  for (const action of actions) {
+    text += `@${action.name}:${action.actionKind};`;
+  }
 
   return text;
 }
 
-export function schemaHash(types: readonly SchemaType[], events: readonly EventType[] = []): number {
-  return fnv1a32(canonicalSchema(types, events));
+export function schemaHash(
+  types: readonly SchemaType[],
+  events: readonly EventType[] = [],
+  actions: readonly ActionType[] = [],
+): number {
+  return fnv1a32(canonicalSchema(types, events, actions));
 }

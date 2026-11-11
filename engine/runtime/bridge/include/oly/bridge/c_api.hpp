@@ -36,6 +36,14 @@ OLY_API uint32_t olySchemaEventCount();
 OLY_API uint32_t olySchemaEventSize(uint32_t eventIndex);
 OLY_API uint32_t olySchemaEventAlignment(uint32_t eventIndex);
 
+#define OLY_ACTION_BUTTON 0u
+#define OLY_ACTION_AXIS2D 1u
+#define OLY_ACTION_POINTER 2u
+OLY_API uint32_t olySchemaActionCount();
+// actionIndex < olySchemaActionCount(), sem verificação. O índice é o da ação no esquema, que é também o seu
+// ActionId na Engine.
+OLY_API uint32_t olySchemaActionKind(uint32_t actionIndex);
+
 // Mudanças estruturais (spawn, destroy, add, remove) exigem nenhuma iteração aberta; destroy, add e remove
 // também exigem entidade viva (OLY_ASSERT). Qualquer mudança estrutural invalida os ponteiros de
 // olyComponentGet; só (index, generation) é handle estável.

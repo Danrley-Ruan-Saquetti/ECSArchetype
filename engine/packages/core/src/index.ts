@@ -9,8 +9,21 @@ export type { RawField, ReadField, ReadView, WriteField, WriteView } from "./fie
 export { Block, Query } from "./query.js";
 export type { QuerySpec } from "./query.js";
 export { loadRuntime, Runtime } from "./runtime.js";
-export { component, defineSchema, event, tag } from "./schema.js";
-export type { ComponentType, EventType, Fields, Schema, SchemaType, TagType, ValueOf } from "./schema.js";
+export { action, component, defineSchema, event, tag } from "./schema.js";
+export type {
+  ActionKind,
+  ActionType,
+  Axis2dAction,
+  ButtonAction,
+  ComponentType,
+  EventType,
+  Fields,
+  PointerAction,
+  Schema,
+  SchemaType,
+  TagType,
+  ValueOf,
+} from "./schema.js";
 export { EventBatch } from "./event_batch.js";
 export { HandlerContext } from "./handler_context.js";
 export type { HandlerFunction } from "./handler_context.js";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { component, defineSchema, event, tag } from "@oly/core";
+import { action, component, defineSchema, event, tag } from "@oly/core";
 
 import { emitHeader, emitRegistry } from "../dist/emit_cpp.js";
 
@@ -57,4 +57,31 @@ test("registro declara os eventos na ordem do esquema", () => {
 
 test("esquema sem eventos gera schemaEvents vazio", () => {
   assert.match(emitRegistry(schema), /schemaEvents\(\) \{\s*return \{\};/);
+});
+
+const fire = action("fire", "button");
+const move = action("move", "axis2d");
+const schemaWithActions = defineSchema([component("R", { a: "u8" }), fire, move]);
+
+test("header com ações declara actions::<nome> com o handle do tipo", () => {
+  const header = emitHeader(schemaWithActions);
+
+  assert.ok(header.includes('#include "oly/input/action_map.hpp"'));
+  assert.ok(header.includes("inline constexpr oly::input::ButtonAction fire{0};"));
+  assert.ok(header.includes("inline constexpr oly::input::Axis2dAction move{1};"));
+});
+
+test("header sem ações não inclui o módulo input", () => {
+  assert.ok(!emitHeader(schema).includes("oly/input"));
+});
+
+test("registro lista as ações na ordem do esquema", () => {
+  const registry = emitRegistry(schemaWithActions);
+
+  assert.ok(registry.indexOf('{"fire", oly::input::ActionKind::Button}') >= 0);
+  assert.ok(registry.indexOf('{"fire", oly::input::ActionKind::Button}') < registry.indexOf('{"move", oly::input::ActionKind::Axis2d}'));
+});
+
+test("esquema sem ações gera schemaActions vazio", () => {
+  assert.match(emitRegistry(schema), /schemaActions\(\) \{\s*return \{\};/);
 });

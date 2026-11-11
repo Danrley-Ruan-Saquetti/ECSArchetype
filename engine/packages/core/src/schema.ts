@@ -33,16 +33,34 @@ export interface EventType<Name extends string = string, F extends Fields = Fiel
   readonly schemaIndex: number;
 }
 
+export type ActionKind = "button" | "axis2d" | "pointer";
+
+export interface ActionType<Name extends string = string, Kind extends ActionKind = ActionKind> {
+  readonly kind: "action";
+  readonly actionKind: Kind;
+  readonly name: Name;
+  /** Posição em `schema.actions`, que é também o ActionId; -1 até a ação entrar num esquema por defineSchema. */
+  readonly schemaIndex: number;
+}
+
+export type ButtonAction = ActionType<string, "button">;
+export type Axis2dAction = ActionType<string, "axis2d">;
+export type PointerAction = ActionType<string, "pointer">;
+
 export interface Schema {
   /** Componentes e tags; o índice deles é o do ComponentId. */
   readonly types: readonly SchemaType[];
   /** Eventos na ordem de declaração, que é a ordem de despacho. */
   readonly events: readonly EventType[];
+  /** Ações de input na ordem de declaração. */
+  readonly actions: readonly ActionType[];
   readonly hash: number;
 }
 
 const typeNamePattern = /^[A-Z][A-Za-z0-9]*$/;
 const fieldNamePattern = /^[a-z][A-Za-z0-9]*$/;
+const actionNamePattern = fieldNamePattern;
+const actionKinds: readonly ActionKind[] = ["button", "axis2d", "pointer"];
 
 const cppReservedWords: ReadonlySet<string> = new Set(
   `class struct int float double char long short unsigned signed bool void auto return operator template namespace new delete
@@ -96,6 +114,26 @@ export function event<const Name extends string, const F extends Fields>(name: N
   return { kind: "event", name, fields, layout: computeLayout(fields), schemaIndex: -1 };
 }
 
+/**
+ * Declara uma ação de input. O nome vira `actions::<nome>` no C++, então segue as regras dos campos: camelCase e
+ * fora das palavras reservadas do C++. Lança ContractError para nome inválido ou `kind` desconhecido.
+ */
+export function action<const Name extends string, const Kind extends ActionKind>(
+  name: Name,
+  kind: Kind,
+): ActionType<Name, Kind> {
+  if (!actionNamePattern.test(name) || cppReservedWords.has(name)) {
+    throw new ContractError(
+      `ação inválida "${name}": use ${actionNamePattern} e evite palavras reservadas do C++`,
+    );
+  }
+  if (!actionKinds.includes(kind)) {
+    throw new ContractError(`ação ${name}: tipo "${String(kind)}" desconhecido; use button, axis2d ou pointer`);
+  }
+
+  return { kind: "action", actionKind: kind, name, schemaIndex: -1 };
+}
+
 export function tag<const Name extends string>(name: Name): TagType<Name> {
   validateTypeName(name);
 
@@ -106,7 +144,7 @@ export function tag<const Name extends string>(name: Name): TagType<Name> {
  * Atribui `schemaIndex` na ordem de cada grupo (tipos, eventos) e congela o que recebeu. Lança ContractError para
  * nome repetido (entre tipos e eventos também) ou para tipo/evento que já pertence a outro esquema.
  */
-export function defineSchema(entries: readonly (SchemaType | EventType)[]): Schema {
+export function defineSchema(entries: readonly (SchemaType | EventType | ActionType)[]): Schema {
   const names = new Set<string>();
   for (const entry of entries) {
     if (names.has(entry.name)) {
@@ -118,9 +156,10 @@ export function defineSchema(entries: readonly (SchemaType | EventType)[]): Sche
     names.add(entry.name);
   }
 
-  const types = entries.filter((entry): entry is SchemaType => entry.kind !== "event");
+  const types = entries.filter((entry): entry is SchemaType => entry.kind !== "event" && entry.kind !== "action");
   const events = entries.filter((entry): entry is EventType => entry.kind === "event");
-  for (const group of [types, events]) {
+  const actions = entries.filter((entry): entry is ActionType => entry.kind === "action");
+  for (const group of [types, events, actions]) {
     group.forEach((entry, index) => {
       (entry as { schemaIndex: number }).schemaIndex = index;
       Object.freeze(entry);
@@ -129,6 +168,12 @@ export function defineSchema(entries: readonly (SchemaType | EventType)[]): Sche
 
   const frozenTypes = Object.freeze([...types]);
   const frozenEvents = Object.freeze([...events]);
+  const frozenActions = Object.freeze([...actions]);
 
-  return Object.freeze({ types: frozenTypes, events: frozenEvents, hash: schemaHash(frozenTypes, frozenEvents) });
+  return Object.freeze({
+    types: frozenTypes,
+    events: frozenEvents,
+    actions: frozenActions,
+    hash: schemaHash(frozenTypes, frozenEvents, frozenActions),
+  });
 }

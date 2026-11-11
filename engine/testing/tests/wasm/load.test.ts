@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { SchemaMismatchError, component, defineSchema, event, loadRuntime, tag } from "@oly/core";
+import { SchemaMismatchError, action, component, defineSchema, event, loadRuntime, tag } from "@oly/core";
 
 import { fixtureFactory, loadFixture } from "./fixture.js";
 
@@ -61,5 +61,19 @@ test("evento com tamanho diferente do WASM é rejeitado com o nome do evento", a
   await assert.rejects(
     loadRuntime(fixtureFactory(), withWiderPing),
     (error: unknown) => error instanceof SchemaMismatchError && /eventos no WASM: 2, no TS: 2/.test(error.message) && /divergente: Ping/.test(error.message),
+  );
+});
+
+test("ação a mais no TS é rejeitada com a contagem de ações", async () => {
+  const withAction = defineSchema([
+    ...fixtureTypes(),
+    event("Ping", { target: "entity", value: "f32" }),
+    event("Echo", { depth: "u32" }),
+    action("extra", "button"),
+  ]);
+
+  await assert.rejects(
+    loadRuntime(fixtureFactory(), withAction),
+    (error: unknown) => error instanceof SchemaMismatchError && /ações no WASM: 0, no TS: 1/.test(error.message),
   );
 });

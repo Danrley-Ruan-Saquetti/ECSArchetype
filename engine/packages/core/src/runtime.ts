@@ -2,7 +2,7 @@ import { Bridge } from "./bridge.js";
 import { Engine, invokeScript, type EngineConfig } from "./engine.js";
 import { ContractError, SchemaMismatchError } from "./errors.js";
 import type { OlyModule, OlyModuleFactory } from "./module.js";
-import type { EventType, Schema, SchemaType } from "./schema.js";
+import type { ActionKind, ActionType, EventType, Schema, SchemaType } from "./schema.js";
 import { World } from "./world.js";
 
 interface RuntimeInternals {
@@ -10,6 +10,7 @@ interface RuntimeInternals {
   moduleOf(runtime: Runtime): OlyModule;
   componentIdOf(runtime: Runtime, type: SchemaType): number;
   eventIndexOf(runtime: Runtime, type: EventType): number;
+  actionIndexOf(runtime: Runtime, action: ActionType): number;
 }
 
 let runtimeInternals!: RuntimeInternals;
@@ -30,8 +31,22 @@ function firstDivergentEvent(module: OlyModule, schema: Schema): string | null {
   return null;
 }
 
+const actionKindCodes: readonly ActionKind[] = ["button", "axis2d", "pointer"];
+
+function firstDivergentAction(module: OlyModule, schema: Schema): string | null {
+  const count = Math.min(module._olySchemaActionCount(), schema.actions.length);
+  for (let index = 0; index < count; ++index) {
+    const action = schema.actions[index]!;
+    if (actionKindCodes.indexOf(action.actionKind) !== module._olySchemaActionKind(index)) {
+      return action.name;
+    }
+  }
+
+  return null;
+}
+
 function firstDivergentType(module: OlyModule, schema: Schema): string | null {
-  return firstDivergentComponent(module, schema) ?? firstDivergentEvent(module, schema);
+  return firstDivergentComponent(module, schema) ?? firstDivergentEvent(module, schema) ?? firstDivergentAction(module, schema);
 }
 
 function firstDivergentComponent(module: OlyModule, schema: Schema): string | null {
@@ -75,6 +90,14 @@ export class Runtime {
 
         // O WASM declara os eventos do esquema na ordem dele: o índice no esquema é o EventTypeId.
         return type.schemaIndex;
+      },
+      actionIndexOf: (runtime, action) => {
+        if (runtime.schema.actions[action.schemaIndex] !== action) {
+          throw new ContractError(`action=${action.name}: ação não pertence ao esquema deste runtime`);
+        }
+
+        // O WASM declara as ações do esquema na ordem dele: o índice no esquema é o ActionId.
+        return action.schemaIndex;
       },
     };
   }
@@ -141,6 +164,10 @@ export function eventIndexOf(runtime: Runtime, type: EventType): number {
   return runtimeInternals.eventIndexOf(runtime, type);
 }
 
+export function actionIndexOf(runtime: Runtime, action: ActionType): number {
+  return runtimeInternals.actionIndexOf(runtime, action);
+}
+
 /**
  * Carrega o módulo WASM e confere que ele foi compilado com `schema`. Rejeita com SchemaMismatchError se o
  * hash, o nº de tipos ou o tamanho/alinhamento de algum tipo diferirem.
@@ -151,13 +178,15 @@ export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Pr
   const wasmHash = module._olySchemaHash() >>> 0;
   const divergent = firstDivergentType(module, schema);
   const countMatches =
-    module._olySchemaComponentCount() === schema.types.length && module._olySchemaEventCount() === schema.events.length;
+    module._olySchemaComponentCount() === schema.types.length && module._olySchemaEventCount() === schema.events.length &&
+    module._olySchemaActionCount() === schema.actions.length;
   if (wasmHash !== schema.hash || !countMatches || divergent !== null) {
     throw new SchemaMismatchError(
       `esquema do WASM (${hex(wasmHash)}) difere do esquema TS (${hex(schema.hash)}); ` +
         `tipos no WASM: ${module._olySchemaComponentCount()}, no TS: ${schema.types.length}; ` +
         `eventos no WASM: ${module._olySchemaEventCount()}, no TS: ${schema.events.length}; ` +
-        `primeiro tipo ou evento divergente: ${divergent ?? "nenhum por tamanho (campos ou ordem mudaram)"}; recompile o WASM`,
+        `ações no WASM: ${module._olySchemaActionCount()}, no TS: ${schema.actions.length}; ` +
+        `primeiro tipo, evento ou ação divergente: ${divergent ?? "nenhum por tamanho (campos ou ordem mudaram)"}; recompile o WASM`,
     );
   }
 

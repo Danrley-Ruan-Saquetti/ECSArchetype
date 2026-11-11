@@ -24,6 +24,10 @@ namespace oly::bridge {
   std::span<const SchemaEvent> schemaEvents() {
     return {};
   }
+
+  std::span<const SchemaAction> schemaActions() {
+    return {};
+  }
 }
 
 namespace {

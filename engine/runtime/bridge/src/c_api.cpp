@@ -87,6 +87,17 @@ uint32_t olySchemaEventAlignment(uint32_t eventIndex) {
   return oly::bridge::schemaEvents()[eventIndex].alignment;
 }
 
+static_assert(OLY_ACTION_BUTTON == static_cast<uint32_t>(oly::input::ActionKind::Button) && OLY_ACTION_AXIS2D == static_cast<uint32_t>(oly::input::ActionKind::Axis2d) && OLY_ACTION_POINTER == static_cast<uint32_t>(oly::input::ActionKind::Pointer),
+              "OLY_ACTION_* devem bater com oly::input::ActionKind");
+
+uint32_t olySchemaActionCount() {
+  return static_cast<uint32_t>(oly::bridge::schemaActions().size());
+}
+
+uint32_t olySchemaActionKind(uint32_t actionIndex) {
+  return static_cast<uint32_t>(oly::bridge::schemaActions()[actionIndex].kind);
+}
+
 void olyEntitySpawn(OlyWorld* world, OlyEntity* out) {
   const oly::ecs::Entity entity = world->world.spawn();
   out->index = entity.index;

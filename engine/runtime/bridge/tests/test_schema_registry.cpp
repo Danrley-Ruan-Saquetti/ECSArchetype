@@ -19,4 +19,13 @@ namespace oly::bridge {
     };
     return events;
   }
+
+  std::span<const SchemaAction> schemaActions() {
+    static const SchemaAction actions[] = {
+      {"bridgeJump", oly::input::ActionKind::Button},
+      {"bridgeMove", oly::input::ActionKind::Axis2d},
+      {"bridgeAim", oly::input::ActionKind::Pointer},
+    };
+    return actions;
+  }
 }
