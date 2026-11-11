@@ -4,10 +4,10 @@ import { loadRuntime } from "@oly/core";
 import type { OlyModuleFactory, Runtime } from "@oly/core";
 import { moduleOf, type OlyModule } from "@oly/core/internal";
 
-import { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity } from "../../fixture/schema.js";
+import { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity, aim, fire, move, togglePause } from "../../fixture/schema.js";
 import schema from "../../fixture/schema.js";
 
-export { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity, schema };
+export { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity, aim, fire, move, schema, togglePause };
 
 export interface FixtureExports {
   fixtureMove(world: number, deltaTime: number): void;
@@ -15,6 +15,7 @@ export interface FixtureExports {
   fixtureMixedChecksum(world: number, index: number, generation: number): number;
   fixtureSetPingCount(count: number): void;
   fixtureTakePingSum(): number;
+  fixtureTakeFirePressCount(): number;
 }
 
 interface FixtureModule extends OlyModule {
@@ -23,6 +24,7 @@ interface FixtureModule extends OlyModule {
   _fixtureMixedChecksum(world: number, index: number, generation: number): number;
   _fixtureSetPingCount(count: number): void;
   _fixtureTakePingSum(): number;
+  _fixtureTakeFirePressCount(): number;
 }
 
 export function fixtureFactory(): OlyModuleFactory {
@@ -50,6 +52,7 @@ export async function loadFixture(): Promise<{ runtime: Runtime; fixture: Fixtur
       fixtureMixedChecksum: (world, index, generation) => module._fixtureMixedChecksum(world, index, generation),
       fixtureSetPingCount: (count) => module._fixtureSetPingCount(count),
       fixtureTakePingSum: () => module._fixtureTakePingSum(),
+      fixtureTakeFirePressCount: () => module._fixtureTakeFirePressCount(),
     },
   };
 }

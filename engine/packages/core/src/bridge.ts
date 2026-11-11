@@ -324,6 +324,49 @@ export class Bridge {
     this.module._olyEngineSetWhilePaused(engine, systemId, whilePaused ? 1 : 0);
   }
 
+  engineBindButton(engine: number, action: number, usage: number): void {
+    this.module._olyEngineBindButton(engine, action, usage);
+    this.sync();
+  }
+
+  engineBindAxis2d(engine: number, action: number, up: number, down: number, left: number, right: number): void {
+    this.module._olyEngineBindAxis2d(engine, action, up, down, left, right);
+    this.sync();
+  }
+
+  engineClearBindings(engine: number, action: number): void {
+    this.module._olyEngineClearBindings(engine, action);
+  }
+
+  engineIsBound(engine: number, usage: number): boolean {
+    return this.module._olyEngineIsBound(engine, usage) === 1;
+  }
+
+  engineButtonDown(engine: number, usage: number): void {
+    this.module._olyEngineButtonDown(engine, usage);
+    this.sync();
+  }
+
+  engineButtonUp(engine: number, usage: number): void {
+    this.module._olyEngineButtonUp(engine, usage);
+    this.sync();
+  }
+
+  enginePointerMove(engine: number, x: number, y: number): void {
+    this.module._olyEnginePointerMove(engine, x, y);
+    this.sync();
+  }
+
+  engineReleaseAll(engine: number): void {
+    this.module._olyEngineReleaseAll(engine);
+    this.sync();
+  }
+
+  // Estável até engineDestroy: o núcleo declara todas as ações do esquema na criação.
+  engineActionSnapshot(engine: number): number {
+    return this.module._olyEngineActionSnapshot(engine) >>> 0;
+  }
+
   systemSpawn(engine: number): Entity {
     this.module._olySystemSpawn(engine, this.scratch + OutputOffset);
     this.sync();

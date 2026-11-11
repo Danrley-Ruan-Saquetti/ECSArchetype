@@ -1,3 +1,7 @@
+export { ActionMap } from "./action_map.js";
+export type { Axis2dBinding, ButtonState, PointerState, Vector2 } from "./action_map.js";
+export { isButtonName } from "./buttons.js";
+export type { ButtonName } from "./buttons.js";
 export { entityGeneration, entityIndex, formatEntity, NullEntity } from "./entity.js";
 export type { Entity } from "./entity.js";
 export { Engine, Phase } from "./engine.js";

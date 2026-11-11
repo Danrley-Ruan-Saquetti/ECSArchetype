@@ -8,6 +8,7 @@
 #include "schema.generated.hpp"
 
 namespace {
+  uint32_t fixtureFirePressCount = 0;
   uint32_t fixturePingCount = 0;
   double fixturePingSum = 0;
 }
@@ -29,6 +30,13 @@ OLY_API double fixtureSumPositionX(OlyWorld* world) {
 
 OLY_API void fixtureSetPingCount(uint32_t count) {
   fixturePingCount = count;
+}
+
+OLY_API uint32_t fixtureTakeFirePressCount() {
+  const uint32_t count = fixtureFirePressCount;
+  fixtureFirePressCount = 0;
+
+  return count;
 }
 
 OLY_API double fixtureTakePingSum() {
@@ -53,6 +61,12 @@ OLY_SYSTEM(move) {
     position.x += velocity.x * deltaTime;
     position.y += velocity.y * deltaTime;
   });
+}
+
+OLY_SYSTEM(countFirePresses) {
+  if (context.actions().button(actions::fire).pressed) {
+    ++fixtureFirePressCount;
+  }
 }
 
 OLY_SYSTEM(appendNine) {

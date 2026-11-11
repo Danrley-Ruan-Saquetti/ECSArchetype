@@ -1,3 +1,4 @@
+import type { ActionMap } from "./action_map.js";
 import type { Bridge } from "./bridge.js";
 import type { Entity } from "./entity.js";
 import { ContractError } from "./errors.js";
@@ -26,6 +27,7 @@ let contextInternals!: ContextInternals;
  */
 export class EngineContext {
   #active = false;
+  readonly #actions: ActionMap;
   readonly #kind: ContextKind;
   readonly #name: string;
   readonly #runtime: Runtime;
@@ -47,13 +49,21 @@ export class EngineContext {
     };
   }
 
-  constructor(kind: ContextKind, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World) {
+  constructor(kind: ContextKind, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap) {
+    this.#actions = actions;
     this.#kind = kind;
     this.#name = name;
     this.#runtime = runtime;
     this.#bridge = bridge;
     this.#engineHandle = engineHandle;
     this.#world = world;
+  }
+
+  /** O mesmo objeto de `Engine.actions`. */
+  get actions(): ActionMap {
+    contextInternals.assertActive(this, "actions");
+
+    return this.#actions;
   }
 
   get fixedDeltaTime(): number {

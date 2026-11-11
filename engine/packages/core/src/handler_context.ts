@@ -1,3 +1,4 @@
+import type { ActionMap } from "./action_map.js";
 import type { Bridge } from "./bridge.js";
 import { assertContextActive, EngineContext } from "./context.js";
 import type { Entity } from "./entity.js";
@@ -18,8 +19,8 @@ export class HandlerContext extends EngineContext {
 
   readonly #world: World;
 
-  constructor(eventType: EventType, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World) {
-    super({ label: "handler", className: "HandlerContext", callNoun: "handler" }, name, runtime, bridge, engineHandle, world);
+  constructor(eventType: EventType, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap) {
+    super({ label: "handler", className: "HandlerContext", callNoun: "handler" }, name, runtime, bridge, engineHandle, world, actions);
     this.eventType = eventType;
     this.name = name;
     this.#world = world;

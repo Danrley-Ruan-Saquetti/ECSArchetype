@@ -69,11 +69,32 @@ test("ação a mais no TS é rejeitada com a contagem de ações", async () => {
     ...fixtureTypes(),
     event("Ping", { target: "entity", value: "f32" }),
     event("Echo", { depth: "u32" }),
+    action("fire", "button"),
+    action("move", "axis2d"),
+    action("aim", "pointer"),
+    action("togglePause", "button"),
     action("extra", "button"),
   ]);
 
   await assert.rejects(
     loadRuntime(fixtureFactory(), withAction),
-    (error: unknown) => error instanceof SchemaMismatchError && /ações no WASM: 0, no TS: 1/.test(error.message),
+    (error: unknown) => error instanceof SchemaMismatchError && /ações no WASM: 4, no TS: 5/.test(error.message),
+  );
+});
+
+test("ação com tipo diferente do WASM é rejeitada com o nome da ação", async () => {
+  const withWrongKind = defineSchema([
+    ...fixtureTypes(),
+    event("Ping", { target: "entity", value: "f32" }),
+    event("Echo", { depth: "u32" }),
+    action("fire", "axis2d"),
+    action("move", "axis2d"),
+    action("aim", "pointer"),
+    action("togglePause", "button"),
+  ]);
+
+  await assert.rejects(
+    loadRuntime(fixtureFactory(), withWrongKind),
+    (error: unknown) => error instanceof SchemaMismatchError && /ações no WASM: 4, no TS: 4/.test(error.message) && /divergente: fire/.test(error.message),
   );
 });

@@ -1,3 +1,4 @@
+import type { ActionMap } from "./action_map.js";
 import type { Bridge } from "./bridge.js";
 import { assertContextActive, EngineContext } from "./context.js";
 import type { Entity } from "./entity.js";
@@ -21,8 +22,8 @@ export class SystemContext extends EngineContext {
   readonly #bridge: Bridge;
   readonly #engineHandle: number;
 
-  constructor(phase: Phase, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World) {
-    super({ label: "system", className: "SystemContext", callNoun: "sistema" }, name, runtime, bridge, engineHandle, world);
+  constructor(phase: Phase, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap) {
+    super({ label: "system", className: "SystemContext", callNoun: "sistema" }, name, runtime, bridge, engineHandle, world, actions);
     this.phase = phase;
     this.name = name;
     this.#runtime = runtime;

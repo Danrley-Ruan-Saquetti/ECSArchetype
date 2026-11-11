@@ -1,3 +1,4 @@
+import { ActionMap } from "./action_map.js";
 import type { Bridge } from "./bridge.js";
 import { setContextActive } from "./context.js";
 import { ContractError } from "./errors.js";
@@ -54,6 +55,7 @@ export class Engine {
 
   readonly #runtime: Runtime;
   readonly #bridge: Bridge;
+  readonly #actions: ActionMap;
   readonly #handle: number;
   readonly #onDispose: () => void;
   readonly #scriptSystems = new Map<number, ScriptSystem>();
@@ -80,6 +82,16 @@ export class Engine {
     this.#handle = handle;
     this.world = world;
     this.#onDispose = onDispose;
+    this.#actions = new ActionMap(runtime, this.#bridge, handle, this.#bridge.engineActionSnapshot(handle), (operation) => {
+      this.#assertUsable(operation);
+    });
+  }
+
+  /** Ligações, entrada do host e leitura das ações do esquema. O mesmo objeto de `context.actions`. */
+  get actions(): ActionMap {
+    this.#assertUsable("actions");
+
+    return this.#actions;
   }
 
   /**
@@ -156,7 +168,7 @@ export class Engine {
     this.#assertCanRegister("addSystem", phase, name);
 
     const id = this.#bridge.addScriptSystem(this.#handle, phase, name);
-    const context = new SystemContext(phase, name, this.#runtime, this.#bridge, this.#handle, this.world);
+    const context = new SystemContext(phase, name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions);
     this.#scriptSystems.set(id, { function: system, context });
 
     return this.#registration(id, phase, name);
@@ -181,7 +193,7 @@ export class Engine {
     const eventType = this.#assertCanRegisterHandler("on", type, name);
 
     const id = this.#bridge.addScriptHandler(this.#handle, eventType, name);
-    const context = new HandlerContext(type, name, this.#runtime, this.#bridge, this.#handle, this.world);
+    const context = new HandlerContext(type, name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions);
     this.#scriptHandlers.set(id, { function: handler as unknown as HandlerFunction, context, type });
 
     return { id };

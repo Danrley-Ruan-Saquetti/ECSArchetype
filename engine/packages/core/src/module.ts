@@ -52,6 +52,15 @@ export interface OlyModule {
   _olyEngineAddNativeSystem(engine: number, phase: number, name: number): number;
   _olyEngineAddScriptSystem(engine: number, phase: number, name: number): number;
   _olyEngineSetWhilePaused(engine: number, systemId: number, whilePaused: number): void;
+  _olyEngineBindButton(engine: number, action: number, button: number): void;
+  _olyEngineBindAxis2d(engine: number, action: number, up: number, down: number, left: number, right: number): void;
+  _olyEngineClearBindings(engine: number, action: number): void;
+  _olyEngineIsBound(engine: number, button: number): number;
+  _olyEngineButtonDown(engine: number, button: number): void;
+  _olyEngineButtonUp(engine: number, button: number): void;
+  _olyEnginePointerMove(engine: number, x: number, y: number): void;
+  _olyEngineReleaseAll(engine: number): void;
+  _olyEngineActionSnapshot(engine: number): number;
   _olySystemSpawn(engine: number, out: number): void;
   _olySystemDestroy(engine: number, index: number, generation: number): void;
   _olySystemAdd(engine: number, index: number, generation: number, componentId: number, value: number): void;

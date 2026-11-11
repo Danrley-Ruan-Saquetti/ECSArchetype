@@ -70,6 +70,7 @@ test("Runtime expõe só schema, createWorld e createEngine", () => {
 
 test("Engine expõe só a API do glossário", () => {
   assert.deepEqual(memberNames("Engine"), [
+    "actions",
     "addNativeHandler",
     "addNativeSystem",
     "addSystem",
@@ -88,6 +89,7 @@ test("Engine expõe só a API do glossário", () => {
 
 test("SystemContext expõe só a API do glossário", () => {
   assert.deepEqual(memberNames("SystemContext"), [
+    "actions",
     "add",
     "destroy",
     "emit",
@@ -111,6 +113,7 @@ test("SystemContext expõe só a API do glossário", () => {
 
 test("HandlerContext expõe só a API do glossário", () => {
   assert.deepEqual(memberNames("HandlerContext"), [
+    "actions",
     "add",
     "destroy",
     "emit",
@@ -128,6 +131,21 @@ test("HandlerContext expõe só a API do glossário", () => {
     "set",
     "spawn",
     "time",
+  ]);
+});
+
+test("ActionMap expõe só ligação, entrada do host e leitura", () => {
+  assert.deepEqual(memberNames("ActionMap"), [
+    "axis2d",
+    "bind",
+    "button",
+    "buttonDown",
+    "buttonUp",
+    "clearBindings",
+    "isBound",
+    "pointer",
+    "pointerMove",
+    "releaseAll",
   ]);
 });
 

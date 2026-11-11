@@ -1,8 +1,12 @@
 ActionKind
+ActionMap
 ActionType
 Axis2dAction
+Axis2dBinding
 Block
 ButtonAction
+ButtonName
+ButtonState
 ComponentLayout
 ComponentType
 ContractError
@@ -20,6 +24,7 @@ NullEntity
 OlyModuleFactory
 Phase
 PointerAction
+PointerState
 Query
 QuerySpec
 RawField
@@ -36,6 +41,7 @@ SystemFunction
 SystemRegistration
 TagType
 ValueOf
+Vector2
 World
 WriteField
 WriteView
@@ -46,5 +52,6 @@ entityGeneration
 entityIndex
 event
 formatEntity
+isButtonName
 loadRuntime
 tag
