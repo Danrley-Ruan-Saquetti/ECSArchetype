@@ -11,8 +11,9 @@ cmake/            OlyOptions, OlyWarnings, OlyWasm, OlyModule (oly_add_module/te
 engine/runtime/   C++, um módulo por pasta: <m>/{include/oly/<m>, src, tests, bench}
   core/           assert, align, small_map, type_name           (sem dependências)
   ecs/            o ECS                                         (DEPENDS core)
-  app/            Engine: loop, fases, sistemas, pausa, eventos (DEPENDS ecs core)
-  bridge/         API C (oly*), OlyWorld, registro do esquema   (DEPENDS app ecs core, módulo OBJECT)
+  input/          ActionMap: ações, botões HID, captura por passo (DEPENDS core)
+  app/            Engine: loop, fases, sistemas, pausa, eventos, ações (DEPENDS input ecs core)
+  bridge/         API C (oly*), OlyWorld, registro do esquema   (DEPENDS app input ecs core, módulo OBJECT)
 engine/packages/  TS, um pacote npm por pasta: core (@oly/core), client (@oly/client)
 engine/tools/     codegen (@oly/codegen: esquema TS -> C++)
 engine/testing/   @oly/testing (privado): fixture (único lugar com nomes de jogo), tests/wasm, bench/{boundary,loop,events}.ts
@@ -37,7 +38,7 @@ $DC ./build/debug-asan/tests/ecs_unit_world -tc="nome do caso"   # um TEST_CASE 
 
 - Presets (`CMakePresets.json`): `debug-asan` (padrão), `release` (testes + bench, `OLY_ENABLE_ASSERTS=0`), `relwithdebinfo` (só bench, para `perf`), as variantes do estudo de custo WASM (`native-clang*`, `wasm-scalar`, `wasm-simd`), `wasm-debug`, `wasm-games` e `wasm-games-release`. Build em `build/<preset>/`; executáveis de teste em `build/<preset>/tests/<módulo>_<suíte>`, de benchmark em `build/<preset>/bench/ecs_bench_*`.
 - Opções: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR`, `OLY_VEC_REPORT`, `OLY_ENABLE_ASSERTS`, `OLY_BUILD_GAMES`.
-- Nomes no ctest levam o prefixo do módulo: `core.*`, `ecs.*`, `app.*`, `bridge.*`, `ts.<pacote>.<suíte>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`), `<módulo>.contract_death.<caso>` e `oly.lint.boundaries` / `oly.lint.boundaries_selftest` (os dois lints só existem fora do Emscripten e com Python no ambiente).
+- Nomes no ctest levam o prefixo do módulo: `core.*`, `input.*`, `ecs.*`, `app.*`, `bridge.*`, `ts.<pacote>.<suíte>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`), `<módulo>.contract_death.<caso>` e `oly.lint.boundaries` / `oly.lint.boundaries_selftest` (os dois lints só existem fora do Emscripten e com Python no ambiente).
 - Um hook `PostToolUse` (`.claude/hooks/clang-format.sh`) roda `clang-format -i` no container `dev` após cada Edit/Write em `.cpp`/`.hpp`. Não formate à mão; se o Docker estiver parado, o hook falha.
 - `-Wall -Wextra -Wpedantic -Werror` estão ligados em todos os nossos alvos (`oly_warnings`); aviso quebra o build.
 - Cada suíte é um executável separado registrado com `oly_add_test(MODULE <m> NAME <suíte> SOURCES ... [SUPPORT <dirs>])` no `tests/CMakeLists.txt` do módulo; arquivo novo precisa ser adicionado lá. Fontes de `src/*.cpp` entram por glob.
@@ -57,7 +58,7 @@ Executáveis: `ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmente
 
 ## Módulos e fronteiras
 
-`oly_add_module(NAME <m> [DEPENDS <m...>] [OBJECT | HEADER_ONLY])` cria `oly_<m>` (alias `oly::<m>`) e liga só os `DEPENDS`. Dependências: `core` ← `ecs` ← `app` ← `bridge` ← jogos (`oly_add_game`). Cada módulo e jogo declara em `DEPENDS` todo módulo que inclui diretamente.
+`oly_add_module(NAME <m> [DEPENDS <m...>] [OBJECT | HEADER_ONLY])` cria `oly_<m>` (alias `oly::<m>`) e liga só os `DEPENDS`. Dependências: `core` ← `input` ← `app` ← `bridge` ← jogos (`oly_add_game`) e `core` ← `ecs` ← `app`. Cada módulo e jogo declara em `DEPENDS` todo módulo que inclui diretamente.
 
 O `oly.lint.boundaries` (`tools/check_boundaries.py`, roda no ctest) reprova:
 - `#include "oly/<x>/..."` num módulo ou jogo que não declarou `<x>` em `DEPENDS`;
@@ -82,6 +83,10 @@ Nada em `engine/runtime/ecs` conhece o `bridge`. Nomes de jogo só em `engine/te
 | mudança estrutural adiada (dentro de sistema) | `SystemContext::spawn/destroy/add/remove` | `olySystemSpawn/Destroy/Add/Remove` | `context.spawn/destroy/add/remove` |
 | declarar evento (ordem = ordem de despacho) | `Engine::declareEvent<T>(name)` | (eventos do esquema, na criação da `OlyEngine`) | `event(name, fields)` no esquema |
 | emitir evento | `Engine::emit`, `SystemContext/HandlerContext::emit` | `olyEngineEmit` | `context.emit` |
+| declarar ação | `ActionMap::declareButton/declareAxis2d/declarePointer` | (ações do esquema, na criação da `OlyEngine`) | `action(name, kind)` no esquema |
+| ligar ação a botão físico | `ActionMap::bind`, `clearBindings`, `isBound` | `olyEngineBindButton/BindAxis2d`, `olyEngineClearBindings`, `olyEngineIsBound` | `engine.actions.bind/clearBindings/isBound` |
+| entregar input do host | `buttonDown`, `buttonUp`, `pointerMove`, `releaseAll` | `olyEngineButtonDown/Up`, `olyEnginePointerMove`, `olyEngineReleaseAll` | `engine.actions.buttonDown/buttonUp/pointerMove/releaseAll` |
+| ler ação no passo | `ActionMap::button/axis2d/pointer` (`context.actions()`) | `olyEngineActionSnapshot` (lido sem cruzar) | `context.actions.button/axis2d/pointer` |
 | registrar handler (lote por rodada) | `Engine::on<T>(name, função)` | `olyEngineAddScriptHandler` | `Engine.on` |
 | handler por nome | `OLY_HANDLER(name, EventType)` | `olyEngineAddNativeHandler` | `addNativeHandler` |
 | variante por ID | sufixo `ById`: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById` | (toda por ID) | — |
@@ -109,12 +114,16 @@ Validade: qualquer mudança estrutural invalida ponteiros/spans de qualquer enti
 
 Eventos: `declareEvent<T>` (trivialmente copiável) dá o `EventTypeId` na ordem de declaração, que é a ordem de despacho. Cada tipo tem duas filas de bytes, `pending` (recebe `emit`, dentro ou fora de `frame`) e `dispatching` (o lote da rodada). O passo 4 do passo fixo (`dispatchEvents`) faz rodadas: troca as filas de todo tipo com pendência e chama cada handler do tipo uma vez com o lote inteiro, tipo a tipo; o que os handlers emitem vai para a rodada seguinte do mesmo passo, até as filas esvaziarem ou estourar `EngineConfig::maxEventRounds` (`OLY_ASSERT`; sem asserts, descarta tudo). Handlers (`HandlerContext`) fazem mudanças estruturais diretas no `World`, rodam também em passo pausado e veem o `time()` do início do passo. Evento sem handler some no fim do passo. A recuperação depois de uma exceção também descarta as filas de eventos.
 
+## Engine: ações de input (`engine/runtime/input`)
+
+`oly::input::ActionMap` não conhece ECS nem `Engine`. Guarda declarações (botão, eixo 2D, ponteiro), ligações a `PhysicalButton` (usage HID: página nos 16 bits altos), o estado físico e uma fila de bordas. O host entrega `buttonDown/buttonUp/pointerMove`; auto-repeat e `keyup` depois de `releaseAll` são ignorados. A `Engine` chama `capture()` no passo 1 de todo passo fixo, também pausado: as bordas viram `pressed/released` por um passo só, então um toque mais curto que um passo aparece como `pressed` e `released` juntos. `setHidden(true)` chama `releaseAll()`; declarar ação durante `frame` é erro de contrato. O snapshot (`ActionState`, 12 B por ação, na ordem de declaração) tem endereço estável na `OlyEngine`, porque o `bridge` declara as ações do esquema na criação; o TS lê por views do heap sem cruzar a fronteira. `engine.actions` e `context.actions` são o mesmo `ActionMap`.
+
 ## Engine: ponte C e pacotes TS
 
-`bridge` expõe a API C `extern "C"` (`engine/runtime/bridge/src/c_api.cpp`): `OlyWorld` é opaco (guarda o `World` e uma pilha de slots de iteração; `oly::bridge::worldOf(OlyWorld*)` dá o `World` aos sistemas do jogo), `olyQueryBegin` devolve uma `OlyIteration*` com buffer próprio de descritores e `olyQueryEnd` precisa encerrar o slot do topo. `olyEngineCreate` declara os eventos do esquema (`oly::bridge::schemaEvents()`, gerado) na ordem do esquema, então o índice do evento no esquema TS é o `EventTypeId`; handlers nativos são resolvidos por nome (`OLY_HANDLER`) e o tipo é conferido (`OLY_INVALID_HANDLER`, `OLY_HANDLER_TYPE_MISMATCH`). Os pacotes TS são npm workspaces na raiz (`package.json`, `tsconfig.base.json`, project references; saída em `<pacote>/dist` e `dist-tests`):
+`bridge` expõe a API C `extern "C"` (`engine/runtime/bridge/src/c_api.cpp`): `OlyWorld` é opaco (guarda o `World` e uma pilha de slots de iteração; `oly::bridge::worldOf(OlyWorld*)` dá o `World` aos sistemas do jogo), `olyQueryBegin` devolve uma `OlyIteration*` com buffer próprio de descritores e `olyQueryEnd` precisa encerrar o slot do topo. `olyEngineCreate` declara os eventos (`oly::bridge::schemaEvents()`, gerado) e as ações (`schemaActions()`) do esquema na ordem dele, então o índice do evento no esquema TS é o `EventTypeId`; handlers nativos são resolvidos por nome (`OLY_HANDLER`) e o tipo é conferido (`OLY_INVALID_HANDLER`, `OLY_HANDLER_TYPE_MISMATCH`). Os pacotes TS são npm workspaces na raiz (`package.json`, `tsconfig.base.json`, project references; saída em `<pacote>/dist` e `dist-tests`):
 
-- `@oly/core`: `loadRuntime(factory, schema)` -> `Runtime` (`schema`, `createWorld()`), `World`, `Query`, `Block`, `ContractError`, `SchemaMismatchError`, `defineSchema`, `component`/`tag`/`event`, `Engine`, `SystemContext`, `HandlerContext`, `EventBatch` (views do lote sem cópia, válidas só durante a chamada do handler). Sem DOM nem node (`types: []`). A lista pública exata é `engine/packages/core/api/public-exports.txt`, conferida por `surface.test.ts`. `@oly/core/internal` (`bridgeOf`, `moduleOf`, `componentIdOf`, `Bridge`...) é só para `engine/`.
-- `@oly/client`: `moduleFactoryFromUrl(url)` e `runInBrowser(engine)` (rAF + `visibilitychange`), camada fina do navegador (usa DOM).
+- `@oly/core`: `loadRuntime(factory, schema)` -> `Runtime` (`schema`, `createWorld()`), `World`, `Query`, `Block`, `ContractError`, `SchemaMismatchError`, `defineSchema`, `component`/`tag`/`event`/`action`, `ActionMap`, `isButtonName`, `Engine`, `SystemContext`, `HandlerContext`, `EventBatch` (views do lote sem cópia, válidas só durante a chamada do handler). Sem DOM nem node (`types: []`). A lista pública exata é `engine/packages/core/api/public-exports.txt`, conferida por `surface.test.ts`. `@oly/core/internal` (`bridgeOf`, `moduleOf`, `componentIdOf`, `Bridge`...) é só para `engine/`.
+- `@oly/client`: `moduleFactoryFromUrl(url)` e `runInBrowser(engine)` (rAF + `visibilitychange`) e `attachBrowserInput(engine, canvas)` (teclado, mouse e `blur` para `engine.actions`), camada fina do navegador (usa DOM).
 - `@oly/codegen`: gera o C++ do esquema (`oly-codegen`); `static_assert` + hash conferido por `loadRuntime` (`SchemaMismatchError` se o WASM estiver desatualizado).
 - `@oly/testing` (privado): fixture, testes de integração WASM e benchmark da fronteira.
 
