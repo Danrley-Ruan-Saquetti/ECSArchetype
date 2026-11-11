@@ -59,6 +59,8 @@ export class Engine {
   readonly #scriptSystems = new Map<number, ScriptSystem>();
   readonly #scriptHandlers = new Map<number, ScriptHandlerEntry>();
   #inFrame = false;
+  // Uma exceção desenrola o WASM sem destrutores: o núcleo C++ continua "em frame" até o próximo frame recuperar.
+  #interrupted = false;
   #disposed = false;
   #lastFrameTime = -Infinity;
 
@@ -83,13 +85,14 @@ export class Engine {
   /**
    * Avança o relógio de passo fixo até `nowSeconds` e roda as fases. Lança ContractError se chamado de dentro
    * de um sistema ou com tempo não finito ou menor que o do frame anterior. Durante o frame, mudanças
-   * estruturais diretas no `world` são erro; use as do SystemContext. Exceção de um sistema TS sobe daqui, e o
-   * frame seguinte descarta os comandos pendentes.
+   * estruturais diretas no `world` são erro; use as do SystemContext. Exceção de um sistema ou handler TS sobe
+   * daqui; até o frame seguinte, registrar sistema ou handler é ContractError, e esse frame descarta os comandos e
+   * os eventos pendentes.
    */
   frame(nowSeconds: number): void {
     this.#assertUsable("frame");
     if (this.#inFrame) {
-      throw new ContractError("frame: chamado de dentro de um sistema (frame não é reentrante)");
+      throw new ContractError("frame: chamado de dentro de um sistema ou handler (frame não é reentrante)");
     }
     if (!Number.isFinite(nowSeconds)) {
       throw new ContractError(`frame: tempo=${nowSeconds} não é um número finito`);
@@ -103,6 +106,10 @@ export class Engine {
     setStructureLocked(this.world, true);
     try {
       this.#bridge.engineFrame(this.#handle, nowSeconds);
+      this.#interrupted = false;
+    } catch (error) {
+      this.#interrupted = true;
+      throw error;
     } finally {
       setStructureLocked(this.world, false);
       this.#inFrame = false;
@@ -267,8 +274,15 @@ export class Engine {
     if (this.#inFrame) {
       throw new ContractError(`${operation} handler=${name}: registro durante frame`);
     }
+    this.#assertNotInterrupted(operation, `handler=${name}`);
 
     return eventIndexOf(this.#runtime, type);
+  }
+
+  #assertNotInterrupted(operation: string, subject: string): void {
+    if (this.#interrupted) {
+      throw new ContractError(`${operation} ${subject}: o último frame foi interrompido por uma exceção; chame frame antes de registrar`);
+    }
   }
 
   #assertCanRegister(operation: string, phase: Phase, name: string): void {
@@ -276,6 +290,7 @@ export class Engine {
     if (this.#inFrame) {
       throw new ContractError(`${operation} system=${name}: registro durante frame`);
     }
+    this.#assertNotInterrupted(operation, `system=${name}`);
     if (!Object.values(Phase).includes(phase)) {
       throw new ContractError(`${operation} system=${name}: phase=${String(phase)} inválida`);
     }

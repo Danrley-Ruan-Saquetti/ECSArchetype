@@ -180,12 +180,14 @@ test("memória cresce dentro do handler TS e o lote continua legível", () => {
     let target = -1;
     engine.addSystem(Phase.Update, "emit", (context) => context.emit(Ping, { target: entity, value: 42 }));
     engine.on(Ping, "grow", (context, batch) => {
+      // A view nasce antes do crescimento e é reusada depois: ela não pode guardar o buffer antigo.
+      const view = batch.read();
+      assert.equal(view.value.get(0), 42);
       const before = module.HEAPU8.buffer;
       for (let count = 0; count < 1_000_000 && module.HEAPU8.buffer === before; ++count) {
         context.spawn([Position, Velocity, Mixed, Trace]);
       }
       grew = module.HEAPU8.buffer !== before;
-      const view = batch.read();
       value = view.value.get(0);
       target = view.target.get(0);
     });
@@ -229,6 +231,36 @@ test("exceção num handler TS chega a quem chamou frame e o frame seguinte desc
 
     armed = true;
     engine.frame(3 * StepSeconds);
+    assert.equal(echoes, 1);
+  });
+});
+
+test("registro depois de frame interrompido é ContractError até o próximo frame", () => {
+  withEngine((engine) => {
+    engine.addSystem(Phase.UpdateBefore, "arm", (context) => context.emit(Ping, { value: 1 }));
+    let thrown = false;
+    engine.on(Ping, "thrower", () => {
+      if (!thrown) {
+        thrown = true;
+        throw new Error("boom");
+      }
+    });
+
+    assert.throws(() => engine.frame(StepSeconds), /boom/);
+
+    const interrupted = (error: unknown) => error instanceof ContractError && /interrompido/.test(error.message);
+    assert.throws(() => engine.on(Echo, "late", () => {}), interrupted);
+    assert.throws(() => engine.addNativeHandler(Ping, "sumPing"), interrupted);
+    assert.throws(() => engine.addSystem(Phase.Update, "late", () => {}), interrupted);
+    assert.throws(() => engine.addNativeSystem(Phase.Update, "noop"), interrupted);
+
+    engine.frame(StepSeconds);
+    let echoes = 0;
+    engine.on(Echo, "late", () => {
+      ++echoes;
+    });
+    engine.addSystem(Phase.Update, "emitEcho", (context) => context.emit(Echo, { depth: 1 }));
+    engine.frame(2 * StepSeconds);
     assert.equal(echoes, 1);
   });
 });
