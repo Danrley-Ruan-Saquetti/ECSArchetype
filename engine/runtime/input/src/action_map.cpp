@@ -99,7 +99,6 @@ namespace oly::input {
 
   void ActionMap::buttonDown(PhysicalButton button) {
     OLY_ASSERT(button.usage != 0, "buttonDown: usage 0 inválido");
-
     if (contains(hostPressed_, button)) {
       return;
     }
@@ -110,7 +109,6 @@ namespace oly::input {
 
   void ActionMap::buttonUp(PhysicalButton button) {
     OLY_ASSERT(button.usage != 0, "buttonUp: usage 0 inválido");
-
     if (!contains(hostPressed_, button)) {
       return;
     }
@@ -139,7 +137,6 @@ namespace oly::input {
     for (std::size_t index = 0; index < declarations_.size(); ++index) {
       const Declaration& declaration = declarations_[index];
       ActionState& state = snapshot_[index];
-
       if (declaration.kind == ActionKind::Button) {
         state.flags = anyPressed(declaration.buttons) ? ActionHeld : 0u;
       }
@@ -154,7 +151,6 @@ namespace oly::input {
 
       for (std::size_t index = 0; index < declarations_.size(); ++index) {
         const Declaration& declaration = declarations_[index];
-
         if (declaration.kind != ActionKind::Button || !contains(declaration.buttons, edge.button)) {
           continue;
         }
@@ -162,7 +158,6 @@ namespace oly::input {
         ActionState& state = snapshot_[index];
         const bool held = (state.flags & ActionHeld) != 0;
         const bool now = anyPressed(declaration.buttons);
-
         if (!held && now) {
           state.flags |= ActionPressed;
         }
@@ -180,13 +175,11 @@ namespace oly::input {
     for (std::size_t index = 0; index < declarations_.size(); ++index) {
       const Declaration& declaration = declarations_[index];
       ActionState& state = snapshot_[index];
-
       if (declaration.kind == ActionKind::Axis2d) {
         bool up = false;
         bool down = false;
         bool left = false;
         bool right = false;
-
         for (const Axis2dBinding& binding : declaration.axes) {
           up = up || contains(capturedPressed_, binding.up);
           down = down || contains(capturedPressed_, binding.down);

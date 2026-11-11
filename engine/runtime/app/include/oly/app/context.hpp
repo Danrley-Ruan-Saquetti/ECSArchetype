@@ -7,6 +7,7 @@
 #include "oly/core/assert.hpp"
 #include "oly/core/type_name.hpp"
 #include "oly/ecs/world.hpp"
+#include "oly/input/action_map.hpp"
 
 namespace oly::app {
   class Engine;
@@ -30,6 +31,8 @@ namespace oly::app {
     void pause() noexcept;
     void resume() noexcept;
     bool paused() const noexcept;
+
+    input::ActionMap& actions() const noexcept;
 
     template <class... Ts, class... Filters>
     ecs::Query<Ts...>& query(Filters... filters) {

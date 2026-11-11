@@ -16,6 +16,7 @@
 #include "oly/core/assert.hpp"
 #include "oly/core/type_name.hpp"
 #include "oly/ecs/world.hpp"
+#include "oly/input/action_map.hpp"
 
 namespace oly::app {
   struct EngineConfig {
@@ -53,6 +54,8 @@ namespace oly::app {
     std::vector<std::vector<HandlerEntry>> handlers_; // [EventTypeId]
     HandlerId handlerCount_ = 0;
     uint32_t eventRoundsThisStep_ = 0;
+
+    input::ActionMap actions_;
 
     double accumulator_ = 0.0;
     double lastTime_ = 0.0;
@@ -127,7 +130,16 @@ namespace oly::app {
     // pendentes (inclusive os emitidos depois da exceção) e também só registra o tempo.
     void frame(double nowSeconds);
     // Oculto, frame não faz nada; ao mostrar, o próximo frame só registra o tempo. Não mexe na pausa do jogo.
+    // Ocultar solta todos os botões (o jogador pode soltá-los com a aba fora de foco).
     void setHidden(bool hidden);
+
+    // Declarações ficam travadas durante frame; ligações e entrada do host não.
+    input::ActionMap& actions() noexcept {
+      return actions_;
+    }
+    const input::ActionMap& actions() const noexcept {
+      return actions_;
+    }
 
     // Pedidos no meio de um passo valem a partir do próximo passo fixo.
     void pause() noexcept {
@@ -162,9 +174,11 @@ namespace oly::app {
     void runPhase(Phase phase);
     void dispatchEvents();
 
-    // Etapas do passo fixo previstas na spec (2026-11-09-game-engine-design.md §4.3); vazias até existirem
-    // ações de input, schedule e estados de jogo.
-    void captureActions() {}
+    // Etapas do passo fixo previstas na spec (2026-11-09-game-engine-design.md §4.3); as vazias esperam
+    // schedule e estados de jogo.
+    void captureActions() {
+      actions_.capture();
+    }
     void runDueSchedule() {}
     void applyStateTransition() {}
   };

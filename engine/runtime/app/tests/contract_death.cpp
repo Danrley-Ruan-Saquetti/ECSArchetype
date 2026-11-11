@@ -124,6 +124,19 @@ namespace {
     engine.frame(1.0 / 60);
   }
 
+  void declareActionFromSystem(SystemContext& context) {
+    context.actions().declareButton("late");
+  }
+
+  void declareActionDuringFrame() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.addSystem(Phase::Update, "declarador", declareActionFromSystem);
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
   void emitEchoAgain(HandlerContext& context) {
     context.emit(Echo{0});
   }
@@ -172,6 +185,7 @@ int main(int argumentCount, char** arguments) {
     {"declare_event_twice", declareEventTwice, {"declareEvent", "já declarado"}},
     {"on_during_frame", onDuringFrame, {"on", "durante frame"}},
     {"declare_event_during_frame", declareEventDuringFrame, {"declareEvent", "durante frame"}},
+    {"declare_action_during_frame", declareActionDuringFrame, {"declare", "durante frame"}},
     {"event_round_limit", eventRoundLimit, {"dispatchEvents", "rodadas", "Echo"}},
     {"events_wrong_type", eventsWrongType, {"events", "tipo"}},
   };

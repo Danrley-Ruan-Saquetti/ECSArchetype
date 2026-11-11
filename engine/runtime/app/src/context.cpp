@@ -27,6 +27,10 @@ namespace oly::app {
     return engine_->paused();
   }
 
+  input::ActionMap& EngineContext::actions() const noexcept {
+    return engine_->actions();
+  }
+
   void EngineContext::emitById(EventTypeId type, const void* event) {
     engine_->emitById(type, event);
   }

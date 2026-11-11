@@ -68,6 +68,10 @@ namespace oly::app {
 
   void Engine::setHidden(bool hidden) {
     hidden_ = hidden;
+    if (hidden) {
+      actions_.releaseAll();
+    }
+
     restartClock();
   }
 
@@ -81,6 +85,7 @@ namespace oly::app {
     commands_ = world_.commands();
     queues_.clear();
     inFrame_ = false;
+    actions_.setDeclarationsLocked(false);
     restartClock();
   }
 
@@ -100,6 +105,7 @@ namespace oly::app {
     OLY_ASSERT(nowSeconds >= lastTime_, "frame: tempo %f menor que o anterior %f", nowSeconds, lastTime_);
 
     inFrame_ = true;
+    actions_.setDeclarationsLocked(true);
     accumulator_ += nowSeconds - lastTime_;
     lastTime_ = nowSeconds;
 
@@ -125,6 +131,7 @@ namespace oly::app {
     interpolation_ = accumulator_ / fixedDeltaTime_;
     runPhase(Phase::Render);
     inFrame_ = false;
+    actions_.setDeclarationsLocked(false);
   }
 
   void Engine::runFixedStep() {
