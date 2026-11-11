@@ -12,6 +12,10 @@ Revisão de 2026-11-10 (antes da fase 3): §4.4 detalhado para os eventos — ha
 despacho tipo a tipo dentro de cada rodada da cascata, fluxo de referência da morte de um inimigo, e o jogo (não a
 engine) decide quando destruir a entidade. Medição da fase 3 no §7.
 
+Revisão de 2026-11-11 (antes da fase 4): §4.5 detalhado para as ações de input — o host empurra eventos brutos,
+botões físicos são usages do USB HID, ações são declaradas no esquema, módulo `input` próprio, sem interface de
+plataforma (§4.3). Testes da fase 4 no §5 e ausência de benchmark justificada no §7.
+
 Convenção deste documento: o que não vem marcado foi decidido pelo autor do projeto. Itens marcados
 **[decisão do design]** foram escolhas feitas ao escrever o documento, sem confirmação explícita; podem ser revistas
 no plano da fase correspondente sem voltar ao autor, desde que respeitem os objetivos e anti-objetivos.
@@ -166,8 +170,9 @@ sistemas, o relógio do jogo, o acumulador do passo fixo, o estado de pausa e o 
   - navegador: o pacote `@oly/client`, com `requestAnimationFrame` e `visibilitychange`, chamando a API C;
   - testes: um relógio falso, tanto no C++ nativo (doctest) quanto no TS em node (pela API C do WASM);
   - outros ambientes: ficam para depois (§2); a engine não pode depender de nada do navegador.
-  Na fase 2, `frame` e `setHidden` bastam e **não** há interface de plataforma; uma interface entra quando o input
-  precisar (fase 4). **[decisão do design]**
+  Na fase 2, `frame` e `setHidden` bastam e **não** há interface de plataforma. Na fase 4 o input também chega
+  por chamadas do host (eventos brutos empurrados, §4.5), então continua sem interface de plataforma.
+  **[decisão do design]**
 - **Sistemas C++** são funções registradas no núcleo e chamadas direto, sem fronteira. Um jogo só em C++ os registra
   pela API C++ (`addSystem(fase, nome, função)`). Para que o TS possa colocá-los na ordem das fases, sistemas C++ do
   jogo também podem ser registrados por **nome** com uma macro (ex.: `OLY_SYSTEM(move)`), e o TS os adiciona por esse
@@ -331,6 +336,147 @@ Regras:
 - Converter a posição do ponteiro para coordenadas do mundo é do jogo (não há câmera na engine).
 - O `CommandBuffer` do ECS continua como mecanismo interno e não é exposto com esse nome pela engine.
 
+**Módulo.** As ações vivem num módulo próprio, `input` (`engine/runtime/input/`, `DEPENDS core`, namespace
+`oly::input`), que não conhece o ECS nem a `Engine`. O `app` passa a depender de `input`. Assim as regras de borda
+são testáveis sem loop nem `World`, e o lint de fronteiras impede o input de depender do ECS. O `ActionMap` não é
+uma interface de plataforma: o núcleo nunca pergunta nada ao host.
+
+**Botões físicos.** Uma tecla ou um botão do mouse é um `PhysicalButton`: um `uint32_t` no formato de usage estendido
+do USB HID, `(página << 16) | usage`. Teclado é a página `0x07` (`Key::W = 0x0007'001A`, `Key::Space =
+0x0007'002C`), mouse é a página `0x09` (`MouseButton::Left = 0x0009'0001`, `Right = 0x0009'0002`, `Middle =
+0x0009'0003`). `Key` e `MouseButton` são `enum class : uint32_t` com esses valores, convertidos implicitamente em
+`PhysicalButton`. Os valores HID são os mesmos dos scancodes do SDL, então um host nativo futuro não precisa de tabela.
+A identidade é a **posição física** da tecla (o `KeyboardEvent.code` do W3C, não o `key`): WASD fica no mesmo lugar em
+qualquer layout de teclado.
+
+**Entrada do host (eventos brutos empurrados).** O host chama, a qualquer hora (dentro ou fora de `frame`):
+- `buttonDown(botão)` e `buttonUp(botão)`: entram numa fila de bordas, na ordem de chegada. Um `buttonDown` de um
+  botão já pressionado (auto-repeat do teclado) é ignorado pelo núcleo; o host não filtra nada.
+- `pointerMove(x, y)`: não entra na fila; só a última posição importa. Coordenadas em pixels do canvas, com `y`
+  crescendo para baixo; a conversão das coordenadas do DOM é do host.
+- `releaseAll()`: solta todos os botões pressionados (gera as bordas de soltura). O host chama no `blur` da janela,
+  porque o `keyup` não chega quando o foco sai; a `Engine` chama em `setHidden(true)`.
+A fronteira é cruzada uma vez por evento de input (dezenas por segundo), fora do caminho quente.
+**[decisão do design]** A fila de bordas não tem limite: só cresce com eventos humanos e cada passo a esvazia.
+
+**Captura (passo 1, em todo passo fixo, pausado ou não).** O núcleo consome a fila na ordem e monta o snapshot:
+- **Botão.** Uma ação de botão tem zero ou mais ligações (ex.: `Space` e `ShiftLeft`). `held` é verdadeiro se algum
+  botão ligado estiver pressionado no fim da captura; `pressed` é verdadeiro se a ação passou de solta a pressionada
+  em algum momento da fila; `released`, o inverso. Um toque dentro de um passo dá `pressed` e `released` verdadeiros
+  com `held` falso, e é assim que ele não se perde. Duas teclas na mesma ação: soltar uma enquanto a outra está
+  pressionada não gera `released`.
+- **As bordas valem por um passo.** Num `frame` com 3 passos, só o primeiro vê as bordas recebidas antes dele; num
+  `frame` com 0 passos, a fila espera o próximo passo.
+- **Eixo 2D.** Cada ligação tem 4 botões (`up`, `down`, `left`, `right`); pode haver várias (WASD e setas). O valor
+  vem do estado pressionado no fim da captura: `x = right − left`, `y = down − up` (**[decisão do design]** `y` cresce
+  para baixo, como no canvas, para `move` e `aim` usarem o mesmo sistema), teclas opostas se anulam e a diagonal é
+  normalizada para comprimento 1. Eixo não tem bordas.
+- **Ponteiro.** A última posição recebida e `valid`, falso até o primeiro `pointerMove`. Por enquanto o ponteiro não
+  tem ligação: a fonte é o único ponteiro do host.
+- **Ligações trocáveis a qualquer hora**, inclusive de dentro de um sistema (menu de configuração de teclas). A troca
+  vale a partir da próxima captura, e o estado da ação é recalculado a partir dos botões físicos pressionados.
+
+**API C++** (nomes normativos para o plano; detalhes de assinatura ficam com ele):
+
+```cpp
+struct ButtonAction  { ActionId id; };   // ids tipados: ler um eixo como botão não compila
+struct Axis2dAction  { ActionId id; };
+struct PointerAction { ActionId id; };
+
+struct ButtonState   { bool pressed; bool held; bool released; };
+struct Vector2       { float x; float y; };
+struct PointerState  { float x; float y; bool valid; };
+struct Axis2dBinding { PhysicalButton up, down, left, right; };
+
+class ActionMap {
+ public:
+  ButtonAction  declareButton(std::string_view name);   // ActionId denso, na ordem de declaração
+  Axis2dAction  declareAxis2d(std::string_view name);
+  PointerAction declarePointer(std::string_view name);
+
+  void bind(ButtonAction action, PhysicalButton button);
+  void bind(Axis2dAction action, Axis2dBinding binding);
+  void clearBindings(ActionId action);
+  bool isBound(PhysicalButton button) const;
+
+  void buttonDown(PhysicalButton button);
+  void buttonUp(PhysicalButton button);
+  void pointerMove(float x, float y);
+  void releaseAll();
+
+  void capture();
+
+  ButtonState  button(ButtonAction action) const;
+  Vector2      axis2d(Axis2dAction action) const;
+  PointerState pointer(PointerAction action) const;
+  std::span<const ActionState> snapshot() const;   // para a ponte
+};
+```
+
+- A `Engine` guarda um `ActionMap`, exposto em `engine.actions()`; o host e o jogo declaram, ligam e entregam input
+  pelo mesmo objeto. `captureActions()` (passo 1) chama `capture()`; `setHidden(true)` chama `releaseAll()`.
+  `EngineContext` ganha `actions()`, então sistemas e handlers leem e religam pelo mesmo caminho
+  (`context.actions().button(actions::dash).pressed`). **[decisão do design]** Sem leitores duplicados no contexto
+  (`context.button(...)`), para a superfície do contexto não repetir a do `ActionMap`.
+- Declarar ação durante `frame` é erro de contrato, como declarar evento. Ligar, entregar input e ler valem a qualquer
+  hora.
+- Um jogo só em C++ guarda o retorno de `declareButton` e liga com `engine.actions().bind(dash, Key::Space)`.
+
+**Esquema e codegen.** Ações são declaradas no esquema, como os eventos: `action("dash", "button")`, com tipo
+`"button"`, `"axis2d"` ou `"pointer"`, vai para `schema.actions` com `schemaIndex` na ordem. O nome é único entre tipos,
+eventos e ações e precisa ser identificador C++ válido. O hash do esquema inclui as ações (nome e tipo), então um WASM
+desatualizado dá `SchemaMismatchError`. O codegen gera `namespace actions { inline constexpr
+oly::input::ButtonAction dash{0}; }` (o namespace evita colisão com nomes de componentes) e um `schemaActions()`
+como o `schemaEvents()`; `olyEngineCreate` declara as ações do esquema na ordem do esquema, então o índice no esquema
+é o `ActionId` nos dois lados e um nome errado num sistema nativo é erro de compilação. As **ligações** não entram no
+esquema: são dados de tempo de execução.
+
+**Snapshot e API C.** `ActionState` é `{ float x; float y; uint32_t flags; }` (12 bytes, um por ação, na ordem do
+`ActionId`), com os bits `pressed`, `held`, `released` e `valid` em `flags`; o layout é conferido por `static_assert`.
+
+```c
+void olyEngineBindButton(OlyEngine*, uint32_t action, uint32_t button);
+void olyEngineBindAxis2d(OlyEngine*, uint32_t action, uint32_t up, uint32_t down, uint32_t left, uint32_t right);
+void olyEngineClearBindings(OlyEngine*, uint32_t action);
+int32_t olyEngineIsBound(OlyEngine*, uint32_t button);
+void olyEngineButtonDown(OlyEngine*, uint32_t button);
+void olyEngineButtonUp(OlyEngine*, uint32_t button);
+void olyEnginePointerMove(OlyEngine*, float x, float y);
+void olyEngineReleaseAll(OlyEngine*);
+const OlyActionState* olyEngineActionSnapshot(OlyEngine*);   // estável até olyEngineDestroy
+```
+
+O TS lê o snapshot por views da `Bridge` (refeitas após `sync()`), então ler uma ação não cruza a fronteira.
+
+**`@oly/core`.**
+- `action(name, kind)` devolve um handle tipado pelo tipo (`ButtonAction`, `Axis2dAction`, `PointerAction`):
+  `context.actions.axis2d(dash)` é erro de tipo.
+- Leitura em sistemas e handlers, com a forma do C++: `context.actions.button(dash)` → `{ pressed, held, released }`,
+  `axis2d(move)` → `{ x, y }`, `pointer(aim)` → `{ x, y, valid }`. Cada leitura cria um objeto pequeno; são poucas
+  por passo.
+- Ligações: `engine.actions.bind(dash, "Space")`, `bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right:
+  "KeyD" })`, `clearBindings(action)`. Os nomes são os do `KeyboardEvent.code` do W3C, mais `"MouseLeft"`,
+  `"MouseRight"` e `"MouseMiddle"`, tipados como união literal (nome errado é erro de compilação). A tabela nome W3C →
+  usage HID fica no `@oly/core` (só dados, sem DOM).
+- Lado do host: `engine.actions.buttonDown(nome)`, `buttonUp(nome)`, `pointerMove(x, y)`, `releaseAll()`.
+
+**`@oly/client`.** `attachBrowserInput(engine, canvas, environment?)` → `{ detach() }`, separado de `runInBrowser`
+(loop e input mudam por motivos diferentes):
+- teclado e `blur` na `window` (`blur` → `releaseAll`); `pointerdown` no canvas (clique fora dele não atira);
+  `pointerup` e `pointermove` na `window` (soltar fora do canvas também chega);
+- posição convertida para pixels do canvas com `getBoundingClientRect` e a razão `canvas.width / rect.width` (idem
+  para a altura);
+- códigos fora da tabela são ignorados;
+- `preventDefault` só para botões ligados a alguma ação (`olyEngineIsBound`): `Space` não rola a página e o botão
+  direito não abre o menu, mas `F5` e os atalhos do navegador continuam funcionando.
+
+**Erros de contrato** (`OLY_ASSERT` no C++; no TS, `ContractError` antes de chegar ao assert): declarar ação durante
+`frame` ou com nome repetido; `ActionId` fora do intervalo ou do tipo errado na API C (no C++ tipado, não compila);
+botão com usage `0`; no TS, nome de botão fora da tabela e handle de ação de outro esquema.
+
+**Tabela HID nos dois lados.** O enum C++ e a tabela TS copiam o mesmo padrão; um teste de cada lado confere as mesmas
+amostras (letras, dígitos, setas, `Space`, modificadores, mouse) contra os valores do padrão.
+
 ### 4.6 Schedule
 
 - Agendamento de ações no **relógio do jogo** (soma dos passos fixos não pausados): `after(segundos, callback)` e
@@ -362,8 +508,10 @@ Esboço aceito como base de uso (nomes indicativos, não normativos):
 ```ts
 const engine = await Engine.boot({ wasm: "game.wasm", fixedHz: 60 });
 engine.states(["menu", "playing", "gameOver"], { initial: "menu" });
-engine.actions({ move: axis2d({ up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" }),
-                 aim: pointer(), shoot: button("Mouse0"), dash: button("Space") });
+// move, aim, shoot e dash vêm do esquema: action("move", "axis2d"), action("aim", "pointer"), ...
+engine.actions.bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" });
+engine.actions.bind(shoot, "MouseLeft");
+engine.actions.bind(dash, "Space");
 engine.onEnter("playing", (context) => {
   context.spawn([Player, Position, Velocity, Dash], { Dash: { ready: 1, speed: 600 } });
   context.schedule.every(5.0, spawnWave);
@@ -405,7 +553,7 @@ Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. 
 | 1 | **Ponte** | build WASM da engine com API C; pacote TS; esquema + gerador; spawn/destroy/get/set e `eachBlock` com views a partir do TS | um teste TS em node cria entidades, itera com views e o resultado bate com o lado C++; benchmark da fronteira (§7) registrado |
 | 2 | **Loop e fases** | módulo C++ com o loop (`frame`, `setHidden`, passo fixo, render, pausa), registro de sistemas C++ (por função e por nome) e TS (chamada de volta) nas fases, `CommandBuffer` por fase compartilhado pelas duas linguagens; host do navegador em `@oly/client` (rAF + `visibilitychange`); passos 1, 2, 4 e 5 do loop como lugares vazios | um teste C++ nativo roda o loop inteiro sem TS, com relógio falso; sistemas das duas linguagens rodam na ordem esperada (teste TS em node contra o WASM); pausa, aba oculta e `.whilePaused()` testados; medições do §7 registradas |
 | 3 | **Eventos** | `event` no esquema e no gerador; filas tipadas na memória do WASM; emissão nos dois lados; handlers C++ (por função e por nome) e TS por lote; despacho tipo a tipo com cascata e limite | teste C++ nativo do fluxo de referência (§4.4) sem TS, terminando com `checkInvariants` e o inimigo destruído; testes de ordem (tipo, registro, rodadas), cascata, estouro do limite (caso de morte no C++), evento duplicado, emissão na fase `render`, handlers C++ e TS misturados (teste TS em node contra o WASM), crescimento de memória dentro de handler TS e recuperação de exceção; medição do §7 registrada |
-| 4 | **Ações de input** | declaração de ações e ligações, snapshot por passo visível em C++ e TS | testes com entrada simulada, incluindo toque mais curto que um passo e sair da pausa por uma ação |
+| 4 | **Ações de input** | módulo `input` (`ActionMap`, botões físicos HID, fila de bordas, captura no passo 1); `action` no esquema e no gerador; API C de ligações, entrada do host e snapshot; leitura pelos contextos em C++ e TS; `attachBrowserInput` em `@oly/client` | `input.unit` sem `Engine` cobrindo bordas, toque mais curto que um passo, várias ligações, auto-repeat, `releaseAll`, eixo (anulação e diagonal) e religação; no `app`, uma captura por passo (inclusive pausado), bordas só no primeiro passo do frame e sair da pausa por uma ação num sistema `.whilePaused()`; casos de morte novos; teste TS em node contra o WASM com sistema TS lendo ações, toque curto e saída da pausa; amostras da tabela HID iguais nos dois lados; `attachBrowserInput` testado com ambiente falso |
 | 5 | **Schedule** | `after`/`every`/cancelar no relógio do jogo, congelando na pausa | testes de ordem de disparo e de pausa com relógio falso |
 | 6 | **Estados** | estados, `onEnter`/`onExit`, `inState`, escopo de entidades e de ações agendadas | teste de `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`) |
 | 7 | **Jogo de validação** | o jogo de tiro em `examples/` (ou equivalente), com render em canvas e colisão simples feitos no jogo | jogável no navegador de ponta a ponta; lista do que precisou ser feito fora da engine, se algo |
@@ -442,6 +590,9 @@ só de 2 entre si; a ordem acima é a recomendada.
   1. um handler C++ contra um handler TS (custo da chamada de volta por lote e da leitura pelas views);
   2. emissão de N eventos por um sistema C++ contra por um sistema TS (custo da emissão pela fronteira).
   Sem meta numérica: os números dizem se vale emitir em lote a partir do TS.
+- Ações de input (fase 4, **[decisão do design]**): sem benchmark. O input está fora do caminho quente: a fronteira é
+  cruzada por evento de input (dezenas por segundo), a captura roda uma vez por passo sobre poucas ações e a leitura no
+  TS é feita por views, sem cruzar a fronteira. Medir só faria sentido se um jogo tivesse centenas de ações.
 - Ambiente ruidoso (WSL2/Docker): só razões da mesma execução, como no ECS.
 - Resultados versionados em `docs/benchmarks/` com registro no `README.md` correspondente.
 
