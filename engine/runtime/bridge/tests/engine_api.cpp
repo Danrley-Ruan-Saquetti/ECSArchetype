@@ -238,3 +238,100 @@ TEST_CASE("olyEngineEmit dentro de um sistema de script é despachado no mesmo p
 
   CHECK(g_values == std::vector<uint32_t>{5});
 }
+
+namespace {
+  constexpr uint32_t SpaceUsage = 0x0007'002Cu;
+  constexpr uint32_t KeyWUsage = 0x0007'001Au;
+  constexpr uint32_t KeySUsage = 0x0007'0016u;
+  constexpr uint32_t KeyAUsage = 0x0007'0004u;
+  constexpr uint32_t KeyDUsage = 0x0007'0007u;
+
+  bool g_sawJumpPressed = false;
+
+  struct ActionFixture : EngineFixture {
+    double now = 0.0;
+
+    ActionFixture() {
+      olyEngineFrame(engine, now);
+    }
+
+    void stepOnce() {
+      now += 1.0 / 60;
+      olyEngineFrame(engine, now);
+    }
+  };
+}
+
+OLY_SYSTEM(bridgeTestReadJump) {
+  g_sawJumpPressed = context.actions().button(oly::input::ButtonAction{0}).pressed;
+}
+
+TEST_CASE("ações do esquema são declaradas na criação, na ordem") {
+  EngineFixture fixture;
+  const oly::input::ActionMap& actions = oly::bridge::engineOf(fixture.engine).actions();
+
+  CHECK(actions.actionCount() == 3);
+  CHECK(actions.name(0) == "bridgeJump");
+  CHECK(actions.kind(2) == oly::input::ActionKind::Pointer);
+}
+
+TEST_CASE("ligar, apertar e ler pelo snapshot") {
+  ActionFixture fixture;
+  g_sawJumpPressed = false;
+  olyEngineAddNativeSystem(fixture.engine, 1, "bridgeTestReadJump");
+
+  olyEngineBindButton(fixture.engine, 0, SpaceUsage);
+  olyEngineButtonDown(fixture.engine, SpaceUsage);
+  fixture.stepOnce();
+
+  CHECK(olyEngineActionSnapshot(fixture.engine)[0].flags == (OLY_ACTION_PRESSED | OLY_ACTION_HELD));
+  CHECK(g_sawJumpPressed);
+}
+
+TEST_CASE("eixo e ponteiro pela API C") {
+  ActionFixture fixture;
+
+  olyEngineBindAxis2d(fixture.engine, 1, KeyWUsage, KeySUsage, KeyAUsage, KeyDUsage);
+  olyEngineButtonDown(fixture.engine, KeyDUsage);
+  olyEnginePointerMove(fixture.engine, 5.0f, 6.0f);
+  fixture.stepOnce();
+
+  const OlyActionState* snapshot = olyEngineActionSnapshot(fixture.engine);
+  CHECK(snapshot[1].x == 1.0f);
+  CHECK(snapshot[1].y == 0.0f);
+  CHECK(snapshot[2].x == 5.0f);
+  CHECK(snapshot[2].y == 6.0f);
+  CHECK(snapshot[2].flags == OLY_ACTION_VALID);
+}
+
+TEST_CASE("isBound, clearBindings e releaseAll") {
+  ActionFixture fixture;
+
+  olyEngineBindButton(fixture.engine, 0, SpaceUsage);
+  CHECK(olyEngineIsBound(fixture.engine, SpaceUsage) == 1);
+
+  olyEngineClearBindings(fixture.engine, 0);
+  CHECK(olyEngineIsBound(fixture.engine, SpaceUsage) == 0);
+
+  olyEngineBindButton(fixture.engine, 0, SpaceUsage);
+  olyEngineButtonDown(fixture.engine, SpaceUsage);
+  fixture.stepOnce();
+  olyEngineReleaseAll(fixture.engine);
+  fixture.stepOnce();
+
+  CHECK((olyEngineActionSnapshot(fixture.engine)[0].flags & OLY_ACTION_RELEASED) != 0);
+}
+
+TEST_CASE("o endereço do snapshot não muda entre frames") {
+  ActionFixture fixture;
+  const OlyActionState* before = olyEngineActionSnapshot(fixture.engine);
+
+  olyEngineBindButton(fixture.engine, 0, SpaceUsage);
+  for (int step = 0; step < 3; ++step) {
+    olyEngineButtonDown(fixture.engine, SpaceUsage);
+    fixture.stepOnce();
+    olyEngineButtonUp(fixture.engine, SpaceUsage);
+  }
+
+  CHECK(olyEngineActionSnapshot(fixture.engine) == before);
+}

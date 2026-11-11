@@ -26,7 +26,11 @@ namespace oly::bridge {
   }
 
   std::span<const SchemaAction> schemaActions() {
-    return {};
+    static const SchemaAction actions[] = {
+      {"jump", oly::input::ActionKind::Button},
+      {"move", oly::input::ActionKind::Axis2d},
+    };
+    return actions;
   }
 }
 
@@ -86,6 +90,16 @@ namespace {
     olyEngineEmit(engine, 5, &value);
   }
 
+  void bindButtonWrongKind() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+    olyEngineBindButton(engine, 1, 0x0007002Cu);
+  }
+
+  void actionOutOfRange() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+    olyEngineClearBindings(engine, 9);
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -98,6 +112,8 @@ int main(int argumentCount, char** arguments) {
     {"query_end_out_of_order", queryEndOutOfOrder, {"olyQueryEnd", "fora de ordem"}},
     {"system_spawn_outside_system", systemSpawnOutsideSystem, {"olySystemSpawn", "fora de sistema"}},
     {"engine_phase_out_of_range", enginePhaseOutOfRange, {"phase"}},
+    {"bind_button_wrong_kind", bindButtonWrongKind, {"olyEngineBindButton", "tipo"}},
+    {"action_out_of_range", actionOutOfRange, {"olyEngineClearBindings", "fora do intervalo"}},
     {"engine_emit_out_of_range", engineEmitOutOfRange, {"olyEngineEmit", "eventType"}},
   };
 

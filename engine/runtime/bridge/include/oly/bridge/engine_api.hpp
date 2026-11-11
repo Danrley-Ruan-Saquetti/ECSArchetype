@@ -14,6 +14,18 @@ struct OlyEngine;
 #define OLY_SCRIPT_SYSTEM 0u
 #define OLY_SCRIPT_HANDLER 1u
 
+// Espelho de oly::input::ActionState (12 B por ação): o JS lê o snapshot direto do heap.
+struct OlyActionState {
+  float x;
+  float y;
+  uint32_t flags;
+};
+
+#define OLY_ACTION_PRESSED 1u
+#define OLY_ACTION_HELD 2u
+#define OLY_ACTION_RELEASED 4u
+#define OLY_ACTION_VALID 8u
+
 extern "C" {
 // fixedHz, maxStepsPerFrame e maxEventRounds precisam ser positivos (OLY_ASSERT). Declara, na ordem do esquema, todos
 // os eventos de oly::bridge::schemaEvents(): o índice do evento no esquema é o seu tipo de evento (eventType).
@@ -47,6 +59,22 @@ OLY_API void olyEngineEmit(OlyEngine* engine, uint32_t eventType, const void* va
 OLY_API uint32_t olyEngineAddNativeHandler(OlyEngine* engine, uint32_t eventType, const char* name);
 // O handler é chamado pelo invocador de scripts uma vez por lote, com o id devolvido aqui.
 OLY_API uint32_t olyEngineAddScriptHandler(OlyEngine* engine, uint32_t eventType, const char* name);
+
+// Ações: olyEngineCreate declara, depois dos eventos, todas as de oly::bridge::schemaActions(); o índice da ação no
+// esquema é o seu ActionId (action). `button` é um usage HID (página nos 16 bits altos). Ligar confere o intervalo
+// e o tipo da ação (OLY_ASSERT); limpar confere só o intervalo. Valem dentro e fora de olyEngineFrame.
+OLY_API void olyEngineBindButton(OlyEngine* engine, uint32_t action, uint32_t button);
+OLY_API void olyEngineBindAxis2d(OlyEngine* engine, uint32_t action, uint32_t up, uint32_t down, uint32_t left, uint32_t right);
+OLY_API void olyEngineClearBindings(OlyEngine* engine, uint32_t action);
+OLY_API int32_t olyEngineIsBound(OlyEngine* engine, uint32_t button);
+// Entrada do host: entra na fila e só vira estado de ação na captura do próximo passo.
+OLY_API void olyEngineButtonDown(OlyEngine* engine, uint32_t button);
+OLY_API void olyEngineButtonUp(OlyEngine* engine, uint32_t button);
+OLY_API void olyEnginePointerMove(OlyEngine* engine, float x, float y);
+OLY_API void olyEngineReleaseAll(OlyEngine* engine);
+// Um OlyActionState por ação, na ordem do esquema; estável até olyEngineDestroy porque todas as ações são
+// declaradas na criação.
+OLY_API const OlyActionState* olyEngineActionSnapshot(OlyEngine* engine);
 
 // Só valem dentro de um sistema de script (fora dele, OLY_ASSERT). Mudanças adiadas até o fim da fase.
 OLY_API void olySystemSpawn(OlyEngine* engine, OlyEntity* out);
