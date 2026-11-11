@@ -258,6 +258,7 @@ export class Bridge {
 
   engineSetHidden(engine: number, hidden: boolean): void {
     this.module._olyEngineSetHidden(engine, hidden ? 1 : 0);
+    this.sync();
   }
 
   enginePause(engine: number): void {

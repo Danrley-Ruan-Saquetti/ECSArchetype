@@ -11,7 +11,7 @@ export interface KeyInput {
 }
 
 export interface PointerInput {
-  readonly button: number;
+  readonly buttons: number;
   readonly clientX: number;
   readonly clientY: number;
   preventDefault(): void;
@@ -28,10 +28,10 @@ export interface InputCanvas {
 export interface InputWindow {
   addEventListener(type: "keydown" | "keyup", listener: (event: KeyInput) => void): void;
   addEventListener(type: "blur", listener: () => void): void;
-  addEventListener(type: "pointerup" | "pointermove", listener: (event: PointerInput) => void): void;
+  addEventListener(type: "pointerup" | "pointermove" | "pointercancel", listener: (event: PointerInput) => void): void;
   removeEventListener(type: "keydown" | "keyup", listener: (event: KeyInput) => void): void;
   removeEventListener(type: "blur", listener: () => void): void;
-  removeEventListener(type: "pointerup" | "pointermove", listener: (event: PointerInput) => void): void;
+  removeEventListener(type: "pointerup" | "pointermove" | "pointercancel", listener: (event: PointerInput) => void): void;
 }
 
 export interface InputEnvironment {
@@ -42,7 +42,13 @@ export interface BrowserInput {
   detach(): void;
 }
 
-const mouseButtons: readonly (ButtonName | undefined)[] = ["MouseLeft", "MouseMiddle", "MouseRight"];
+// Bits de PointerEvent.buttons. O botão intermediário de um acorde só chega por aqui: pointerdown dispara quando o
+// primeiro botão é apertado e pointerup quando o último é solto.
+const mouseButtonBits: readonly (readonly [number, ButtonName])[] = [
+  [1, "MouseLeft"],
+  [2, "MouseRight"],
+  [4, "MouseMiddle"],
+];
 
 // Os métodos do navegador exigem `this` = window; por isso as funções embrulhadas.
 function globalEnvironment(): InputEnvironment {
@@ -61,8 +67,8 @@ function globalEnvironment(): InputEnvironment {
 }
 
 /**
- * Entrega teclado e mouse ao alvo: teclas pelo `code` W3C, botões do mouse pelo canvas (soltar vale em qualquer
- * lugar da janela) e `releaseAll` no `blur`. A posição do ponteiro sai em pixels do canvas, não da tela. Eventos
+ * Entrega teclado e mouse ao alvo: teclas pelo `code` W3C, botões do mouse pela máscara `buttons` (apertar vale só
+ * no canvas, soltar em qualquer lugar da janela) e `releaseAll` no `blur`. A posição do ponteiro sai em pixels do canvas, não da tela. Eventos
  * de ponteiro com o canvas sem tamanho são ignorados. `detach` remove os listeners; chamá-lo de novo não faz nada.
  */
 export function attachBrowserInput(
@@ -74,16 +80,33 @@ export function attachBrowserInput(
   const { window } = environment;
   let attached = true;
 
-  // Nada de pointerMove com NaN no snapshot: canvas oculto tem retângulo de largura ou altura 0.
-  const moveToCanvasPosition = (event: PointerInput): boolean => {
+  const heldMouseButtons = new Set<ButtonName>();
+
+  // Devolve null com o canvas sem tamanho (oculto): não há como converter sem dividir por zero.
+  const moveToCanvasPosition = (event: PointerInput): { inside: boolean } | null => {
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
-      return false;
+      return null;
     }
 
-    actions.pointerMove(((event.clientX - rect.left) * canvas.width) / rect.width, ((event.clientY - rect.top) * canvas.height) / rect.height);
+    const x = ((event.clientX - rect.left) * canvas.width) / rect.width;
+    const y = ((event.clientY - rect.top) * canvas.height) / rect.height;
+    actions.pointerMove(x, y);
 
-    return true;
+    return { inside: x >= 0 && x < canvas.width && y >= 0 && y < canvas.height };
+  };
+
+  // Aperto só vale dentro do canvas; soltar vale em qualquer lugar da janela.
+  const syncMouseButtons = (buttons: number, allowPress: boolean): void => {
+    for (const [bit, button] of mouseButtonBits) {
+      const down = (buttons & bit) !== 0;
+      if (down && allowPress && !heldMouseButtons.has(button)) {
+        heldMouseButtons.add(button);
+        actions.buttonDown(button);
+      } else if (!down && heldMouseButtons.delete(button)) {
+        actions.buttonUp(button);
+      }
+    }
   };
 
   const onKeyDown = (event: KeyInput): void => {
@@ -108,23 +131,22 @@ export function attachBrowserInput(
   };
 
   const onPointerDown = (event: PointerInput): void => {
-    const button = mouseButtons[event.button];
-    if (button === undefined || !moveToCanvasPosition(event)) {
-      return;
+    if (moveToCanvasPosition(event) !== null) {
+      syncMouseButtons(event.buttons, true);
     }
-
-    actions.buttonDown(button);
   };
 
   const onPointerUp = (event: PointerInput): void => {
-    const button = mouseButtons[event.button];
-    if (button !== undefined) {
-      actions.buttonUp(button);
-    }
+    syncMouseButtons(event.buttons, false);
   };
 
   const onPointerMove = (event: PointerInput): void => {
-    moveToCanvasPosition(event);
+    const position = moveToCanvasPosition(event);
+    syncMouseButtons(event.buttons, position?.inside === true);
+  };
+
+  const onPointerCancel = (): void => {
+    syncMouseButtons(0, false);
   };
 
   // O menu do botão direito vem deste evento, não do pointerdown.
@@ -139,6 +161,7 @@ export function attachBrowserInput(
   window.addEventListener("blur", onBlur);
   window.addEventListener("pointerup", onPointerUp);
   window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointercancel", onPointerCancel);
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("contextmenu", onContextMenu);
 
@@ -154,6 +177,7 @@ export function attachBrowserInput(
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointercancel", onPointerCancel);
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("contextmenu", onContextMenu);
     },

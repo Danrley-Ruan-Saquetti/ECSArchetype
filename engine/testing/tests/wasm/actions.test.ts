@@ -225,3 +225,27 @@ test("context.actions fora da chamada do sistema é ContractError", () => {
     assert.throws(() => captured!.actions, ContractError);
   });
 });
+
+test("setHidden que cresce a memória não deixa a leitura de ações com o heap antigo", () => {
+  withEngine((engine) => {
+    const module = moduleOf(runtime);
+    const original = module._olyEngineSetHidden;
+    engine.actions.bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" });
+    engine.actions.buttonDown("KeyW");
+    stepper(engine)();
+    const bufferBefore = module.HEAPU8.buffer;
+
+    module._olyEngineSetHidden = (handle, hidden) => {
+      original.call(module, handle, hidden);
+      module._free(module._malloc(256 * 1024 * 1024));
+    };
+    try {
+      engine.setHidden(true);
+    } finally {
+      module._olyEngineSetHidden = original;
+    }
+
+    assert.notEqual(module.HEAPU8.buffer, bufferBefore);
+    assert.deepEqual(engine.actions.axis2d(move), { x: 0, y: -1 });
+  });
+});

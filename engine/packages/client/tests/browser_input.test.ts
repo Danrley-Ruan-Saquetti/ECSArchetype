@@ -88,15 +88,15 @@ function keyEvent(code: string): { code: string; prevented: boolean; preventDefa
   return event;
 }
 
-function pointerEvent(button: number, clientX = 0, clientY = 0): {
-  button: number;
+function pointerEvent(buttons: number, clientX = 0, clientY = 0): {
+  buttons: number;
   clientX: number;
   clientY: number;
   prevented: boolean;
   preventDefault(): void;
 } {
   const event = {
-    button,
+    buttons,
     clientX,
     clientY,
     prevented: false,
@@ -150,7 +150,7 @@ test("blur na janela chama releaseAll", () => {
 test("pointerdown no canvas manda pointerMove e depois buttonDown", () => {
   const { target, canvas } = setup();
 
-  canvas.dispatch("pointerdown", pointerEvent(0, 60, 70));
+  canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
 
   assert.deepEqual(target.calls, ["move 100 100", "down MouseLeft"]);
 });
@@ -158,22 +158,68 @@ test("pointerdown no canvas manda pointerMove e depois buttonDown", () => {
 test("pointerup e pointermove vêm da janela", () => {
   const { target, canvas, window } = setup();
 
-  window.dispatch("pointermove", pointerEvent(0, 110, 70));
+  canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
+  window.dispatch("pointermove", pointerEvent(1, 110, 70));
   window.dispatch("pointerup", pointerEvent(0, 500, 500));
 
-  assert.deepEqual(target.calls, ["move 200 100", "up MouseLeft"]);
+  assert.deepEqual(target.calls, ["move 100 100", "down MouseLeft", "move 200 100", "up MouseLeft"]);
   assert.equal(canvas.count(), 2);
 });
 
-test("botão do mouse 1 é MouseMiddle, 2 é MouseRight, 3 é ignorado", () => {
+test("bit 4 de buttons é MouseMiddle, 2 é MouseRight e o bit 8 é ignorado", () => {
   const { target, canvas, window } = setup();
 
-  canvas.dispatch("pointerdown", pointerEvent(1, 10, 20));
+  canvas.dispatch("pointerdown", pointerEvent(4, 10, 20));
+  window.dispatch("pointerup", pointerEvent(0, 10, 20));
   canvas.dispatch("pointerdown", pointerEvent(2, 10, 20));
-  canvas.dispatch("pointerdown", pointerEvent(3, 10, 20));
-  window.dispatch("pointerup", pointerEvent(3));
+  window.dispatch("pointerup", pointerEvent(0, 10, 20));
+  canvas.dispatch("pointerdown", pointerEvent(8, 10, 20));
 
-  assert.deepEqual(target.calls, ["move 0 0", "down MouseMiddle", "move 0 0", "down MouseRight"]);
+  assert.deepEqual(target.calls, [
+    "move 0 0",
+    "down MouseMiddle",
+    "up MouseMiddle",
+    "move 0 0",
+    "down MouseRight",
+    "up MouseRight",
+    "move 0 0",
+  ]);
+});
+
+test("segundo botão apertado e soltado em acorde chega pelo pointermove", () => {
+  const { target, canvas, window } = setup();
+
+  canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
+  window.dispatch("pointermove", pointerEvent(3, 60, 70));
+  window.dispatch("pointermove", pointerEvent(2, 60, 70));
+  window.dispatch("pointerup", pointerEvent(1, 60, 70));
+
+  assert.deepEqual(target.calls, [
+    "move 100 100",
+    "down MouseLeft",
+    "move 100 100",
+    "down MouseRight",
+    "move 100 100",
+    "up MouseLeft",
+    "up MouseRight",
+  ]);
+});
+
+test("arrastar de fora do canvas não aperta botão", () => {
+  const { target, window } = setup();
+
+  window.dispatch("pointermove", pointerEvent(1, 500, 500));
+
+  assert.deepEqual(target.calls, ["move 980 960"]);
+});
+
+test("pointercancel solta os botões do mouse apertados", () => {
+  const { target, canvas, window } = setup();
+
+  canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
+  window.dispatch("pointercancel", pointerEvent(1, 60, 70));
+
+  assert.deepEqual(target.calls, ["move 100 100", "down MouseLeft", "up MouseLeft"]);
 });
 
 test("contextmenu no canvas só é impedido com MouseRight ligado", () => {
@@ -193,8 +239,8 @@ test("canvas com tamanho 0 ignora eventos de ponteiro", () => {
   const { target, canvas, window } = setup();
   canvas.rect = { left: 0, top: 0, width: 0, height: 100 };
 
-  canvas.dispatch("pointerdown", pointerEvent(0, 5, 5));
-  window.dispatch("pointermove", pointerEvent(0, 5, 5));
+  canvas.dispatch("pointerdown", pointerEvent(1, 5, 5));
+  window.dispatch("pointermove", pointerEvent(1, 5, 5));
 
   assert.deepEqual(target.calls, []);
 });
@@ -205,7 +251,7 @@ test("detach remove os listeners e é idempotente", () => {
   detach();
   detach();
   window.dispatch("keydown", keyEvent("KeyW"));
-  canvas.dispatch("pointerdown", pointerEvent(0, 60, 70));
+  canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
 
   assert.deepEqual(target.calls, []);
   assert.equal(window.count() + canvas.count(), 0);
