@@ -90,11 +90,11 @@ test("SystemContext expõe só a API do glossário", () => {
   assert.deepEqual(memberNames("SystemContext"), [
     "add",
     "destroy",
+    "emit",
     "fixedDeltaTime",
     "get",
     "has",
     "interpolation",
-    "emit",
     "isAlive",
     "name",
     "pause",

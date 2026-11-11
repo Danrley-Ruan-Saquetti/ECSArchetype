@@ -55,7 +55,7 @@ namespace oly::app {
     template <class T>
     void emit(const T& event) {
       const EventTypeId type = eventTypeOf(eventKey<T>());
-      constexpr std::string_view name = oly::core::typeName<T>();
+      [[maybe_unused]] constexpr std::string_view name = oly::core::typeName<T>();
       OLY_ASSERT(type != InvalidEventType, "emit: evento \"%.*s\" não declarado", static_cast<int>(name.size()), name.data());
 
       emitById(type, &event);

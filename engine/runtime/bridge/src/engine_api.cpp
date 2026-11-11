@@ -1,8 +1,8 @@
 #include "oly/bridge/engine_api.hpp"
 
 #include "handles.hpp"
-#include "oly/app/system.hpp"
 #include "oly/app/handler.hpp"
+#include "oly/app/system.hpp"
 #include "oly/bridge/engine.hpp"
 #include "oly/bridge/schema_registry.hpp"
 #include "oly/core/assert.hpp"
@@ -40,7 +40,7 @@ namespace oly::bridge {
       g_invoker(engine, OLY_SCRIPT_HANDLER, context.handlerId(), context.eventData(), context.eventCount());
     }
 
-    uint32_t checkedEventType(OlyEngine* engine, uint32_t eventType, [[maybe_unused]] const char* operation) {
+    uint32_t checkedEventType([[maybe_unused]] OlyEngine* engine, uint32_t eventType, [[maybe_unused]] const char* operation) {
       OLY_ASSERT(eventType < engine->engine.eventTypeCount(), "%s: eventType=%u fora do intervalo (0..%u)", operation, eventType, engine->engine.eventTypeCount() - 1);
       return eventType;
     }

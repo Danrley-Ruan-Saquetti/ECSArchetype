@@ -332,3 +332,12 @@ test("evento sem handler é descartado no fim do passo", () => {
     assert.equal(calls, 1);
   });
 });
+
+test("maxEventRounds que não é inteiro positivo é ContractError em createEngine", () => {
+  for (const maxEventRounds of [0, -1, 1.5, Number.NaN]) {
+    assert.throws(() => runtime.createEngine({ maxEventRounds }), (error: unknown) => error instanceof ContractError && /maxEventRounds/.test(error.message));
+  }
+
+  const engine = runtime.createEngine({ maxEventRounds: 3 });
+  engine.dispose();
+});

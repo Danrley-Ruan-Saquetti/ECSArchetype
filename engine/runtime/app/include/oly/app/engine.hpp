@@ -103,7 +103,7 @@ namespace oly::app {
     template <class T>
     HandlerId on(std::string_view name, HandlerFunction function, void* userData = nullptr) {
       const EventTypeId type = eventTypeOf(eventKey<T>());
-      constexpr std::string_view typeName = oly::core::typeName<T>();
+      [[maybe_unused]] constexpr std::string_view typeName = oly::core::typeName<T>();
       OLY_ASSERT(type != InvalidEventType, "on: handler \"%.*s\" para o evento \"%.*s\" não declarado", static_cast<int>(name.size()), name.data(), static_cast<int>(typeName.size()), typeName.data());
 
       return onById(type, name, function, userData);
@@ -114,7 +114,7 @@ namespace oly::app {
     template <class T>
     void emit(const T& event) {
       const EventTypeId type = eventTypeOf(eventKey<T>());
-      constexpr std::string_view typeName = oly::core::typeName<T>();
+      [[maybe_unused]] constexpr std::string_view typeName = oly::core::typeName<T>();
       OLY_ASSERT(type != InvalidEventType, "emit: evento \"%.*s\" não declarado", static_cast<int>(typeName.size()), typeName.data());
 
       emitById(type, &event);

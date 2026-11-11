@@ -53,7 +53,7 @@ namespace oly::app {
     // O lote do tipo do handler; não muda enquanto os handlers do tipo rodam.
     template <class T>
     std::span<const T> events() const {
-      constexpr std::string_view typeName = oly::core::typeName<T>();
+      [[maybe_unused]] constexpr std::string_view typeName = oly::core::typeName<T>();
       OLY_ASSERT(eventTypeOf(eventKey<T>()) == eventType_, "events: tipo \"%.*s\" não é o do evento do handler \"%.*s\"", static_cast<int>(typeName.size()), typeName.data(), static_cast<int>(name_.size()), name_.data());
 
       return std::span<const T>(static_cast<const T*>(eventData_), eventCount_);
