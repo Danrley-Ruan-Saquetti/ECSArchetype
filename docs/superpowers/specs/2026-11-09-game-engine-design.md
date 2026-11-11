@@ -16,6 +16,11 @@ Revisão de 2026-11-11 (antes da fase 4): §4.5 detalhado para as ações de inp
 botões físicos são usages do USB HID, ações são declaradas no esquema, módulo `input` próprio, sem interface de
 plataforma (§4.3). Testes da fase 4 no §5 e ausência de benchmark justificada no §7.
 
+Revisão de 2026-11-11 (antes da fase 5): §4.6 detalhado para o schedule — o que se agenda passa a se chamar
+**tarefa** (o nome "ação" ficou com o input, §4.5), payload copiado nas tarefas C++, sem tarefa nativa por nome
+(o TS chega ao C++ por evento), descarte que avisa o TS para soltar a closure. Testes da fase 5 no §5 e ausência de
+benchmark justificada no §7.
+
 Convenção deste documento: o que não vem marcado foi decidido pelo autor do projeto. Itens marcados
 **[decisão do design]** foram escolhas feitas ao escrever o documento, sem confirmação explícita; podem ser revistas
 no plano da fase correspondente sem voltar ao autor, desde que respeitem os objetivos e anti-objetivos.
@@ -58,7 +63,7 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
 **Objetivos**
 - Engine reaproveitável: nada no núcleo nem no pacote TS conhece conceitos do jogo de validação (inimigo, moeda, dash).
 - Infraestrutura completa para: sistemas em fases fixas, mudanças estruturais seguras, eventos, ações de input,
-  `schedule` de ações no tempo, ciclo de vida da aplicação e estados de jogo.
+  `schedule` de tarefas no tempo, ciclo de vida da aplicação e estados de jogo.
 - Sistemas em C++ e em TypeScript com o mesmo modelo de uso.
 - Engine completa em C++: um jogo só em C++ usa todos os mecanismos (loop, fases, pausa e, nas fases seguintes,
   eventos, ações, schedule e estados) pela API C++, sem depender de nada escrito em TS. O que é próprio do ambiente
@@ -222,7 +227,7 @@ sistemas, o relógio do jogo, o acumulador do passo fixo, o estado de pausa e o 
 `updateAfter`. Ordem de um passo fixo (**[decisão do design]** a ordem dos itens que não são fases do gameplay):
 
 1. captura das ações de input (§4.5)
-2. disparo das ações agendadas vencidas (§4.6)
+2. disparo das tarefas agendadas vencidas (§4.6)
 3. `updateBefore` → `update` → `updateAfter`
 4. despacho de eventos (§4.4)
 5. transição de estado pendente, se houver (§4.7)
@@ -317,7 +322,7 @@ Regras:
 - Eventos do passo são descartados após o despacho; não sobrevivem ao passo.
 - Registro de handlers segue as regras do registro de sistemas: não pode acontecer durante `frame` (`OLY_ASSERT`).
 - **Eventos emitidos fora das fases do gameplay** (**[decisão do design]**):
-  - em ações agendadas (passo 2): entram na fila e são despachados no passo 4 do mesmo passo fixo;
+  - em tarefas agendadas (passo 2): entram na fila e são despachados no passo 4 do mesmo passo fixo;
   - em `onExit`/`onEnter` (passo 5): depois da transição, se houver eventos pendentes, a engine roda um novo despacho
     no mesmo passo fixo, com a mesma regra de cascata; as rodadas contam para o mesmo limite do passo;
   - na fase `render`: ficam na fila e são despachados no passo 4 do próximo passo fixo (render não é gameplay, mas
@@ -479,14 +484,160 @@ amostras (letras, dígitos, setas, `Space`, modificadores, mouse) contra os valo
 
 ### 4.6 Schedule
 
-- Agendamento de ações no **relógio do jogo** (soma dos passos fixos não pausados): `after(segundos, callback)` e
-  `every(segundos, callback)`, com handle para cancelar.
-- Resolução de um passo fixo: uma ação vence no primeiro passo cujo tempo é ≥ o vencimento. Ações vencidas no mesmo
-  passo rodam na ordem de vencimento e, em empate, de criação. `every` não acumula disparos atrasados além do que o
-  limite de passos por quadro já permite. **[decisão do design]**
+- Agendamento de **tarefas** no **relógio do jogo** (o `time()` da `Engine`, soma dos passos fixos não pausados):
+  `after(segundos, callback)` e `every(segundos, callback)`, com handle para cancelar. O nome "ação" é do input
+  (§4.5); o que se agenda é uma tarefa.
 - Callbacks rodam no passo 2 do loop, fora de iteração, e podem fazer mudanças estruturais diretamente e emitir eventos.
-- Callbacks em TS e em C++. **[decisão do design]**
+- Callbacks em TS e em C++. O TS agenda só closures TS e o C++ só funções C++: não existe tarefa nativa por nome
+  (como `OLY_SYSTEM`), porque o TS teria de escrever o payload C++. Uma tarefa TS que precisa de código C++ emite um
+  evento com handler C++, despachado no passo 4 do mesmo passo fixo.
 - Exemplos do jogo: onda de inimigos a cada 5 s; dash disponível de novo após 0,8 s; moeda nova a cada 2 s.
+
+**Regras de tempo**
+- Uma tarefa guarda vencimento (segundos, `double`), intervalo (0 para `after`), sequência de criação, callback,
+  payload e geração.
+- **Vencimento = `time()` + atraso**, calculado ao agendar. Dentro de um passo, `time()` é o início do passo; fora de
+  `frame`, o início do próximo passo. O atraso precisa ser finito e ≥ 0; o intervalo de `every`, finito e > 0.
+- **Disparo no passo 2**, só em passo não pausado: rodam todas as tarefas com vencimento ≤ `time()` (com a mesma
+  tolerância do acumulador do passo fixo), na ordem de vencimento e, em empate, de criação.
+- **Tarefas criadas durante o passo 2 só rodam a partir do passo seguinte**, mesmo já vencidas: um `after(0)` dentro
+  de uma tarefa não vira laço. Um `after(0)` agendado fora de `frame` roda no passo 2 do próximo passo; agendado por
+  um sistema, no passo seguinte ao dele.
+- **`every`:** o primeiro disparo é em agora + intervalo. Depois de cada disparo, o próximo vencimento é
+  vencimento + intervalo (sem deriva); se ainda for ≤ agora, pula para o primeiro múltiplo > agora. Assim cada tarefa
+  dispara no máximo uma vez por passo, e um intervalo menor que o passo fixo vira "uma vez por passo".
+- **A tarefa é reagendada (`every`) ou retirada da fila (`after`) antes do callback.** Uma exceção no callback deixa a
+  fila consistente, e uma `every` pode cancelar a si mesma dentro do callback.
+- **Cancelar:** o handle carrega a geração. Cancelar tarefa já terminada ou já cancelada não faz nada e devolve
+  `false` (inclusive um `after` cancelando a si mesmo no callback, que já saiu da fila). Uma tarefa cancelada no mesmo
+  passo, antes de rodar, não roda.
+- **Pausa e aba oculta:** o relógio para, então nada vence. Passos descartados pelo limite por quadro não avançam o
+  relógio, então não geram atraso acumulado.
+- **Recuperação de exceção (§4.3):** as tarefas sobrevivem, como o `World`; comandos e eventos pendentes continuam
+  descartados.
+
+**Estrutura, [decisão do design]:** a fila fica em `engine/runtime/app/detail/` (como as filas de eventos), sem
+módulo novo. É um min-heap ordenado por (vencimento, sequência) sobre slots com geração, com cancelamento preguiçoso
+(a tarefa cancelada é marcada e sai quando chega ao topo). Com dezenas de tarefas, heap e varredura linear custam
+pouco (hipótese não medida); o heap entrega a ordem pronta. Alternativas rejeitadas: módulo próprio como o `input` (a
+parte pura é só uma fila de prioridade; contexto, mudanças diretas e ponte são do `app`) e tarefas como entidades do
+ECS (apareceriam nas queries do jogo e a engine usaria o `World` para estado interno, embora a limpeza por escopo da
+fase 6 viesse de graça).
+
+**API C++** (nomes normativos para o plano; detalhes de assinatura ficam com ele):
+
+```cpp
+struct TaskHandle { uint32_t slot = InvalidTaskSlot; uint32_t generation = 0; };
+using TaskFunction = void (*)(TaskContext& context);
+using TaskDiscardFunction = void (*)(void* payload);
+
+class Scheduler {
+ public:
+  template <class P>
+  TaskHandle after(double delaySeconds, TaskFunction function, const P& payload, TaskDiscardFunction discard = nullptr);
+  TaskHandle after(double delaySeconds, TaskFunction function);
+  template <class P>
+  TaskHandle every(double intervalSeconds, TaskFunction function, const P& payload, TaskDiscardFunction discard = nullptr);
+  TaskHandle every(double intervalSeconds, TaskFunction function);
+
+  bool cancel(TaskHandle task);
+  bool isPending(TaskHandle task) const;
+  uint32_t pendingCount() const;
+};
+
+class TaskContext : public DirectContext {
+ public:
+  TaskHandle handle() const;
+  bool lastRun() const;   // true no disparo de um after: a tarefa não roda mais
+  template <class P>
+  const P& payload() const;
+};
+```
+
+- **Payload:** copiado para dentro da tarefa; precisa ser trivially copyable, com até 32 bytes e alinhamento até 8
+  (`static_assert`, **[decisão do design]** os limites). A tarefa guarda o tipo; `payload<P>()` com outro tipo é erro
+  de contrato, como `events<T>()`. Um ponteiro também é payload, então o modelo "função + `userData`" de sistemas e
+  handlers cabe nele.
+- **Onde se agenda:** `engine.schedule()`, dentro e fora de `frame`, e `context.schedule()` em sistemas, handlers e
+  tarefas; é o mesmo `Scheduler`, como `actions()`. Agendar não é mudança estrutural, então vale direto também dentro
+  de sistemas e na fase `render`.
+- **`DirectContext`, [decisão do design]:** as mudanças estruturais diretas saem do `HandlerContext` para uma base
+  entre o `EngineContext` e os dois contextos que as usam (`HandlerContext` e `TaskContext`), em vez de repetidas.
+- **Descarte:** `TaskDiscardFunction` (opcional) roda **uma única vez** quando a tarefa sai da fila **sem** a última
+  execução: cancelamento, auto-cancelamento de uma `every`, fim de escopo (fase 6) e destruição da `Engine`. Recebe
+  só o payload. No disparo de um `after`, o próprio callback é a última chamada (`lastRun()`), e é ele quem libera o
+  que estiver no payload. O descarte não roda depois do último callback porque uma exceção JS desenrola o WASM sem
+  executar o que vem depois, e a closure TS ficaria presa.
+- Uso:
+
+```cpp
+struct DashTarget {
+  ecs::Entity player;
+};
+
+void dashReady(TaskContext& context) {
+  const ecs::Entity player = context.payload<DashTarget>().player;
+  if (context.isAlive(player)) {
+    context.get<Dash>(player).ready = 1;
+  }
+}
+
+context.schedule().after(0.8, dashReady, DashTarget{player});
+```
+
+**Ponte e API C.** Uma tarefa TS é uma tarefa C++ comum, registrada pelo `bridge`: a função chama
+`olyHostInvokeScript` com um `kind` novo, o payload guarda o id do script e o descarte avisa o TS. O `app` continua sem
+conhecer TS.
+
+```c
+#define OLY_SCRIPT_TASK 2u           // olyHostInvokeScript(engine, kind, scriptId, NULL, lastRun)
+#define OLY_SCRIPT_TASK_DISCARD 3u   // olyHostInvokeScript(engine, kind, scriptId, NULL, 0)
+
+typedef struct OlyTaskHandle {
+  uint32_t slot;
+  uint32_t generation;
+} OlyTaskHandle;
+
+// intervalSeconds == 0 agenda um after; > 0, um every. Vale dentro e fora de olyEngineFrame.
+OLY_API void olyEngineScheduleScriptTask(OlyEngine* engine, double delaySeconds, double intervalSeconds, uint32_t scriptId, OlyTaskHandle* out);
+OLY_API int32_t olyEngineCancelTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
+OLY_API int32_t olyEngineIsTaskPending(OlyEngine* engine, uint32_t slot, uint32_t generation);
+```
+
+- O TS escolhe o `scriptId` (contador próprio); o núcleo o devolve nas chamadas de volta. A fronteira é cruzada uma
+  vez por disparo e uma vez por descarte, fora de caminho quente.
+
+**`@oly/core`.**
+
+```ts
+const handle = context.schedule.after(0.8, (task) => {
+  if (task.isAlive(player)) {
+    task.set(player, Dash, { ready: 1 });
+  }
+});
+engine.schedule.every(5, spawnWave);
+context.schedule.cancel(handle);
+context.schedule.isPending(handle);
+```
+
+- `schedule` existe na `Engine` e em `SystemContext`, `HandlerContext` e `TaskContext`; é o mesmo objeto.
+- `TaskContext` tem o acesso do `HandlerContext` sem o lote (mudanças estruturais diretas, `emit`, `schedule`), mais
+  `handle` e `lastRun`. Só vale durante a chamada; fora dela, `ContractError`.
+- `TaskHandle` é um valor opaco e barato de comparar; a representação fica com o construtor, como a do `Entity`.
+  `cancel` devolve `false` para tarefa já terminada.
+- **Vida da closure:** o TS guarda `scriptId → closure` e apaga a entrada no `finally` da última execução ou ao
+  receber `OLY_SCRIPT_TASK_DISCARD`. O mapa termina vazio em todos os caminhos (disparo, cancelamento,
+  auto-cancelamento, exceção, `dispose`), e isso tem teste.
+
+**Erros de contrato** (`OLY_ASSERT` no C++; no TS, `ContractError` antes de chegar ao assert): atraso negativo ou não
+finito; intervalo ≤ 0 ou não finito; função nula; `payload<P>()` com tipo diferente do agendado; handle com `slot`
+fora do intervalo (não veio deste `Scheduler`; geração antiga não é erro, `cancel` devolve `false`); no TS, callback
+que não é função, `TaskContext` usado fora da chamada e handle de outra `Engine`. Agendar e cancelar valem a qualquer
+hora, inclusive durante `frame`.
+
+**Preparação para a fase 6.** A fase 5 entrega o cancelamento pelo núcleo e o descarte que avisa o TS, que o
+cancelamento por escopo vai usar. O campo de escopo na tarefa e o "cancelar tudo do escopo" entram na fase 6, quando
+os estados existirem.
 
 ### 4.7 Estados de jogo
 
@@ -496,7 +647,7 @@ amostras (letras, dígitos, setas, `Space`, modificadores, mouse) contra os valo
 - Pedir transição (`context.setState("gameOver")`) não troca na hora: a troca acontece no passo 5 do loop
   (`onExit` do antigo, limpeza de escopo, `onEnter` do novo). Dois pedidos no mesmo passo: vale o último.
   **[decisão do design]**
-- **Escopo:** entidades e ações agendadas criadas enquanto um estado está ativo (inclusive no `onEnter`) pertencem a
+- **Escopo:** entidades e tarefas agendadas criadas enquanto um estado está ativo (inclusive no `onEnter`) pertencem a
   ele por padrão e são destruídas/canceladas ao sair dele. Criar algo persistente exige pedir explicitamente.
   **[decisão do design]** Assim "jogar de novo" (`gameOver → playing`) começa limpo sem código de limpeza no jogo.
 - Sistemas e handlers podem ser restritos a estados.
@@ -554,11 +705,11 @@ Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. 
 | 2 | **Loop e fases** | módulo C++ com o loop (`frame`, `setHidden`, passo fixo, render, pausa), registro de sistemas C++ (por função e por nome) e TS (chamada de volta) nas fases, `CommandBuffer` por fase compartilhado pelas duas linguagens; host do navegador em `@oly/client` (rAF + `visibilitychange`); passos 1, 2, 4 e 5 do loop como lugares vazios | um teste C++ nativo roda o loop inteiro sem TS, com relógio falso; sistemas das duas linguagens rodam na ordem esperada (teste TS em node contra o WASM); pausa, aba oculta e `.whilePaused()` testados; medições do §7 registradas |
 | 3 | **Eventos** | `event` no esquema e no gerador; filas tipadas na memória do WASM; emissão nos dois lados; handlers C++ (por função e por nome) e TS por lote; despacho tipo a tipo com cascata e limite | teste C++ nativo do fluxo de referência (§4.4) sem TS, terminando com `checkInvariants` e o inimigo destruído; testes de ordem (tipo, registro, rodadas), cascata, estouro do limite (caso de morte no C++), evento duplicado, emissão na fase `render`, handlers C++ e TS misturados (teste TS em node contra o WASM), crescimento de memória dentro de handler TS e recuperação de exceção; medição do §7 registrada |
 | 4 | **Ações de input** | módulo `input` (`ActionMap`, botões físicos HID, fila de bordas, captura no passo 1); `action` no esquema e no gerador; API C de ligações, entrada do host e snapshot; leitura pelos contextos em C++ e TS; `attachBrowserInput` em `@oly/client` | `input.unit` sem `Engine` cobrindo bordas, toque mais curto que um passo, várias ligações, auto-repeat, `releaseAll`, eixo (anulação e diagonal) e religação; no `app`, uma captura por passo (inclusive pausado), bordas só no primeiro passo do frame e sair da pausa por uma ação num sistema `.whilePaused()`; casos de morte novos; teste TS em node contra o WASM com sistema TS lendo ações, toque curto e saída da pausa; amostras da tabela HID iguais nos dois lados; `attachBrowserInput` testado com ambiente falso |
-| 5 | **Schedule** | `after`/`every`/cancelar no relógio do jogo, congelando na pausa | testes de ordem de disparo e de pausa com relógio falso |
-| 6 | **Estados** | estados, `onEnter`/`onExit`, `inState`, escopo de entidades e de ações agendadas | teste de `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`) |
+| 5 | **Schedule** | fila de tarefas no `app` (`Scheduler`, `TaskContext`, `DirectContext`); `after`/`every`/cancelar no relógio do jogo, congelando na pausa; payload e descarte; API C de tarefas TS; `schedule` na `Engine` e nos contextos do `@oly/core` | no `app`, C++ nativo com relógio falso e sem TS: passo do disparo (atraso fora do passo, `after(0)` dentro e fora de `frame`), ordem por vencimento e criação, `every` sem deriva e com intervalo menor que o passo, tarefa criada no passo 2 esperando o seguinte, cancelar antes/durante/depois, pausa, aba oculta, passos descartados, descarte uma única vez e nunca depois de `lastRun`, payload, mudanças diretas com `checkInvariants`, `emit` em tarefa despachado no mesmo passo, tarefas sobrevivendo à recuperação; casos de morte novos; `bridge.c_api`; teste TS em node contra o WASM com tarefas C++ e TS intercaladas, exceção e recuperação, crescimento de memória dentro de tarefa TS e mapa de closures vazio em todos os caminhos |
+| 6 | **Estados** | estados, `onEnter`/`onExit`, `inState`, escopo de entidades e de tarefas agendadas | teste de `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`) |
 | 7 | **Jogo de validação** | o jogo de tiro em `examples/` (ou equivalente), com render em canvas e colisão simples feitos no jogo | jogável no navegador de ponta a ponta; lista do que precisou ser feito fora da engine, se algo |
 
-Estados (6) depende do schedule (5) por causa do escopo das ações agendadas. Eventos, ações e schedule (3–5) dependem
+Estados (6) depende do schedule (5) por causa do escopo das tarefas agendadas. Eventos, ações e schedule (3–5) dependem
 só de 2 entre si; a ordem acima é a recomendada.
 
 ## 6. Testes e corretude
@@ -593,6 +744,9 @@ só de 2 entre si; a ordem acima é a recomendada.
 - Ações de input (fase 4, **[decisão do design]**): sem benchmark. O input está fora do caminho quente: a fronteira é
   cruzada por evento de input (dezenas por segundo), a captura roda uma vez por passo sobre poucas ações e a leitura no
   TS é feita por views, sem cruzar a fronteira. Medir só faria sentido se um jogo tivesse centenas de ações.
+- Schedule (fase 5, **[decisão do design]**): sem benchmark. Um jogo tem dezenas de tarefas, a fronteira é cruzada uma
+  vez por disparo ou descarte de tarefa TS e nada é feito por entidade. A escolha heap vs varredura linear (§4.6) só
+  seria medida se um jogo chegasse a milhares de tarefas.
 - Ambiente ruidoso (WSL2/Docker): só razões da mesma execução, como no ECS.
 - Resultados versionados em `docs/benchmarks/` com registro no `README.md` correspondente.
 
