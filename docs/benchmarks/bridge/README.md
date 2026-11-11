@@ -122,3 +122,52 @@ Sem meta numérica (§7).
 - Intercalar não custa mais que o número de chamadas explica: `alternado` e `agrupado` empatam (razão ~1,0). Não vale agrupar sistemas TS por causa do custo da fronteira; a ordem das fases e do registro pode seguir a lógica do jogo.
 - Um sistema TS com `eachBlock` e views, dentro do loop, fica na mesma faixa do `ts-engine` do `boundary.ts` a N ≥ 10000 (8–11 ns/entidade contra ~8 ns). A ~2× do `ts-manual` e 7–14× do `move` em C++, o que repete a conclusão da fase 1: laço quente fica no C++.
 - A N = 1000 o `ts-loop` (20 ns/entidade) fica ~2× acima do `ts-engine` do `boundary.ts` (~10 ns). Não foi investigado; suspeitas: `context.query(...)` a cada passo e o aquecimento do JIT com 200 passos. Não leia a razão a N = 1000 como custo do passo (o `ts-manual` também é anômalo ali, como na fase 1).
+
+## Custo dos eventos — fase 3
+
+Resultado bruto: `events_fase3.json` (commit `3d331a8`, 2026-11-11). Gerado por `engine/testing/bench/events.ts`:
+
+```sh
+WC="docker compose run --rm wasm"
+$WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
+$WC node engine/testing/dist/bench/events.js --module build/wasm-games-release/games/fixture_game.mjs   --out docs/benchmarks/bridge/events_fase3.json --commit $(git rev-parse --short HEAD)
+```
+
+Ambiente: o mesmo das seções acima (Docker no WSL2, node 20.18, V8 11.3, Release com asserts desligados). Protocolo do `loop.ts`:
+200 passos de aquecimento, 10 rodadas com a ordem das variantes girando, mediana, um passo fixo por `frame`. Cada amostra roda
+~1 000 000 eventos (`ceil(1e6 / N)` passos). N eventos `Ping` por passo. O benchmark confere a soma de `value` lida pelos
+handlers (N × passos) e sai com código 1 se divergir. Sem meta numérica (§7).
+
+### Handler por lote (ns por evento)
+
+Emissão sempre pelo sistema nativo `emitPings`. `none`: sem handler; `cpp`: `addNativeHandler(Ping, "sumPing")`; `ts`: handler TS
+que soma `value` por `batch.read()`. A última coluna é `(ts − cpp) × N`: o custo extra do handler TS por lote, em ns por passo.
+
+| N | none | cpp | ts | ts / cpp | (ts − cpp) ns/lote |
+|---:|---:|---:|---:|---:|---:|
+| 16 | 21,74 | 22,96 | 35,52 | 1,55 | 201 |
+| 256 | 15,00 | 16,20 | 19,76 | 1,22 | 911 |
+| 4096 | 14,52 | 14,50 | 18,98 | 1,31 | 18333 |
+
+### Emissão (ns por evento)
+
+Os dois com `sumPing`. `cpp`: `emitPings` nativo; `ts`: sistema TS com N × `context.emit(Ping, { value: 1 })`.
+
+| N | cpp | ts | ts / cpp |
+|---:|---:|---:|---:|
+| 16 | 21,34 | 169,70 | 7,95 |
+| 256 | 14,23 | 170,49 | 11,98 |
+| 4096 | 14,20 | 172,41 | 12,14 |
+
+### Leitura
+
+- A chamada de volta de um handler TS custa ~150–200 ns por lote (N = 16: 201 ns, dos quais ~16 × 4 ns são leitura). É ~4× a
+  chamada de um sistema TS vazio da fase 2 (~40–50 ns): além da travessia, cada lote cria o `EventBatch`, faz `sync()` e
+  destrava e trava o `World`. Paga-se uma vez por handler por rodada, não por evento.
+- Ler um evento pelas views custa ~4 ns por campo lido (N = 4096: (18,98 − 14,50) ≈ 4,5 ns/evento). O handler TS fica a
+  1,2–1,6× do C++ no total do passo, porque a emissão e o despacho no C++ dominam.
+- Emitir e despachar no C++ custa ~14 ns/evento sem handler. Não foi investigado (suspeitas: o `resize` da fila zera os bytes antes do
+  `memcpy`, e `emit` passa por `emitById` em outro `.cpp`, sem inline); fica para quando um jogo mostrar o custo.
+- Emitir do TS custa ~170 ns/evento, ~155 ns a mais que no C++ (uma travessia por evento, mais a validação e a escrita do
+  valor na área de rascunho). Com dezenas de eventos por passo isso é poucos µs; não vale emissão em lote a partir do TS
+  agora. Se um jogo emitir centenas por passo do TS, emitir do C++ ou criar a emissão em lote.

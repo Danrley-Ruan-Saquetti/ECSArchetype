@@ -11,11 +11,11 @@ cmake/            OlyOptions, OlyWarnings, OlyWasm, OlyModule (oly_add_module/te
 engine/runtime/   C++, um módulo por pasta: <m>/{include/oly/<m>, src, tests, bench}
   core/           assert, align, small_map, type_name           (sem dependências)
   ecs/            o ECS                                         (DEPENDS core)
-  app/            Engine: loop, fases, sistemas, pausa          (DEPENDS ecs core)
+  app/            Engine: loop, fases, sistemas, pausa, eventos (DEPENDS ecs core)
   bridge/         API C (oly*), OlyWorld, registro do esquema   (DEPENDS app ecs core, módulo OBJECT)
 engine/packages/  TS, um pacote npm por pasta: core (@oly/core), client (@oly/client)
 engine/tools/     codegen (@oly/codegen: esquema TS -> C++)
-engine/testing/   @oly/testing (privado): fixture (único lugar com nomes de jogo), tests/wasm, bench/{boundary,loop}.ts
+engine/testing/   @oly/testing (privado): fixture (único lugar com nomes de jogo), tests/wasm, bench/{boundary,loop,events}.ts
 games/            ainda não existe (fase 7); já é workspace npm (`games/*`). `oly_add_game` hoje só gera build/<preset>/games/fixture_game.mjs
 tools/            scripts de medição e de lint (bench_ratio.py, bench_ladder.py, run_ladder.sh, check_boundaries.py, ...)
 docs/benchmarks/  resultados registrados: ecs/, bridge/, wasm/
@@ -80,6 +80,10 @@ Nada em `engine/runtime/ecs` conhece o `bridge`. Nomes de jogo só em `engine/te
 | registrar sistema | `Engine::addSystem(phase, name, função)`, `OLY_SYSTEM(name)` (por nome) | `olyEngineAddNativeSystem` (por nome), `olyEngineAddScriptSystem` | `addSystem`, `addNativeSystem` |
 | sistema roda pausado | `Engine::setWhilePaused` | `olyEngineSetWhilePaused` | `SystemRegistration.whilePaused()` |
 | mudança estrutural adiada (dentro de sistema) | `SystemContext::spawn/destroy/add/remove` | `olySystemSpawn/Destroy/Add/Remove` | `context.spawn/destroy/add/remove` |
+| declarar evento (ordem = ordem de despacho) | `Engine::declareEvent<T>(name)` | (eventos do esquema, na criação da `OlyEngine`) | `event(name, fields)` no esquema |
+| emitir evento | `Engine::emit`, `SystemContext/HandlerContext::emit` | `olyEngineEmit` | `context.emit` |
+| registrar handler (lote por rodada) | `Engine::on<T>(name, função)` | `olyEngineAddScriptHandler` | `Engine.on` |
+| handler por nome | `OLY_HANDLER(name, EventType)` | `olyEngineAddNativeHandler` | `addNativeHandler` |
 | variante por ID | sufixo `ById`: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById` | (toda por ID) | — |
 
 O prefixo `oly` aparece só na API C (`oly*`, `OlyWorld`, `OLY_API`) e no que é interno à ponte (`OlyModule`). APIs C++ e TS não repetem `oly` nos nomes. `create` e "Raw" não existem mais como nomes.
@@ -101,13 +105,15 @@ Validade: qualquer mudança estrutural invalida ponteiros/spans de qualquer enti
 
 ## Engine: loop e sistemas (`engine/runtime/app`)
 
-`oly::app::Engine` guarda o relógio de passo fixo, os sistemas de cada fase (`UpdateBefore`, `Update`, `UpdateAfter`, `Render`), a pausa e a aba oculta. Toda regra do loop vive no C++; o TS só valida o uso e repassa. Um sistema é um ponteiro de função mais `userData`, então o `app` não conhece TS: o `bridge` registra um sistema TS como uma função C++ que chama a única função JS importada (`olyHostInvokeScript`), uma vez por sistema por passo, nunca por entidade. Mudanças estruturais feitas pelos sistemas (`context.spawn/destroy/add/remove`) ficam num `CommandBuffer` por `Engine` que não aparece na API e é aplicado ao fim de cada fase. Se um sistema TS lança, o `frame` seguinte descarta os comandos pendentes e se comporta como o primeiro frame (recuperação); o que as fases anteriores já aplicaram fica.
+`oly::app::Engine` guarda o relógio de passo fixo, os sistemas de cada fase (`UpdateBefore`, `Update`, `UpdateAfter`, `Render`), a pausa e a aba oculta. Toda regra do loop vive no C++; o TS só valida o uso e repassa. Um sistema é um ponteiro de função mais `userData`, então o `app` não conhece TS: o `bridge` registra um sistema TS como uma função C++ que chama a única função JS importada (`olyHostInvokeScript`), uma vez por sistema por passo, nunca por entidade. A mesma função serve aos handlers TS: `olyHostInvokeScript(engine, kind, id, events, eventCount)` com `kind` `OLY_SCRIPT_SYSTEM` ou `OLY_SCRIPT_HANDLER` (uma chamada por lote, com o endereço da fila no heap). Mudanças estruturais feitas pelos sistemas (`context.spawn/destroy/add/remove`) ficam num `CommandBuffer` por `Engine` que não aparece na API e é aplicado ao fim de cada fase. Se um sistema TS lança, o `frame` seguinte descarta os comandos pendentes e se comporta como o primeiro frame (recuperação); o que as fases anteriores já aplicaram fica.
+
+Eventos: `declareEvent<T>` (trivialmente copiável) dá o `EventTypeId` na ordem de declaração, que é a ordem de despacho. Cada tipo tem duas filas de bytes, `pending` (recebe `emit`, dentro ou fora de `frame`) e `dispatching` (o lote da rodada). O passo 4 do passo fixo (`dispatchEvents`) faz rodadas: troca as filas de todo tipo com pendência e chama cada handler do tipo uma vez com o lote inteiro, tipo a tipo; o que os handlers emitem vai para a rodada seguinte do mesmo passo, até as filas esvaziarem ou estourar `EngineConfig::maxEventRounds` (`OLY_ASSERT`; sem asserts, descarta tudo). Handlers (`HandlerContext`) fazem mudanças estruturais diretas no `World`, rodam também em passo pausado e veem o `time()` do início do passo. Evento sem handler some no fim do passo. A recuperação depois de uma exceção também descarta as filas de eventos.
 
 ## Engine: ponte C e pacotes TS
 
-`bridge` expõe a API C `extern "C"` (`engine/runtime/bridge/src/c_api.cpp`): `OlyWorld` é opaco (guarda o `World` e uma pilha de slots de iteração; `oly::bridge::worldOf(OlyWorld*)` dá o `World` aos sistemas do jogo), `olyQueryBegin` devolve uma `OlyIteration*` com buffer próprio de descritores e `olyQueryEnd` precisa encerrar o slot do topo. Os pacotes TS são npm workspaces na raiz (`package.json`, `tsconfig.base.json`, project references; saída em `<pacote>/dist` e `dist-tests`):
+`bridge` expõe a API C `extern "C"` (`engine/runtime/bridge/src/c_api.cpp`): `OlyWorld` é opaco (guarda o `World` e uma pilha de slots de iteração; `oly::bridge::worldOf(OlyWorld*)` dá o `World` aos sistemas do jogo), `olyQueryBegin` devolve uma `OlyIteration*` com buffer próprio de descritores e `olyQueryEnd` precisa encerrar o slot do topo. `olyEngineCreate` declara os eventos do esquema (`oly::bridge::schemaEvents()`, gerado) na ordem do esquema, então o índice do evento no esquema TS é o `EventTypeId`; handlers nativos são resolvidos por nome (`OLY_HANDLER`) e o tipo é conferido (`OLY_INVALID_HANDLER`, `OLY_HANDLER_TYPE_MISMATCH`). Os pacotes TS são npm workspaces na raiz (`package.json`, `tsconfig.base.json`, project references; saída em `<pacote>/dist` e `dist-tests`):
 
-- `@oly/core`: `loadRuntime(factory, schema)` -> `Runtime` (`schema`, `createWorld()`), `World`, `Query`, `Block`, `ContractError`, `SchemaMismatchError`, `defineSchema`. Sem DOM nem node (`types: []`). A lista pública exata é `engine/packages/core/api/public-exports.txt`, conferida por `surface.test.ts`. `@oly/core/internal` (`bridgeOf`, `moduleOf`, `componentIdOf`, `Bridge`...) é só para `engine/`.
+- `@oly/core`: `loadRuntime(factory, schema)` -> `Runtime` (`schema`, `createWorld()`), `World`, `Query`, `Block`, `ContractError`, `SchemaMismatchError`, `defineSchema`, `component`/`tag`/`event`, `Engine`, `SystemContext`, `HandlerContext`, `EventBatch` (views do lote sem cópia, válidas só durante a chamada do handler). Sem DOM nem node (`types: []`). A lista pública exata é `engine/packages/core/api/public-exports.txt`, conferida por `surface.test.ts`. `@oly/core/internal` (`bridgeOf`, `moduleOf`, `componentIdOf`, `Bridge`...) é só para `engine/`.
 - `@oly/client`: `moduleFactoryFromUrl(url)` e `runInBrowser(engine)` (rAF + `visibilitychange`), camada fina do navegador (usa DOM).
 - `@oly/codegen`: gera o C++ do esquema (`oly-codegen`); `static_assert` + hash conferido por `loadRuntime` (`SchemaMismatchError` se o WASM estiver desatualizado).
 - `@oly/testing` (privado): fixture, testes de integração WASM e benchmark da fronteira.
