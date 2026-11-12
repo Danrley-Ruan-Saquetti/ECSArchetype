@@ -127,6 +127,7 @@ The recorded results and the status of each target are in [`docs/benchmarks/READ
 
 | Where | What it has |
 |---|---|
+| [`docs/guide/`](docs/guide/README.md) | user guide: how to make a game, step by step, with examples, recipes and a cheat sheet |
 | [`docs/architecture/`](docs/architecture/README.md) | architecture: overview, modules and boundaries, ECS, `Engine`, bridge, TS packages, games, decisions and limitations |
 | [`docs/architecture/repository.md`](docs/architecture/repository.md) | repository structure |
 | [`docs/development/commands.md`](docs/development/commands.md) | all commands for build, tests, benchmarks and games |
