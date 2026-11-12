@@ -1,35 +1,35 @@
-# `bridge`: a API C
+# `bridge`: the C API
 
-O `bridge` (`engine/runtime/bridge/`) expõe a API C `extern "C"` (`c_api.cpp`, `engine_api.cpp`) e é o único lugar do núcleo que conhece o lado TS.
+`bridge` (`engine/runtime/bridge/`) exposes the `extern "C"` C API (`c_api.cpp`, `engine_api.cpp`) and is the only place in the core that knows about the TS side.
 
-| Grupo | Funções |
+| Group | Functions |
 |---|---|
-| Mundo e esquema | `olyWorldCreate/Destroy/CheckInvariants`, `olySchemaHash`, `olySchemaComponentCount/ComponentId`, `olySchemaEvent*`, `olySchemaAction*`, `olySchemaStateCount`, `olyComponentSize/Alignment` |
-| Entidades e componentes | `olyEntitySpawn/Destroy/IsAlive`, `olyComponentAdd/Remove/Has/Get` |
+| World and schema | `olyWorldCreate/Destroy/CheckInvariants`, `olySchemaHash`, `olySchemaComponentCount/ComponentId`, `olySchemaEvent*`, `olySchemaAction*`, `olySchemaStateCount`, `olyComponentSize/Alignment` |
+| Entities and components | `olyEntitySpawn/Destroy/IsAlive`, `olyComponentAdd/Remove/Has/Get` |
 | Queries | `olyQueryCreate`, `olyQueryBegin`, `olyQueryEnd` |
-| Engine e loop | `olyEngineCreate/Destroy/World`, `olyEngineFrame/SetHidden`, `olyEnginePause/Resume/IsPaused`, `olyEngineTime/FixedDeltaTime/Interpolation` |
-| Sistemas | `olyEngineAddNativeSystem` (por nome), `olyEngineAddScriptSystem`, `olyEngineSetWhilePaused`, `olySystemSpawn/Destroy/Add/Remove` |
-| Eventos | `olyEngineEmit`, `olyEngineAddNativeHandler`, `olyEngineAddScriptHandler` |
+| Engine and loop | `olyEngineCreate/Destroy/World`, `olyEngineFrame/SetHidden`, `olyEnginePause/Resume/IsPaused`, `olyEngineTime/FixedDeltaTime/Interpolation` |
+| Systems | `olyEngineAddNativeSystem` (by name), `olyEngineAddScriptSystem`, `olyEngineSetWhilePaused`, `olySystemSpawn/Destroy/Add/Remove` |
+| Events | `olyEngineEmit`, `olyEngineAddNativeHandler`, `olyEngineAddScriptHandler` |
 | Input | `olyEngineBindButton/BindAxis2d/ClearBindings/IsBound`, `olyEngineButtonDown/Up`, `olyEnginePointerMove`, `olyEngineReleaseAll`, `olyEngineActionSnapshot` |
 | Schedule | `olyEngineScheduleScriptTask`, `olyEngineCancelTask`, `olyEngineIsTaskPending`, `olyEnginePersistTask` |
-| Estados | `olyEngineRequestState`, `olyEngineState`, `olyEngineSetSystemStates/SetHandlerStates`, `olyEngineAddNativeStateHook/AddScriptStateHook`, `olyDirectSpawn`, `olyContextPersist` |
+| States | `olyEngineRequestState`, `olyEngineState`, `olyEngineSetSystemStates/SetHandlerStates`, `olyEngineAddNativeStateHook/AddScriptStateHook`, `olyDirectSpawn`, `olyContextPersist` |
 
-## Pontos de projeto
+## Design points
 
-- **`OlyWorld` é opaco.** Ele guarda o `World` e uma pilha de slots de iteração. Os sistemas C++ do jogo chegam ao `World` por `oly::bridge::worldOf(OlyWorld*)`.
-- **`olyQueryBegin` devolve uma `OlyIteration*`** com buffer próprio de descritores (`count`, endereço das entidades, endereço de cada coluna). Um `eachBlock` aninhado não sobrescreve o externo. `olyQueryEnd` precisa encerrar o slot do topo.
-- **`OlyEngine`** guarda um `OlyWorld` e a `Engine` sobre ele (um `World` por `OlyEngine`). Na criação, declara os eventos, as ações e os estados do esquema na ordem dele, então o índice no esquema TS é o id no C++.
-- **Uma única função JS importada**, `olyHostInvokeScript(engine, kind, id, events, eventCount)`, serve a todo código TS chamado pelo C++. Não há `addFunction` nem tabela de funções que cresce. O parâmetro `engine` permite várias engines por módulo WASM. O `kind` diz o que chamar e o sentido dos outros parâmetros:
+- **`OlyWorld` is opaque.** It holds the `World` and a stack of iteration slots. The game's C++ systems reach the `World` through `oly::bridge::worldOf(OlyWorld*)`.
+- **`olyQueryBegin` returns an `OlyIteration*`** with its own descriptor buffer (`count`, address of the entities, address of each column). A nested `eachBlock` does not overwrite the outer one. `olyQueryEnd` must close the top slot.
+- **`OlyEngine`** holds an `OlyWorld` and the `Engine` on top of it (one `World` per `OlyEngine`). On creation, it declares the schema's events, actions and states in schema order, so the index in the TS schema is the id in C++.
+- **A single imported JS function**, `olyHostInvokeScript(engine, kind, id, events, eventCount)`, serves all TS code called from C++. There is no `addFunction` and no growing function table. The `engine` parameter allows several engines per WASM module. `kind` says what to call and the meaning of the other parameters:
 
   | `kind` | `id` | `events` / `eventCount` |
   |---|---|---|
-  | `OLY_SCRIPT_SYSTEM` | sistema | nulo / 0; uma chamada por sistema por passo |
-  | `OLY_SCRIPT_HANDLER` | handler | endereço da fila no heap / tamanho do lote; uma chamada por lote |
-  | `OLY_SCRIPT_TASK` | `scriptId` | nulo / 1 na última execução, senão 0 |
-  | `OLY_SCRIPT_TASK_DISCARD` | `scriptId` | nulo / 0 |
-  | `OLY_SCRIPT_STATE_HOOK` | `hookId` | nulo / o estado do outro lado da troca (o de origem num `onEnter`, o de destino num `onExit`) |
-- **Nomes nativos são resolvidos na criação.** `OLY_SYSTEM`, `OLY_HANDLER(name, EventType)` e `OLY_STATE_HOOK` registram funções por nome. Nome desconhecido devolve `OLY_INVALID_HANDLER`; tipo de evento errado, `OLY_HANDLER_TYPE_MISMATCH`.
-- **Contexto atual.** `olyDirectSpawn` e `olyContextPersist` usam o contexto em que o TS está: direto num handler, tarefa ou gancho; adiado num sistema.
-- No build nativo, `oly::bridge::setScriptInvoker` troca o invocador para os testes.
+  | `OLY_SCRIPT_SYSTEM` | system | null / 0; one call per system per step |
+  | `OLY_SCRIPT_HANDLER` | handler | address of the queue in the heap / batch size; one call per batch |
+  | `OLY_SCRIPT_TASK` | `scriptId` | null / 1 on the last run, otherwise 0 |
+  | `OLY_SCRIPT_TASK_DISCARD` | `scriptId` | null / 0 |
+  | `OLY_SCRIPT_STATE_HOOK` | `hookId` | null / the state on the other side of the change (the source in an `onEnter`, the destination in an `onExit`) |
+- **Native names are resolved at creation.** `OLY_SYSTEM`, `OLY_HANDLER(name, EventType)` and `OLY_STATE_HOOK` register functions by name. An unknown name returns `OLY_INVALID_HANDLER`; a wrong event type, `OLY_HANDLER_TYPE_MISMATCH`.
+- **Current context.** `olyDirectSpawn` and `olyContextPersist` use the context TS is in: direct in a handler, task or hook; deferred in a system.
+- In the native build, `oly::bridge::setScriptInvoker` swaps the invoker for tests.
 
-O lado TS que consome esta API está em [ts-packages.md](ts-packages.md). O contrato de link com o código gerado do jogo está em [schema-and-codegen.md](schema-and-codegen.md).
+The TS side that consumes this API is in [ts-packages.md](ts-packages.md). The link contract with the game's generated code is in [schema-and-codegen.md](schema-and-codegen.md).

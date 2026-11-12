@@ -1,40 +1,40 @@
-# Pacotes TypeScript
+# TypeScript packages
 
-npm workspaces na raiz, um único `package-lock.json`, `tsconfig.base.json` (`strict`, ES2022, `NodeNext`) e project references. Cada pacote compila para o próprio `dist/` (testes em `dist-tests/`). Versões fixas: TypeScript 5.6.3, `@types/node` 20.17.6 e esbuild 0.24.2. Testes com `node:test`.
+npm workspaces at the root, a single `package-lock.json`, `tsconfig.base.json` (`strict`, ES2022, `NodeNext`) and project references. Each package compiles to its own `dist/` (tests in `dist-tests/`). Pinned versions: TypeScript 5.6.3, `@types/node` 20.17.6 and esbuild 0.24.2. Tests with `node:test`.
 
 ## `@oly/core`
 
-A engine no lado TS (`engine/packages/core/`), sem DOM nem node (`types: []`): roda em node, no navegador e em worker. O que depende do ambiente entra por injeção (a fábrica do módulo WASM, o tempo, o input).
+The engine on the TS side (`engine/packages/core/`), with no DOM and no node (`types: []`): it runs in node, in the browser and in a worker. What depends on the environment comes in by injection (the WASM module factory, the time, the input).
 
-- **Esquema**: `defineSchema`, `component`, `tag`, `event`, `action`, `state`.
+- **Schema**: `defineSchema`, `component`, `tag`, `event`, `action`, `state`.
 - **Runtime**: `loadRuntime(factory, schema)` → `Runtime` (`schema`, `createWorld()`).
-- **Mundo**: `World`, `Query` (`eachBlock`, `single`, `trySingle`), `Block` (`read`, `write`), `Entity`.
+- **World**: `World`, `Query` (`eachBlock`, `single`, `trySingle`), `Block` (`read`, `write`), `Entity`.
 - **Engine**: `Engine`, `SystemContext`, `HandlerContext`, `TaskContext`, `StateContext`, `EventBatch`, `Scheduler`, `ActionMap`.
-- **Erros**: `ContractError`, `SchemaMismatchError`.
-- **Interno** (`@oly/core/internal`, só para `engine/`): `Bridge`, `bridgeOf`, `moduleOf`, `componentIdOf`, `Heap`, layout e hash.
+- **Errors**: `ContractError`, `SchemaMismatchError`.
+- **Internal** (`@oly/core/internal`, only for `engine/`): `Bridge`, `bridgeOf`, `moduleOf`, `componentIdOf`, `Heap`, layout and hash.
 
-A lista pública exata é `engine/packages/core/api/public-exports.txt` ([modules-and-boundaries.md](modules-and-boundaries.md#como-as-fronteiras-são-garantidas)).
+The exact public list is `engine/packages/core/api/public-exports.txt` ([modules-and-boundaries.md](modules-and-boundaries.md#how-the-boundaries-are-enforced)).
 
-Regras de implementação:
+Implementation rules:
 
-- **Só a `Bridge` chama exports do WASM.** Toda chamada que pode alocar passa por ela, e ela faz `sync()`: se a memória cresceu, o `ArrayBuffer` antigo foi desanexado e as views do heap são recriadas.
-- **Views sem cópia.** `Block.read/write` e `EventBatch.read` devolvem campos que leem o heap pelo endereço da coluna e o passo da struct. Elas valem só dentro do callback.
-- **O TS valida antes de chamar o C++.** Uso inválido lança `ContractError` com operação, entidade e tipo. Com asserts desligados no Release, chegar ao `OLY_ASSERT` seria comportamento indefinido.
-- **`Entity` é um `number`**: `generation × 2³² + index`, com geração até `0x1FFFFF` para caber em 53 bits.
-- **`World` travado durante `frame`.** Mudança estrutural direta num sistema TS é `ContractError`; o sistema usa `context.spawn/destroy/add/remove`.
-- Leituras pontuais (`get`, `single`) cruzam a fronteira um número constante de vezes por chamada e devolvem cópias.
+- **Only the `Bridge` calls WASM exports.** Every call that may allocate goes through it, and it does `sync()`: if memory grew, the old `ArrayBuffer` was detached and the heap views are recreated.
+- **Copy-free views.** `Block.read/write` and `EventBatch.read` return fields that read the heap through the column address and the struct stride. They are only valid inside the callback.
+- **TS validates before calling C++.** Invalid usage throws `ContractError` with operation, entity and type. With asserts disabled in Release, reaching the `OLY_ASSERT` would be undefined behaviour.
+- **`Entity` is a `number`**: `generation × 2³² + index`, with generation up to `0x1FFFFF` to fit in 53 bits.
+- **`World` locked during `frame`.** A direct structural change in a TS system is a `ContractError`; the system uses `context.spawn/destroy/add/remove`.
+- One-off reads (`get`, `single`) cross the boundary a constant number of times per call and return copies.
 
 ## `@oly/client`
 
-Camada fina do navegador (`engine/packages/client/`). Ela implementa com APIs do DOM as portas que o `core` recebe por injeção e não tem regra de engine:
+Thin browser layer (`engine/packages/client/`). It implements with DOM APIs the ports that `core` receives by injection and has no engine rule:
 
-- `moduleFactoryFromUrl(url)`: carrega o `.mjs` do Emscripten de um jogo.
-- `runInBrowser(engine)`: laço por `requestAnimationFrame` e `visibilitychange` → `setHidden`.
-- `attachBrowserInput(engine, canvas)`: teclado e `blur` na `window`, `pointerdown` no canvas, `pointerup`/`pointermove` na `window`, posição convertida para pixels do canvas. `preventDefault` só para botões ligados a alguma ação.
+- `moduleFactoryFromUrl(url)`: loads a game's Emscripten `.mjs`.
+- `runInBrowser(engine)`: loop via `requestAnimationFrame` and `visibilitychange` → `setHidden`.
+- `attachBrowserInput(engine, canvas)`: keyboard and `blur` on `window`, `pointerdown` on the canvas, `pointerup`/`pointermove` on `window`, position converted to canvas pixels. `preventDefault` only for buttons bound to some action.
 
-Loop e input ficam separados porque mudam por motivos diferentes.
+Loop and input are kept separate because they change for different reasons.
 
-## `@oly/codegen` e `@oly/testing`
+## `@oly/codegen` and `@oly/testing`
 
-- `@oly/codegen` (`engine/tools/codegen/`): o bin `oly-codegen --schema <schema.js> --out <dir>`, chamado pelo `oly_add_game` ([schema-and-codegen.md](schema-and-codegen.md)).
-- `@oly/testing` (`engine/testing/`, privado): o jogo `fixture` (`engine/testing/fixture/`, único lugar da engine com nomes de jogo), os testes de integração contra o WASM real (`tests/wasm/`) e os benchmarks da fronteira, do loop e dos eventos (`bench/`). Ele fica fora do `@oly/core` para não criar ciclo nas project references nem pôr nomes de jogo no pacote.
+- `@oly/codegen` (`engine/tools/codegen/`): the `oly-codegen --schema <schema.js> --out <dir>` bin, called by `oly_add_game` ([schema-and-codegen.md](schema-and-codegen.md)).
+- `@oly/testing` (`engine/testing/`, private): the `fixture` game (`engine/testing/fixture/`, the only place in the engine with game names), the integration tests against the real WASM (`tests/wasm/`) and the boundary, loop and event benchmarks (`bench/`). It stays outside `@oly/core` so as not to create a cycle in the project references or put game names in the package.

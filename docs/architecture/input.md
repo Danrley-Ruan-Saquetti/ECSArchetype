@@ -1,12 +1,12 @@
-# `input`: ações
+# `input`: actions
 
-`oly::input::ActionMap` (`engine/runtime/input/`) não conhece ECS nem `Engine`. Assim as regras de borda são testáveis sem loop nem `World`.
+`oly::input::ActionMap` (`engine/runtime/input/`) knows neither the ECS nor the `Engine`. That way the edge rules are testable without a loop or a `World`.
 
-- **Ações**: botão, eixo 2D e ponteiro, com `ActionId` denso na ordem de declaração e handles tipados (`ButtonAction`, `Axis2dAction`, `PointerAction`): ler um eixo como botão não compila.
-- **Botões físicos**: `PhysicalButton` é um usage do USB HID, `(página << 16) | usage`. Teclado = página `0x07`, mouse = página `0x09`. A identidade é a posição física da tecla (o `KeyboardEvent.code` do W3C), então WASD fica no mesmo lugar em qualquer layout. Os valores são os mesmos dos scancodes do SDL.
-- **Entrada do host**: `buttonDown`, `buttonUp`, `pointerMove` e `releaseAll`, a qualquer hora. As bordas entram numa fila. Auto-repeat e `keyup` que chega depois de um `releaseAll` são ignorados.
-- **Captura**: uma vez por passo fixo, também pausado. As bordas viram `pressed`/`released` por um passo só. Um toque mais curto que um passo aparece como `pressed` e `released` juntos, então não se perde. O eixo normaliza a diagonal e tem `y` para baixo, como o canvas.
-- **Ligações**: trocáveis a qualquer hora, inclusive de dentro de um sistema. A troca vale na próxima captura.
-- **Snapshot**: `ActionState { float x; float y; uint32_t flags; }`, 12 B por ação. O endereço é estável na `OlyEngine`, então o TS lê as ações por views do heap, sem cruzar a fronteira ([bridge.md](bridge.md)).
+- **Actions**: button, 2D axis and pointer, with a dense `ActionId` in declaration order and typed handles (`ButtonAction`, `Axis2dAction`, `PointerAction`): reading an axis as a button does not compile.
+- **Physical buttons**: `PhysicalButton` is a USB HID usage, `(page << 16) | usage`. Keyboard = page `0x07`, mouse = page `0x09`. The identity is the physical position of the key (the W3C `KeyboardEvent.code`), so WASD stays in the same place on any layout. The values are the same as SDL scancodes.
+- **Host input**: `buttonDown`, `buttonUp`, `pointerMove` and `releaseAll`, at any time. Edges go into a queue. Auto-repeat and a `keyup` that arrives after a `releaseAll` are ignored.
+- **Capture**: once per fixed step, also while paused. Edges become `pressed`/`released` for a single step. A tap shorter than a step shows up as `pressed` and `released` together, so it is not lost. The axis normalizes the diagonal and has `y` pointing down, like the canvas.
+- **Bindings**: can be changed at any time, including from inside a system. The change takes effect on the next capture.
+- **Snapshot**: `ActionState { float x; float y; uint32_t flags; }`, 12 B per action. The address is stable in the `OlyEngine`, so TS reads the actions through heap views, without crossing the boundary ([bridge.md](bridge.md)).
 
-O host não é uma interface de plataforma: o núcleo nunca pergunta nada ao host, só recebe os eventos que ele empurra. No navegador, quem empurra é o `attachBrowserInput` ([ts-packages.md](ts-packages.md#olyclient)).
+The host is not a platform interface: the core never asks the host anything, it only receives the events the host pushes. In the browser, `attachBrowserInput` does the pushing ([ts-packages.md](ts-packages.md#olyclient)).

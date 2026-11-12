@@ -1,33 +1,33 @@
-# Desempenho
+# Performance
 
-As metas são **razões** contra uma linha de base medida na mesma execução, nunca números absolutos, porque o ambiente (WSL2 + Docker) é ruidoso.
+Targets are **ratios** against a baseline measured in the same run, never absolute numbers, because the environment (WSL2 + Docker) is noisy.
 
-## Metas do ECS
+## ECS targets
 
-| Meta | Requisito | Situação |
+| Target | Requirement | Status |
 |---|---|---|
-| NF-P1 | iterar 1M entidades num arquétipo ≤ 1,10× o SoA manual | atendida (~0,82) |
-| NF-P2 | o mesmo em 64 arquétipos ≤ 1,25× | atendida (~1,08) |
-| NF-P3 | laço interno de `eachBlock` vetorizado | atendida |
-| NF-P4 | `add`/`remove` com aresta em cache: zero alocações e zero hash | atendida |
-| NF-P5 | flush de N adds coalescidos ≥ 2× mais rápido que adds diretos | no limite do ruído a N = 1000; **não atendida** a N = 100000 (o buffer de comandos é lido a frio) |
+| NF-P1 | iterate 1M entities in one archetype ≤ 1.10× the manual SoA | met (~0.82) |
+| NF-P2 | the same across 64 archetypes ≤ 1.25× | met (~1.08) |
+| NF-P3 | `eachBlock` inner loop vectorized | met |
+| NF-P4 | `add`/`remove` with cached edge: zero allocations and zero hash | met |
+| NF-P5 | flush of N coalesced adds ≥ 2× faster than direct adds | at the noise limit at N = 1000; **not met** at N = 100000 (the command buffer is read cold) |
 
-## Custos da fronteira
+## Boundary costs
 
-Sem meta numérica:
+No numeric target:
 
-- O laço em C++ dentro do WASM roda a ~0,6–1,3 ns/entidade. O mesmo laço em TS pelas views fica ~10–15× acima.
-- O acessor `get`/`set` por elemento é o custo principal no TS; o acesso `raw()` fica a ~1,1–1,5× de um `Float32Array` manual a N ≥ 10⁴.
-- Uma chamada de volta C++ → JS custa ~40–50 ns por sistema TS. Intercalar sistemas C++ e TS na mesma fase não custa mais que o número de chamadas explica.
+- The C++ loop inside WASM runs at ~0.6–1.3 ns/entity. The same loop in TS through the views is ~10–15× higher.
+- The per-element `get`/`set` accessor is the main cost in TS; `raw()` access is within ~1.1–1.5× of a manual `Float32Array` at N ≥ 10⁴.
+- A C++ → JS callback costs ~40–50 ns per TS system. Interleaving C++ and TS systems in the same phase costs no more than the number of calls explains.
 
-Consequência para quem escreve jogos: laços quentes por entidade ficam em C++; o TS fica com o que roda por sistema, por lote ou poucas vezes por passo.
+Consequence for game authors: hot per-entity loops stay in C++; TS keeps what runs per system, per batch or a few times per step.
 
-## Onde ficam os resultados
+## Where the results live
 
-| Pasta | Conteúdo |
+| Folder | Contents |
 |---|---|
-| `docs/benchmarks/README.md` + `ecs/` | metas do ECS, `perf stat` da iteração fragmentada |
-| `docs/benchmarks/bridge/` | fronteira, loop e eventos |
-| `docs/benchmarks/wasm/` | execuções (`runs/`) e código gerado (`codegen/`) da escada nativo × WASM |
+| `docs/benchmarks/README.md` + `ecs/` | ECS targets, `perf stat` of the fragmented iteration |
+| `docs/benchmarks/bridge/` | boundary, loop and events |
+| `docs/benchmarks/wasm/` | runs (`runs/`) and generated code (`codegen/`) of the native × WASM ladder |
 
-Os benchmarks do ECS ficam em `engine/runtime/ecs/bench/` (`ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmented`, `ecs_bench_flush`). Os da fronteira ficam em `engine/testing/bench/`. `tools/bench_ratio.py` calcula as razões.
+The ECS benchmarks live in `engine/runtime/ecs/bench/` (`ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmented`, `ecs_bench_flush`). The boundary ones live in `engine/testing/bench/`. `tools/bench_ratio.py` computes the ratios.

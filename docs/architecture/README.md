@@ -1,69 +1,69 @@
-# Arquitetura do Oly
+# Oly architecture
 
-Esta pasta descreve o Oly como ele está hoje: o que cada parte faz, como as partes se ligam e por que a estrutura é esta. Ela não conta a história do projeto. Os requisitos detalhados ficam nas specs ([Documentos de referência](#documentos-de-referência)).
+This folder describes Oly as it is today: what each part does, how the parts connect and why the structure is this one. It does not tell the history of the project. The detailed requirements live in the specs ([Reference documents](#reference-documents)).
 
-## Visão geral
+## Overview
 
-O Oly é uma engine de jogos 2D para o navegador, escrita em C++20 e TypeScript. É um projeto de estudo e de benchmark: cada decisão de representação de dados tem um custo medido.
+Oly is a 2D game engine for the browser, written in C++20 and TypeScript. It is a study and benchmark project: every data representation decision has a measured cost.
 
-A engine tem três peças:
+The engine has three pieces:
 
-- **Núcleo C++**: o ECS por arquétipos e toda a lógica de engine (loop de passo fixo, fases, pausa, eventos, ações de input, schedule e estados). Ele compila para x86-64 (testes nativos) e para WebAssembly (jogos).
-- **Ponte**: uma API C (`oly*`) exportada pelo módulo WASM.
-- **Camada TypeScript fina**: carrega o WASM, repassa ao núcleo o tempo e o input do navegador, registra sistemas TS e dá acesso sem cópia aos componentes.
+- **C++ core**: the archetype ECS and all engine logic (fixed-step loop, phases, pause, events, input actions, schedule and states). It compiles to x86-64 (native tests) and to WebAssembly (games).
+- **Bridge**: a C API (`oly*`) exported by the WASM module.
+- **Thin TypeScript layer**: loads the WASM, forwards the browser's time and input to the core, registers TS systems and gives copy-free access to components.
 
-Três regras guiam o desenho:
+Three rules guide the design:
 
-1. **A engine está completa em C++.** Um jogo só em C++ usa todos os mecanismos sem depender de nada escrito em TS. O TS tem conveniências de API, nunca comportamento de engine.
-2. **A fronteira WASM↔JS é cruzada por bloco, por lote ou por sistema, nunca por entidade** nos caminhos quentes.
-3. **Existe uma única fonte para o layout dos dados**: o esquema do jogo, escrito em TS. Um gerador produz o C++ a partir dele.
+1. **The engine is complete in C++.** A C++-only game uses every mechanism without depending on anything written in TS. TS has API conveniences, never engine behaviour.
+2. **The WASM↔JS boundary is crossed per block, per batch or per system, never per entity** on hot paths.
+3. **There is a single source for the data layout**: the game schema, written in TS. A generator produces the C++ from it.
 
 ```
- jogo (TS e/ou C++)                          games/<jogo>/
+ game (TS and/or C++)                        games/<game>/
  ───────────────────────────────────────────────────────────────────────
- pacotes TS (camada fina)          │  núcleo C++ (WASM ou nativo)
-   @oly/client: rAF, visibilidade, │    app:    Engine (loop, fases, pausa,
-                teclado e mouse    │            eventos, schedule, estados)
-   @oly/core:   esquema, World,    │    input:  ActionMap
-                Engine, contextos, │    bridge: API C oly*, chamada de volta
-                views sem cópia    │    sistemas e handlers C++ do jogo
- ──────────────── API C (extern "C") + 1 função JS importada ─────────────
+ TS packages (thin layer)          │  C++ core (WASM or native)
+   @oly/client: rAF, visibility,   │    app:    Engine (loop, phases, pause,
+                keyboard and mouse │            events, schedule, states)
+   @oly/core:   schema, World,     │    input:  ActionMap
+                Engine, contexts,  │    bridge: C API oly*, callback
+                copy-free views    │    the game's C++ systems and handlers
+ ──────────────── C API (extern "C") + 1 imported JS function ────────────
  ECS: component → entity → table → archetype → query / command_buffer → world
  core: assert, align, small_map, type_name
 ```
 
-## Índice
+## Index
 
-| Arquivo | Conteúdo |
+| File | Contents |
 |---|---|
-| [repository.md](repository.md) | mapa das pastas e forma de um módulo |
-| [modules-and-boundaries.md](modules-and-boundaries.md) | grafo de dependências, como as fronteiras são garantidas, regras de vocabulário |
-| [core.md](core.md) | utilitários base (`OLY_ASSERT` e outros) |
-| [ecs.md](ecs.md) | o ECS por arquétipos: camadas, índices, custos, iteração, `CommandBuffer` |
-| [input.md](input.md) | ações de input e botões físicos HID |
-| [app.md](app.md) | a `Engine`: loop, sistemas, pausa, eventos, schedule, estados, recuperação |
-| [bridge.md](bridge.md) | a API C e a chamada de volta para o TS |
-| [schema-and-codegen.md](schema-and-codegen.md) | o esquema do jogo, o gerador e o módulo WASM de cada jogo |
+| [repository.md](repository.md) | folder map and the shape of a module |
+| [modules-and-boundaries.md](modules-and-boundaries.md) | dependency graph, how boundaries are enforced, vocabulary rules |
+| [core.md](core.md) | base utilities (`OLY_ASSERT` and others) |
+| [ecs.md](ecs.md) | the archetype ECS: layers, indices, costs, iteration, `CommandBuffer` |
+| [input.md](input.md) | input actions and HID physical buttons |
+| [app.md](app.md) | the `Engine`: loop, systems, pause, events, schedule, states, recovery |
+| [bridge.md](bridge.md) | the C API and the callback into TS |
+| [schema-and-codegen.md](schema-and-codegen.md) | the game schema, the generator and each game's WASM module |
 | [ts-packages.md](ts-packages.md) | `@oly/core`, `@oly/client`, `@oly/codegen`, `@oly/testing` |
-| [games.md](games.md) | o jogo de validação `games/arena` |
-| [build-and-tests.md](build-and-tests.md) | Docker, presets, testes e qualidade de código |
-| [performance.md](performance.md) | metas, situação atual e custos da fronteira |
-| [decisions.md](decisions.md) | decisões arquiteturais principais, com motivo e custo aceito |
-| [limits.md](limits.md) | limites conhecidos e o que fica fora do escopo |
-| [glossary.md](glossary.md) | o mesmo verbo em C++, API C e TS |
+| [games.md](games.md) | the validation game `games/arena` |
+| [build-and-tests.md](build-and-tests.md) | Docker, presets, tests and code quality |
+| [performance.md](performance.md) | targets, current status and boundary costs |
+| [decisions.md](decisions.md) | main architectural decisions, with reason and accepted cost |
+| [limits.md](limits.md) | known limitations and what is out of scope |
+| [glossary.md](glossary.md) | the same verb in C++, C API and TS |
 
-Para trabalhar no código: [../development/commands.md](../development/commands.md) (build, testes, benchmarks, jogos) e [../development/code-style.md](../development/code-style.md).
+To work on the code: [../development/commands.md](../development/commands.md) (build, tests, benchmarks, games) and [../development/code-style.md](../development/code-style.md).
 
-## Documentos de referência
+## Reference documents
 
-As specs são a fonte da verdade. Os planos registram, fase a fase, como cada parte foi implementada e as decisões que as specs deixaram em aberto.
+The specs are the source of truth. The plans record, phase by phase, how each part was implemented and the decisions the specs left open.
 
-| Documento | Conteúdo |
+| Document | Contents |
 |---|---|
-| `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md` | ECS: requisitos `R-*`, invariantes `I-1..I-11`, metas `NF-*` |
-| `docs/superpowers/specs/2026-11-06-wasm-cost-study-design.md` | estudo de custo nativo × WASM |
-| `docs/superpowers/specs/2026-11-09-game-engine-design.md` | a engine: loop, eventos, input, schedule, estados, jogo de validação |
-| `docs/superpowers/specs/2026-11-09-oly-modularization-design.md` | módulos, fronteiras, nomes e superfícies públicas |
-| `docs/superpowers/plans/` | planos de implementação por fase |
-| `CLAUDE.md` | índice para o Claude Code e regras que valem sempre |
-| `docs/benchmarks/` | resultados e situação das metas |
+| `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md` | ECS: requirements `R-*`, invariants `I-1..I-11`, targets `NF-*` |
+| `docs/superpowers/specs/2026-11-06-wasm-cost-study-design.md` | native × WASM cost study |
+| `docs/superpowers/specs/2026-11-09-game-engine-design.md` | the engine: loop, events, input, schedule, states, validation game |
+| `docs/superpowers/specs/2026-11-09-oly-modularization-design.md` | modules, boundaries, names and public surfaces |
+| `docs/superpowers/plans/` | implementation plans per phase |
+| `CLAUDE.md` | index for Claude Code and rules that always apply |
+| `docs/benchmarks/` | results and status of the targets |

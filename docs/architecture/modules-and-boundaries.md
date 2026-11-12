@@ -1,6 +1,6 @@
-# Módulos e fronteiras
+# Modules and boundaries
 
-## Grafo de dependências
+## Dependency graph
 
 ```mermaid
 graph BT
@@ -9,7 +9,7 @@ graph BT
   app --> ecs
   app --> input
   bridge --> app
-  games["jogos (oly_add_game)"] --> bridge
+  games["games (oly_add_game)"] --> bridge
   codegen["@oly/codegen"] --> tscore["@oly/core"]
   client["@oly/client"] --> tscore
   testing["@oly/testing"] --> tscore
@@ -17,34 +17,34 @@ graph BT
   arena --> client
 ```
 
-| Módulo | Alvo CMake | `DEPENDS` | Tipo |
+| Module | CMake target | `DEPENDS` | Type |
 |---|---|---|---|
-| `core` | `oly::core` | — | biblioteca |
-| `ecs` | `oly::ecs` | `core` | biblioteca |
-| `input` | `oly::input` | `core` | biblioteca |
-| `app` | `oly::app` | `input ecs core` | biblioteca |
+| `core` | `oly::core` | — | library |
+| `ecs` | `oly::ecs` | `core` | library |
+| `input` | `oly::input` | `core` | library |
+| `app` | `oly::app` | `input ecs core` | library |
 | `bridge` | `oly::bridge` | `app input ecs core` | `OBJECT` |
 
-O `bridge` é `OBJECT` porque, numa biblioteca estática, o linker descartaria os membros não referenciados e levaria junto as funções `EMSCRIPTEN_KEEPALIVE`.
+`bridge` is `OBJECT` because, in a static library, the linker would discard the unreferenced members and take the `EMSCRIPTEN_KEEPALIVE` functions with them.
 
-## Como as fronteiras são garantidas
+## How the boundaries are enforced
 
-As fronteiras não valem só por convenção. Três mecanismos as garantem:
+The boundaries do not hold by convention alone. Three mechanisms enforce them:
 
-1. **O build.** `oly_add_module(NAME <m> DEPENDS <...>)` liga só os módulos declarados. O `ecs` não liga o `bridge`, então um include do `bridge` dentro do ECS não compila.
-2. **O lint `oly.lint.boundaries`** (`tools/check_boundaries.py`, roda no ctest, com autoteste em `oly.lint.boundaries_selftest`). Ele reprova:
-   - `#include "oly/<x>/..."` num módulo ou jogo que não declarou `<x>` em `DEPENDS` (as dependências são `PUBLIC` e transitivas, então só o lint pega o include direto não declarado);
-   - `oly/<x>/detail/` incluído fora de `engine/runtime/<x>/` (testes e benchmarks do próprio módulo podem);
-   - `@oly/core/internal` importado fora de `engine/`;
-   - `@oly/client` importado em `@oly/core`;
-   - import relativo que atravessa pacotes.
-3. **O teste de superfície do TS** (`ts.core.unit`, `surface.test.ts`). Ele confere os exports públicos de `@oly/core` contra a lista versionada `engine/packages/core/api/public-exports.txt`. Adicionar algo à API pública é uma mudança explícita nesse arquivo.
+1. **The build.** `oly_add_module(NAME <m> DEPENDS <...>)` links only the declared modules. `ecs` does not link `bridge`, so an include of `bridge` inside the ECS does not compile.
+2. **The `oly.lint.boundaries` lint** (`tools/check_boundaries.py`, runs in ctest, with a self-test in `oly.lint.boundaries_selftest`). It rejects:
+   - `#include "oly/<x>/..."` in a module or game that did not declare `<x>` in `DEPENDS` (dependencies are `PUBLIC` and transitive, so only the lint catches the undeclared direct include);
+   - `oly/<x>/detail/` included outside `engine/runtime/<x>/` (the module's own tests and benchmarks may);
+   - `@oly/core/internal` imported outside `engine/`;
+   - `@oly/client` imported in `@oly/core`;
+   - a relative import that crosses packages.
+3. **The TS surface test** (`ts.core.unit`, `surface.test.ts`). It checks the public exports of `@oly/core` against the versioned list `engine/packages/core/api/public-exports.txt`. Adding something to the public API is an explicit change in that file.
 
-Por que `detail/` e lint, e não pimpl: os templates do caminho quente (`Query<Ts...>::each`, `World::get<T>`, `World::spawn<Ts...>`) precisam ver `Table` e `Archetype` para fazer inline. Esconder esses tipos com pimpl ou interface virtual poria indireção no laço de iteração. O compilador vê os detalhes; o build reprova quem os usa de fora.
+Why `detail/` and a lint, and not pimpl: the hot-path templates (`Query<Ts...>::each`, `World::get<T>`, `World::spawn<Ts...>`) need to see `Table` and `Archetype` to inline. Hiding these types behind pimpl or a virtual interface would put indirection in the iteration loop. The compiler sees the details; the build rejects whoever uses them from outside.
 
-## Regras de vocabulário
+## Vocabulary rules
 
-- Os conceitos de jogo (inimigo, moeda, dash) nunca entram em `engine/`. Nomes de jogo só aparecem em `engine/testing/fixture/` e em `games/`.
-- O mesmo verbo vale nas três superfícies (C++, API C, TS): `spawn`, `destroy`, `add`, `remove`, `has`, `get`, `query`, `eachBlock`. O glossário completo está em [glossary.md](glossary.md).
-- O prefixo `oly` aparece só na API C (`oly*`, `OlyWorld`, `OLY_API`) e no que é interno à ponte. Símbolos `extern "C"` vivem num espaço global único do módulo WASM, junto com a libc e os exports do jogo; o prefixo evita colisão. As APIs C++ (`oly::ecs::World`) e TS (`World`) não repetem `oly`.
-- O sufixo `ById` marca a variante por `ComponentId` em tempo de execução: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById`.
+- Game concepts (enemy, coin, dash) never enter `engine/`. Game names only appear in `engine/testing/fixture/` and in `games/`.
+- The same verb holds across the three surfaces (C++, C API, TS): `spawn`, `destroy`, `add`, `remove`, `has`, `get`, `query`, `eachBlock`. The full glossary is in [glossary.md](glossary.md).
+- The `oly` prefix appears only in the C API (`oly*`, `OlyWorld`, `OLY_API`) and in what is internal to the bridge. `extern "C"` symbols live in a single global namespace of the WASM module, together with libc and the game's exports; the prefix avoids collisions. The C++ (`oly::ecs::World`) and TS (`World`) APIs do not repeat `oly`.
+- The `ById` suffix marks the variant by `ComponentId` at run time: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById`.

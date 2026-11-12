@@ -1,29 +1,29 @@
-# Jogos: `games/arena`
+# Games: `games/arena`
 
-O arena é o jogo de validação: um tiro 2D com visão de cima (mover, mirar, atirar, dash, ondas de inimigos, moedas, menu → jogando → fim de jogo). Ele é cliente da engine: se algo genérico só pudesse ser feito com gambiarra fora da engine, a engine estaria incompleta.
+Arena is the validation game: a top-down 2D shooter (move, aim, shoot, dash, enemy waves, coins, menu → playing → game over). It is a client of the engine: if something generic could only be done with a hack outside the engine, the engine would be incomplete.
 
 ```
 games/arena/
-  schema.ts          componentes, tags, eventos, ações e estados do jogo
-  native/            gameplay C++ por entidade: controle, tiro, perseguição, movimento, colisão
-  src/game.ts        installGame(engine, { drawer, random }): registra tudo, sem DOM
-  src/render.ts      render por uma interface Drawer
-  src/main.ts        casca do navegador: canvas, Drawer sobre Canvas 2D, runInBrowser, attachBrowserInput
-  src/arena.ts       constantes compartilhadas com native/arena.hpp
-  tests/smoke.test.ts  roteiro em node contra o WASM real (ts.arena.smoke)
+  schema.ts          the game's components, tags, events, actions and states
+  native/            per-entity C++ gameplay: control, shooting, chasing, movement, collision
+  src/game.ts        installGame(engine, { drawer, random }): registers everything, no DOM
+  src/render.ts      render through a Drawer interface
+  src/main.ts        browser shell: canvas, Drawer over Canvas 2D, runInBrowser, attachBrowserInput
+  src/arena.ts       constants shared with native/arena.hpp
+  tests/smoke.test.ts  script in node against the real WASM (ts.arena.smoke)
   web/index.html
-  README.md          como rodar, checklist manual e a lista da fase
+  README.md          how to run, manual checklist and the phase list
 ```
 
-## Divisão entre as linguagens
+## Split between the languages
 
-- **C++**: tudo o que roda por entidade (sistemas `steerPlayer`, `fireWeapon`, `chasePlayer`, `integrate`, `confine`, `collide`; handlers `dropCoin`, `destroyDead`).
-- **TS**: render, HUD, ligações de teclas, ganchos de estado, ondas e placar. A fronteira é usada por sistema, por bloco e por lote.
+- **C++**: everything that runs per entity (systems `steerPlayer`, `fireWeapon`, `chasePlayer`, `integrate`, `confine`, `collide`; handlers `dropCoin`, `destroyDead`).
+- **TS**: render, HUD, key bindings, state hooks, waves and score. The boundary is used per system, per block and per batch.
 
-O jogo sem DOM (`installGame`) fica separado da casca do navegador (`main.ts`). Isso permite o teste de fumaça em node com relógio, input e `Drawer` falsos. O `tsconfig.json` do jogo não tem `lib: ["DOM"]`, então usar DOM fora do `main.ts` é erro de compilação.
+The DOM-free game (`installGame`) is kept separate from the browser shell (`main.ts`). This allows the smoke test in node with a fake clock, input and `Drawer`. The game's `tsconfig.json` has no `lib: ["DOM"]`, so using the DOM outside `main.ts` is a compile error.
 
-## Servir no navegador
+## Serving in the browser
 
-`make game G=arena` monta uma pasta estática em `build/wasm-games-release/web/arena/` (`index.html`, `main.js` do esbuild, `.mjs` e `.wasm`). O `.mjs` não entra no bundle: é carregado em tempo de execução. `make serve G=arena`, no serviço `web`, serve essa pasta na porta 8000 ([build-and-tests.md](build-and-tests.md)).
+`make game G=arena` assembles a static folder in `build/wasm-games-release/web/arena/` (`index.html`, esbuild's `main.js`, `.mjs` and `.wasm`). The `.mjs` does not go into the bundle: it is loaded at run time. `make serve G=arena`, in the `web` service, serves that folder on port 8000 ([build-and-tests.md](build-and-tests.md)).
 
-O checklist manual e a lista do que faltava na engine, do que é do jogo e do que foi contornado ficam em `games/arena/README.md`.
+The manual checklist and the list of what was missing in the engine, what belongs to the game and what was worked around are in `games/arena/README.md`.

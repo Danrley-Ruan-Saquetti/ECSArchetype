@@ -1,47 +1,47 @@
-# Mapa do repositório
+# Repository map
 
 ```
-CMakeLists.txt  CMakePresets.json  Makefile         build C++ e atalhos
-Dockerfile  Dockerfile.wasm  docker-compose.yaml    toolchains (gcc:14 e emsdk 3.1.74)
-package.json  tsconfig.base.json  tsconfig.json     npm workspaces e project references
-cmake/            funções de build: OlyModule, OlyGame, OlyOptions, OlyWarnings, OlyWasm, Dependencies
+CMakeLists.txt  CMakePresets.json  Makefile         C++ build and shortcuts
+Dockerfile  Dockerfile.wasm  docker-compose.yaml    toolchains (gcc:14 and emsdk 3.1.74)
+package.json  tsconfig.base.json  tsconfig.json     npm workspaces and project references
+cmake/            build functions: OlyModule, OlyGame, OlyOptions, OlyWarnings, OlyWasm, Dependencies
 engine/
-  runtime/        C++, um módulo por pasta: <m>/{include/oly/<m>, src, tests, bench}
-    core/         utilitários sem dependências
-    ecs/          o ECS por arquétipos
-    input/        ações de input (ActionMap)
-    app/          a Engine: loop, sistemas, eventos, schedule, estados
-    bridge/       API C oly*, OlyWorld, OlyEngine, registro do esquema
-  packages/       TS, um pacote npm por pasta
-    core/         @oly/core: a engine no lado TS, sem DOM
-    client/       @oly/client: camada do navegador
-  tools/codegen/  @oly/codegen: esquema TS -> header C++
-  testing/        @oly/testing (privado): jogo fixture, testes WASM, benchmarks da fronteira
+  runtime/        C++, one module per folder: <m>/{include/oly/<m>, src, tests, bench}
+    core/         dependency-free utilities
+    ecs/          the archetype ECS
+    input/        input actions (ActionMap)
+    app/          the Engine: loop, systems, events, schedule, states
+    bridge/       C API oly*, OlyWorld, OlyEngine, schema registration
+  packages/       TS, one npm package per folder
+    core/         @oly/core: the engine on the TS side, no DOM
+    client/       @oly/client: browser layer
+  tools/codegen/  @oly/codegen: TS schema -> C++ header
+  testing/        @oly/testing (private): fixture game, WASM tests, boundary benchmarks
 games/
-  arena/          jogo de validação (C++ em native/, TS em src/, teste de fumaça em tests/)
-tools/            scripts de medição e de lint (Python e shell)
+  arena/          validation game (C++ in native/, TS in src/, smoke test in tests/)
+tools/            measurement and lint scripts (Python and shell)
 docs/
-  arquitetura/    esta documentação
-  desenvolvimento/  comandos e estilo de código
-  benchmarks/     resultados registrados: ecs/, bridge/, wasm/
-  superpowers/    specs (fonte da verdade) e planos de implementação por fase
-.claude/          skills, agentes e hook de formatação do Claude Code
+  architecture/   this documentation
+  development/    commands and code style
+  benchmarks/     recorded results: ecs/, bridge/, wasm/
+  superpowers/    specs (source of truth) and implementation plans per phase
+.claude/          Claude Code skills, agents and formatting hook
 ```
 
-## Forma de um módulo C++
+## Shape of a C++ module
 
-Cada módulo C++ segue a mesma forma:
+Every C++ module follows the same shape:
 
 ```
 engine/runtime/<m>/
   CMakeLists.txt         oly_add_module(NAME <m> DEPENDS ...)
-  include/oly/<m>/       headers públicos
-  include/oly/<m>/detail/  tipos internos (namespace oly::<m>::detail)
-  src/                   implementação (entra por glob)
-  tests/                 suítes doctest e casos de morte
-  bench/                 benchmarks (só no ecs)
+  include/oly/<m>/       public headers
+  include/oly/<m>/detail/  internal types (namespace oly::<m>::detail)
+  src/                   implementation (comes in by glob)
+  tests/                 doctest suites and death cases
+  bench/                 benchmarks (only in ecs)
 ```
 
-O caminho de include repete o nome do módulo (`#include "oly/ecs/world.hpp"`), então o include já diz de onde vem o header.
+The include path repeats the module name (`#include "oly/ecs/world.hpp"`), so the include already says where the header comes from.
 
-Veja também: [modules-and-boundaries.md](modules-and-boundaries.md).
+See also: [modules-and-boundaries.md](modules-and-boundaries.md).

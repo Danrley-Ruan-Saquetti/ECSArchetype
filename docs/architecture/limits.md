@@ -1,8 +1,8 @@
-# Limites conhecidos e fora do escopo
+# Known limitations and out of scope
 
-- **Fora do escopo da engine**: render, física, áudio, câmera, UI, assets, rede, serialização, editor, threads e gamepad. Render e colisão são do jogo ([games.md](games.md)).
-- **Sem host nativo de verdade** (janela, SDL). O núcleo está pronto para isso: o host só chama `frame`, `setHidden` e as funções de input.
-- **ECS v1**: sem chunks de tamanho fixo, sem detecção de mudança, sem componentes habilitáveis, sem armazenamento esparso. `ComponentId` vale só dentro do processo.
-- **NF-P5** não é atendida a N = 100000 ([performance.md](performance.md)).
-- **Duas `Engine`s sobre o mesmo `World`** dividem a tag de escopo: a troca de estado de uma limpa as entidades com escopo da outra. A ponte evita isso criando um `World` por `OlyEngine`.
-- **Contornos do arena** (registrados em `games/arena/README.md`): o menu do clique direito é impedido pelo próprio `main.ts`, porque o `attachBrowserInput` só o impede quando `MouseRight` está ligado a uma ação.
+- **Out of the engine's scope**: render, physics, audio, camera, UI, assets, networking, serialization, editor, threads and gamepad. Render and collision belong to the game ([games.md](games.md)).
+- **No real native host** (window, SDL). The core is ready for one: the host only calls `frame`, `setHidden` and the input functions.
+- **ECS v1**: no fixed-size chunks, no change detection, no enableable components, no sparse storage. `ComponentId` is only valid inside the process.
+- **NF-P5** is not met at N = 100000 ([performance.md](performance.md)).
+- **Two `Engine`s on the same `World`** share the scope tag: a state change in one cleans up the scoped entities of the other. The bridge avoids this by creating one `World` per `OlyEngine`.
+- **Arena workarounds** (recorded in `games/arena/README.md`): the right-click menu is prevented by `main.ts` itself, because `attachBrowserInput` only prevents it when `MouseRight` is bound to an action.

@@ -1,23 +1,23 @@
-# Estilo de código
+# Code style
 
-## Idioma
+## Language
 
-Commits, comentários e mensagens de assert são em pt-BR.
+Commits, comments and assert messages are in English.
 
-## Formatação
+## Formatting
 
-- `.clang-format`: base Google, indentação 2, `NamespaceIndentation: All`, sem limite de coluna.
-- Um hook `PostToolUse` do Claude Code (`.claude/hooks/clang-format.sh`) roda `clang-format -i` no container `dev` após cada edição de `.cpp`/`.hpp`. Não formate à mão. Se o Docker estiver parado, o hook falha.
-- `-Wall -Wextra -Wpedantic -Werror` em todos os alvos (`oly_warnings`): aviso quebra o build. TS em `strict`.
+- `.clang-format`: Google base, indentation 2, `NamespaceIndentation: All`, no column limit.
+- A Claude Code `PostToolUse` hook (`.claude/hooks/clang-format.sh`) runs `clang-format -i` in the `dev` container after every edit of a `.cpp`/`.hpp`. Do not format by hand. If Docker is stopped, the hook fails.
+- `-Wall -Wextra -Wpedantic -Werror` on every target (`oly_warnings`): a warning breaks the build. TS in `strict`.
 
-## Regras de C++
+## C++ rules
 
-- Chaves em todo `if`/`for`/`while`/`else`, mesmo com uma linha só.
-- Nomes completos, sem abreviações (`entity`, `componentId`, `sourceToDestination`, não `e`, `cid`, `srcToDst`).
-- Tipos em `PascalCase`, funções e variáveis em `camelCase`, membros privados com sufixo `_`.
-- Comentários só para o porquê ou para contratos não óbvios; nada que repita o código. Se um comentário explica o quê, prefira um nome ou uma função extraída.
-- Linhas em branco separam ideias (blocos lógicos), não linhas soltas.
-- Um bloco `namespace` por arquivo, sem reabrir o mesmo namespace mais abaixo.
-- Em `class`/`struct`, os atributos (membros de dados, inclusive privados e estáticos) ficam no topo, antes de construtores e métodos. Numa `class` isso significa abrir com uma seção `private:` só de dados (e dos tipos aninhados que eles usam), depois `public:` e, por fim, `private:` com os métodos auxiliares. Mover blocos de membros não pode mudar a ordem relativa entre eles (ordem de inicialização, `-Wreorder`).
-- `#include` dos headers do projeto com aspas (`"oly/ecs/..."`), depois dos headers da biblioteca padrão.
-- Mensagens de `OLY_ASSERT` incluem a operação, a `Entity` e o nome do tipo.
+- Braces on every `if`/`for`/`while`/`else`, even with a single line.
+- Full names, no abbreviations (`entity`, `componentId`, `sourceToDestination`, not `e`, `cid`, `srcToDst`).
+- Types in `PascalCase`, functions and variables in `camelCase`, private members with a `_` suffix.
+- Comments only for the why or for non-obvious contracts; nothing that repeats the code. If a comment explains the what, prefer a name or an extracted function.
+- Blank lines separate ideas (logical blocks), not individual lines.
+- One `namespace` block per file, without reopening the same namespace further down.
+- In a `class`/`struct`, the attributes (data members, including private and static ones) go at the top, before constructors and methods. In a `class` this means opening with a `private:` section of data only (and the nested types they use), then `public:` and, finally, `private:` with the helper methods. Moving blocks of members must not change their relative order (initialization order, `-Wreorder`).
+- `#include` project headers with quotes (`"oly/ecs/..."`), after the standard library headers.
+- `OLY_ASSERT` messages include the operation, the `Entity` and the type name.

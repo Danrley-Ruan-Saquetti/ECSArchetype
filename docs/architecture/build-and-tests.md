@@ -1,61 +1,61 @@
-# Build, testes e ferramentas
+# Build, tests and tools
 
-Os comandos do dia a dia estão em [../development/commands.md](../development/commands.md). Este arquivo explica a organização.
+The everyday commands are in [../development/commands.md](../development/commands.md). This file explains the organization.
 
 ## Toolchain
 
-Não há toolchain C++ no host. Tudo roda em Docker Compose:
+There is no C++ toolchain on the host. Everything runs in Docker Compose:
 
-| Serviço | Imagem | Uso |
+| Service | Image | Use |
 |---|---|---|
-| `dev` | `Dockerfile` (`gcc:14`, CMake, perf) | build e testes nativos |
-| `perf` | `Dockerfile`, privilegiado | `perf stat` |
-| `wasm` | `Dockerfile.wasm` (`emscripten/emsdk:3.1.74`, Clang do emsdk como compilador nativo, node 20.18, Python) | WASM, TS, estudo de custo |
-| `web` | `Dockerfile.wasm`, porta 8000 | `make serve` |
+| `dev` | `Dockerfile` (`gcc:14`, CMake, perf) | native build and tests |
+| `perf` | `Dockerfile`, privileged | `perf stat` |
+| `wasm` | `Dockerfile.wasm` (`emscripten/emsdk:3.1.74`, emsdk's Clang as the native compiler, node 20.18, Python) | WASM, TS, cost study |
+| `web` | `Dockerfile.wasm`, port 8000 | `make serve` |
 
 ## Presets
 
-| Preset | Para quê |
+| Preset | What for |
 |---|---|
-| `debug-asan` (padrão) | testes com ASan + UBSan e asserts ligados |
-| `release` | testes e benchmarks com `OLY_ENABLE_ASSERTS=0` |
-| `relwithdebinfo` | benchmarks para `perf` |
-| `native-clang`, `native-clang-32`, `native-clang-32-scalar`, `native-clang-avx2`, `wasm-scalar`, `wasm-simd` | escada do estudo de custo nativo × WASM |
-| `wasm-debug` | testes do ECS em WASM |
-| `wasm-games`, `wasm-games-release` | jogos, `bridge`, testes TS |
+| `debug-asan` (default) | tests with ASan + UBSan and asserts enabled |
+| `release` | tests and benchmarks with `OLY_ENABLE_ASSERTS=0` |
+| `relwithdebinfo` | benchmarks for `perf` |
+| `native-clang`, `native-clang-32`, `native-clang-32-scalar`, `native-clang-avx2`, `wasm-scalar`, `wasm-simd` | ladder of the native × WASM cost study |
+| `wasm-debug` | ECS tests in WASM |
+| `wasm-games`, `wasm-games-release` | games, `bridge`, TS tests |
 
-Cada degrau da escada do estudo de custo muda um único fator (compilador, largura de ponteiro, alvo WASM, SIMD).
+Each rung of the cost study ladder changes a single factor (compiler, pointer width, WASM target, SIMD).
 
-Opções do CMake: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR`, `OLY_VEC_REPORT`, `OLY_ENABLE_ASSERTS`, `OLY_BUILD_GAMES`.
+CMake options: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR`, `OLY_VEC_REPORT`, `OLY_ENABLE_ASSERTS`, `OLY_BUILD_GAMES`.
 
-## Funções de build (`cmake/`)
+## Build functions (`cmake/`)
 
-| Função | O que faz |
+| Function | What it does |
 |---|---|
-| `oly_add_module` | cria `oly_<m>` (alias `oly::<m>`) e liga só os `DEPENDS` |
-| `oly_add_test` | registra uma suíte doctest como executável e teste do ctest |
-| `oly_add_contract_death` | registra os casos de morte de um módulo |
-| `oly_add_bench` | registra um executável de benchmark |
-| `oly_add_game` | roda o codegen e linka o módulo `.mjs`/`.wasm` de um jogo |
-| `oly_warnings`, `oly_wasm_exceptions`, `oly_wasm_node_env` | avisos e ajustes do Emscripten |
+| `oly_add_module` | creates `oly_<m>` (alias `oly::<m>`) and links only the `DEPENDS` |
+| `oly_add_test` | registers a doctest suite as an executable and a ctest test |
+| `oly_add_contract_death` | registers a module's death cases |
+| `oly_add_bench` | registers a benchmark executable |
+| `oly_add_game` | runs codegen and links a game's `.mjs`/`.wasm` module |
+| `oly_warnings`, `oly_wasm_exceptions`, `oly_wasm_node_env` | warnings and Emscripten settings |
 
-## Testes
+## Tests
 
-- **Uma suíte doctest = um executável**, registrado com `oly_add_test(MODULE <m> NAME <suíte> SOURCES ... [SUPPORT <dirs>])` no `tests/CMakeLists.txt` do módulo. Arquivo de teste novo precisa ser adicionado lá; as fontes de `src/*.cpp` entram por glob.
-- **Nomes no ctest** levam o prefixo do módulo: `core.*`, `ecs.*`, `input.*`, `app.*`, `bridge.*`, `<módulo>.contract_death.<caso>`, `ts.<pacote>.<suíte>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`, `ts.arena.smoke`) e `oly.lint.boundaries` / `oly.lint.boundaries_selftest`.
-- **Testes de morte**: registrados com `oly_add_contract_death(MODULE <m> SOURCE <arq> CASES ...)`. Cada caso é um argumento de linha de comando. Um handler de assert confere substrings da mensagem e sai com 0; se o caso não dispara o assert, falha. Caso novo = função no arquivo + nome na lista `CASES`. Existem em `ecs`, `input`, `app` e `bridge`, só com asserts ligados.
-- **Invariantes**: `checkInvariants(const World&, std::string* why)` verifica I-1 a I-11 (records, colunas, índices, arestas, queries, lista livre, modo iterando). Os testes a chamam depois de cada operação estrutural.
-- **Fuzz contra modelo**: `fuzz_vs_model` compara o `World` com um mapa trivial. Os valores derivam da `Entity`, então trocar linhas aparece como valor errado. Semente e número de operações por `OLY_FUZZ_SEED`/`OLY_FUZZ_OPS`.
-- **`LifeCounter`** conta construções − destruições e pega moved-from não destruído e double destroy.
-- **Testes TS** rodam em node contra o WASM real, não contra um mock.
+- **One doctest suite = one executable**, registered with `oly_add_test(MODULE <m> NAME <suite> SOURCES ... [SUPPORT <dirs>])` in the module's `tests/CMakeLists.txt`. A new test file must be added there; the sources in `src/*.cpp` come in by glob.
+- **Names in ctest** carry the module prefix: `core.*`, `ecs.*`, `input.*`, `app.*`, `bridge.*`, `<module>.contract_death.<case>`, `ts.<package>.<suite>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`, `ts.arena.smoke`) and `oly.lint.boundaries` / `oly.lint.boundaries_selftest`.
+- **Death tests**: registered with `oly_add_contract_death(MODULE <m> SOURCE <file> CASES ...)`. Each case is a command-line argument. An assert handler checks substrings of the message and exits with 0; if the case does not fire the assert, it fails. New case = function in the file + name in the `CASES` list. They exist in `ecs`, `input`, `app` and `bridge`, only with asserts enabled.
+- **Invariants**: `checkInvariants(const World&, std::string* why)` checks I-1 to I-11 (records, columns, indices, edges, queries, free list, iterating mode). Tests call it after every structural operation.
+- **Fuzz against a model**: `fuzz_vs_model` compares the `World` with a trivial map. Values derive from the `Entity`, so swapped rows show up as a wrong value. Seed and number of operations via `OLY_FUZZ_SEED`/`OLY_FUZZ_OPS`.
+- **`LifeCounter`** counts constructions − destructions and catches undestroyed moved-from objects and double destroy.
+- **TS tests** run in node against the real WASM, not against a mock.
 
-## Qualidade de código
+## Code quality
 
-- Avisos, formatação e regras de estilo: [../development/code-style.md](../development/code-style.md).
-- O lint de fronteiras roda fora do Emscripten e nos presets `wasm-games*`, que têm Python no ambiente ([modules-and-boundaries.md](modules-and-boundaries.md)).
+- Warnings, formatting and style rules: [../development/code-style.md](../development/code-style.md).
+- The boundaries lint runs outside Emscripten and in the `wasm-games*` presets, which have Python in the environment ([modules-and-boundaries.md](modules-and-boundaries.md)).
 
-## Automação do Claude Code (`.claude/`)
+## Claude Code automation (`.claude/`)
 
-- Skills do projeto: `add-test-case` (registrar suíte, `TEST_CASE` ou caso de `contract_death`) e `bench-compare` (só manual, `/bench-compare <prefixo>`: mede NF-P1/P2/P5 e grava em `docs/benchmarks/`).
-- Agentes: `spec-conformance-reviewer` (spec, invariantes e cobertura de `checkInvariants`) e `perf-reviewer` (custo no caminho quente, conferido no assembly).
-- Hook `PostToolUse` `.claude/hooks/clang-format.sh`: formata `.cpp`/`.hpp` após cada edição.
+- Project skills: `add-test-case` (register a suite, a `TEST_CASE` or a `contract_death` case) and `bench-compare` (manual only, `/bench-compare <prefix>`: measures NF-P1/P2/P5 and records into `docs/benchmarks/`).
+- Agents: `spec-conformance-reviewer` (spec, invariants and `checkInvariants` coverage) and `perf-reviewer` (hot-path cost, checked in the assembly).
+- `PostToolUse` hook `.claude/hooks/clang-format.sh`: formats `.cpp`/`.hpp` after every edit.

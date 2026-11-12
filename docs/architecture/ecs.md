@@ -1,68 +1,68 @@
-# `ecs`: o ECS por arquétipos
+# `ecs`: the archetype ECS
 
-Código em `engine/runtime/ecs/`. Spec: `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md`.
+Code in `engine/runtime/ecs/`. Spec: `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md`.
 
-## Camadas
+## Layers
 
 ```
 component → entity → detail/table → detail/archetype → query / command_buffer → world
 ```
 
-Cada camada usa só as de baixo. Headers públicos: `world`, `entity`, `component`, `query`, `query_by_id`, `command_buffer` e `diagnostics`. Tudo o mais fica em `detail/`: `Table`, `Archetype`, `EntityStore`, cache de query, plano de comandos e os acessores de teste.
+Each layer uses only the ones below it. Public headers: `world`, `entity`, `component`, `query`, `query_by_id`, `command_buffer` and `diagnostics`. Everything else lives in `detail/`: `Table`, `Archetype`, `EntityStore`, query cache, command plan and the test accessors.
 
-| Camada | Responsabilidade |
+| Layer | Responsibility |
 |---|---|
-| `component` | `componentId<T>()` dá IDs densos por processo. `TypeInfo` guarda tamanho, alinhamento, se o tipo é trivial (caminho `memcpy`) ou tag (tamanho 0, sem coluna) e ponteiros de move e destroy. |
-| `entity` | `Entity` = índice de 32 bits + geração de 32 bits. `EntityStore` guarda os records e a lista de índices livres. Ela fica abaixo do `World` para o `CommandBuffer` poder reservar índices sem conhecer o `World`. |
-| `detail/table` | Armazenamento SoA: um único `count` e `capacity` para todas as colunas, cada coluna alinhada a 64 B, crescimento ×2. Não conhece entidades vivas, records nem queries. `pushUninit` deixa uma linha morta; `fillHole(r)` faz swap-remove e devolve a entidade deslocada. |
-| `detail/archetype` | Dono de uma `Table`. Guarda `signature` (com as tags) e `columnTypes` (só componentes com dados); confundir os dois é a fonte clássica de coluna errada. Arestas `±ComponentId` memoizadas trazem pronto o mapeamento de colunas `sourceToDestination`. Arquétipos nunca são removidos, então os ponteiros são estáveis. |
-| `query` | `Query<Ts...>` cacheada pelo `World`, com matching incremental. Filtros `With<...>` e `Without<...>` fazem parte da chave do cache. `each`, `eachBlock`, `single`, `trySingle`. |
-| `query_by_id` | `QueryById`: a mesma query, type-erased por listas de `ComponentId` (`read`, `write`, `with`, `without`). É o que a ponte e o TS usam. |
-| `command_buffer` | Grava mudanças estruturais adiadas. `spawn()` reserva o índice na hora. O `flush` agrupa por entidade e faz uma única transição por entidade até o arquétipo final. |
-| `world` | Único dono dos records e único que chama `fillHole`, então a correção do record da entidade deslocada vive num só lugar. |
-| `diagnostics` | Funções livres: `checkInvariants`, `stats`, `signatureLookupCount`, `archetypeCount`. |
+| `component` | `componentId<T>()` gives dense per-process IDs. `TypeInfo` holds size, alignment, whether the type is trivial (`memcpy` path) or a tag (size 0, no column) and move and destroy pointers. |
+| `entity` | `Entity` = 32-bit index + 32-bit generation. `EntityStore` holds the records and the free index list. It sits below the `World` so the `CommandBuffer` can reserve indices without knowing the `World`. |
+| `detail/table` | SoA storage: a single `count` and `capacity` for all columns, each column aligned to 64 B, ×2 growth. It does not know about alive entities, records or queries. `pushUninit` leaves a dead row; `fillHole(r)` does a swap-remove and returns the displaced entity. |
+| `detail/archetype` | Owns a `Table`. Holds `signature` (with the tags) and `columnTypes` (only components with data); mixing the two up is the classic source of a wrong column. Memoized `±ComponentId` edges carry the precomputed `sourceToDestination` column mapping. Archetypes are never removed, so pointers are stable. |
+| `query` | `Query<Ts...>` cached by the `World`, with incremental matching. `With<...>` and `Without<...>` filters are part of the cache key. `each`, `eachBlock`, `single`, `trySingle`. |
+| `query_by_id` | `QueryById`: the same query, type-erased through `ComponentId` lists (`read`, `write`, `with`, `without`). It is what the bridge and TS use. |
+| `command_buffer` | Records deferred structural changes. `spawn()` reserves the index immediately. `flush` groups by entity and makes a single transition per entity to the final archetype. |
+| `world` | Sole owner of the records and the only one that calls `fillHole`, so fixing the record of the displaced entity lives in one place. |
+| `diagnostics` | Free functions: `checkInvariants`, `stats`, `signatureLookupCount`, `archetypeCount`. |
 
-## Índices do `World`
+## `World` indices
 
-- `records_` (via `EntityStore`): `Entity.index → (arquétipo, linha, geração)`.
-- `bySignature_`: assinatura → arquétipo. Só é consultado na primeira transição para um arquétipo.
-- `componentIndex_[componentId]`: arquétipos que têm o componente e a coluna dele. `has`, `get` e a criação de queries usam esse índice, sem varrer todos os arquétipos.
+- `records_` (via `EntityStore`): `Entity.index → (archetype, row, generation)`.
+- `bySignature_`: signature → archetype. Only consulted on the first transition to an archetype.
+- `componentIndex_[componentId]`: archetypes that have the component and its column. `has`, `get` and query creation use this index, without scanning every archetype.
 
-Os dois índices só mudam em `findOrCreate`, que também registra o arquétipo novo nas queries existentes.
+The two indices only change in `findOrCreate`, which also registers the new archetype in the existing queries.
 
-## Custos das operações
+## Operation costs
 
-| Operação | Custo |
+| Operation | Cost |
 |---|---|
-| `get<T>(entity)` | 3 indireções: record, `componentIndex_`, coluna |
-| `add`/`remove` com aresta em cache | O(k) (k = componentes da entidade), zero alocações e zero lookups de hash |
-| primeira transição para um arquétipo | O(k) + hash da assinatura |
-| `query<Ts...>()` | O(arquétipos com o componente mais raro) na primeira vez; O(1) depois |
-| `flush` | O(Σk), uma transição por entidade afetada |
+| `get<T>(entity)` | 3 indirections: record, `componentIndex_`, column |
+| `add`/`remove` with cached edge | O(k) (k = components of the entity), zero allocations and zero hash lookups |
+| first transition to an archetype | O(k) + signature hash |
+| `query<Ts...>()` | O(archetypes with the rarest component) the first time; O(1) after |
+| `flush` | O(Σk), one transition per affected entity |
 
-## Templates e `ById`
+## Templates and `ById`
 
-Os templates de `world.hpp` são finos e delegam para funções não template por `ComponentId` em `world.cpp` (`addById`, `removeById` etc.), o que reduz tempo de compilação e tamanho de binário. O caminho quente (`get<T>`, `Query::each`, `eachBlock`) **não** delega: ele fica inline, porque uma indireção ali afetaria as metas NF-P1 e NF-P2 ([performance.md](performance.md)).
+The templates in `world.hpp` are thin and delegate to non-template functions by `ComponentId` in `world.cpp` (`addById`, `removeById` etc.), which reduces compile time and binary size. The hot path (`get<T>`, `Query::each`, `eachBlock`) does **not** delegate: it stays inline, because an indirection there would affect the NF-P1 and NF-P2 targets ([performance.md](performance.md)).
 
-## Iteração e mudanças estruturais
+## Iteration and structural changes
 
-- `each` e `eachBlock` incrementam `iterating_` (por um `IterationGuard`). Mudança estrutural direta com `iterating_ > 0` é erro de contrato.
-- Mudanças durante a iteração passam pelo `CommandBuffer`.
-- `QueryById::iterate()` devolve uma `QueryIteration` RAII, só movível, com descritores de bloco de um pool por nível de aninhamento. Não há alocação por iteração depois do aquecimento.
+- `each` and `eachBlock` increment `iterating_` (through an `IterationGuard`). A direct structural change with `iterating_ > 0` is a contract violation.
+- Changes during iteration go through the `CommandBuffer`.
+- `QueryById::iterate()` returns a move-only RAII `QueryIteration`, with block descriptors from a pool per nesting level. There is no per-iteration allocation after warm-up.
 
-Regras de validade:
+Validity rules:
 
-- Qualquer mudança estrutural invalida ponteiros, referências e spans de **qualquer** entidade.
-- Só a `Entity` é um handle estável. Para guardar uma relação, guarde a `Entity` e chame `tryGet` ao usar.
+- Any structural change invalidates pointers, references and spans of **any** entity.
+- Only the `Entity` is a stable handle. To keep a relationship, store the `Entity` and call `tryGet` when using it.
 
 ## `CommandBuffer`
 
-- O buffer é um bloco próprio alinhado a 64 B. Ao crescer, ele realoca cada payload pelo `TypeInfo`, porque copiar bytes de um tipo não trivial (ex.: `std::string` com SSO) seria comportamento indefinido.
-- Regras de conflito (R-CB-4): `add` seguido de `remove` do mesmo tipo se anulam; `add` repetido mantém o último valor; `destroy` descarta os comandos anteriores da entidade; comando depois de `destroy` é erro de contrato.
-- Um `destroy` direto de uma entidade com comandos pendentes é resolvido pela geração: o flush vê o handle obsoleto e ignora os comandos.
+- The buffer is its own block aligned to 64 B. When it grows, it relocates each payload through the `TypeInfo`, because copying the bytes of a non-trivial type (e.g. `std::string` with SSO) would be undefined behaviour.
+- Conflict rules (R-CB-4): `add` followed by `remove` of the same type cancel out; a repeated `add` keeps the last value; `destroy` discards the entity's earlier commands; a command after `destroy` is a contract violation.
+- A direct `destroy` of an entity with pending commands is resolved by the generation: flush sees the stale handle and ignores the commands.
 
-## Corretude
+## Correctness
 
-- As invariantes I-1 a I-11, o fuzz contra modelo e o `LifeCounter` estão em [build-and-tests.md](build-and-tests.md#testes).
-- Ao mudar a lógica estrutural, mantenha `checkInvariants` cobrindo o que mudou, inclusive as caches de `QueryById` (que entram em `checkQueries`).
-- Os ganchos só de teste (`flushSequential`, `setGeneration`, `CommandBuffer::forEach`) ficam em `detail/test_access.hpp` (`WorldTestAccess`, `EntityStoreTestAccess`, `CommandBufferTestAccess`). As classes públicas não têm nada "para teste".
+- Invariants I-1 to I-11, the fuzz against a model and `LifeCounter` are in [build-and-tests.md](build-and-tests.md#tests).
+- When changing structural logic, keep `checkInvariants` covering what changed, including the `QueryById` caches (which go into `checkQueries`).
+- Test-only hooks (`flushSequential`, `setGeneration`, `CommandBuffer::forEach`) live in `detail/test_access.hpp` (`WorldTestAccess`, `EntityStoreTestAccess`, `CommandBufferTestAccess`). The public classes have nothing "for testing".

@@ -1,21 +1,21 @@
-# Decisões arquiteturais principais
+# Main architectural decisions
 
-| Decisão | Motivo | Custo aceito |
+| Decision | Reason | Accepted cost |
 |---|---|---|
-| ECS por arquétipos com tabelas SoA | iteração próxima de um SoA escrito à mão | transições movem a entidade entre tabelas |
-| Arestas `±ComponentId` memoizadas com mapeamento de colunas | transição sem hash nem alocação | memória por arquétipo |
-| Arquétipos nunca removidos | ponteiros estáveis, queries sem invalidação | arquétipos vazios ficam |
-| `detail/` + lint em vez de pimpl | templates quentes fazem inline | fronteira garantida pelo lint, não pelo compilador |
-| API template e API `ById` separadas | o caminho quente não paga indireção | duas implementações a manter |
-| `CommandBuffer` com uma transição por entidade | flush barato em lote | complexidade de coalescing (coberta por fuzz) |
-| Loop e toda regra de engine em C++ | um jogo só em C++ não fica com engine incompleta | o TS precisa da chamada de volta |
-| Uma única função JS importada, com `kind` | sem tabela de funções que cresce; várias engines por módulo | despacho por `kind` no TS |
-| Esquema TS como fonte única + codegen + hash | layout nunca diverge entre C++ e TS | WASM compilado por jogo |
-| Coluna de structs, view com passo | não muda a `Table` nem a API de queries | acessor com passo no TS |
-| `Engine` não é dona do `World` | o ECS fica abaixo e independente da engine | duas `Engine`s no mesmo `World` dividem a tag de escopo |
-| Escopo de estado por tag interna | limpeza por query, `persist` barato | arquétipos gêmeos com e sem a tag |
-| Schedule como min-heap no `app`, não como entidades | tarefas não aparecem nas queries do jogo | escopo das tarefas implementado à parte |
-| Input em módulo próprio, sem interface de plataforma | regras de borda testáveis sem `Engine`; o host só empurra eventos | — |
-| `@oly/core` sem DOM, `@oly/client` com DOM | o núcleo TS roda em node, navegador e worker | dois pacotes |
+| Archetype ECS with SoA tables | iteration close to a hand-written SoA | transitions move the entity between tables |
+| Memoized `±ComponentId` edges with column mapping | transition with no hash and no allocation | memory per archetype |
+| Archetypes never removed | stable pointers, queries without invalidation | empty archetypes remain |
+| `detail/` + lint instead of pimpl | hot templates inline | boundary enforced by the lint, not by the compiler |
+| Separate template API and `ById` API | the hot path pays no indirection | two implementations to maintain |
+| `CommandBuffer` with one transition per entity | cheap batched flush | coalescing complexity (covered by fuzz) |
+| Loop and every engine rule in C++ | a C++-only game does not end up with an incomplete engine | TS needs the callback |
+| A single imported JS function, with `kind` | no growing function table; several engines per module | dispatch by `kind` in TS |
+| TS schema as the single source + codegen + hash | layout never diverges between C++ and TS | WASM compiled per game |
+| Column of structs, strided view | does not change the `Table` or the query API | strided accessor in TS |
+| `Engine` does not own the `World` | the ECS stays below and independent of the engine | two `Engine`s on the same `World` share the scope tag |
+| State scope through an internal tag | cleanup by query, cheap `persist` | twin archetypes with and without the tag |
+| Schedule as a min-heap in `app`, not as entities | tasks do not show up in the game's queries | task scope implemented separately |
+| Input in its own module, without a platform interface | edge rules testable without `Engine`; the host only pushes events | — |
+| `@oly/core` without DOM, `@oly/client` with DOM | the TS core runs in node, browser and worker | two packages |
 
-Os detalhes de cada decisão estão nos arquivos dos módulos ([README.md](README.md#índice)) e nas specs.
+The details of each decision are in the module files ([README.md](README.md#index)) and in the specs.

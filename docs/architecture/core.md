@@ -1,8 +1,8 @@
 # `core`
 
-Utilitários sem dependências, usados por todos os módulos (`engine/runtime/core/`):
+Dependency-free utilities, used by every module (`engine/runtime/core/`):
 
-- `assert.hpp`: `OLY_ASSERT(cond, fmt, ...)`. Some com `OLY_ENABLE_ASSERTS=0`. A mensagem inclui a operação, a `Entity` e o nome do tipo. O handler é trocável, o que permite os testes de morte ([build-and-tests.md](build-and-tests.md#testes)).
-- `align.hpp`: alinhamento e alocação alinhada.
-- `small_map.hpp`: mapa pequeno por vetor ordenado, usado nas arestas e no índice de componentes do ECS.
-- `type_name.hpp`: nome de tipo em tempo de compilação, para mensagens.
+- `assert.hpp`: `OLY_ASSERT(cond, fmt, ...)`. Compiled out with `OLY_ENABLE_ASSERTS=0`. The message includes the operation, the `Entity` and the type name. The handler is replaceable, which enables the death tests ([build-and-tests.md](build-and-tests.md#tests)).
+- `align.hpp`: alignment and aligned allocation.
+- `small_map.hpp`: small map backed by a sorted vector, used in the ECS edges and component index.
+- `type_name.hpp`: compile-time type name, for messages.

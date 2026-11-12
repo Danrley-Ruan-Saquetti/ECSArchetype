@@ -1,4 +1,4 @@
-# ecs::World::transitionTo não existe como função neste binário: foi inlinada em ecs::World::flush (ver flush.txt); bench_flush.wasm não tem símbolo próprio para ela.
+# ecs::World::transitionTo does not exist as a function in this binary: it was inlined into ecs::World::flush (see flush.txt); bench_flush.wasm has no symbol of its own for it.
 # ecs::World::moveEntity (bench_transitions)
 00028ddc <ecs::World::moveEntity(ecs::Entity, ecs::EntityRecord&, ecs::Archetype&, ecs::Edge const&)>:
         .local i32, i32, i32, i32, i32, i32, i32, i32, i64

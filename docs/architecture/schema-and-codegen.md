@@ -1,8 +1,8 @@
-# Esquema, codegen e o módulo WASM de cada jogo
+# Schema, codegen and each game's WASM module
 
-## O esquema
+## The schema
 
-O jogo declara tudo num `schema.ts`:
+The game declares everything in a `schema.ts`:
 
 ```ts
 component("Position", { x: "f32", y: "f32" })
@@ -12,22 +12,22 @@ action("move", "axis2d")
 state("playing")
 ```
 
-- Tipos escalares: `f32 f64 i8 u8 i16 u16 i32 u32 entity`. Não há inteiros de 64 bits (exigiriam `BigInt`).
-- Campos na ordem de declaração, alinhamento natural. Um componente vira uma struct trivial; a coluna guarda structs (SoA entre componentes, AoS dentro do componente).
-- O layout é calculado pelo próprio `@oly/core` (`computeLayout`). O gerador usa a mesma função. Não existe arquivo TS gerado que possa divergir.
+- Scalar types: `f32 f64 i8 u8 i16 u16 i32 u32 entity`. There are no 64-bit integers (they would require `BigInt`).
+- Fields in declaration order, natural alignment. A component becomes a trivial struct; the column stores structs (SoA across components, AoS inside the component).
+- The layout is computed by `@oly/core` itself (`computeLayout`). The generator uses the same function. There is no generated TS file that could diverge.
 
-## O fluxo de build
+## The build flow
 
 ```
-schema.ts ──tsc──► schema.js ──oly-codegen──► header C++ (structs, ids, static_assert, hash)
+schema.ts ──tsc──► schema.js ──oly-codegen──► C++ header (structs, ids, static_assert, hash)
                                                    │
-sistemas C++ do jogo (OLY_SYSTEM, OLY_HANDLER) ────┤
-oly::bridge + app + input + ecs + core ────────────┴──► emcc ──► <jogo>_game.mjs + .wasm
+the game's C++ systems (OLY_SYSTEM, OLY_HANDLER) ──┤
+oly::bridge + app + input + ecs + core ────────────┴──► emcc ──► <game>_game.mjs + .wasm
 ```
 
-- `oly_add_game` (`cmake/OlyGame.cmake`) junta tudo. O WASM é compilado **por jogo**.
-- O código gerado tem `static_assert` de `sizeof`, `alignof` e `offsetof`, e namespaces `actions::` e `states::` com os ids. Um nome errado num sistema nativo é erro de compilação.
-- **Hash do esquema**: FNV-1a 32 bits de uma forma canônica (componentes, tags, eventos, ações e estados). `loadRuntime` confere o hash e os tamanhos e lança `SchemaMismatchError` se o WASM foi gerado com outro esquema.
-- Link: `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=node,web`, memória que cresce. O resultado sai em `build/<preset>/games/<jogo>_game.{mjs,wasm}`.
+- `oly_add_game` (`cmake/OlyGame.cmake`) puts it all together. The WASM is compiled **per game**.
+- The generated code has `static_assert`s on `sizeof`, `alignof` and `offsetof`, and `actions::` and `states::` namespaces with the ids. A wrong name in a native system is a compile error.
+- **Schema hash**: 32-bit FNV-1a of a canonical form (components, tags, events, actions and states). `loadRuntime` checks the hash and the sizes and throws `SchemaMismatchError` if the WASM was generated with another schema.
+- Link: `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=node,web`, growable memory. The output goes to `build/<preset>/games/<game>_game.{mjs,wasm}`.
 
-Veja também: [bridge.md](bridge.md) (como a `OlyEngine` declara o esquema na criação) e [ts-packages.md](ts-packages.md#olycodegen-e-olytesting) (o pacote do gerador).
+See also: [bridge.md](bridge.md) (how the `OlyEngine` declares the schema on creation) and [ts-packages.md](ts-packages.md#olycodegen-and-olytesting) (the generator package).

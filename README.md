@@ -1,31 +1,31 @@
 # Oly
 
-Oly é uma engine de jogos em C++20 e TypeScript. O núcleo é um ECS (*Entity Component System*) por arquétipos, single-thread, escrito em C++ e compilado para WebAssembly. O jogo usa esse núcleo pelo TypeScript, no navegador ou no Node.
+Oly is a game engine in C++20 and TypeScript. The core is an archetype-based, single-threaded ECS (*Entity Component System*), written in C++ and compiled to WebAssembly. The game uses this core from TypeScript, in the browser or in Node.
 
-É um projeto de estudo. O objetivo é medir como a representação dos dados (SoA, arquétipos, colunas alinhadas) e as decisões de arquitetura afetam o custo de execução. Por isso cada meta de desempenho tem um benchmark e um resultado registrado.
+It is a study project. The goal is to measure how data representation (SoA, archetypes, aligned columns) and architectural decisions affect execution cost. That is why every performance target has a benchmark and a recorded result.
 
-> **Estado:** em desenvolvimento. O ECS, a ponte C/WASM e os pacotes TypeScript base já funcionam e têm testes. Ainda não há renderização, entrada, áudio nem um jogo de exemplo. Os pacotes ainda não estão publicados no npm. A API pode mudar.
+> **Status:** in development. The ECS, the C/WASM bridge and the base TypeScript packages already work and have tests. There is no rendering, input, audio or example game yet. The packages are not published on npm yet. The API may change.
 
-## O que já existe
+## What already exists
 
-| Parte | Onde | O que faz |
+| Part | Where | What it does |
 |---|---|---|
-| `oly::core` | `engine/runtime/core` | Utilitários base: `OLY_ASSERT`, alinhamento, `small_map`, nome de tipo. |
-| `oly::ecs` | `engine/runtime/ecs` | O ECS: `World`, `Entity`, queries cacheadas, `CommandBuffer`, diagnóstico de invariantes. |
-| `oly::bridge` | `engine/runtime/bridge` | API C (`oly*`) que expõe o ECS ao WebAssembly. |
-| `@oly/core` | `engine/packages/core` | API TypeScript: esquema, `World`, `Query`, `Block`. |
-| `@oly/client` | `engine/packages/client` | Carrega o módulo WASM por URL no navegador. |
-| `@oly/codegen` | `engine/tools/codegen` | Gera os structs C++ a partir do esquema TypeScript. |
+| `oly::core` | `engine/runtime/core` | Base utilities: `OLY_ASSERT`, alignment, `small_map`, type name. |
+| `oly::ecs` | `engine/runtime/ecs` | The ECS: `World`, `Entity`, cached queries, `CommandBuffer`, invariant diagnostics. |
+| `oly::bridge` | `engine/runtime/bridge` | C API (`oly*`) that exposes the ECS to WebAssembly. |
+| `@oly/core` | `engine/packages/core` | TypeScript API: schema, `World`, `Query`, `Block`. |
+| `@oly/client` | `engine/packages/client` | Loads the WASM module by URL in the browser. |
+| `@oly/codegen` | `engine/tools/codegen` | Generates the C++ structs from the TypeScript schema. |
 
-## Como o ECS funciona
+## How the ECS works
 
-- Cada combinação de componentes forma um **arquétipo**. Cada arquétipo guarda as entidades numa tabela SoA: uma coluna contígua por componente, alinhada a 64 bytes.
-- Adicionar ou remover um componente move a entidade para outro arquétipo. As transições ficam em cache como arestas do grafo de arquétipos.
-- Uma **query** é cacheada pelo `World` e só visita os arquétipos que combinam com ela. Arquétipos novos entram nas queries existentes de forma incremental.
-- Mudanças estruturais durante uma iteração são erro de contrato. Para isso existe o **`CommandBuffer`**: ele grava as mudanças e o `flush` aplica uma única transição por entidade.
-- Só o `Entity` (índice + geração) é um handle estável. Ponteiros e views valem até a próxima mudança estrutural.
+- Each combination of components forms an **archetype**. Each archetype stores its entities in an SoA table: one contiguous column per component, aligned to 64 bytes.
+- Adding or removing a component moves the entity to another archetype. Transitions are cached as edges of the archetype graph.
+- A **query** is cached by the `World` and only visits the archetypes that match it. New archetypes join existing queries incrementally.
+- Structural changes during an iteration are a contract violation. That is what the **`CommandBuffer`** is for: it records the changes and `flush` applies a single transition per entity.
+- Only the `Entity` (index + generation) is a stable handle. Pointers and views are valid until the next structural change.
 
-## Exemplos
+## Examples
 
 ### C++
 
@@ -34,19 +34,19 @@ Oly é uma engine de jogos em C++20 e TypeScript. O núcleo é um ECS (*Entity C
 
 struct Position { float x, y; };
 struct Velocity { float x, y; };
-struct Frozen {};  // tag: componente sem dados
+struct Frozen {};  // tag: component with no data
 
 oly::ecs::World world;
 oly::ecs::Entity player = world.spawn(Position{0, 0}, Velocity{1, 2});
 
-// Itera só entidades com Position e Velocity e sem a tag Frozen.
+// Iterates only entities with Position and Velocity and without the Frozen tag.
 world.query<Position, const Velocity>(oly::ecs::Without<Frozen>{})
     .each([](Position& position, const Velocity& velocity) {
       position.x += velocity.x;
       position.y += velocity.y;
     });
 
-// Mudanças estruturais durante a iteração passam pelo CommandBuffer.
+// Structural changes during iteration go through the CommandBuffer.
 oly::ecs::CommandBuffer commands = world.commands();
 world.query<const Position>().each([&](oly::ecs::Entity entity, const Position& position) {
   if (position.x > 100) {
@@ -58,7 +58,7 @@ world.flush(commands);
 
 ### TypeScript
 
-O jogo declara o esquema em TypeScript. O `@oly/codegen` gera o C++ equivalente, que entra no módulo WASM do jogo.
+The game declares the schema in TypeScript. `@oly/codegen` generates the equivalent C++, which goes into the game's WASM module.
 
 ```ts
 import { component, defineSchema, loadRuntime, tag } from "@oly/core";
@@ -69,7 +69,7 @@ const Velocity = component("Velocity", { x: "f32", y: "f32" });
 const Enemy = tag("Enemy");
 const schema = defineSchema([Position, Velocity, Enemy]);
 
-// Lança SchemaMismatchError se o WASM foi gerado com outro esquema.
+// Throws SchemaMismatchError if the WASM was generated with another schema.
 const runtime = await loadRuntime(moduleFactoryFromUrl("/game.mjs"), schema);
 const world = runtime.createWorld();
 
@@ -91,45 +91,45 @@ console.log(world.get(enemy, Position)); // { x: 1, y: 2 }
 world.dispose();
 ```
 
-As views de `block.read` e `block.write` acessam a memória do WASM diretamente, sem cópia, e só valem dentro do callback. O TypeScript valida o uso antes de chamar o C++ e lança `ContractError` quando o uso é inválido.
+The views from `block.read` and `block.write` access WASM memory directly, without copying, and are only valid inside the callback. TypeScript validates usage before calling into C++ and throws `ContractError` when usage is invalid.
 
-Um exemplo completo, com sistemas em C++ chamados a partir do TypeScript, está em [`engine/testing/fixture/`](engine/testing/fixture/) e nos testes de [`engine/testing/tests/wasm/`](engine/testing/tests/wasm/).
+A complete example, with C++ systems called from TypeScript, is in [`engine/testing/fixture/`](engine/testing/fixture/) and in the tests under [`engine/testing/tests/wasm/`](engine/testing/tests/wasm/).
 
-## Compilar e testar
+## Build and test
 
-O único requisito no host é o **Docker** com Docker Compose. As imagens trazem o GCC 14, o CMake, o `perf`, o Emscripten e o Node.
+The only requirement on the host is **Docker** with Docker Compose. The images ship GCC 14, CMake, `perf`, Emscripten and Node.
 
 ```sh
-# C++ nativo: compila e roda todos os testes com ASan + UBSan.
+# Native C++: builds and runs all tests with ASan + UBSan.
 docker compose run --rm dev make test
 
-# Só um módulo ou uma suíte (T é uma regex do ctest).
+# Only one module or one suite (T is a ctest regex).
 docker compose run --rm dev make test T='^ecs\.'
 
-# ECS em WebAssembly + pacotes TypeScript + testes de integração.
+# ECS in WebAssembly + TypeScript packages + integration tests.
 docker compose run --rm wasm make games-test
 ```
 
-O build fica em `build/<preset>/`. Os presets estão em [`CMakePresets.json`](CMakePresets.json). Os principais são `debug-asan` (padrão), `release` e `wasm-games`.
+The build goes to `build/<preset>/`. The presets are in [`CMakePresets.json`](CMakePresets.json). The main ones are `debug-asan` (default), `release` and `wasm-games`.
 
 ## Benchmarks
 
-As metas de desempenho são razões contra uma linha de base medida na mesma execução, por exemplo: "iterar no ECS custa no máximo 1,10× o custo de um laço SoA escrito à mão".
+Performance targets are ratios against a baseline measured in the same run, for example: "iterating in the ECS costs at most 1.10× the cost of a hand-written SoA loop".
 
 ```sh
 docker compose run --rm dev make build PRESET=release
 docker compose run --rm dev ./build/release/bench/ecs_bench_iterate
 ```
 
-Os resultados registrados e a situação de cada meta estão em [`docs/benchmarks/README.md`](docs/benchmarks/README.md).
+The recorded results and the status of each target are in [`docs/benchmarks/README.md`](docs/benchmarks/README.md).
 
-## Documentação
+## Documentation
 
-| Onde | O que tem |
+| Where | What it has |
 |---|---|
-| [`docs/architecture/`](docs/architecture/README.md) | arquitetura: visão geral, módulos e fronteiras, ECS, `Engine`, ponte, pacotes TS, jogos, decisões e limites |
-| [`docs/architecture/repository.md`](docs/architecture/repository.md) | estrutura do repositório |
-| [`docs/development/commands.md`](docs/development/commands.md) | todos os comandos de build, testes, benchmarks e jogos |
-| [`docs/development/code-style.md`](docs/development/code-style.md) | estilo de código |
-| [`docs/benchmarks/`](docs/benchmarks/README.md) | resultados de benchmark |
-| [`docs/superpowers/specs/`](docs/superpowers/specs/) | specs (fonte da verdade dos requisitos) |
+| [`docs/architecture/`](docs/architecture/README.md) | architecture: overview, modules and boundaries, ECS, `Engine`, bridge, TS packages, games, decisions and limitations |
+| [`docs/architecture/repository.md`](docs/architecture/repository.md) | repository structure |
+| [`docs/development/commands.md`](docs/development/commands.md) | all commands for build, tests, benchmarks and games |
+| [`docs/development/code-style.md`](docs/development/code-style.md) | code style |
+| [`docs/benchmarks/`](docs/benchmarks/README.md) | benchmark results |
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | specs (source of truth for the requirements) |
