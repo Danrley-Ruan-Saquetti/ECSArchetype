@@ -101,6 +101,10 @@ namespace {
   void countHook(oly::app::StateContext& context) {
     ++static_cast<StateShared*>(context.userData())->calls;
   }
+
+  void spawnHook(oly::app::StateContext& context) {
+    *static_cast<oly::ecs::Entity*>(context.userData()) = context.spawn();
+  }
 }
 
 TEST_CASE("exceção num sistema deixa o spawn adiado sem aplicar") {
@@ -232,6 +236,25 @@ TEST_CASE("exceção em onEnter: o estado já é o novo e os ganchos seguintes n
 
   CHECK(engine.state() == first);
   CHECK(shared.calls == 0);
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("exceção em onExit não limpa o escopo") {
+  oly::ecs::World world;
+  Engine engine(world);
+  oly::ecs::Entity scoped{};
+  const auto first = engine.declareState("a");
+  const auto second = engine.declareState("b");
+  engine.onEnter(first, "spawner", spawnHook, &scoped);
+  engine.onExit(first, "thrower", throwHook);
+  engine.requestState(first);
+  engine.frame(0.0);
+  engine.frame(1.0 / 60);
+  engine.requestState(second);
+
+  CHECK_THROWS(engine.frame(2.0 / 60));
+
+  CHECK(world.isAlive(scoped));
   CHECK_INVARIANTS(world);
 }
 #endif

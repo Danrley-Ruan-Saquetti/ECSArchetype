@@ -50,15 +50,16 @@ namespace oly::app {
 
     float interpolation() const noexcept;
 
-    ecs::Entity spawn() {
-      return commands_->spawn();
-    }
+    // Com estado ativo a entidade nasce com escopo (some na troca de estado) até receber persist.
+    ecs::Entity spawn();
     template <class... Ts>
     ecs::Entity spawn(Ts&&... components) {
-      ecs::Entity entity = commands_->spawn();
+      ecs::Entity entity = spawn();
       (commands_->add(entity, std::forward<Ts>(components)), ...);
       return entity;
     }
+    // Adiado como o remove: sem efeito se a entidade não tiver a tag.
+    void persist(ecs::Entity entity);
     void destroy(ecs::Entity entity) {
       commands_->destroy(entity);
     }

@@ -1,5 +1,6 @@
 #include "oly/app/engine.hpp"
 
+#include "oly/app/detail/state_scoped.hpp"
 #include "oly/app/state_context.hpp"
 #include "oly/core/assert.hpp"
 
@@ -68,10 +69,30 @@ namespace oly::app {
       runStateHooks(states_[from].exitHooks, from, target, false);
     }
 
+    clearStateScope();
+
     state_ = target;
     runStateHooks(states_[target].enterHooks, from, target, true);
 
     dispatchEvents();
+  }
+
+  void Engine::clearStateScope() {
+    if (scopedQuery_ == nullptr) {
+      scopedQuery_ = &world_.queryById(ecs::QueryByIdSpec{.with = {ecs::componentId<detail::StateScoped>()}});
+    }
+
+    scopedEntities_.clear();
+    scopedQuery_->eachBlock([this](const ecs::BlockById& block) {
+      const std::span<const ecs::Entity> entities = block.entities();
+      scopedEntities_.insert(scopedEntities_.end(), entities.begin(), entities.end());
+    });
+
+    for (const ecs::Entity entity : scopedEntities_) {
+      world_.destroy(entity);
+    }
+
+    scheduler_.queue_.cancelScoped();
   }
 
   void Engine::checkState([[maybe_unused]] const char* operation, [[maybe_unused]] StateId state) const {

@@ -83,6 +83,8 @@ namespace oly::app {
     StateHookId stateHookCount_ = 0;
     StateId state_ = NoState;
     StateId requestedState_ = NoState;
+    ecs::QueryById* scopedQuery_ = nullptr; // criada na primeira limpeza: criá-la no construtor mudaria a contagem de queries do World
+    std::vector<ecs::Entity> scopedEntities_;
 
     double accumulator_ = 0.0;
     double lastTime_ = 0.0;
@@ -96,7 +98,8 @@ namespace oly::app {
     bool hidden_ = false;
 
    public:
-    // fixedHz, maxStepsPerFrame e maxEventRounds precisam ser positivos (OLY_ASSERT).
+    // fixedHz, maxStepsPerFrame e maxEventRounds precisam ser positivos (OLY_ASSERT). Duas Engines sobre o mesmo World
+    // dividem a tag de escopo: a troca de estado de uma destrói as entidades com escopo da outra.
     explicit Engine(ecs::World& world, EngineConfig config = {});
     Engine(const Engine&) = delete;
     Engine& operator=(const Engine&) = delete;
@@ -241,6 +244,7 @@ namespace oly::app {
     StateMask maskOf(const char* operation, std::initializer_list<StateId> states) const;
     StateHookId addStateHook(const char* operation, bool entering, StateId state, std::string_view name, StateHookFunction function, void* userData);
     void runStateHooks(const std::vector<StateHookEntry>& hooks, StateId from, StateId to, bool entering);
+    void clearStateScope();
 
     bool runsInState(StateMask states) const noexcept {
       return states == 0 || (state_ != NoState && ((states >> state_) & 1u) != 0);

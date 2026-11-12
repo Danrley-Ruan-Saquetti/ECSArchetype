@@ -4,6 +4,7 @@
 #include <string_view>
 #include <utility>
 
+#include "oly/app/detail/state_scoped.hpp"
 #include "oly/app/event.hpp"
 #include "oly/app/scheduler.hpp"
 #include "oly/app/state.hpp"
@@ -26,6 +27,8 @@ namespace oly::app {
         world_(&world) {}
 
     EventTypeId eventTypeOf(EventKey key) const noexcept;
+    // Verdadeiro quando há estado ativo: o que o contexto cria nasce com escopo.
+    bool spawnsScoped() const noexcept;
 
    public:
     float fixedDeltaTime() const noexcept;
@@ -81,13 +84,24 @@ namespace oly::app {
       : EngineContext(engine, world) {}
 
    public:
+    // Com estado ativo a entidade nasce com escopo (some na troca de estado) até receber persist.
     ecs::Entity spawn() {
+      if (spawnsScoped()) {
+        return world_->spawn(detail::StateScoped{});
+      }
+
       return world_->spawn();
     }
     template <class... Ts>
     ecs::Entity spawn(Ts&&... components) {
+      if (spawnsScoped()) {
+        return world_->spawn(std::forward<Ts>(components)..., detail::StateScoped{});
+      }
+
       return world_->spawn(std::forward<Ts>(components)...);
     }
+    // Tira o escopo; a entidade precisa estar viva (OLY_ASSERT) e sem a tag não há efeito.
+    void persist(ecs::Entity entity);
     void destroy(ecs::Entity entity) {
       world_->destroy(entity);
     }

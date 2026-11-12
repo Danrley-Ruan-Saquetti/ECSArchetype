@@ -30,6 +30,19 @@ namespace oly::app {
     namedSystems().emplace_back(std::string(name), function);
   }
 
+  ecs::Entity SystemContext::spawn() {
+    const ecs::Entity entity = commands_->spawn();
+    if (spawnsScoped()) {
+      commands_->add(entity, detail::StateScoped{});
+    }
+
+    return entity;
+  }
+
+  void SystemContext::persist(ecs::Entity entity) {
+    commands_->remove<detail::StateScoped>(entity);
+  }
+
   float SystemContext::interpolation() const noexcept {
     return static_cast<float>(engine_->interpolation());
   }

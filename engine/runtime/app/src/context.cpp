@@ -7,6 +7,10 @@ namespace oly::app {
     return engine_->eventTypeOf(key);
   }
 
+  bool EngineContext::spawnsScoped() const noexcept {
+    return engine_->state() != NoState;
+  }
+
   float EngineContext::fixedDeltaTime() const noexcept {
     return static_cast<float>(engine_->fixedDeltaTime());
   }
@@ -45,5 +49,9 @@ namespace oly::app {
 
   Scheduler& EngineContext::schedule() const noexcept {
     return engine_->schedule();
+  }
+
+  void DirectContext::persist(ecs::Entity entity) {
+    world_->remove<detail::StateScoped>(entity);
   }
 }

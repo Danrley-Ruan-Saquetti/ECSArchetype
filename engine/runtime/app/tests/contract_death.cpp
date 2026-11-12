@@ -301,6 +301,21 @@ namespace {
     engine.frame(1.0 / 60);
   }
 
+  void persistFromTask(TaskContext& context) {
+    context.persist(context.payload<oly::ecs::Entity>());
+  }
+
+  void persistDeadEntity() {
+    oly::ecs::World world;
+    Engine engine(world);
+    const oly::ecs::Entity entity = world.spawn();
+    world.destroy(entity);
+    engine.schedule().after(0.0, persistFromTask, entity);
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
   void systemStateMaskUndeclared() {
     oly::ecs::World world;
     Engine engine(world);
@@ -344,6 +359,7 @@ int main(int argumentCount, char** arguments) {
     {"on_enter_during_frame", onEnterDuringFrame, {"onEnter", "durante frame"}},
     {"system_states_during_frame", systemStatesDuringFrame, {"setSystemStates", "durante frame"}},
     {"system_state_mask_undeclared", systemStateMaskUndeclared, {"setSystemStates", "não declarado"}},
+    {"persist_dead_entity", persistDeadEntity, {"remove", "StateScoped"}},
   };
 
   if (argumentCount != 2) {

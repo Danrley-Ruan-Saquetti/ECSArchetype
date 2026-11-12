@@ -1,6 +1,7 @@
 oly_add_test(MODULE app NAME loop SOURCES loop.cpp SUPPORT engine/runtime/ecs/tests/support)
 oly_add_test(MODULE app NAME task_queue SOURCES task_queue.cpp)
 oly_add_test(MODULE app NAME states SOURCES states.cpp SUPPORT engine/runtime/ecs/tests/support)
+oly_add_test(MODULE app NAME state_scope SOURCES state_scope.cpp SUPPORT engine/runtime/ecs/tests/support)
 oly_add_test(MODULE app NAME schedule SOURCES schedule.cpp SUPPORT engine/runtime/ecs/tests/support)
 oly_add_test(MODULE app NAME systems SOURCES systems.cpp SUPPORT engine/runtime/ecs/tests/support)
 oly_add_test(MODULE app NAME pause SOURCES pause.cpp SUPPORT engine/runtime/ecs/tests/support)
@@ -9,4 +10,4 @@ oly_add_test(MODULE app NAME events SOURCES events.cpp SUPPORT engine/runtime/ec
 oly_add_test(MODULE app NAME events_loop SOURCES events_loop.cpp SUPPORT engine/runtime/ecs/tests/support)
 oly_add_test(MODULE app NAME actions SOURCES actions.cpp SUPPORT engine/runtime/ecs/tests/support)
 
-oly_add_contract_death(MODULE app SOURCE contract_death.cpp CASES add_system_during_frame while_paused_render frame_time_backwards emit_undeclared_event on_undeclared_event declare_event_twice on_during_frame declare_event_during_frame event_round_limit events_wrong_type declare_action_during_frame schedule_negative_delay schedule_not_finite_delay every_zero_interval schedule_null_function task_payload_wrong_type cancel_slot_out_of_range declare_state_during_frame declare_state_twice too_many_states request_state_out_of_range on_enter_during_frame system_states_during_frame system_state_mask_undeclared)
+oly_add_contract_death(MODULE app SOURCE contract_death.cpp CASES add_system_during_frame while_paused_render frame_time_backwards emit_undeclared_event on_undeclared_event declare_event_twice on_during_frame declare_event_during_frame event_round_limit events_wrong_type declare_action_during_frame schedule_negative_delay schedule_not_finite_delay every_zero_interval schedule_null_function task_payload_wrong_type cancel_slot_out_of_range declare_state_during_frame declare_state_twice too_many_states request_state_out_of_range on_enter_during_frame system_states_during_frame system_state_mask_undeclared persist_dead_entity)

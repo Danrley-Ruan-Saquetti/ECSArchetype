@@ -11,7 +11,8 @@ namespace oly::app {
   // Tarefas no relógio do jogo (Engine::time()). Vencimento = time() + atraso: dentro de um passo, time() é o início
   // do passo; fora de frame (e na fase render), o início do próximo. Tarefas vencidas rodam no passo 2 do passo fixo,
   // só em passo não pausado, na ordem de vencimento e, no empate, de criação. Uma tarefa criada durante o passo 2
-  // só roda a partir do passo seguinte.
+  // só roda a partir do passo seguinte. Com um estado ativo a tarefa nasce com escopo: a troca de estado a cancela
+  // (com descarte) a menos que receba persist.
   class Scheduler {
    private:
     friend class Engine;
@@ -60,6 +61,10 @@ namespace oly::app {
     }
     bool isPending(TaskHandle task) const {
       return queue_.isPending(task);
+    }
+    // Tira o escopo de uma tarefa pendente; false se não está pendente.
+    bool persist(TaskHandle task) {
+      return queue_.persist(task);
     }
     uint32_t pendingCount() const noexcept {
       return queue_.pendingCount();

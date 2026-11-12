@@ -11,7 +11,7 @@ namespace oly::app {
     OLY_ASSERT(std::isfinite(intervalSeconds) && intervalSeconds >= 0.0, "schedule: intervalo=%f negativo ou não finito", intervalSeconds);
     OLY_ASSERT(function != nullptr, "schedule: função nula");
 
-    return queue_.push(engine_.time() + delaySeconds, intervalSeconds, function, discard, payload);
+    return queue_.push(engine_.time() + delaySeconds, intervalSeconds, function, discard, payload, engine_.state() != NoState);
   }
 
   void Scheduler::requirePositiveInterval([[maybe_unused]] double intervalSeconds) {
