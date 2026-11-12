@@ -44,6 +44,11 @@ namespace {
     queueToReenter->push(1.0, 0.0, taskC, countDiscard, {});
   }
 
+  void discardAndScheduleScoped(void*) {
+    ++discardCount;
+    queueToReenter->push(1.0, 0.0, taskC, countDiscard, {}, true);
+  }
+
   struct Fixture {
     TaskQueue queue;
 
@@ -55,6 +60,10 @@ namespace {
 
     TaskHandle push(double due, TaskFunction function, double interval = 0.0) {
       return queue.push(due, interval, function, countDiscard, {});
+    }
+
+    TaskHandle pushScoped(double due, TaskFunction function) {
+      return queue.push(due, 0.0, function, countDiscard, {}, true);
     }
   };
 }
@@ -243,4 +252,71 @@ TEST_CASE("payloadKey distingue tipos e TaskPayload::of copia os bytes") {
   CHECK(oly::app::payloadKey<Value>() != oly::app::payloadKey<Other>());
   CHECK(payload.key == oly::app::payloadKey<Value>());
   CHECK(reinterpret_cast<const Value*>(payload.bytes)->number == 42);
+}
+
+TEST_CASE("push sem escopo por padrão: cancelScoped não mexe") {
+  Fixture fixture;
+  const TaskHandle handle = fixture.push(1.0, taskA);
+
+  fixture.queue.cancelScoped();
+
+  CHECK(fixture.queue.isPending(handle));
+  CHECK(discardCount == 0);
+}
+
+TEST_CASE("cancelScoped cancela só as com escopo, com descarte uma vez") {
+  Fixture fixture;
+  fixture.pushScoped(1.0, taskA);
+  fixture.pushScoped(2.0, taskB);
+  const TaskHandle unscoped = fixture.push(3.0, taskC);
+
+  fixture.queue.cancelScoped();
+
+  CHECK(discardCount == 2);
+  CHECK(fixture.queue.pendingCount() == 1);
+  CHECK(fixture.queue.isPending(unscoped));
+}
+
+TEST_CASE("cancelScoped repete para tarefas com escopo agendadas por descartes") {
+  Fixture fixture;
+  queueToReenter = &fixture.queue;
+  fixture.queue.push(1.0, 0.0, taskA, discardAndScheduleScoped, {}, true);
+
+  fixture.queue.cancelScoped();
+
+  CHECK(discardCount == 2);
+  CHECK(fixture.queue.pendingCount() == 0);
+}
+
+TEST_CASE("persist tira o escopo") {
+  Fixture fixture;
+  const TaskHandle handle = fixture.pushScoped(1.0, taskA);
+
+  const bool persisted = fixture.queue.persist(handle);
+  fixture.queue.cancelScoped();
+
+  CHECK(persisted);
+  CHECK(fixture.queue.isPending(handle));
+  CHECK(discardCount == 0);
+}
+
+TEST_CASE("persist de tarefa não pendente ou de TaskHandle{} devolve false") {
+  Fixture fixture;
+  const TaskHandle canceled = fixture.pushScoped(1.0, taskA);
+  fixture.queue.cancel(canceled);
+
+  CHECK(!fixture.queue.persist(canceled));
+  CHECK(!fixture.queue.persist(TaskHandle{}));
+}
+
+TEST_CASE("cancelScoped não pega entradas antigas de um slot reusado sem escopo") {
+  Fixture fixture;
+  const TaskHandle scoped = fixture.pushScoped(1.0, taskA);
+  fixture.queue.cancel(scoped);
+  const TaskHandle unscoped = fixture.push(1.0, taskB);
+
+  fixture.queue.cancelScoped();
+
+  CHECK(unscoped.slot == scoped.slot);
+  CHECK(fixture.queue.isPending(unscoped));
 }

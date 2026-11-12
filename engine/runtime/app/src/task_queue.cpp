@@ -21,7 +21,7 @@ namespace oly::app::detail {
     discardAll();
   }
 
-  TaskHandle TaskQueue::push(double due, double interval, TaskFunction function, TaskDiscardFunction discard, const TaskPayload& payload) {
+  TaskHandle TaskQueue::push(double due, double interval, TaskFunction function, TaskDiscardFunction discard, const TaskPayload& payload, bool scoped) {
     uint32_t index;
     if (freeSlots_.empty()) {
       index = static_cast<uint32_t>(slots_.size());
@@ -39,6 +39,7 @@ namespace oly::app::detail {
     slot.periods = 0.0;
     slot.interval = interval;
     slot.live = true;
+    slot.scoped = scoped;
     ++pendingCount_;
 
     const HeapEntry entry{due, nextSequence_++, index, slot.generation};
@@ -70,6 +71,16 @@ namespace oly::app::detail {
 
   bool TaskQueue::isPending(TaskHandle task) const {
     return matches(task, "isPending");
+  }
+
+  bool TaskQueue::persist(TaskHandle task) {
+    if (!matches(task, "persist")) {
+      return false;
+    }
+
+    slots_[task.slot].scoped = false;
+
+    return true;
   }
 
   void TaskQueue::beginRun() noexcept {
@@ -129,6 +140,19 @@ namespace oly::app::detail {
 
     heap_.clear();
     deferred_.clear();
+  }
+
+  void TaskQueue::cancelScoped() {
+    bool canceledAny = true;
+    while (canceledAny) {
+      canceledAny = false;
+      for (uint32_t index = 0; index < slots_.size(); ++index) {
+        if (slots_[index].live && slots_[index].scoped) {
+          cancel(TaskHandle{index, slots_[index].generation});
+          canceledAny = true;
+        }
+      }
+    }
   }
 
   bool TaskQueue::matches(TaskHandle task, const char* operation) const {

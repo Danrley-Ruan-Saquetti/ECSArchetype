@@ -29,6 +29,7 @@ namespace oly::app::detail {
       double interval = 0.0;
       uint32_t generation = 0;
       bool live = false;
+      bool scoped = false;
     };
 
     struct HeapEntry {
@@ -55,11 +56,14 @@ namespace oly::app::detail {
     ~TaskQueue();
 
     // A fila não valida atraso nem função; isso é do Scheduler. interval 0 é tarefa de uma execução só.
-    TaskHandle push(double due, double interval, TaskFunction function, TaskDiscardFunction discard, const TaskPayload& payload);
+    // Tarefa com escopo é cancelada por cancelScoped (troca de estado) até receber persist.
+    TaskHandle push(double due, double interval, TaskFunction function, TaskDiscardFunction discard, const TaskPayload& payload, bool scoped = false);
     // Handle padrão e handle antigo (slot reusado) devolvem false. Slot fora do intervalo é erro de contrato.
     // O descarte roda com uma cópia do payload depois de liberar o slot, então pode mexer na fila.
     bool cancel(TaskHandle task);
     bool isPending(TaskHandle task) const;
+    // Tira o escopo de uma tarefa pendente; false para handle padrão ou não pendente.
+    bool persist(TaskHandle task);
     uint32_t pendingCount() const noexcept {
       return pendingCount_;
     }
@@ -73,6 +77,8 @@ namespace oly::app::detail {
 
     // Descarta cada tarefa pendente uma vez, inclusive as agendadas por descartes.
     void discardAll();
+    // Cancela, com descarte, cada tarefa com escopo, inclusive as com escopo agendadas por descartes.
+    void cancelScoped();
 
    private:
     bool matches(TaskHandle task, const char* operation) const;
