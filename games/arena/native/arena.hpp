@@ -39,7 +39,6 @@ namespace arena {
     return Direction{deltaX / length, deltaY / length};
   }
 
-  // A bala fora daqui é destruída pelo confine; o collide a ignora para ninguém destruir a mesma bala duas vezes no mesmo passo.
   inline bool isOutsideArena(float x, float y) {
     return x < 0.0f || x > ArenaWidth || y < 0.0f || y > ArenaHeight;
   }

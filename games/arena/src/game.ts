@@ -74,8 +74,10 @@ export function installGame(engine: Engine, options: GameOptions): ArenaScore {
   engine.addNativeSystem(Phase.Update, "fireWeapon").inState(playing);
   engine.addNativeSystem(Phase.Update, "chasePlayer").inState(playing);
   engine.addNativeSystem(Phase.Update, "integrate").inState(playing);
+  // Em update, não em updateAfter: os destroys das balas fora são aplicados no fim da fase, então o collide não vê
+  // bala fora da arena (que ele destruiria de novo) nem jogador além da parede.
+  engine.addNativeSystem(Phase.Update, "confine").inState(playing);
   engine.addNativeSystem(Phase.UpdateAfter, "collide").inState(playing);
-  engine.addNativeSystem(Phase.UpdateAfter, "confine").inState(playing);
 
   engine.addNativeHandler(EnemyDied, "dropCoin");
   engine.on(EnemyDied, "countKill", (_context, batch) => countKill(score, batch));

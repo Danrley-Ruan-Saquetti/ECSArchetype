@@ -338,7 +338,7 @@ test("roteiro: menu → playing → onda → morte → gameOver com o mundo vazi
   });
 });
 
-test("bala fora da arena que toca um inimigo só é destruída: não acerta e não duplica o destroy", () => {
+test("bala fora da arena é descartada antes da colisão: não acerta o inimigo na borda", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const enemy = spawnEnemy(arena, 0, 100);
@@ -348,6 +348,19 @@ test("bala fora da arena que toca um inimigo só é destruída: não acerta e n�
 
     assert.equal(arena.count(Bullet), 0);
     assert.equal(arena.engine.world.isAlive(enemy), true);
+  });
+});
+
+test("jogador além da parede volta para a arena antes da colisão: não pega a moeda de fora", () => {
+  withArena(runtime, (arena) => {
+    startPlaying(arena);
+    arena.engine.world.set(arena.player(), Position, { x: 1100, y: 270 });
+    const coin = arena.engine.world.spawn([Coin, Position, Collider], { Position: { x: 1100, y: 270 }, Collider: { radius: 8 } });
+
+    arena.step();
+
+    assert.equal(arena.engine.world.isAlive(coin), true);
+    assert.equal(arena.score.coins, 0);
   });
 });
 

@@ -904,8 +904,8 @@ games/arena/
 | update | C `fireWeapon` | playing | `shoot` segurado + recarga da arma → bala na direção de `aim` |
 | update | C `chasePlayer` | playing | inimigos apontam a velocidade para o jogador |
 | update | C `integrate` | playing | posição += velocidade × passo |
+| update | C `confine` | playing | prende o jogador na arena e destrói balas fora dela. **[decisão do design]** Fica em `update`, não em `updateAfter`: os destroys são aplicados no fim da fase, então o `collide` só vê balas dentro da arena e o jogador já preso. Bala que sai da arena não acerta nada, nem inimigo na borda, e só um sistema decide destruí-la por esse motivo (dois `destroy` da mesma entidade no mesmo `CommandBuffer` são erro de contrato, R-CB-4) |
 | updateAfter | C `collide` | playing | bala×inimigo: dano, bala destruída, `EnemyDied` com vida ≤ 0. Inimigo×jogador: sem `Invulnerable`, dano, tag e tarefa C++ que a tira depois de 1 s; vida ≤ 0 → `PlayerDied`. Jogador×moeda: `CoinCollected` |
-| updateAfter | C `confine` | playing | prende o jogador na arena e destrói balas fora dela |
 
 **Handlers** (passo 4), no fluxo de referência do §4.4:
 - `EnemyDied`: C `dropCoin` (chance de moeda em `x, y`) → T `countKill` (placar) → C `destroyDead` (por último,
