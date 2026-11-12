@@ -12,6 +12,9 @@ include(OlyGame)
 
 enable_testing()
 add_subdirectory(engine)
+if(OLY_BUILD_GAMES)
+  add_subdirectory(games)
+endif()
 
 # Manifesto de fronteiras para o oly.lint.boundaries: módulos e jogos com seus DEPENDS.
 function(oly_manifest_entries property outputVariable)
@@ -37,7 +40,7 @@ oly_manifest_entries(OLY_MODULES moduleEntries)
 oly_manifest_entries(OLY_GAMES gameEntries)
 file(WRITE ${CMAKE_BINARY_DIR}/oly_boundaries.json "{\"modules\": [${moduleEntries}], \"games\": [${gameEntries}]}\n")
 
-if(NOT EMSCRIPTEN)
+if(NOT EMSCRIPTEN OR OLY_BUILD_GAMES)
   find_package(Python3 COMPONENTS Interpreter QUIET)
   if(Python3_FOUND)
     add_test(NAME oly.lint.boundaries
