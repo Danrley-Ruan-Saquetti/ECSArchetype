@@ -76,6 +76,7 @@ Nada em `engine/runtime/ecs` conhece o `bridge`. Nomes de jogo só em `engine/te
 | adicionar / remover / ter | `add`, `remove`, `has` | `olyComponentAdd/Remove/Has` | `add`, `remove`, `has` |
 | ler (existe por contrato) / se existir | `get` -> `T&` / `tryGet` -> `T*` | `olyComponentGet` | `get` -> cópia |
 | query / iterar | `query<Ts...>`, `each`, `eachBlock` | `olyQueryCreate`, `olyQueryBegin/End` | `query`, `eachBlock` |
+| ler a única linha de uma query (exatamente uma / no máximo uma) | `Query::single()` -> `tuple<Entity, Ts&...>` / `trySingle()` -> `optional` | (`olyQueryBegin/End`) | `query.single()` / `trySingle()` -> `SingleRow` (cópia) |
 | passo de jogo (fixo) / aba oculta | `Engine::frame(nowSeconds)`, `setHidden` | `olyEngineFrame`, `olyEngineSetHidden` | `Engine.frame`, `setHidden` |
 | pausar / retomar | `Engine::pause`, `resume`, `paused`; `SystemContext::pause/resume` | `olyEnginePause/Resume/IsPaused` | `pause`, `resume`, `paused` |
 | registrar sistema | `Engine::addSystem(phase, name, função)`, `OLY_SYSTEM(name)` (por nome) | `olyEngineAddNativeSystem` (por nome), `olyEngineAddScriptSystem` | `addSystem`, `addNativeSystem` |

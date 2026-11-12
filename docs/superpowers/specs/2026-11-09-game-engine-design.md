@@ -934,7 +934,7 @@ números do jogo (velocidades, raios, intervalos, vida 3) são valores iniciais 
   de contrato (`OLY_ASSERT`, com caso em `contract_death`). `trySingle()` devolve vazio quando não há linha, porque
   entre `gameOver` e o próximo `playing` o jogador não existe; mais de uma linha continua erro.
 - TS: `query.single()` e `query.trySingle()` com a mesma regra (`ContractError` antes do assert). Cruzam a fronteira
-  uma vez por chamada, como o `get`.
+  um número constante de vezes por chamada (`olyQueryBegin`/`End`), não por entidade.
 - O glossário do `CLAUDE.md` ganha a linha `single`.
 
 **Regra para faltas descobertas durante a fase**

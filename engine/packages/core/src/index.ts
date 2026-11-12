@@ -10,7 +10,7 @@ export { ContractError, SchemaMismatchError } from "./errors.js";
 export type { ComponentLayout, FieldLayout, ScalarType } from "./layout.js";
 export type { OlyModuleFactory } from "./module.js";
 export type { RawField, ReadField, ReadView, WriteField, WriteView } from "./fields.js";
-export { Block, Query } from "./query.js";
+export { Block, Query, SingleRow } from "./query.js";
 export type { QuerySpec } from "./query.js";
 export { loadRuntime, Runtime } from "./runtime.js";
 export { action, component, defineSchema, event, state, tag } from "./schema.js";

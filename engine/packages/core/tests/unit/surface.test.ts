@@ -56,8 +56,8 @@ test("World expõe só a API do glossário", () => {
   ]);
 });
 
-test("Query expõe só eachBlock", () => {
-  assert.deepEqual(memberNames("Query"), ["eachBlock"]);
+test("Query expõe só eachBlock, single e trySingle", () => {
+  assert.deepEqual(memberNames("Query"), ["eachBlock", "single", "trySingle"]);
 });
 
 test("Block expõe só count, entity, read, write", () => {
@@ -228,4 +228,8 @@ test("EventBatch expõe só type, count e read", () => {
 
 test("ContractError tem name ContractError", () => {
   assert.equal(new ContractError("x").name, "ContractError");
+});
+
+test("SingleRow expõe só entity e get", () => {
+  assert.deepEqual(memberNames("SingleRow"), ["entity", "get"]);
 });

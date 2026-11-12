@@ -36,6 +36,7 @@ Scheduler
 Schema
 SchemaMismatchError
 SchemaType
+SingleRow
 SpawnValues
 State
 StateContext

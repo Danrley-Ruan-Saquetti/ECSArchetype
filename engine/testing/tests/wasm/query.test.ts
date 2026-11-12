@@ -295,3 +295,78 @@ test("checkInvariants sincroniza o heap da Bridge depois de chamar o C++", () =>
     pointers.forEach((pointer) => moduleOf(runtime)._free(pointer));
   });
 });
+
+test("single devolve a entidade e cópias dos componentes da única linha", () => {
+  withWorld((world) => {
+    const player = world.spawn([Position, Velocity, Player], { Position: { x: 1, y: 2 }, Velocity: { x: 3, y: 4 } });
+    world.spawn([Position, Enemy]);
+
+    const row = world.query({ read: [Velocity], write: [Position], with: [Player] }).single();
+    const copy = row.get(Position);
+    (copy as { x: number }).x = 99;
+
+    assert.equal(row.entity, player);
+    assert.deepEqual(row.get(Position), { x: 99, y: 2 });
+    assert.deepEqual(row.get(Velocity), { x: 3, y: 4 });
+    assert.deepEqual(world.get(player, Position), { x: 1, y: 2 });
+  });
+});
+
+test("single escolhe pela spec entre várias entidades", () => {
+  withWorld((world) => {
+    world.spawn([Position, Enemy]);
+    world.spawn([Position, Enemy]);
+    const player = world.spawn([Position, Player]);
+    world.spawn([Position, Velocity]);
+    world.spawn([Position, Velocity]);
+
+    assert.equal(world.query({ read: [Position], with: [Player] }).single().entity, player);
+    assert.equal(world.query({ read: [Position], with: [Player], without: [Enemy] }).trySingle()?.entity, player);
+  });
+});
+
+test("trySingle devolve null sem linhas e a linha com uma", () => {
+  withWorld((world) => {
+    const query = world.query({ read: [Position], with: [Player] });
+    assert.equal(query.trySingle(), null);
+
+    const player = world.spawn([Position, Player], { Position: { x: 5, y: 6 } });
+    const row = query.trySingle();
+
+    assert.equal(row?.entity, player);
+    assert.deepEqual(row?.get(Position), { x: 5, y: 6 });
+  });
+});
+
+test("single dentro do eachBlock de outra query", () => {
+  withWorld((world) => {
+    const player = world.spawn([Position, Player], { Position: { x: 7, y: 8 } });
+    world.spawn([Velocity]);
+    const seen: number[] = [];
+
+    world.query({ read: [Velocity] }).eachBlock(() => {
+      seen.push(world.query({ read: [Position], with: [Player] }).single().get(Position).x);
+    });
+
+    assert.deepEqual(seen, [7]);
+    assert.equal(world.isAlive(player), true);
+    assert.equal(world.checkInvariants(), null);
+  });
+});
+
+test("erros de single, trySingle e SingleRow.get", () => {
+  withWorld((world) => {
+    const query = world.query({ read: [Position] });
+    assert.throws(() => query.single(), new ContractError("single: query com 0 linhas; esperava 1"));
+
+    world.spawn([Position]);
+    world.spawn([Position]);
+    assert.throws(() => query.single(), /single: query com 2 linhas/);
+    assert.throws(() => query.trySingle(), /trySingle: query com 2 linhas; esperava 0 ou 1/);
+    assert.equal(world.checkInvariants(), null);
+
+    const only = world.query({ read: [Position], with: [Enemy] });
+    world.spawn([Position, Enemy]);
+    assert.throws(() => only.single().get(Velocity), /get type=Velocity: tipo não está na query/);
+  });
+});

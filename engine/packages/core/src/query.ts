@@ -1,8 +1,8 @@
-import type { Bridge } from "./bridge.js";
 import { packEntity, type Entity } from "./entity.js";
 import { ContractError } from "./errors.js";
+import { readScalar, type Bridge } from "./bridge.js";
 import { makeView, type ReadView, type WriteView } from "./fields.js";
-import type { ComponentType, Fields, SchemaType } from "./schema.js";
+import type { ComponentType, Fields, SchemaType, ValueOf } from "./schema.js";
 import { assertWorldUsable, enterIteration, leaveIteration, type World } from "./world.js";
 
 export interface QuerySpec {
@@ -105,6 +105,37 @@ export class Block {
   }
 }
 
+
+let makeSingleRow!: (entity: Entity, values: ReadonlyMap<ComponentType, unknown>) => SingleRow;
+
+/**
+ * A única linha de uma query: a entidade e uma cópia dos componentes de `read` e `write`, feita no momento
+ * da consulta. Mudar a cópia não muda o World (use `world.set`).
+ */
+export class SingleRow {
+  readonly entity: Entity;
+
+  readonly #values: ReadonlyMap<ComponentType, unknown>;
+
+  static {
+    makeSingleRow = (entity, values) => new SingleRow(entity, values);
+  }
+
+  private constructor(entity: Entity, values: ReadonlyMap<ComponentType, unknown>) {
+    this.entity = entity;
+    this.#values = values;
+  }
+
+  get<F extends Fields>(type: ComponentType<string, F>): ValueOf<F> {
+    const value = this.#values.get(type);
+    if (value === undefined) {
+      throw new ContractError(`get type=${type.name}: tipo não está na query`);
+    }
+
+    return value as ValueOf<F>;
+  }
+}
+
 export class Query {
   readonly #world: World;
   readonly #bridge: Bridge;
@@ -152,5 +183,67 @@ export class Query {
       leaveIteration(this.#world);
       this.#bridge.queryEnd(this.#world.handle, iteration);
     }
+  }
+
+  /** Exatamente uma linha entre todas as tabelas casadas; senão ContractError. Cruza a fronteira duas vezes (Begin/End). */
+  single(): SingleRow {
+    return this.#readSingle("single", true)!;
+  }
+
+  /** `null` sem linhas; mais de uma é ContractError. */
+  trySingle(): SingleRow | null {
+    return this.#readSingle("trySingle", false);
+  }
+
+  #readSingle(operation: string, required: boolean): SingleRow | null {
+    assertWorldUsable(this.#world, operation);
+
+    const { iteration, blockCount, descriptors } = this.#bridge.queryBegin(this.#world.handle, this.#handle);
+    const stride = DescriptorHeaderLength + this.#components.length;
+    const start = descriptors >> 2;
+    let rowCount = 0;
+    let row: SingleRow | null = null;
+    try {
+      const words = this.#bridge.heap.u32;
+      let firstBlockOffset = -1;
+      for (let index = 0; index < blockCount; ++index) {
+        const count = words[start + index * stride]!;
+        if (count > 0 && firstBlockOffset < 0) {
+          firstBlockOffset = start + index * stride;
+        }
+
+        rowCount += count;
+      }
+
+      if (rowCount === 1) {
+        row = this.#copyFirstRow(firstBlockOffset);
+      }
+    } finally {
+      this.#bridge.queryEnd(this.#world.handle, iteration);
+    }
+
+    if (rowCount > 1 || (rowCount === 0 && required)) {
+      const expected = required ? "1" : "0 ou 1";
+      throw new ContractError(`${operation}: query com ${rowCount} linhas; esperava ${expected}`);
+    }
+
+    return row;
+  }
+
+  #copyFirstRow(blockOffset: number): SingleRow {
+    const heap = this.#bridge.heap;
+    const entityPosition = heap.u32[blockOffset + 1]! >> 2;
+    const values = new Map<ComponentType, unknown>();
+    this.#components.forEach((type, position) => {
+      const columnAddress = heap.u32[blockOffset + DescriptorHeaderLength + position]!;
+      const value: Record<string, number> = {};
+      for (const field of type.layout.fields) {
+        value[field.name] = readScalar(heap, field.type, columnAddress + field.offset);
+      }
+
+      values.set(type, value);
+    });
+
+    return makeSingleRow(packEntity(heap.u32[entityPosition]!, heap.u32[entityPosition + 1]!), values);
   }
 }
