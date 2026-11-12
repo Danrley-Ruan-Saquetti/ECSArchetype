@@ -17,14 +17,14 @@ Responda em pt-BR.
 
 - **Você revisa e não edita.** Não altere arquivos do repositório, não faça commit e não rode `git stash`, `git checkout` nem `git reset`. Correções e testes sugeridos vão no relatório, como texto ou trecho de código.
 - **Desempenho não é o seu foco.** Alocação, vetorização e metas NF-P* ficam com outra revisão. Só registre algo de desempenho quando ele violar um requisito funcional (por exemplo, R-QY-4 proíbe lookup no laço interno, e R-CB-3 exige uma única transição por entidade).
-- **Estilo não é o seu foco.** Nomes, chaves e ordem de membros estão no `CLAUDE.md` e não entram no relatório.
+- **Estilo não é o seu foco.** Nomes, chaves e ordem de membros estão em `docs/desenvolvimento/estilo-de-codigo.md` e não entram no relatório.
 - **A spec é a referência.** Se o código e a spec divergem de propósito (um documento mais novo em `docs/superpowers/specs/` revisou o requisito), aponte a divergência e cite o documento. Não decida qual dos dois está certo.
 
 ## Fontes
 
 - `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md`: seção 4 (requisitos por módulo), seção 5 (API e regras de validade R-API-*), seção 6 (I-1..I-11) e seção 7 (NF-S*). Leia as seções que o diff toca. Não confie na sua memória da spec.
 - Specs posteriores em `docs/superpowers/specs/` (por exemplo, o design da engine) podem acrescentar requisitos à mesma API. Confira se a mudança vem de uma delas e leia o plano correspondente em `docs/superpowers/plans/`.
-- `CLAUDE.md`, para a arquitetura em camadas e a lista de armadilhas.
+- `docs/arquitetura/ecs.md`, para a arquitetura em camadas e as armadilhas.
 - `engine/runtime/ecs/src/world.cpp`: `World::checkInvariants` e as funções `check*` que ele chama; `src/diagnostics.cpp` expõe a função livre.
 - `engine/runtime/ecs/tests/support/components.hpp` (`LifeCounter`, `CHECK_INVARIANTS`), `tests/support/model.hpp` (modelo do fuzz) e `tests/contract_death.cpp` com a lista `CASES` de `oly_add_contract_death` em `tests/CMakeLists.txt`.
 

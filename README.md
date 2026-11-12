@@ -123,14 +123,13 @@ docker compose run --rm dev ./build/release/bench/ecs_bench_iterate
 
 Os resultados registrados e a situação de cada meta estão em [`docs/benchmarks/README.md`](docs/benchmarks/README.md).
 
-## Estrutura do repositório
+## Documentação
 
-```
-engine/runtime/   módulos C++ (core, ecs, bridge)
-engine/packages/  pacotes TypeScript (@oly/core, @oly/client)
-engine/tools/     @oly/codegen
-engine/testing/   fixture, testes de integração WASM e benchmark da fronteira
-cmake/            funções de build (oly_add_module, oly_add_game, ...)
-tools/            scripts de benchmark e de lint
-docs/benchmarks/  resultados de benchmark
-```
+| Onde | O que tem |
+|---|---|
+| [`docs/arquitetura/`](docs/arquitetura/README.md) | arquitetura: visão geral, módulos e fronteiras, ECS, `Engine`, ponte, pacotes TS, jogos, decisões e limites |
+| [`docs/arquitetura/repositorio.md`](docs/arquitetura/repositorio.md) | estrutura do repositório |
+| [`docs/desenvolvimento/comandos.md`](docs/desenvolvimento/comandos.md) | todos os comandos de build, testes, benchmarks e jogos |
+| [`docs/desenvolvimento/estilo-de-codigo.md`](docs/desenvolvimento/estilo-de-codigo.md) | estilo de código |
+| [`docs/benchmarks/`](docs/benchmarks/README.md) | resultados de benchmark |
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | specs (fonte da verdade dos requisitos) |

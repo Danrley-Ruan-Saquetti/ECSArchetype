@@ -16,7 +16,7 @@ Responda em pt-BR.
 
 ## Contexto do projeto que você precisa ter em mente
 
-Leia `CLAUDE.md` na raiz para a arquitetura em camadas (`type_info → entity → table → archetype → query / command_buffer → world`). A spec é `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md`; a seção 7 traz as metas:
+Leia `docs/arquitetura/ecs.md` para a arquitetura em camadas (`component → entity → table → archetype → query / command_buffer → world`). A spec é `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md`; a seção 7 traz as metas:
 
 | Meta | O que exige | Como se confirma |
 |---|---|---|
