@@ -1,6 +1,7 @@
 ---
 name: comentarios-de-codigo
-description: Filosofia e critérios para decidir quando escrever, manter, converter ou apagar comentários em código, docstrings, documentação de API e arquivos de configuração. Use sempre que for escrever ou editar código em qualquer linguagem, revisar um diff ou PR, refatorar, "limpar" um arquivo, documentar uma função ou API pública, ou mexer em configs (TOML, YAML, .env, JSON) — mesmo que o usuário não fale em "comentários". Use também quando o usuário pedir para comentar código, remover comentários, adicionar docstrings/JSDoc/Doxygen, ou perguntar se um comentário deve existir.
+description: 'Carregue ANTES da primeira linha de código de qualquer tarefa que escreva, altere, planeje ou revise código, de qualquer tamanho: uma linha, um rename, um literal virando constante, um bugfix, um teste, um script, uma migração, uma feature inteira. Vale igualmente para elaborar plano, spec ou design de implementação (mesmo antes de existir código), executar task de plano, refatorar, responder com trecho de código, revisar diff ou PR e delegar código a subagente. Toda edição decide comentários mesmo sem ninguém pedir: escreve um novo, deixa um antigo virar mentira ou copia o eco do plano. Traz os critérios de que comentário entra, fica, vira código (nome, tipo, constante) ou sai, em código, docstrings, API pública e configs. Soma às skills de linguagem, projeto ou fluxo (brainstorm, plano, implementação, revisão); ter carregado uma delas não dispensa esta. Use também para comentar, documentar ou limpar comentários. Dispensável só quando nenhuma linha de código é escrita, planejada ou revisada.'
+
 ---
 
 # Comentários em código
@@ -15,6 +16,14 @@ Por isso todo comentário é uma de duas coisas:
 Confundir os dois produz tanto código poluído quanto código mudo. O objetivo não é "poucos comentários" nem "muitos": é zero comentários do tipo 1 e todos os do tipo 2.
 
 Para a argumentação completa (assimetria de verificação, respostas a objeções), leia `references/filosofia-completa.md` quando precisar justificar uma decisão ao usuário ou resolver um caso que esta página não cobre.
+
+## Fronteira
+
+**Território** — decide se um comentário deve existir, ser convertido em código ou ser apagado, e o que a documentação de API pública e os arquivos de configuração precisam registrar.
+
+**Fora da fronteira** — como o código é formatado e espaçado, o formato das mensagens de commit, como os comandos são executados no repositório, e o conteúdo técnico das decisões que o comentário registra (isso vem do usuário ou da medição).
+
+**Contrato de borda** — recebo código, diff, plano ou config em qualquer linguagem; entrego o mesmo material com os comentários decididos, ou critérios em texto curto para quem vai escrever o código.
 
 ## O teste de decisão
 
@@ -151,6 +160,20 @@ JSON estrito não aceita comentários: a razão vai para o schema (`description`
 Ao apontar um problema, proponha a forma internalizada concreta (o novo nome, a constante, o tipo), não só "remova este comentário".
 
 **Quando o usuário pede "comente este código".** Não adicione paráfrases linha a linha — isso produz exatamente o ruído descrito acima. Aplique o teste de decisão: melhore nomes onde o código não se explica, comente razões, medições, restrições e invariantes, e documente a API pública. Se o pedido for claramente didático (o usuário quer entender o código, não mantê-lo), explique na resposta da conversa em vez de poluir o arquivo — ou pergunte qual dos dois ele quer.
+
+## Planos, specs e tarefas delegadas
+
+O código que aparece num plano ou numa spec é código de verdade: quem executa o plano costuma copiar o bloco literalmente. Um comentário-eco no plano vira comentário-eco no arquivo. E quem executa uma tarefa delegada trabalha em contexto isolado: ele não leu esta skill, então só segue o que estiver escrito na tarefa.
+
+**Redigindo o plano.**
+- Aplique o teste de decisão a cada bloco de código. Os nomes, tipos e constantes do bloco já saem na forma final.
+- Mantenha os passos ("Passo 1", "agora crie X") na prosa, fora do bloco. Dentro do bloco só entra o que ficaria no arquivo.
+- Quando o plano escolhe algo não óbvio (algoritmo, estrutura, layout, constante), escreva a razão na tarefa, junto do bloco. Assim o implementador a registra no código em vez de perdê-la.
+- Se o plano pede uma documentação de API pública, diga o que ela precisa cobrir (erros, efeitos colaterais, pré-condições).
+
+**Delegando a escrita de código.** Inclua este critério no texto da tarefa, em poucas linhas: comentário só para razão, medição, restrição externa ou invariante não local; o que o código consegue dizer vai para nome, tipo ou constante; sem narração da edição, sem passo a passo, sem placeholders; comentário tocado pela mudança continua verdadeiro. Sem isso, o agente que recebe a tarefa usa o próprio padrão, que tende ao eco.
+
+**Executando uma tarefa do plano.** O plano manda no comportamento, não no estilo dos comentários. Se o bloco do plano traz um comentário-eco ou de tutorial, não copie; aplique o teste de decisão.
 
 ## Exemplo de conversão
 
