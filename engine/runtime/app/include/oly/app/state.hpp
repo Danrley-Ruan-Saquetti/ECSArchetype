@@ -24,7 +24,7 @@ namespace oly::app {
   };
 }
 
-#define OLY_STATE_HOOK(name)                                                                 \
-  void name(oly::app::StateContext& context);                                                \
-  static const oly::app::NamedStateHookRegistration name##Registration(#name, &name);        \
+#define OLY_STATE_HOOK(name)                                                          \
+  void name(oly::app::StateContext& context);                                         \
+  static const oly::app::NamedStateHookRegistration name##Registration(#name, &name); \
   void name([[maybe_unused]] oly::app::StateContext& context)

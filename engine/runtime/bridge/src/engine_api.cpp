@@ -276,19 +276,19 @@ void olyEngineSetHandlerStates(OlyEngine* engine, uint32_t handlerId, uint32_t s
 }
 
 uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name) {
-  const uint32_t checkedWhen = oly::bridge::checkedWhen(when, "olyEngineAddNativeStateHook");
+  const uint32_t hookWhen = oly::bridge::checkedWhen(when, "olyEngineAddNativeStateHook");
   const oly::app::StateHookFunction function = oly::app::findNamedStateHook(name);
   if (function == nullptr) {
     return OLY_INVALID_STATE_HOOK;
   }
 
-  return checkedWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, function) : engine->engine.onExit(state, name, function);
+  return hookWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, function) : engine->engine.onExit(state, name, function);
 }
 
 uint32_t olyEngineAddScriptStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name) {
-  const uint32_t checkedWhen = oly::bridge::checkedWhen(when, "olyEngineAddScriptStateHook");
+  const uint32_t hookWhen = oly::bridge::checkedWhen(when, "olyEngineAddScriptStateHook");
 
-  return checkedWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, &oly::bridge::runScriptStateHook, engine) : engine->engine.onExit(state, name, &oly::bridge::runScriptStateHook, engine);
+  return hookWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, &oly::bridge::runScriptStateHook, engine) : engine->engine.onExit(state, name, &oly::bridge::runScriptStateHook, engine);
 }
 
 void olyEngineBindButton(OlyEngine* engine, uint32_t action, uint32_t button) {

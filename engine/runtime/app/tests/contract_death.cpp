@@ -326,6 +326,22 @@ namespace {
     engine.setSystemStateMask(system, 0b100);
   }
 
+  void systemStatesUnknownSystem() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareState("a");
+
+    engine.setSystemStateMask(7, 0b1);
+  }
+
+  void handlerStatesUnknownHandler() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareState("a");
+
+    engine.setHandlerStateMask(7, 0b1);
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -359,6 +375,8 @@ int main(int argumentCount, char** arguments) {
     {"on_enter_during_frame", onEnterDuringFrame, {"onEnter", "durante frame"}},
     {"system_states_during_frame", systemStatesDuringFrame, {"setSystemStates", "durante frame"}},
     {"system_state_mask_undeclared", systemStateMaskUndeclared, {"setSystemStates", "não declarado"}},
+    {"system_states_unknown_system", systemStatesUnknownSystem, {"setSystemStates", "fora do intervalo"}},
+    {"handler_states_unknown_handler", handlerStatesUnknownHandler, {"setHandlerStates", "fora do intervalo"}},
     {"persist_dead_entity", persistDeadEntity, {"remove", "StateScoped"}},
   };
 

@@ -402,3 +402,30 @@ TEST_CASE("OLY_STATE_HOOK registra por nome") {
   CHECK(oly::app::findNamedStateHook("namedEnter") == &namedEnter);
   CHECK(oly::app::findNamedStateHook("nenhum") == nullptr);
 }
+
+TEST_CASE("inState com o estado de índice 31 usa o bit mais alto da máscara") {
+  oly::ecs::World world;
+  Engine engine(world);
+  Probe probe;
+  StateId last = NoState;
+  for (uint32_t index = 0; index < oly::app::MaxStates; ++index) {
+    last = engine.declareState("state" + std::to_string(index));
+  }
+  const auto system = engine.addSystem(Phase::Update, "lastOnly", recordName, &probe.log);
+  engine.setSystemStates(system, {last});
+  engine.frame(0.0);
+
+  engine.requestState(0);
+  engine.frame(1.0 / 60);
+  engine.frame(2.0 / 60);
+
+  CHECK(probe.log.count("lastOnly") == 0);
+
+  engine.requestState(last);
+  engine.frame(3.0 / 60);
+  engine.frame(4.0 / 60);
+
+  CHECK(last == 31);
+  CHECK(probe.log.count("lastOnly") == 1);
+  CHECK_INVARIANTS(world);
+}

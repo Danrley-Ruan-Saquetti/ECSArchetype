@@ -297,6 +297,42 @@ namespace {
       olyEngineFrame(engine, now);
     }
   };
+
+  constexpr uint32_t MenuState = 0;
+  constexpr uint32_t PlayingState = 1;
+
+  uint32_t countKind(uint32_t kind) {
+    uint32_t count = 0;
+    for (const uint32_t recorded : g_kinds) {
+      count += recorded == kind ? 1 : 0;
+    }
+
+    return count;
+  }
+
+  void spawnWithScopeOnce(OlyEngine* engine, uint32_t) {
+    if (olyEngineState(engine) != MenuState || g_actionCalls > 0) {
+      return;
+    }
+
+    ++g_actionCalls;
+    olyDirectSpawn(engine, &g_created);
+  }
+
+  void spawnAndPersistOnce(OlyEngine* engine, uint32_t) {
+    if (olyEngineState(engine) != MenuState || g_actionCalls > 0) {
+      return;
+    }
+
+    ++g_actionCalls;
+    if (g_actionKind == OLY_SCRIPT_SYSTEM) {
+      olySystemSpawn(engine, &g_created);
+      olyContextPersist(engine, g_created.index, g_created.generation);
+    } else {
+      olyDirectSpawn(engine, &g_createdByHandler);
+      olyContextPersist(engine, g_createdByHandler.index, g_createdByHandler.generation);
+    }
+  }
 }
 
 OLY_SYSTEM(bridgeTestReadJump) {
@@ -444,44 +480,6 @@ TEST_CASE("tarefas de script e nativas na ordem de vencimento") {
 
 OLY_STATE_HOOK(bridgeNamedEnter) {
   g_order.push_back("ne");
-}
-
-namespace {
-  constexpr uint32_t MenuState = 0;
-  constexpr uint32_t PlayingState = 1;
-
-  uint32_t countKind(uint32_t kind) {
-    uint32_t count = 0;
-    for (const uint32_t recorded : g_kinds) {
-      count += recorded == kind ? 1 : 0;
-    }
-
-    return count;
-  }
-
-  void spawnWithScopeOnce(OlyEngine* engine, uint32_t) {
-    if (olyEngineState(engine) != MenuState || g_actionCalls > 0) {
-      return;
-    }
-
-    ++g_actionCalls;
-    olyDirectSpawn(engine, &g_created);
-  }
-
-  void spawnAndPersistOnce(OlyEngine* engine, uint32_t) {
-    if (olyEngineState(engine) != MenuState || g_actionCalls > 0) {
-      return;
-    }
-
-    ++g_actionCalls;
-    if (g_actionKind == OLY_SCRIPT_SYSTEM) {
-      olySystemSpawn(engine, &g_created);
-      olyContextPersist(engine, g_created.index, g_created.generation);
-    } else {
-      olyDirectSpawn(engine, &g_createdByHandler);
-      olyContextPersist(engine, g_createdByHandler.index, g_createdByHandler.generation);
-    }
-  }
 }
 
 TEST_CASE("olyEngineState começa em OLY_NO_STATE e muda no passo 5") {

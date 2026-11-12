@@ -77,7 +77,7 @@ namespace oly::app {
     Scheduler& schedule() const noexcept;
   };
 
-  // Mudanças estruturais diretas no World, para quem roda fora de qualquer iteração (handlers e tarefas).
+  // Mudanças estruturais diretas no World, para quem roda fora de qualquer iteração (handlers, tarefas e ganchos de estado).
   class DirectContext : public EngineContext {
    protected:
     DirectContext(Engine& engine, ecs::World& world) noexcept

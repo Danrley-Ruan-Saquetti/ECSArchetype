@@ -139,9 +139,10 @@ export class Engine {
   /**
    * Avança o relógio de passo fixo até `nowSeconds` e roda as fases. Lança ContractError se chamado de dentro
    * de um sistema ou com tempo não finito ou menor que o do frame anterior. Durante o frame, mudanças
-   * estruturais diretas no `world` são erro; use as do SystemContext. Exceção de um sistema ou handler TS sobe
-   * daqui; até o frame seguinte, registrar sistema ou handler é ContractError, e esse frame descarta os comandos e
-   * os eventos pendentes.
+   * estruturais diretas no `world` são erro; use as do SystemContext. Exceção de um sistema, handler, tarefa ou
+   * gancho de estado TS sobe daqui; até o frame seguinte, registrar sistema, handler ou gancho e chamar `inState` é
+   * ContractError, e esse frame descarta os comandos, os eventos e o pedido de estado pendentes (um `requestState`
+   * feito nesse intervalo também se perde).
    */
   frame(nowSeconds: number): void {
     this.#assertUsable("frame");

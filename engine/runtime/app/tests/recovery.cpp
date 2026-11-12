@@ -184,7 +184,6 @@ TEST_CASE("exceção num handler descarta os eventos pendentes no frame seguinte
   CHECK_INVARIANTS(world);
 }
 
-
 TEST_CASE("a recuperação descarta o pedido pendente") {
   oly::ecs::World world;
   Engine engine(world);

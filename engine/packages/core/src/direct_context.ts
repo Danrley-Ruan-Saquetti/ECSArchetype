@@ -9,8 +9,9 @@ import type { ComponentType, Fields, SchemaType, ValueOf } from "./schema.js";
 import { spawnWith, type SpawnValues, type World } from "./world.js";
 
 /**
- * Base do HandlerContext e do TaskContext: mudanças estruturais diretas (delegam ao World). Rodam fora de qualquer
- * iteração, então a entidade citada num evento ou numa tarefa pode já ter morrido (confira com isAlive).
+ * Base do HandlerContext, do TaskContext e do StateContext: mudanças estruturais diretas. `spawn` passa pela engine
+ * (a entidade ganha o escopo do estado ativo) e o resto delega ao World. Rodam fora de qualquer iteração, então a
+ * entidade citada num evento ou numa tarefa pode já ter morrido (confira com isAlive).
  */
 export class DirectContext extends EngineContext {
   readonly #world: World;

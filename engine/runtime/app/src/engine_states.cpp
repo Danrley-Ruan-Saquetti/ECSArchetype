@@ -1,6 +1,5 @@
-#include "oly/app/engine.hpp"
-
 #include "oly/app/detail/state_scoped.hpp"
+#include "oly/app/engine.hpp"
 #include "oly/app/state_context.hpp"
 #include "oly/core/assert.hpp"
 
@@ -38,6 +37,7 @@ namespace oly::app {
 
   void Engine::setSystemStateMask(SystemId system, StateMask mask) {
     OLY_ASSERT(!inFrame_, "setSystemStates: restrição de estados durante frame");
+    OLY_ASSERT(system < systemLocations_.size(), "setSystemStates: system=%u fora do intervalo (%zu sistemas)", system, systemLocations_.size());
     checkStateMask("setSystemStates", mask);
 
     const auto [phase, position] = systemLocations_[system];
@@ -50,6 +50,7 @@ namespace oly::app {
 
   void Engine::setHandlerStateMask(HandlerId handler, StateMask mask) {
     OLY_ASSERT(!inFrame_, "setHandlerStates: restrição de estados durante frame");
+    OLY_ASSERT(handler < handlerLocations_.size(), "setHandlerStates: handler=%u fora do intervalo (%zu handlers)", handler, handlerLocations_.size());
     checkStateMask("setHandlerStates", mask);
 
     const auto [type, position] = handlerLocations_[handler];
