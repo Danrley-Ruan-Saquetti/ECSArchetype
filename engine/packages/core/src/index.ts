@@ -34,6 +34,8 @@ export { HandlerContext } from "./handler_context.js";
 export type { HandlerFunction } from "./handler_context.js";
 export { Scheduler } from "./scheduler.js";
 export type { TaskFunction, TaskHandle } from "./scheduler.js";
+export { StateContext } from "./state_context.js";
+export type { StateHookFunction } from "./state_context.js";
 export { SystemContext } from "./system_context.js";
 export { TaskContext } from "./task_context.js";
 export type { SystemFunction } from "./system_context.js";

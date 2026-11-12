@@ -53,6 +53,13 @@ export class SystemContext extends EngineContext {
     return entity;
   }
 
+  /** Adiado até o fim da fase, como o remove: tira o escopo de estado da entidade, que sobrevive à troca. */
+  persist(entity: Entity): void {
+    assertContextActive(this, "persist");
+
+    this.#bridge.contextPersist(this.#engineHandle, entity);
+  }
+
   destroy(entity: Entity): void {
     assertContextActive(this, "destroy");
 

@@ -16,7 +16,10 @@ interface WorldInternals {
   leaveIteration(world: World): void;
   setStructureLocked(world: World, locked: boolean): void;
   release(world: World): void;
+  spawnWith(world: World, types: readonly SchemaType[], values: SpawnValuesByName | undefined, create: () => Entity): Entity;
 }
+
+type SpawnValuesByName = Readonly<Record<string, Partial<Record<string, number>>>>;
 
 let worldInternals!: WorldInternals;
 
@@ -52,6 +55,7 @@ export class World {
       release: (world) => {
         world.#disposed = true;
       },
+      spawnWith: (world, types, values, create) => world.#spawnWith(types, values, create),
     };
   }
 
@@ -64,17 +68,7 @@ export class World {
   }
 
   spawn<const Ts extends readonly SchemaType[]>(types: Ts, values?: SpawnValues<Ts>): Entity {
-    this.#assertStructuralChangeAllowed("spawn");
-
-    const valuesByName = (values ?? {}) as Readonly<Record<string, Partial<Record<string, number>>>>;
-    assertSpawnArguments(this.#runtime, types, valuesByName);
-
-    const entity = this.#bridge.spawn(this.handle);
-    for (const type of types) {
-      this.#addToEntity(entity, type, valuesByName[type.name]);
-    }
-
-    return entity;
+    return this.#spawnWith(types, values as SpawnValuesByName | undefined, () => this.#bridge.spawn(this.handle));
   }
 
   destroy(entity: Entity): void {
@@ -232,6 +226,20 @@ export class World {
     }
   }
 
+  #spawnWith(types: readonly SchemaType[], values: SpawnValuesByName | undefined, create: () => Entity): Entity {
+    this.#assertStructuralChangeAllowed("spawn");
+
+    const valuesByName = values ?? {};
+    assertSpawnArguments(this.#runtime, types, valuesByName);
+
+    const entity = create();
+    for (const type of types) {
+      this.#addToEntity(entity, type, valuesByName[type.name]);
+    }
+
+    return entity;
+  }
+
   #assertStructuralChangeAllowed(operation: string, entity: Entity | null = null, type: SchemaType | null = null): void {
     this.#assertUsable(operation);
     if (this.#structureLocked) {
@@ -259,6 +267,12 @@ export function enterIteration(world: World): void {
 
 export function leaveIteration(world: World): void {
   worldInternals.leaveIteration(world);
+}
+
+// O que World.spawn faz, com a criação da entidade escolhida por quem chama (o contexto direto cria pelo núcleo,
+// que aplica o escopo do estado).
+export function spawnWith(world: World, types: readonly SchemaType[], values: SpawnValuesByName | undefined, create: () => Entity): Entity {
+  return worldInternals.spawnWith(world, types, values, create);
 }
 
 export function setStructureLocked(world: World, locked: boolean): void {

@@ -107,6 +107,14 @@ export class Scheduler {
     return this.#bridge.engineIsTaskPending(this.#engineHandle, ref.slot, ref.generation);
   }
 
+  /** Tira o escopo de estado de uma tarefa pendente (true); false se já terminou ou foi cancelada. */
+  persist(handle: TaskHandle): boolean {
+    this.#assertUsable("persist");
+    const ref = this.#refOf("persist", handle);
+
+    return this.#bridge.enginePersistTask(this.#engineHandle, ref.slot, ref.generation);
+  }
+
   #schedule(delaySeconds: number, intervalSeconds: number, callback: TaskFunction): TaskHandle {
     const scriptId = this.#nextScriptId++;
     const ref = this.#bridge.engineScheduleScriptTask(this.#engineHandle, delaySeconds, intervalSeconds, scriptId);

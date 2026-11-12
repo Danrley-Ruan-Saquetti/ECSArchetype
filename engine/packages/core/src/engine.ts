@@ -4,9 +4,11 @@ import { setContextActive } from "./context.js";
 import { ContractError } from "./errors.js";
 import { EventBatch, endBatch } from "./event_batch.js";
 import { HandlerContext, type HandlerFunction } from "./handler_context.js";
-import { bridgeOf, eventIndexOf, type Runtime } from "./runtime.js";
+import { bridgeOf, eventIndexOf, stateAt, stateIndexOf, type Runtime } from "./runtime.js";
 import { discardScriptTask, invokeScriptTask, Scheduler } from "./scheduler.js";
-import type { EventType, Fields } from "./schema.js";
+import type { EventType, Fields, State } from "./schema.js";
+import { setStateContextSides, StateContext, type StateHookFunction } from "./state_context.js";
+import { stateMaskOf } from "./state_mask.js";
 import { SystemContext, type SystemFunction } from "./system_context.js";
 import { releaseOwnedWorld, setStructureLocked, type World } from "./world.js";
 
@@ -21,6 +23,11 @@ export interface EngineConfig {
 
 export interface HandlerRegistration {
   readonly id: number;
+  /**
+   * Faz o handler rodar só nos estados dados, conferidos a cada rodada; lista vazia tira a restrição. Lança
+   * ContractError durante frame, depois de um frame interrompido e para estado de outro esquema.
+   */
+  inState(...states: State[]): HandlerRegistration;
 }
 
 export interface SystemRegistration {
@@ -30,6 +37,8 @@ export interface SystemRegistration {
    * whilePaused; sem pausa, eles não rodam. Lança ContractError para sistema da fase Render.
    */
   whilePaused(): SystemRegistration;
+  /** Como `HandlerRegistration.inState`, para o sistema; vale em todas as fases, inclusive render. */
+  inState(...states: State[]): SystemRegistration;
 }
 
 const InvalidSystem = 0xffffffff;
@@ -38,6 +47,10 @@ const HandlerTypeMismatch = 0xfffffffe;
 const ScriptHandler = 1;
 const ScriptTask = 2;
 const ScriptTaskDiscard = 3;
+const ScriptStateHook = 4;
+const InvalidStateHook = 0xffffffff;
+const StateEnter = 0;
+const StateExit = 1;
 
 interface ScriptSystem {
   readonly function: SystemFunction;
@@ -48,6 +61,12 @@ interface ScriptHandlerEntry {
   readonly function: HandlerFunction;
   readonly context: HandlerContext;
   readonly type: EventType;
+}
+
+interface ScriptStateHookEntry {
+  readonly function: StateHookFunction;
+  readonly context: StateContext;
+  readonly entering: boolean;
 }
 
 let engineHandleOfInternal!: (engine: Engine) => number;
@@ -65,6 +84,7 @@ export class Engine {
   readonly #onDispose: () => void;
   readonly #scriptSystems = new Map<number, ScriptSystem>();
   readonly #scriptHandlers = new Map<number, ScriptHandlerEntry>();
+  readonly #scriptStateHooks = new Map<number, ScriptStateHookEntry>();
   #inFrame = false;
   // Uma exceção desenrola o WASM sem destrutores: o núcleo C++ continua "em frame" até o próximo frame recuperar.
   #interrupted = false;
@@ -80,6 +100,8 @@ export class Engine {
         invokeScriptTask(engine.#scheduler, id, eventCount !== 0);
       } else if (kind === ScriptTaskDiscard) {
         discardScriptTask(engine.#scheduler, id);
+      } else if (kind === ScriptStateHook) {
+        engine.#invokeStateHook(id, eventCount);
       } else {
         engine.#invoke(id);
       }
@@ -166,6 +188,42 @@ export class Engine {
     this.#bridge.engineResume(this.#handle);
   }
 
+  /**
+   * Vale o último pedido antes do passo 5 (dentro ou fora de `frame`); a troca acontece lá, pausado ou não: `onExit`,
+   * limpeza do escopo, `onEnter`. Um pedido feito num gancho vale no passo seguinte. Lança ContractError para estado
+   * de outro esquema.
+   */
+  requestState(state: State): void {
+    this.#assertUsable("requestState");
+
+    this.#bridge.engineRequestState(this.#handle, stateIndexOf(this.#runtime, state));
+  }
+
+  /** `null` até a primeira troca. Só muda no passo 5. */
+  get state(): State | null {
+    this.#assertUsable("state");
+
+    return stateAt(this.#runtime, this.#bridge.engineState(this.#handle));
+  }
+
+  /** Ganchos do mesmo estado rodam na ordem de registro, os C++ e os TS intercalados. Lança ContractError durante frame. */
+  onEnter(state: State, name: string, hook: StateHookFunction): void {
+    this.#addStateHook("onEnter", StateEnter, state, name, hook);
+  }
+
+  onExit(state: State, name: string, hook: StateHookFunction): void {
+    this.#addStateHook("onExit", StateExit, state, name, hook);
+  }
+
+  /** Registra um gancho C++ declarado com OLY_STATE_HOOK. Lança ContractError se o nome não existe. */
+  addNativeOnEnter(state: State, name: string): void {
+    this.#addNativeStateHook("addNativeOnEnter", StateEnter, state, name);
+  }
+
+  addNativeOnExit(state: State, name: string): void {
+    this.#addNativeStateHook("addNativeOnExit", StateExit, state, name);
+  }
+
   get paused(): boolean {
     this.#assertUsable("paused");
 
@@ -216,7 +274,7 @@ export class Engine {
     const context = new HandlerContext(type, name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions, this.#scheduler);
     this.#scriptHandlers.set(id, { function: handler as unknown as HandlerFunction, context, type });
 
-    return { id };
+    return this.#handlerRegistration(id, name);
   }
 
   addNativeHandler(type: EventType, name: string): HandlerRegistration {
@@ -230,7 +288,7 @@ export class Engine {
       throw new ContractError(`addNativeHandler name=${name} event=${type.name}: o handler nativo é de outro tipo de evento`);
     }
 
-    return { id };
+    return this.#handlerRegistration(id, name);
   }
 
   dispose(): void {
@@ -260,9 +318,68 @@ export class Engine {
 
         return registration;
       },
+      inState: (...states) => {
+        this.#restrictToStates("inState", `system=${name}`, states, (mask) => {
+          this.#bridge.engineSetSystemStates(this.#handle, id, mask);
+        });
+
+        return registration;
+      },
     };
 
     return registration;
+  }
+
+  #handlerRegistration(id: number, name: string): HandlerRegistration {
+    const registration: HandlerRegistration = {
+      id,
+      inState: (...states) => {
+        this.#restrictToStates("inState", `handler=${name}`, states, (mask) => {
+          this.#bridge.engineSetHandlerStates(this.#handle, id, mask);
+        });
+
+        return registration;
+      },
+    };
+
+    return registration;
+  }
+
+  #restrictToStates(operation: string, subject: string, states: readonly State[], apply: (mask: number) => void): void {
+    this.#assertUsable(operation);
+    if (this.#inFrame) {
+      throw new ContractError(`${operation} ${subject}: restrição de estados durante frame`);
+    }
+    this.#assertNotInterrupted(operation, subject);
+
+    apply(stateMaskOf(states.map((state) => stateIndexOf(this.#runtime, state))));
+  }
+
+  #addStateHook(operation: string, when: number, state: State, name: string, hook: StateHookFunction): void {
+    const index = this.#assertCanRegisterStateHook(operation, state, name);
+
+    const id = this.#bridge.engineAddScriptStateHook(this.#handle, when, index, name);
+    const context = new StateContext(name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions, this.#scheduler);
+    this.#scriptStateHooks.set(id, { function: hook, context, entering: when === StateEnter });
+  }
+
+  #addNativeStateHook(operation: string, when: number, state: State, name: string): void {
+    const index = this.#assertCanRegisterStateHook(operation, state, name);
+
+    const id = this.#bridge.engineAddNativeStateHook(this.#handle, when, index, name);
+    if (id === InvalidStateHook) {
+      throw new ContractError(`${operation} name=${name}: não há gancho de estado nativo com esse nome (declare com OLY_STATE_HOOK)`);
+    }
+  }
+
+  #assertCanRegisterStateHook(operation: string, state: State, name: string): number {
+    this.#assertUsable(operation);
+    if (this.#inFrame) {
+      throw new ContractError(`${operation} hook=${name}: registro durante frame`);
+    }
+    this.#assertNotInterrupted(operation, `hook=${name}`);
+
+    return stateIndexOf(this.#runtime, state);
   }
 
   #invoke(systemId: number): void {
@@ -296,6 +413,31 @@ export class Engine {
       entry.function(entry.context, batch);
     } finally {
       endBatch(batch);
+      setContextActive(entry.context, false);
+      setStructureLocked(this.world, true);
+    }
+  }
+
+  #invokeStateHook(id: number, otherSide: number): void {
+    const entry = this.#scriptStateHooks.get(id);
+    if (entry === undefined) {
+      throw new ContractError(`gancho id=${id}: não é um gancho de estado TS desta Engine`);
+    }
+
+    // Um gancho, sistema ou handler C++ anterior pode ter crescido a memória do WASM.
+    this.#bridge.sync();
+    const current = stateAt(this.#runtime, this.#bridge.engineState(this.#handle));
+    const other = stateAt(this.#runtime, otherSide >>> 0);
+    if (entry.entering) {
+      setStateContextSides(entry.context, other, current);
+    } else {
+      setStateContextSides(entry.context, current, other);
+    }
+    setContextActive(entry.context, true);
+    setStructureLocked(this.world, false);
+    try {
+      entry.function(entry.context);
+    } finally {
       setContextActive(entry.context, false);
       setStructureLocked(this.world, true);
     }

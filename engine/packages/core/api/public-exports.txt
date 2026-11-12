@@ -38,6 +38,8 @@ SchemaMismatchError
 SchemaType
 SpawnValues
 State
+StateContext
+StateHookFunction
 SystemContext
 SystemFunction
 SystemRegistration

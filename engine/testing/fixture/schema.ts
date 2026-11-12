@@ -1,4 +1,4 @@
-import { action, component, defineSchema, event, tag } from "@oly/core";
+import { action, component, defineSchema, event, state, tag } from "@oly/core";
 
 export const Position = component("Position", { x: "f32", y: "f32" });
 export const Velocity = component("Velocity", { x: "f32", y: "f32" });
@@ -15,4 +15,8 @@ export const move = action("move", "axis2d");
 export const aim = action("aim", "pointer");
 export const togglePause = action("togglePause", "button");
 
-export default defineSchema([Position, Velocity, Mixed, Trace, Player, Enemy, Ping, Echo, fire, move, aim, togglePause]);
+export const menu = state("menu");
+export const playing = state("playing");
+export const gameOver = state("gameOver");
+
+export default defineSchema([Position, Velocity, Mixed, Trace, Player, Enemy, Ping, Echo, fire, move, aim, togglePause, menu, playing, gameOver]);

@@ -3,9 +3,9 @@ import type { Bridge } from "./bridge.js";
 import type { Entity } from "./entity.js";
 import { ContractError } from "./errors.js";
 import type { Query, QuerySpec } from "./query.js";
-import { eventIndexOf, type Runtime } from "./runtime.js";
+import { eventIndexOf, stateAt, stateIndexOf, type Runtime } from "./runtime.js";
 import type { Scheduler } from "./scheduler.js";
-import type { ComponentType, EventType, Fields, SchemaType, ValueOf } from "./schema.js";
+import type { ComponentType, EventType, Fields, SchemaType, State, ValueOf } from "./schema.js";
 import { assertKnownFields, writeValue } from "./values.js";
 import type { World } from "./world.js";
 
@@ -23,8 +23,8 @@ interface ContextInternals {
 let contextInternals!: ContextInternals;
 
 /**
- * O que o SystemContext, o HandlerContext e o TaskContext têm em comum. Válido só durante a chamada do seu sistema,
- * handler ou tarefa; fora dela, qualquer uso lança ContractError.
+ * O que o SystemContext, o HandlerContext, o TaskContext e o StateContext têm em comum. Válido só durante a chamada do seu sistema,
+ * handler, tarefa ou gancho; fora dela, qualquer uso lança ContractError.
  */
 export class EngineContext {
   #active = false;
@@ -104,6 +104,20 @@ export class EngineContext {
     contextInternals.assertActive(this, "resume");
 
     this.#bridge.engineResume(this.#engineHandle);
+  }
+
+  /** Vale o último pedido antes do passo 5; a troca de estado acontece lá. */
+  requestState(state: State): void {
+    contextInternals.assertActive(this, "requestState");
+
+    this.#bridge.engineRequestState(this.#engineHandle, stateIndexOf(this.#runtime, state));
+  }
+
+  /** `null` até a primeira troca. Só muda no passo 5. */
+  get state(): State | null {
+    contextInternals.assertActive(this, "state");
+
+    return stateAt(this.#runtime, this.#bridge.engineState(this.#engineHandle));
   }
 
   query(spec: QuerySpec): Query {

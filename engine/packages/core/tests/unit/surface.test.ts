@@ -72,17 +72,23 @@ test("Engine expõe só a API do glossário", () => {
   assert.deepEqual(memberNames("Engine"), [
     "actions",
     "addNativeHandler",
+    "addNativeOnEnter",
+    "addNativeOnExit",
     "addNativeSystem",
     "addSystem",
     "dispose",
     "fixedDeltaTime",
     "frame",
     "on",
+    "onEnter",
+    "onExit",
     "pause",
     "paused",
+    "requestState",
     "resume",
     "schedule",
     "setHidden",
+    "state",
     "time",
     "world",
   ]);
@@ -102,13 +108,16 @@ test("SystemContext expõe só a API do glossário", () => {
     "name",
     "pause",
     "paused",
+    "persist",
     "phase",
     "query",
     "remove",
+    "requestState",
     "resume",
     "schedule",
     "set",
     "spawn",
+    "state",
     "time",
   ]);
 });
@@ -127,12 +136,15 @@ test("HandlerContext expõe só a API do glossário", () => {
     "name",
     "pause",
     "paused",
+    "persist",
     "query",
     "remove",
+    "requestState",
     "resume",
     "schedule",
     "set",
     "spawn",
+    "state",
     "time",
   ]);
 });
@@ -151,18 +163,48 @@ test("TaskContext expõe só a API do glossário", () => {
     "lastRun",
     "pause",
     "paused",
+    "persist",
     "query",
     "remove",
+    "requestState",
     "resume",
     "schedule",
     "set",
     "spawn",
+    "state",
     "time",
   ]);
 });
 
-test("Scheduler expõe só after, every, cancel e isPending", () => {
-  assert.deepEqual(memberNames("Scheduler"), ["after", "cancel", "every", "isPending"]);
+test("StateContext expõe só a API do glossário", () => {
+  assert.deepEqual(memberNames("StateContext"), [
+    "actions",
+    "add",
+    "destroy",
+    "emit",
+    "fixedDeltaTime",
+    "fromState",
+    "get",
+    "has",
+    "isAlive",
+    "pause",
+    "paused",
+    "persist",
+    "query",
+    "remove",
+    "requestState",
+    "resume",
+    "schedule",
+    "set",
+    "spawn",
+    "state",
+    "time",
+    "toState",
+  ]);
+});
+
+test("Scheduler expõe só after, every, cancel, isPending e persist", () => {
+  assert.deepEqual(memberNames("Scheduler"), ["after", "cancel", "every", "isPending", "persist"]);
 });
 
 test("ActionMap expõe só ligação, entrada do host e leitura", () => {

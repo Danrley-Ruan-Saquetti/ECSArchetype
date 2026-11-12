@@ -9,3 +9,4 @@ export { scriptTaskCount } from "./scheduler.js";
 export { buttonUsages, isButtonName } from "./buttons.js";
 export { actionIndexOf, bridgeOf, componentIdOf, eventIndexOf, moduleOf, stateAt, stateIndexOf } from "./runtime.js";
 export { canonicalSchema, fnv1a32, schemaHash } from "./schema_hash.js";
+export { stateMaskOf } from "./state_mask.js";

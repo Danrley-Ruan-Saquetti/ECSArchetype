@@ -4,10 +4,10 @@ import { loadRuntime } from "@oly/core";
 import type { OlyModuleFactory, Runtime } from "@oly/core";
 import { moduleOf, type OlyModule } from "@oly/core/internal";
 
-import { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity, aim, fire, move, togglePause } from "../../fixture/schema.js";
+import { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity, aim, fire, gameOver, menu, move, playing, togglePause } from "../../fixture/schema.js";
 import schema from "../../fixture/schema.js";
 
-export { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity, aim, fire, move, schema, togglePause };
+export { Echo, Enemy, Mixed, Ping, Player, Position, Trace, Velocity, aim, fire, gameOver, menu, move, playing, schema, togglePause };
 
 export interface FixtureExports {
   fixtureMove(world: number, deltaTime: number): void;

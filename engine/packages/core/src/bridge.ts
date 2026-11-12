@@ -345,6 +345,54 @@ export class Bridge {
     this.module._olyEngineSetWhilePaused(engine, systemId, whilePaused ? 1 : 0);
   }
 
+  engineRequestState(engine: number, state: number): void {
+    this.module._olyEngineRequestState(engine, state);
+  }
+
+  engineState(engine: number): number {
+    return this.module._olyEngineState(engine) >>> 0;
+  }
+
+  engineSetSystemStates(engine: number, systemId: number, mask: number): void {
+    this.module._olyEngineSetSystemStates(engine, systemId, mask);
+  }
+
+  engineSetHandlerStates(engine: number, handlerId: number, mask: number): void {
+    this.module._olyEngineSetHandlerStates(engine, handlerId, mask);
+  }
+
+  // O nome nativo desconhecido volta como 0xFFFFFFFF.
+  engineAddNativeStateHook(engine: number, when: number, state: number, name: string): number {
+    const id = this.module._olyEngineAddNativeStateHook(engine, when, state, this.writeString(name)) >>> 0;
+    this.sync();
+
+    return id;
+  }
+
+  engineAddScriptStateHook(engine: number, when: number, state: number, name: string): number {
+    const id = this.module._olyEngineAddScriptStateHook(engine, when, state, this.writeString(name)) >>> 0;
+    this.sync();
+
+    return id;
+  }
+
+  directSpawn(engine: number): Entity {
+    this.module._olyDirectSpawn(engine, this.scratch + OutputOffset);
+    this.sync();
+
+    const base = (this.scratch + OutputOffset) >> 2;
+    return packEntity(this.heap.u32[base]!, this.heap.u32[base + 1]!);
+  }
+
+  contextPersist(engine: number, entity: Entity): void {
+    this.module._olyContextPersist(engine, entityIndex(entity), entityGeneration(entity));
+    this.sync();
+  }
+
+  enginePersistTask(engine: number, slot: number, generation: number): boolean {
+    return this.module._olyEnginePersistTask(engine, slot, generation) !== 0;
+  }
+
   engineBindButton(engine: number, action: number, usage: number): void {
     this.module._olyEngineBindButton(engine, action, usage);
     this.sync();

@@ -56,6 +56,15 @@ export interface OlyModule {
   _olyEngineAddNativeSystem(engine: number, phase: number, name: number): number;
   _olyEngineAddScriptSystem(engine: number, phase: number, name: number): number;
   _olyEngineSetWhilePaused(engine: number, systemId: number, whilePaused: number): void;
+  _olyEngineRequestState(engine: number, state: number): void;
+  _olyEngineState(engine: number): number;
+  _olyEngineSetSystemStates(engine: number, systemId: number, stateMask: number): void;
+  _olyEngineSetHandlerStates(engine: number, handlerId: number, stateMask: number): void;
+  _olyEngineAddNativeStateHook(engine: number, when: number, state: number, name: number): number;
+  _olyEngineAddScriptStateHook(engine: number, when: number, state: number, name: number): number;
+  _olyDirectSpawn(engine: number, out: number): void;
+  _olyContextPersist(engine: number, index: number, generation: number): void;
+  _olyEnginePersistTask(engine: number, slot: number, generation: number): number;
   _olyEngineBindButton(engine: number, action: number, button: number): void;
   _olyEngineBindAxis2d(engine: number, action: number, up: number, down: number, left: number, right: number): void;
   _olyEngineClearBindings(engine: number, action: number): void;

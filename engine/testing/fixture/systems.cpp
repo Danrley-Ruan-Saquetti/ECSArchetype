@@ -1,6 +1,7 @@
 #include <cstdint>
 
 #include "oly/app/handler.hpp"
+#include "oly/app/state_context.hpp"
 #include "oly/app/system.hpp"
 #include "oly/app/task_context.hpp"
 #include "oly/bridge/engine.hpp"
@@ -114,4 +115,8 @@ OLY_SYSTEM(emitPings) {
   for (uint32_t count = 0; count < fixturePingCount; ++count) {
     context.emit(Ping{oly::ecs::NullEntity, 1});
   }
+}
+
+OLY_STATE_HOOK(appendEight) {
+  context.query<Trace>().each([](Trace& trace) { trace.value = trace.value * 10 + 8; });
 }
