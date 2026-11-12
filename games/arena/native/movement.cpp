@@ -93,8 +93,7 @@ OLY_SYSTEM(confine) {
   position.y = std::clamp(position.y, collider.radius, arena::ArenaHeight - collider.radius);
 
   context.query<const Position>(oly::ecs::With<Bullet>{}).each([&context](oly::ecs::Entity bullet, const Position& bulletPosition) {
-    const bool outside = bulletPosition.x < 0.0f || bulletPosition.x > arena::ArenaWidth || bulletPosition.y < 0.0f || bulletPosition.y > arena::ArenaHeight;
-    if (outside) {
+    if (arena::isOutsideArena(bulletPosition.x, bulletPosition.y)) {
       context.destroy(bullet);
     }
   });

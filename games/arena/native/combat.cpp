@@ -28,6 +28,10 @@ namespace {
     auto& enemies = context.query<const Position, const Collider, Health>(oly::ecs::With<Enemy>{});
 
     context.query<const Position, const Collider>(oly::ecs::With<Bullet>{}).each([&](oly::ecs::Entity bullet, const Position& bulletPosition, const Collider& bulletCollider) {
+      if (arena::isOutsideArena(bulletPosition.x, bulletPosition.y)) {
+        return;
+      }
+
       bool hit = false;
       enemies.each([&](oly::ecs::Entity enemy, const Position& enemyPosition, const Collider& enemyCollider, Health& health) {
         if (hit || !arena::touches(bulletPosition.x, bulletPosition.y, bulletCollider.radius, enemyPosition.x, enemyPosition.y, enemyCollider.radius)) {

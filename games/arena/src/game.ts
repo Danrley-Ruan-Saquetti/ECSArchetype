@@ -162,5 +162,7 @@ function collectCoin(context: HandlerContext, score: MutableScore, batch: EventB
 
 function endRound(context: HandlerContext, score: MutableScore): void {
   score.finalScore = score.score;
+  // Esc apertado no passo da morte pausaria o gameOver, onde nada tira a pausa.
+  context.resume();
   context.requestState(gameOver);
 }

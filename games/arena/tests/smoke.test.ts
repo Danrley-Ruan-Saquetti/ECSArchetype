@@ -337,3 +337,33 @@ test("roteiro: menu → playing → onda → morte → gameOver com o mundo vazi
     assert.equal(arena.count(Coin), 1);
   });
 });
+
+test("bala fora da arena que toca um inimigo só é destruída: não acerta e não duplica o destroy", () => {
+  withArena(runtime, (arena) => {
+    startPlaying(arena);
+    const enemy = spawnEnemy(arena, 0, 100);
+    spawnBullet(arena, -1, 100);
+
+    arena.step();
+
+    assert.equal(arena.count(Bullet), 0);
+    assert.equal(arena.engine.world.isAlive(enemy), true);
+  });
+});
+
+test("Esc no passo em que o jogador morre não deixa o gameOver pausado", () => {
+  withArena(runtime, (arena) => {
+    startPlaying(arena);
+    arena.engine.world.set(arena.player(), Health, { value: 1 });
+    spawnEnemy(arena, 480, 270);
+
+    arena.tap("Escape");
+    assert.equal(arena.engine.state?.name, "gameOver");
+    arena.step();
+    arena.tap("Enter");
+    arena.step();
+
+    assert.equal(arena.engine.paused, false);
+    assert.equal(arena.engine.state?.name, "playing");
+  });
+});
