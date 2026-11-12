@@ -1,4 +1,4 @@
-// Só o que o core usa do ambiente; existe em node, navegador e worker.
+// Only what core uses from the environment; it exists in node, browser and worker.
 declare class TextDecoder {
   decode(input?: Uint8Array): string;
 }

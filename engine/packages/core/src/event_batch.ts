@@ -7,8 +7,8 @@ import type { EventType, Fields } from "./schema.js";
 let endBatchInternal!: (batch: EventBatch) => void;
 
 /**
- * O lote de eventos de um tipo que um handler recebe, na ordem de emissão. As views leem a fila direto da memória
- * do WASM (sem cópia) e valem só durante a chamada do handler; depois dela, `read` lança ContractError.
+ * The batch of events of one type that a handler receives, in emission order. The views read the queue directly from the
+ * WASM memory (no copy) and are valid only during the handler call; after it, `read` throws ContractError.
  */
 export class EventBatch<F extends Fields = Fields> {
   readonly type: EventType;
@@ -34,7 +34,7 @@ export class EventBatch<F extends Fields = Fields> {
 
   read(): ReadView<F> {
     if (!this.#live) {
-      throw new ContractError(`read type=${this.type.name}: EventBatch usado fora da chamada do handler`);
+      throw new ContractError(`read type=${this.type.name}: EventBatch used outside the handler call`);
     }
 
     this.#view ??= makeView(this.#bridge.heap, this.type.layout, this.#address) as unknown as ReadView<F>;

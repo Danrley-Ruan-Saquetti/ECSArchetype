@@ -10,7 +10,7 @@ export type TaskFunction = (task: TaskContext) => void;
 
 declare const taskHandleBrand: unique symbol;
 
-/** Valor opaco devolvido ao agendar; compara-se com `===`. */
+/** Opaque value returned when scheduling; compared with `===`. */
 export interface TaskHandle {
   readonly [taskHandleBrand]: true;
 }
@@ -34,9 +34,9 @@ interface SchedulerInternals {
 let schedulerInternals!: SchedulerInternals;
 
 /**
- * Tarefas no relógio do jogo (`time` da Engine), disparadas no passo 2 do passo fixo e só em passo não pausado. O
- * mesmo objeto em `engine.schedule` e em `context.schedule`. A regra de tempo vive no núcleo C++; aqui ficam a
- * validação de uso e as closures.
+ * Tasks on the game clock (the Engine's `time`), fired in step 2 of the fixed step and only in a non-paused step. The
+ * same object in `engine.schedule` and in `context.schedule`. The timing rule lives in the C++ core; here are the
+ * usage validation and the closures.
  */
 export class Scheduler {
   readonly #runtime: Runtime;
@@ -70,29 +70,29 @@ export class Scheduler {
     this.#assertUsable = assertUsable;
   }
 
-  /** Dispara uma vez, no passo cujo início alcança `time + delaySeconds`. Atraso finito e ≥ 0. */
+  /** Fires once, in the step whose start reaches `time + delaySeconds`. Delay finite and ≥ 0. */
   after(delaySeconds: number, callback: TaskFunction): TaskHandle {
     this.#assertUsable("after");
     if (!Number.isFinite(delaySeconds) || delaySeconds < 0) {
-      throw new ContractError(`after: atraso=${delaySeconds} negativo ou não finito`);
+      throw new ContractError(`after: delay=${delaySeconds} negative or not finite`);
     }
     this.#assertCallback("after", callback);
 
     return this.#schedule(delaySeconds, 0, callback);
   }
 
-  /** Primeiro disparo em `time + intervalSeconds`, depois a cada intervalo, sem deriva. Intervalo finito e > 0. */
+  /** First firing at `time + intervalSeconds`, then every interval, without drift. Interval finite and > 0. */
   every(intervalSeconds: number, callback: TaskFunction): TaskHandle {
     this.#assertUsable("every");
     if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
-      throw new ContractError(`every: intervalo=${intervalSeconds} deve ser positivo e finito`);
+      throw new ContractError(`every: interval=${intervalSeconds} must be positive and finite`);
     }
     this.#assertCallback("every", callback);
 
     return this.#schedule(intervalSeconds, intervalSeconds, callback);
   }
 
-  /** false se a tarefa já terminou ou foi cancelada. Cancelar uma `every` descarta a closure. */
+  /** false if the task already finished or was cancelled. Cancelling an `every` discards the closure. */
   cancel(handle: TaskHandle): boolean {
     this.#assertUsable("cancel");
     const ref = this.#refOf("cancel", handle);
@@ -107,7 +107,7 @@ export class Scheduler {
     return this.#bridge.engineIsTaskPending(this.#engineHandle, ref.slot, ref.generation);
   }
 
-  /** Tira o escopo de estado de uma tarefa pendente (true); false se já terminou ou foi cancelada. */
+  /** Removes the state scope of a pending task (true); false if it already finished or was cancelled. */
   persist(handle: TaskHandle): boolean {
     this.#assertUsable("persist");
     const ref = this.#refOf("persist", handle);
@@ -129,10 +129,10 @@ export class Scheduler {
   #invoke(scriptId: number, lastRun: boolean): void {
     const task = this.#tasks.get(scriptId);
     if (task === undefined) {
-      throw new ContractError(`tarefa id=${scriptId}: não é uma tarefa TS desta Engine`);
+      throw new ContractError(`task id=${scriptId}: not a TS task of this Engine`);
     }
 
-    // Uma tarefa, handler ou sistema C++ anterior pode ter crescido a memória do WASM.
+    // A previous C++ task, handler or system may have grown the WASM memory.
     this.#bridge.sync();
     setTaskLastRun(task.context, lastRun);
     setContextActive(task.context, true);
@@ -151,7 +151,7 @@ export class Scheduler {
   #refOf(operation: string, handle: TaskHandle): TaskRef {
     const ref = this.#refs.get(handle);
     if (ref === undefined) {
-      throw new ContractError(`${operation}: handle de outra Engine ou inválido`);
+      throw new ContractError(`${operation}: handle from another Engine or invalid`);
     }
 
     return ref;
@@ -159,17 +159,17 @@ export class Scheduler {
 
   #assertCallback(operation: string, callback: unknown): void {
     if (typeof callback !== "function") {
-      throw new ContractError(`${operation}: o callback precisa ser uma função`);
+      throw new ContractError(`${operation}: the callback must be a function`);
     }
   }
 }
 
-/** Disparo de uma tarefa TS pelo núcleo (OLY_SCRIPT_TASK). */
+/** Firing of a TS task by the core (OLY_SCRIPT_TASK). */
 export function invokeScriptTask(scheduler: Scheduler, scriptId: number, lastRun: boolean): void {
   schedulerInternals.invoke(scheduler, scriptId, lastRun);
 }
 
-/** Descarte de uma tarefa TS pelo núcleo (OLY_SCRIPT_TASK_DISCARD); vale também com a Engine já liberada. */
+/** Discarding of a TS task by the core (OLY_SCRIPT_TASK_DISCARD); also valid with the Engine already disposed. */
 export function discardScriptTask(scheduler: Scheduler, scriptId: number): void {
   schedulerInternals.discard(scheduler, scriptId);
 }

@@ -9,8 +9,8 @@ import type { World } from "./world.js";
 let setLastRunInternal!: (context: TaskContext, lastRun: boolean) => void;
 
 /**
- * Válido só durante a chamada da sua tarefa; fora dela, qualquer uso lança ContractError. Roda no passo 2, fora de
- * qualquer iteração, com mudanças estruturais diretas.
+ * Valid only during the call of its task; outside it, any use throws ContractError. Runs in step 2, outside
+ * any iteration, with direct structural changes.
  */
 export class TaskContext extends DirectContext {
   readonly #handle: TaskHandle;
@@ -23,7 +23,7 @@ export class TaskContext extends DirectContext {
   }
 
   constructor(scriptId: number, handle: TaskHandle, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap, scheduler: Scheduler) {
-    super({ label: "task", className: "TaskContext", callNoun: "tarefa" }, String(scriptId), runtime, bridge, engineHandle, world, actions, scheduler);
+    super({ label: "task", className: "TaskContext", callNoun: "task" }, String(scriptId), runtime, bridge, engineHandle, world, actions, scheduler);
     this.#handle = handle;
   }
 
@@ -33,7 +33,7 @@ export class TaskContext extends DirectContext {
     return this.#handle;
   }
 
-  /** Verdadeiro no disparo de um after: a tarefa não roda mais. */
+  /** True on the firing of an after: the task does not run again. */
   get lastRun(): boolean {
     assertContextActive(this, "lastRun");
 

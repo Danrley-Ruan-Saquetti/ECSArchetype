@@ -11,14 +11,14 @@ export interface ComponentType<Name extends string = string, F extends Fields = 
   readonly name: Name;
   readonly fields: F;
   readonly layout: ComponentLayout;
-  /** -1 até o tipo entrar num esquema por defineSchema. */
+  /** -1 until the type enters a schema through defineSchema. */
   readonly schemaIndex: number;
 }
 
 export interface TagType<Name extends string = string> {
   readonly kind: "tag";
   readonly name: Name;
-  /** -1 até o tipo entrar num esquema por defineSchema. */
+  /** -1 until the type enters a schema through defineSchema. */
   readonly schemaIndex: number;
 }
 
@@ -29,7 +29,7 @@ export interface EventType<Name extends string = string, F extends Fields = Fiel
   readonly name: Name;
   readonly fields: F;
   readonly layout: ComponentLayout;
-  /** Posição em `schema.events`; -1 até o evento entrar num esquema por defineSchema. */
+  /** Position in `schema.events`; -1 until the event enters a schema through defineSchema. */
   readonly schemaIndex: number;
 }
 
@@ -39,7 +39,7 @@ export interface ActionType<Name extends string = string, Kind extends ActionKin
   readonly kind: "action";
   readonly actionKind: Kind;
   readonly name: Name;
-  /** Posição em `schema.actions`, que é também o ActionId; -1 até a ação entrar num esquema por defineSchema. */
+  /** Position in `schema.actions`, which is also the ActionId; -1 until the action enters a schema through defineSchema. */
   readonly schemaIndex: number;
 }
 
@@ -50,20 +50,20 @@ export type PointerAction = ActionType<string, "pointer">;
 export interface State<Name extends string = string> {
   readonly kind: "state";
   readonly name: Name;
-  /** Posição em `schema.states`, que é também o StateId; -1 até o estado entrar num esquema por defineSchema. */
+  /** Position in `schema.states`, which is also the StateId; -1 until the state enters a schema through defineSchema. */
   readonly schemaIndex: number;
 }
 
 export const MaxStates = 32;
 
 export interface Schema {
-  /** Componentes e tags; o índice deles é o do ComponentId. */
+  /** Components and tags; their index is the ComponentId's. */
   readonly types: readonly SchemaType[];
-  /** Eventos na ordem de declaração, que é a ordem de despacho. */
+  /** Events in declaration order, which is the dispatch order. */
   readonly events: readonly EventType[];
-  /** Ações de input na ordem de declaração. */
+  /** Input actions in declaration order. */
   readonly actions: readonly ActionType[];
-  /** Estados na ordem de declaração. */
+  /** States in declaration order. */
   readonly states: readonly State[];
   readonly hash: number;
 }
@@ -83,14 +83,14 @@ const cppReservedWords: ReadonlySet<string> = new Set(
 
 function validateTypeName(name: string): void {
   if (!typeNamePattern.test(name)) {
-    throw new ContractError(`nome de tipo inválido "${name}": use ${typeNamePattern}`);
+    throw new ContractError(`invalid type name "${name}": use ${typeNamePattern}`);
   }
 }
 
 function validateFieldName(typeName: string, field: string): void {
   if (!fieldNamePattern.test(field) || cppReservedWords.has(field)) {
     throw new ContractError(
-      `campo inválido "${field}" em ${typeName}: use ${fieldNamePattern} e evite palavras reservadas do C++`,
+      `invalid field "${field}" in ${typeName}: use ${fieldNamePattern} and avoid C++ reserved words`,
     );
   }
 }
@@ -107,28 +107,28 @@ function validateFields(name: string, fields: Fields, emptyMessage: string): voi
 }
 
 /**
- * Lança ContractError se o nome não for PascalCase, se algum campo não for camelCase ou for palavra reservada
- * do C++, ou se não houver campos (use `tag`).
+ * Throws ContractError if the name is not PascalCase, if any field is not camelCase or is a C++ reserved
+ * word, or if there are no fields (use `tag`).
  */
 export function component<const Name extends string, const F extends Fields>(
   name: Name,
   fields: F,
 ): ComponentType<Name, F> {
-  validateFields(name, fields, `componente ${name} sem campos: use tag("${name}")`);
+  validateFields(name, fields, `component ${name} has no fields: use tag("${name}")`);
 
   return { kind: "component", name, fields, layout: computeLayout(fields), schemaIndex: -1 };
 }
 
-/** Mesmas validações de `component`; um evento sem dados não existe. */
+/** Same validations as `component`; an event without data does not exist. */
 export function event<const Name extends string, const F extends Fields>(name: Name, fields: F): EventType<Name, F> {
-  validateFields(name, fields, `evento ${name} sem campos: um evento precisa de ao menos um campo`);
+  validateFields(name, fields, `event ${name} has no fields: an event needs at least one field`);
 
   return { kind: "event", name, fields, layout: computeLayout(fields), schemaIndex: -1 };
 }
 
 /**
- * Declara uma ação de input. O nome vira `actions::<nome>` no C++, então segue as regras dos campos: camelCase e
- * fora das palavras reservadas do C++. Lança ContractError para nome inválido ou `kind` desconhecido.
+ * Declares an input action. The name becomes `actions::<name>` in C++, so it follows the field rules: camelCase and
+ * not a C++ reserved word. Throws ContractError for an invalid name or an unknown `kind`.
  */
 export function action<const Name extends string, const Kind extends ActionKind>(
   name: Name,
@@ -136,24 +136,24 @@ export function action<const Name extends string, const Kind extends ActionKind>
 ): ActionType<Name, Kind> {
   if (!actionNamePattern.test(name) || cppReservedWords.has(name)) {
     throw new ContractError(
-      `ação inválida "${name}": use ${actionNamePattern} e evite palavras reservadas do C++`,
+      `invalid action "${name}": use ${actionNamePattern} and avoid C++ reserved words`,
     );
   }
   if (!actionKinds.includes(kind)) {
-    throw new ContractError(`ação ${name}: tipo "${String(kind)}" desconhecido; use button, axis2d ou pointer`);
+    throw new ContractError(`action ${name}: unknown kind "${String(kind)}"; use button, axis2d or pointer`);
   }
 
   return { kind: "action", actionKind: kind, name, schemaIndex: -1 };
 }
 
 /**
- * Declara um estado de jogo. O nome vira `states::<nome>` no C++, então segue as regras dos campos: camelCase e fora
- * das palavras reservadas do C++. Lança ContractError para nome inválido.
+ * Declares a game state. The name becomes `states::<name>` in C++, so it follows the field rules: camelCase and not
+ * a C++ reserved word. Throws ContractError for an invalid name.
  */
 export function state<const Name extends string>(name: Name): State<Name> {
   if (!stateNamePattern.test(name) || cppReservedWords.has(name)) {
     throw new ContractError(
-      `estado inválido "${name}": use ${stateNamePattern} e evite palavras reservadas do C++`,
+      `invalid state "${name}": use ${stateNamePattern} and avoid C++ reserved words`,
     );
   }
 
@@ -167,17 +167,17 @@ export function tag<const Name extends string>(name: Name): TagType<Name> {
 }
 
 /**
- * Atribui `schemaIndex` na ordem de cada grupo (tipos, eventos, ações, estados) e congela o que recebeu. Lança ContractError para
- * nome repetido (entre tipos e eventos também) ou para tipo/evento que já pertence a outro esquema.
+ * Assigns `schemaIndex` in the order of each group (types, events, actions, states) and freezes what it received. Throws ContractError for
+ * a repeated name (across types and events too) or for a type/event that already belongs to another schema.
  */
 export function defineSchema(entries: readonly (SchemaType | EventType | ActionType | State)[]): Schema {
   const names = new Set<string>();
   for (const entry of entries) {
     if (names.has(entry.name)) {
-      throw new ContractError(`defineSchema: nome repetido "${entry.name}"`);
+      throw new ContractError(`defineSchema: repeated name "${entry.name}"`);
     }
     if (entry.schemaIndex >= 0) {
-      throw new ContractError(`defineSchema: ${entry.name} já pertence a outro esquema`);
+      throw new ContractError(`defineSchema: ${entry.name} already belongs to another schema`);
     }
     names.add(entry.name);
   }
@@ -187,7 +187,7 @@ export function defineSchema(entries: readonly (SchemaType | EventType | ActionT
   const actions = entries.filter((entry): entry is ActionType => entry.kind === "action");
   const states = entries.filter((entry): entry is State => entry.kind === "state");
   if (states.length > MaxStates) {
-    throw new ContractError(`defineSchema: ${states.length} estados; o máximo é ${MaxStates}`);
+    throw new ContractError(`defineSchema: ${states.length} states; the maximum is ${MaxStates}`);
   }
 
   for (const group of [types, events, actions, states]) {

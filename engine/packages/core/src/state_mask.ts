@@ -1,4 +1,4 @@
-// `>>> 0` devolve a máscara como uint32 (`1 << 31` é negativo em JS), o mesmo número que a API C lê.
+// `>>> 0` returns the mask as uint32 (`1 << 31` is negative in JS), the same number the C API reads.
 export function stateMaskOf(indices: readonly number[]): number {
   let mask = 0;
   for (const index of indices) {

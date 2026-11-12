@@ -65,7 +65,7 @@ function setup(): { target: RecordingTarget; browser: FakeBrowser } {
   return { target: new RecordingTarget(), browser: new FakeBrowser() };
 }
 
-test("cada rAF chama frame com o timestamp em segundos", () => {
+test("each rAF calls frame with the timestamp in seconds", () => {
   const { target, browser } = setup();
   runInBrowser(target, browser);
 
@@ -75,7 +75,7 @@ test("cada rAF chama frame com o timestamp em segundos", () => {
   assert.deepEqual(target.frames, [1.5, 1.5165]);
 });
 
-test("visibilitychange repassa setHidden com document.hidden", () => {
+test("visibilitychange forwards setHidden with document.hidden", () => {
   const { target, browser } = setup();
   runInBrowser(target, browser);
 
@@ -87,7 +87,7 @@ test("visibilitychange repassa setHidden com document.hidden", () => {
   assert.deepEqual(target.hiddenCalls, [true, false]);
 });
 
-test("documento já oculto no início chama setHidden(true)", () => {
+test("document already hidden at start calls setHidden(true)", () => {
   const { target, browser } = setup();
   browser.hidden = true;
 
@@ -96,7 +96,7 @@ test("documento já oculto no início chama setHidden(true)", () => {
   assert.deepEqual(target.hiddenCalls, [true]);
 });
 
-test("stop cancela o rAF pendente e remove o listener", () => {
+test("stop cancels the pending rAF and removes the listener", () => {
   const { target, browser } = setup();
   const loop = runInBrowser(target, browser);
 
@@ -107,7 +107,7 @@ test("stop cancela o rAF pendente e remove o listener", () => {
   assert.equal(browser.removedListeners, 1);
 });
 
-test("exceção em frame não para o laço: o próximo rAF já foi pedido", () => {
+test("exception in frame does not stop the loop: the next rAF was already requested", () => {
   const { target, browser } = setup();
   runInBrowser(target, browser);
   target.onFrame = () => {

@@ -108,7 +108,7 @@ function pointerEvent(buttons: number, clientX = 0, clientY = 0): {
   return event;
 }
 
-test("keydown/keyup viram buttonDown/buttonUp pelo code W3C", () => {
+test("keydown/keyup become buttonDown/buttonUp by W3C code", () => {
   const { target, window } = setup();
 
   window.dispatch("keydown", keyEvent("KeyW"));
@@ -117,7 +117,7 @@ test("keydown/keyup viram buttonDown/buttonUp pelo code W3C", () => {
   assert.deepEqual(target.calls, ["down KeyW", "up KeyW"]);
 });
 
-test("code fora da tabela é ignorado", () => {
+test("code outside the table is ignored", () => {
   const { target, window } = setup();
 
   window.dispatch("keydown", keyEvent("Unidentified"));
@@ -126,7 +126,7 @@ test("code fora da tabela é ignorado", () => {
   assert.deepEqual(target.calls, []);
 });
 
-test("preventDefault só para botão ligado", () => {
+test("preventDefault only for a bound button", () => {
   const { target, window } = setup();
   target.bound.add("Space");
   const space = keyEvent("Space");
@@ -139,7 +139,7 @@ test("preventDefault só para botão ligado", () => {
   assert.equal(reload.prevented, false);
 });
 
-test("blur na janela chama releaseAll", () => {
+test("blur on the window calls releaseAll", () => {
   const { target, window } = setup();
 
   window.dispatch("blur");
@@ -147,7 +147,7 @@ test("blur na janela chama releaseAll", () => {
   assert.deepEqual(target.calls, ["releaseAll"]);
 });
 
-test("pointerdown no canvas manda pointerMove e depois buttonDown", () => {
+test("pointerdown on the canvas sends pointerMove then buttonDown", () => {
   const { target, canvas } = setup();
 
   canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
@@ -155,7 +155,7 @@ test("pointerdown no canvas manda pointerMove e depois buttonDown", () => {
   assert.deepEqual(target.calls, ["move 100 100", "down MouseLeft"]);
 });
 
-test("pointerup e pointermove vêm da janela", () => {
+test("pointerup and pointermove come from the window", () => {
   const { target, canvas, window } = setup();
 
   canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
@@ -166,7 +166,7 @@ test("pointerup e pointermove vêm da janela", () => {
   assert.equal(canvas.count(), 2);
 });
 
-test("bit 4 de buttons é MouseMiddle, 2 é MouseRight e o bit 8 é ignorado", () => {
+test("buttons bit 4 is MouseMiddle, 2 is MouseRight and bit 8 is ignored", () => {
   const { target, canvas, window } = setup();
 
   canvas.dispatch("pointerdown", pointerEvent(4, 10, 20));
@@ -186,7 +186,7 @@ test("bit 4 de buttons é MouseMiddle, 2 é MouseRight e o bit 8 é ignorado", (
   ]);
 });
 
-test("segundo botão apertado e soltado em acorde chega pelo pointermove", () => {
+test("second button pressed and released in a chord arrives through pointermove", () => {
   const { target, canvas, window } = setup();
 
   canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
@@ -205,7 +205,7 @@ test("segundo botão apertado e soltado em acorde chega pelo pointermove", () =>
   ]);
 });
 
-test("arrastar de fora do canvas não aperta botão", () => {
+test("dragging from outside the canvas does not press a button", () => {
   const { target, window } = setup();
 
   window.dispatch("pointermove", pointerEvent(1, 500, 500));
@@ -213,7 +213,7 @@ test("arrastar de fora do canvas não aperta botão", () => {
   assert.deepEqual(target.calls, ["move 980 960"]);
 });
 
-test("pointercancel solta os botões do mouse apertados", () => {
+test("pointercancel releases the pressed mouse buttons", () => {
   const { target, canvas, window } = setup();
 
   canvas.dispatch("pointerdown", pointerEvent(1, 60, 70));
@@ -222,7 +222,7 @@ test("pointercancel solta os botões do mouse apertados", () => {
   assert.deepEqual(target.calls, ["move 100 100", "down MouseLeft", "up MouseLeft"]);
 });
 
-test("contextmenu no canvas só é impedido com MouseRight ligado", () => {
+test("contextmenu on the canvas is prevented only with MouseRight bound", () => {
   const { target, canvas } = setup();
   const unbound = pointerEvent(2);
   const bound = pointerEvent(2);
@@ -235,7 +235,7 @@ test("contextmenu no canvas só é impedido com MouseRight ligado", () => {
   assert.equal(bound.prevented, true);
 });
 
-test("canvas com tamanho 0 ignora eventos de ponteiro", () => {
+test("canvas with size 0 ignores pointer events", () => {
   const { target, canvas, window } = setup();
   canvas.rect = { left: 0, top: 0, width: 0, height: 100 };
 
@@ -245,7 +245,7 @@ test("canvas com tamanho 0 ignora eventos de ponteiro", () => {
   assert.deepEqual(target.calls, []);
 });
 
-test("detach remove os listeners e é idempotente", () => {
+test("detach removes the listeners and is idempotent", () => {
   const { target, canvas, window, detach } = setup();
 
   detach();

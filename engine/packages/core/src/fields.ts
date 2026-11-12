@@ -3,7 +3,7 @@ import { entityGeneration, entityIndex, packEntity } from "./entity.js";
 import { scalarSize, type ComponentLayout, type FieldLayout, type ScalarType } from "./layout.js";
 import type { Fields } from "./schema.js";
 
-/** elemento = array[base + row * stride]; para `entity`, array é u32, `base` aponta para o index e `base + 1` para a generation. */
+/** element = array[base + row * stride]; for `entity`, array is u32, `base` points to the index and `base + 1` to the generation. */
 export interface RawField {
   readonly array: Float32Array | Float64Array | Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array;
   readonly base: number;
@@ -12,7 +12,7 @@ export interface RawField {
 
 export interface ReadField {
   get(row: number): number;
-  /** Válido até a próxima chamada que aloque no WASM (a memória pode crescer e trocar o buffer). */
+  /** Valid until the next call that allocates in the WASM (memory may grow and replace the buffer). */
   raw(): RawField;
 }
 
@@ -23,8 +23,8 @@ export interface WriteField extends ReadField {
 export type ReadView<F extends Fields> = { readonly [K in keyof F]: ReadField };
 export type WriteView<F extends Fields> = { readonly [K in keyof F]: WriteField };
 
-// Uma classe por tipo escalar mantém cada get/set monomórfico. O array é lido do Heap a cada acesso:
-// assim a view segue o crescimento da memória do WASM.
+// One class per scalar type keeps each get/set monomorphic. The array is read from the Heap on every access:
+// that way the view follows the growth of the WASM memory.
 class F32Field implements WriteField {
   constructor(
     private readonly heap: Heap,
@@ -209,7 +209,7 @@ class EntityField implements WriteField {
   }
 }
 
-// `entity` é lido como dois u32 (index e generation), então o elemento tem 4 B, não os 8 B do escalar.
+// `entity` is read as two u32 (index and generation), so the element is 4 B, not the scalar's 8 B.
 function elementSize(type: ScalarType): number {
   return type === "entity" ? 4 : scalarSize(type);
 }

@@ -12,8 +12,8 @@ export type StateHookFunction = (context: StateContext) => void;
 let setSidesInternal!: (context: StateContext, fromState: State | null, toState: State | null) => void;
 
 /**
- * Válido só durante a chamada do seu gancho; fora dela, qualquer uso lança ContractError. Roda no passo 5, fora de
- * qualquer iteração, com mudanças estruturais diretas.
+ * Valid only during the call of its hook; outside it, any use throws ContractError. Runs in step 5, outside
+ * any iteration, with direct structural changes.
  */
 export class StateContext extends DirectContext {
   #fromState: State | null = null;
@@ -27,10 +27,10 @@ export class StateContext extends DirectContext {
   }
 
   constructor(name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap, scheduler: Scheduler) {
-    super({ label: "hook", className: "StateContext", callNoun: "gancho" }, name, runtime, bridge, engineHandle, world, actions, scheduler);
+    super({ label: "hook", className: "StateContext", callNoun: "hook" }, name, runtime, bridge, engineHandle, world, actions, scheduler);
   }
 
-  /** `null` na primeira troca. */
+  /** `null` on the first change. */
   get fromState(): State | null {
     assertContextActive(this, "fromState");
 

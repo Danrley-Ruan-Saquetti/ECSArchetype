@@ -5,7 +5,7 @@ import { componentIdOf, type Runtime } from "./runtime.js";
 import type { ComponentLayout } from "./layout.js";
 import type { ComponentType, EventType, SchemaType } from "./schema.js";
 
-// Validações e escrita de valores compartilhadas por World e pelos contextos (mesmas regras e mensagens).
+// Value validation and writing shared by World and the contexts (same rules and messages).
 
 export function contractError(operation: string, entity: Entity | null, type: { readonly name: string } | null, reason: string): ContractError {
   const entityPart = entity === null ? "" : ` e=${formatEntity(entity)}`;
@@ -18,7 +18,7 @@ export function assertKnownFields(operation: string, entity: Entity | null, type
   const known = new Set(type.layout.fields.map((field) => field.name));
   for (const name of Object.keys(value)) {
     if (!known.has(name)) {
-      throw contractError(operation, entity, type, `campo desconhecido "${name}"`);
+      throw contractError(operation, entity, type, `unknown field "${name}"`);
     }
   }
 }
@@ -32,7 +32,7 @@ export function assertSpawnArguments(
   for (const type of types) {
     componentIdOf(runtime, type);
     if (seen.has(type)) {
-      throw new ContractError(`spawn type=${type.name}: tipo repetido em types`);
+      throw new ContractError(`spawn type=${type.name}: type repeated in types`);
     }
     seen.add(type);
   }
@@ -40,13 +40,13 @@ export function assertSpawnArguments(
   for (const [name, value] of Object.entries(valuesByName)) {
     const type = types.find((candidate) => candidate.name === name);
     if (type === undefined || type.kind !== "component") {
-      throw new ContractError(`spawn type=${name}: valor para componente que não está em types`);
+      throw new ContractError(`spawn type=${name}: value for a component that is not in types`);
     }
     assertKnownFields("spawn", null, type, value);
   }
 }
 
-// Monta o valor na área de rascunho da ponte e devolve o endereço (0 para tag, que não tem layout).
+// Builds the value in the bridge scratch area and returns the address (0 for a tag, which has no layout).
 export function writeValue(bridge: Bridge, layout: ComponentLayout | null, value: Partial<Record<string, number>> | undefined): number {
   if (layout === null) {
     return 0;

@@ -17,7 +17,7 @@ export interface BrowserLoop {
   stop(): void;
 }
 
-// Os métodos do navegador exigem `this` = window; por isso as funções embrulhadas.
+// The browser methods require `this` = window; hence the wrapped functions.
 function globalEnvironment(): BrowserEnvironment {
   return {
     requestAnimationFrame: (callback) => globalThis.requestAnimationFrame(callback),
@@ -27,9 +27,9 @@ function globalEnvironment(): BrowserEnvironment {
 }
 
 /**
- * Chama `target.frame` a cada requestAnimationFrame (tempo em segundos) e `target.setHidden` a cada
- * visibilitychange, e já no início se o documento estiver oculto. `stop` cancela o rAF pendente e remove o
- * listener; chamá-lo de novo não faz nada.
+ * Calls `target.frame` on every requestAnimationFrame (time in seconds) and `target.setHidden` on every
+ * visibilitychange, and right at the start if the document is hidden. `stop` cancels the pending rAF and removes the
+ * listener; calling it again does nothing.
  */
 export function runInBrowser(
   target: FrameTarget,
@@ -42,8 +42,8 @@ export function runInBrowser(
     target.setHidden(environment.document.hidden);
   };
 
-  // O próximo rAF é pedido antes de `frame`: uma exceção em `frame` sobe para o
-  // console do navegador sem interromper o laço.
+  // The next rAF is requested before `frame`: an exception in `frame` goes up to the
+  // browser console without breaking the loop.
   const onAnimationFrame = (timestampMilliseconds: number): void => {
     pendingHandle = environment.requestAnimationFrame(onAnimationFrame);
     target.frame(timestampMilliseconds / 1000);

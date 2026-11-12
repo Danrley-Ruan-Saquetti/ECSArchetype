@@ -33,13 +33,13 @@ function memberNames(name: string): string[] {
     .sort();
 }
 
-test("exports públicos batem com api/public-exports.txt", () => {
+test("public exports match api/public-exports.txt", () => {
   const expected = readFileSync(publicExportsPath, "utf8").split(/\r?\n/).filter((line) => line !== "");
 
   assert.deepEqual(exported.map((symbol) => symbol.name).sort(), expected);
 });
 
-test("World expõe só a API do glossário", () => {
+test("World exposes only the glossary API", () => {
   assert.deepEqual(memberNames("World"), [
     "add",
     "checkInvariants",
@@ -56,19 +56,19 @@ test("World expõe só a API do glossário", () => {
   ]);
 });
 
-test("Query expõe só eachBlock, single e trySingle", () => {
+test("Query exposes only eachBlock, single and trySingle", () => {
   assert.deepEqual(memberNames("Query"), ["eachBlock", "single", "trySingle"]);
 });
 
-test("Block expõe só count, entity, read, write", () => {
+test("Block exposes only count, entity, read, write", () => {
   assert.deepEqual(memberNames("Block"), ["count", "entity", "read", "write"]);
 });
 
-test("Runtime expõe só schema, createWorld e createEngine", () => {
+test("Runtime exposes only schema, createWorld and createEngine", () => {
   assert.deepEqual(memberNames("Runtime"), ["createEngine", "createWorld", "schema"]);
 });
 
-test("Engine expõe só a API do glossário", () => {
+test("Engine exposes only the glossary API", () => {
   assert.deepEqual(memberNames("Engine"), [
     "actions",
     "addNativeHandler",
@@ -94,7 +94,7 @@ test("Engine expõe só a API do glossário", () => {
   ]);
 });
 
-test("SystemContext expõe só a API do glossário", () => {
+test("SystemContext exposes only the glossary API", () => {
   assert.deepEqual(memberNames("SystemContext"), [
     "actions",
     "add",
@@ -122,7 +122,7 @@ test("SystemContext expõe só a API do glossário", () => {
   ]);
 });
 
-test("HandlerContext expõe só a API do glossário", () => {
+test("HandlerContext exposes only the glossary API", () => {
   assert.deepEqual(memberNames("HandlerContext"), [
     "actions",
     "add",
@@ -149,7 +149,7 @@ test("HandlerContext expõe só a API do glossário", () => {
   ]);
 });
 
-test("TaskContext expõe só a API do glossário", () => {
+test("TaskContext exposes only the glossary API", () => {
   assert.deepEqual(memberNames("TaskContext"), [
     "actions",
     "add",
@@ -176,7 +176,7 @@ test("TaskContext expõe só a API do glossário", () => {
   ]);
 });
 
-test("StateContext expõe só a API do glossário", () => {
+test("StateContext exposes only the glossary API", () => {
   assert.deepEqual(memberNames("StateContext"), [
     "actions",
     "add",
@@ -203,11 +203,11 @@ test("StateContext expõe só a API do glossário", () => {
   ]);
 });
 
-test("Scheduler expõe só after, every, cancel, isPending e persist", () => {
+test("Scheduler exposes only after, every, cancel, isPending and persist", () => {
   assert.deepEqual(memberNames("Scheduler"), ["after", "cancel", "every", "isPending", "persist"]);
 });
 
-test("ActionMap expõe só ligação, entrada do host e leitura", () => {
+test("ActionMap exposes only binding, host input and reading", () => {
   assert.deepEqual(memberNames("ActionMap"), [
     "axis2d",
     "bind",
@@ -222,14 +222,14 @@ test("ActionMap expõe só ligação, entrada do host e leitura", () => {
   ]);
 });
 
-test("EventBatch expõe só type, count e read", () => {
+test("EventBatch exposes only type, count and read", () => {
   assert.deepEqual(memberNames("EventBatch"), ["count", "read", "type"]);
 });
 
-test("ContractError tem name ContractError", () => {
+test("ContractError has name ContractError", () => {
   assert.equal(new ContractError("x").name, "ContractError");
 });
 
-test("SingleRow expõe só entity e get", () => {
+test("SingleRow exposes only entity and get", () => {
   assert.deepEqual(memberNames("SingleRow"), ["entity", "get"]);
 });

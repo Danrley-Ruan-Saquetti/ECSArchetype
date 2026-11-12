@@ -80,33 +80,33 @@ export class Runtime {
       moduleOf: (runtime) => runtime.#module,
       componentIdOf: (runtime, type) => {
         if (runtime.schema.types[type.schemaIndex] !== type) {
-          throw new ContractError(`type=${type.name}: tipo não pertence ao esquema deste runtime`);
+          throw new ContractError(`type=${type.name}: type does not belong to this runtime's schema`);
         }
 
         return runtime.#componentIds[type.schemaIndex]!;
       },
       eventIndexOf: (runtime, type) => {
         if (runtime.schema.events[type.schemaIndex] !== type) {
-          throw new ContractError(`event=${type.name}: tipo não pertence ao esquema deste runtime`);
+          throw new ContractError(`event=${type.name}: type does not belong to this runtime's schema`);
         }
 
-        // O WASM declara os eventos do esquema na ordem dele: o índice no esquema é o EventTypeId.
+        // The WASM declares the schema events in schema order: the schema index is the EventTypeId.
         return type.schemaIndex;
       },
       actionIndexOf: (runtime, action) => {
         if (runtime.schema.actions[action.schemaIndex] !== action) {
-          throw new ContractError(`action=${action.name}: ação não pertence ao esquema deste runtime`);
+          throw new ContractError(`action=${action.name}: action does not belong to this runtime's schema`);
         }
 
-        // O WASM declara as ações do esquema na ordem dele: o índice no esquema é o ActionId.
+        // The WASM declares the schema actions in schema order: the schema index is the ActionId.
         return action.schemaIndex;
       },
       stateIndexOf: (runtime, state) => {
         if (runtime.schema.states[state.schemaIndex] !== state) {
-          throw new ContractError(`state=${state.name}: estado não pertence ao esquema deste runtime`);
+          throw new ContractError(`state=${state.name}: state does not belong to this runtime's schema`);
         }
 
-        // O WASM declara os estados do esquema na ordem dele: o índice no esquema é o StateId.
+        // The WASM declares the schema states in schema order: the schema index is the StateId.
         return state.schemaIndex;
       },
       stateAt: (runtime, index) => runtime.schema.states[index] ?? null,
@@ -122,7 +122,7 @@ export class Runtime {
     module.olyInvokeScript = (engineHandle, kind, id, events, eventCount) => {
       const engine = this.#engines.get(engineHandle);
       if (engine === undefined) {
-        throw new ContractError(`olyInvokeScript engine=${engineHandle}: Engine desconhecida ou já liberada`);
+        throw new ContractError(`olyInvokeScript engine=${engineHandle}: unknown or already disposed Engine`);
       }
 
       invokeScript(engine, kind, id, events, eventCount);
@@ -134,14 +134,14 @@ export class Runtime {
     const maxStepsPerFrame = config.maxStepsPerFrame ?? 5;
     const maxEventRounds = config.maxEventRounds ?? 16;
     if (!Number.isFinite(fixedHz) || fixedHz <= 0) {
-      throw new ContractError(`createEngine fixedHz=${fixedHz}: deve ser um número positivo`);
+      throw new ContractError(`createEngine fixedHz=${fixedHz}: must be a positive number`);
     }
     if (!Number.isInteger(maxStepsPerFrame) || maxStepsPerFrame < 1) {
-      throw new ContractError(`createEngine maxStepsPerFrame=${maxStepsPerFrame}: deve ser um inteiro positivo`);
+      throw new ContractError(`createEngine maxStepsPerFrame=${maxStepsPerFrame}: must be a positive integer`);
     }
 
     if (!Number.isInteger(maxEventRounds) || maxEventRounds < 1) {
-      throw new ContractError(`createEngine maxEventRounds=${maxEventRounds}: deve ser um inteiro positivo`);
+      throw new ContractError(`createEngine maxEventRounds=${maxEventRounds}: must be a positive integer`);
     }
 
     const handle = this.#bridge.engineCreate(fixedHz, maxStepsPerFrame, maxEventRounds);
@@ -183,14 +183,14 @@ export function stateIndexOf(runtime: Runtime, state: State): number {
   return runtimeInternals.stateIndexOf(runtime, state);
 }
 
-/** `null` para o estado vazio (0xFFFFFFFF), que nenhum esquema declara. */
+/** `null` for the empty state (0xFFFFFFFF), which no schema declares. */
 export function stateAt(runtime: Runtime, index: number): State | null {
   return runtimeInternals.stateAt(runtime, index);
 }
 
 /**
- * Carrega o módulo WASM e confere que ele foi compilado com `schema`. Rejeita com SchemaMismatchError se o
- * hash, o nº de tipos ou o tamanho/alinhamento de algum tipo diferirem.
+ * Loads the WASM module and checks that it was compiled with `schema`. Rejects with SchemaMismatchError if the
+ * hash, the number of types or the size/alignment of any type differ.
  */
 export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Promise<Runtime> {
   const module = await factory();
@@ -202,12 +202,12 @@ export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Pr
     module._olySchemaActionCount() === schema.actions.length && module._olySchemaStateCount() === schema.states.length;
   if (wasmHash !== schema.hash || !countMatches || divergent !== null) {
     throw new SchemaMismatchError(
-      `esquema do WASM (${hex(wasmHash)}) difere do esquema TS (${hex(schema.hash)}); ` +
-        `tipos no WASM: ${module._olySchemaComponentCount()}, no TS: ${schema.types.length}; ` +
-        `eventos no WASM: ${module._olySchemaEventCount()}, no TS: ${schema.events.length}; ` +
-        `ações no WASM: ${module._olySchemaActionCount()}, no TS: ${schema.actions.length}; ` +
-        `estados no WASM: ${module._olySchemaStateCount()}, no TS: ${schema.states.length}; ` +
-        `primeiro tipo, evento ou ação divergente: ${divergent ?? "nenhum por tamanho (campos ou ordem mudaram)"}; recompile o WASM`,
+      `WASM schema (${hex(wasmHash)}) differs from the TS schema (${hex(schema.hash)}); ` +
+        `types in WASM: ${module._olySchemaComponentCount()}, in TS: ${schema.types.length}; ` +
+        `events in WASM: ${module._olySchemaEventCount()}, in TS: ${schema.events.length}; ` +
+        `actions in WASM: ${module._olySchemaActionCount()}, in TS: ${schema.actions.length}; ` +
+        `states in WASM: ${module._olySchemaStateCount()}, in TS: ${schema.states.length}; ` +
+        `first divergent type, event or action: ${divergent ?? "none by size (fields or order changed)"}; recompile the WASM`,
     );
   }
 

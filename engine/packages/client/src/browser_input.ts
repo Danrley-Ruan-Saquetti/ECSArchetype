@@ -42,15 +42,15 @@ export interface BrowserInput {
   detach(): void;
 }
 
-// Bits de PointerEvent.buttons. O botão intermediário de um acorde só chega por aqui: pointerdown dispara quando o
-// primeiro botão é apertado e pointerup quando o último é solto.
+// PointerEvent.buttons bits. The middle button of a chord only arrives through here: pointerdown fires when the
+// first button is pressed and pointerup when the last one is released.
 const mouseButtonBits: readonly (readonly [number, ButtonName])[] = [
   [1, "MouseLeft"],
   [2, "MouseRight"],
   [4, "MouseMiddle"],
 ];
 
-// Os métodos do navegador exigem `this` = window; por isso as funções embrulhadas.
+// The browser methods require `this` = window; hence the wrapped functions.
 function globalEnvironment(): InputEnvironment {
   const target = globalThis as unknown as InputWindow;
 
@@ -67,9 +67,9 @@ function globalEnvironment(): InputEnvironment {
 }
 
 /**
- * Entrega teclado e mouse ao alvo: teclas pelo `code` W3C, botões do mouse pela máscara `buttons` (apertar vale só
- * no canvas, soltar em qualquer lugar da janela) e `releaseAll` no `blur`. A posição do ponteiro sai em pixels do canvas, não da tela. Eventos
- * de ponteiro com o canvas sem tamanho são ignorados. `detach` remove os listeners; chamá-lo de novo não faz nada.
+ * Delivers keyboard and mouse to the target: keys by W3C `code`, mouse buttons by the `buttons` mask (pressing counts only
+ * on the canvas, releasing anywhere in the window) and `releaseAll` on `blur`. The pointer position comes out in canvas pixels, not screen pixels. Pointer
+ * events while the canvas has no size are ignored. `detach` removes the listeners; calling it again does nothing.
  */
 export function attachBrowserInput(
   target: InputTarget,
@@ -82,7 +82,7 @@ export function attachBrowserInput(
 
   const heldMouseButtons = new Set<ButtonName>();
 
-  // Devolve null com o canvas sem tamanho (oculto): não há como converter sem dividir por zero.
+  // Returns null when the canvas has no size (hidden): there is no way to convert without dividing by zero.
   const moveToCanvasPosition = (event: PointerInput): { inside: boolean } | null => {
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
@@ -96,7 +96,7 @@ export function attachBrowserInput(
     return { inside: x >= 0 && x < canvas.width && y >= 0 && y < canvas.height };
   };
 
-  // Aperto só vale dentro do canvas; soltar vale em qualquer lugar da janela.
+  // A press counts only inside the canvas; a release counts anywhere in the window.
   const syncMouseButtons = (buttons: number, allowPress: boolean): void => {
     for (const [bit, button] of mouseButtonBits) {
       const down = (buttons & bit) !== 0;
@@ -149,7 +149,7 @@ export function attachBrowserInput(
     syncMouseButtons(0, false);
   };
 
-  // O menu do botão direito vem deste evento, não do pointerdown.
+  // The right-button menu comes from this event, not from pointerdown.
   const onContextMenu = (event: PointerInput): void => {
     if (actions.isBound("MouseRight")) {
       event.preventDefault();

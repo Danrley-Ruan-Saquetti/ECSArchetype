@@ -1,6 +1,6 @@
 /**
- * Nome W3C (`KeyboardEvent.code`) de cada botão físico e o usage HID dele: a página nos 16 bits altos (0x0007 teclado,
- * 0x0009 mouse) e o usage nos baixos. É a mesma tabela de `oly::input::Key` e `MouseButton` no C++.
+ * W3C name (`KeyboardEvent.code`) of each physical button and its HID usage: the page in the high 16 bits (0x0007 keyboard,
+ * 0x0009 mouse) and the usage in the low ones. It is the same table as `oly::input::Key` and `MouseButton` in C++.
  */
 export const buttonUsages = {
   KeyA: 0x0007_0004,

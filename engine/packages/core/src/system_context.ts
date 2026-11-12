@@ -12,8 +12,8 @@ import type { SpawnValues, World } from "./world.js";
 export type SystemFunction = (context: SystemContext) => void;
 
 /**
- * Válido só durante a chamada do seu sistema; fora dela, qualquer uso lança ContractError. Mudanças estruturais
- * (spawn/destroy/add/remove) são adiadas até o fim da fase.
+ * Valid only during the call of its system; outside it, any use throws ContractError. Structural changes
+ * (spawn/destroy/add/remove) are deferred until the end of the phase.
  */
 export class SystemContext extends EngineContext {
   readonly phase: Phase;
@@ -24,7 +24,7 @@ export class SystemContext extends EngineContext {
   readonly #engineHandle: number;
 
   constructor(phase: Phase, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap, scheduler: Scheduler) {
-    super({ label: "system", className: "SystemContext", callNoun: "sistema" }, name, runtime, bridge, engineHandle, world, actions, scheduler);
+    super({ label: "system", className: "SystemContext", callNoun: "system" }, name, runtime, bridge, engineHandle, world, actions, scheduler);
     this.phase = phase;
     this.name = name;
     this.#runtime = runtime;
@@ -38,7 +38,7 @@ export class SystemContext extends EngineContext {
     return this.#bridge.engineInterpolation(this.#engineHandle);
   }
 
-  /** A entidade só fica viva ao fim da fase; o handle já pode ser usado nos comandos adiados. */
+  /** The entity only becomes alive at the end of the phase; the handle can already be used in the deferred commands. */
   spawn<const Ts extends readonly SchemaType[]>(types: Ts, values?: SpawnValues<Ts>): Entity {
     assertContextActive(this, "spawn");
 
@@ -53,7 +53,7 @@ export class SystemContext extends EngineContext {
     return entity;
   }
 
-  /** Adiado até o fim da fase, como o remove: tira o escopo de estado da entidade, que sobrevive à troca. */
+  /** Deferred until the end of the phase, like remove: removes the entity's state scope, so it survives the change. */
   persist(entity: Entity): void {
     assertContextActive(this, "persist");
 

@@ -30,7 +30,7 @@ export function scalarSize(type: ScalarType): number {
   return scalarSizes[type];
 }
 
-// `entity` é oly::ecs::Entity: dois u32, alinhamento 4.
+// `entity` is oly::ecs::Entity: two u32, alignment 4.
 export function scalarAlignment(type: ScalarType): number {
   return type === "entity" ? 4 : scalarSizes[type];
 }

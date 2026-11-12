@@ -24,8 +24,8 @@ export interface EngineConfig {
 export interface HandlerRegistration {
   readonly id: number;
   /**
-   * Faz o handler rodar só nos estados dados, conferidos a cada rodada; lista vazia tira a restrição. Lança
-   * ContractError durante frame, depois de um frame interrompido e para estado de outro esquema.
+   * Makes the handler run only in the given states, checked every round; an empty list removes the restriction. Throws
+   * ContractError during a frame, after an interrupted frame and for a state from another schema.
    */
   inState(...states: State[]): HandlerRegistration;
 }
@@ -33,11 +33,11 @@ export interface HandlerRegistration {
 export interface SystemRegistration {
   readonly id: number;
   /**
-   * Faz o sistema rodar só com o jogo pausado: pausado, as fases de jogo rodam apenas os sistemas
-   * whilePaused; sem pausa, eles não rodam. Lança ContractError para sistema da fase Render.
+   * Makes the system run only while the game is paused: when paused, the game phases run only the
+   * whilePaused systems; when not paused, those do not run. Throws ContractError for a system in the Render phase.
    */
   whilePaused(): SystemRegistration;
-  /** Como `HandlerRegistration.inState`, para o sistema; vale em todas as fases, inclusive render. */
+  /** Like `HandlerRegistration.inState`, for the system; applies in every phase, including render. */
   inState(...states: State[]): SystemRegistration;
 }
 
@@ -72,7 +72,7 @@ interface ScriptStateHookEntry {
 let engineHandleOfInternal!: (engine: Engine) => number;
 let invokeScriptInternal!: (engine: Engine, kind: number, id: number, events: number, eventCount: number) => void;
 
-// Regras do loop vivem no núcleo C++; aqui só validação de uso e a chamada de volta dos sistemas TS.
+// Loop rules live in the C++ core; here only usage validation and the callback into TS systems.
 export class Engine {
   readonly world: World;
 
@@ -86,7 +86,7 @@ export class Engine {
   readonly #scriptHandlers = new Map<number, ScriptHandlerEntry>();
   readonly #scriptStateHooks = new Map<number, ScriptStateHookEntry>();
   #inFrame = false;
-  // Uma exceção desenrola o WASM sem destrutores: o núcleo C++ continua "em frame" até o próximo frame recuperar.
+  // An exception unwinds the WASM without destructors: the C++ core stays "in frame" until the next frame recovers.
   #interrupted = false;
   #disposed = false;
   #lastFrameTime = -Infinity;
@@ -122,14 +122,14 @@ export class Engine {
     });
   }
 
-  /** Ligações, entrada do host e leitura das ações do esquema. O mesmo objeto de `context.actions`. */
+  /** Bindings, host input and reading of the schema actions. The same object as `context.actions`. */
   get actions(): ActionMap {
     this.#assertUsable("actions");
 
     return this.#actions;
   }
 
-  /** Tarefas no relógio do jogo. O mesmo objeto de `context.schedule`. */
+  /** Tasks on the game clock. The same object as `context.schedule`. */
   get schedule(): Scheduler {
     this.#assertUsable("schedule");
 
@@ -137,23 +137,23 @@ export class Engine {
   }
 
   /**
-   * Avança o relógio de passo fixo até `nowSeconds` e roda as fases. Lança ContractError se chamado de dentro
-   * de um sistema ou com tempo não finito ou menor que o do frame anterior. Durante o frame, mudanças
-   * estruturais diretas no `world` são erro; use as do SystemContext. Exceção de um sistema, handler, tarefa ou
-   * gancho de estado TS sobe daqui; até o frame seguinte, registrar sistema, handler ou gancho e chamar `inState` é
-   * ContractError, e esse frame descarta os comandos, os eventos e o pedido de estado pendentes (um `requestState`
-   * feito nesse intervalo também se perde).
+   * Advances the fixed-step clock up to `nowSeconds` and runs the phases. Throws ContractError if called from inside
+   * a system or with a time that is not finite or is less than the previous frame's. During the frame, direct structural
+   * changes on the `world` are an error; use the SystemContext ones. An exception from a TS system, handler, task or
+   * state hook propagates from here; until the next frame, registering a system, handler or hook and calling `inState` is
+   * ContractError, and that frame discards the pending commands, events and state request (a `requestState`
+   * made in that interval is lost too).
    */
   frame(nowSeconds: number): void {
     this.#assertUsable("frame");
     if (this.#inFrame) {
-      throw new ContractError("frame: chamado de dentro de um sistema ou handler (frame não é reentrante)");
+      throw new ContractError("frame: called from inside a system or handler (frame is not reentrant)");
     }
     if (!Number.isFinite(nowSeconds)) {
-      throw new ContractError(`frame: tempo=${nowSeconds} não é um número finito`);
+      throw new ContractError(`frame: time=${nowSeconds} is not a finite number`);
     }
     if (nowSeconds < this.#lastFrameTime) {
-      throw new ContractError(`frame: tempo=${nowSeconds} menor que o do frame anterior (${this.#lastFrameTime})`);
+      throw new ContractError(`frame: time=${nowSeconds} less than the previous frame's (${this.#lastFrameTime})`);
     }
 
     this.#lastFrameTime = nowSeconds;
@@ -190,9 +190,9 @@ export class Engine {
   }
 
   /**
-   * Vale o último pedido antes do passo 5 (dentro ou fora de `frame`); a troca acontece lá, pausado ou não: `onExit`,
-   * limpeza do escopo, `onEnter`. Um pedido feito num gancho vale no passo seguinte. Lança ContractError para estado
-   * de outro esquema.
+   * The last request before step 5 wins (inside or outside `frame`); the change happens there, paused or not: `onExit`,
+   * scope cleanup, `onEnter`. A request made in a hook takes effect in the next step. Throws ContractError for a state
+   * from another schema.
    */
   requestState(state: State): void {
     this.#assertUsable("requestState");
@@ -200,14 +200,14 @@ export class Engine {
     this.#bridge.engineRequestState(this.#handle, stateIndexOf(this.#runtime, state));
   }
 
-  /** `null` até a primeira troca. Só muda no passo 5. */
+  /** `null` until the first change. Only changes in step 5. */
   get state(): State | null {
     this.#assertUsable("state");
 
     return stateAt(this.#runtime, this.#bridge.engineState(this.#handle));
   }
 
-  /** Ganchos do mesmo estado rodam na ordem de registro, os C++ e os TS intercalados. Lança ContractError durante frame. */
+  /** Hooks of the same state run in registration order, C++ and TS interleaved. Throws ContractError during a frame. */
   onEnter(state: State, name: string, hook: StateHookFunction): void {
     this.#addStateHook("onEnter", StateEnter, state, name, hook);
   }
@@ -216,7 +216,7 @@ export class Engine {
     this.#addStateHook("onExit", StateExit, state, name, hook);
   }
 
-  /** Registra um gancho C++ declarado com OLY_STATE_HOOK. Lança ContractError se o nome não existe. */
+  /** Registers a C++ hook declared with OLY_STATE_HOOK. Throws ContractError if the name does not exist. */
   addNativeOnEnter(state: State, name: string): void {
     this.#addNativeStateHook("addNativeOnEnter", StateEnter, state, name);
   }
@@ -258,15 +258,15 @@ export class Engine {
 
     const id = this.#bridge.addNativeSystem(this.#handle, phase, name);
     if (id === InvalidSystem) {
-      throw new ContractError(`addNativeSystem name=${name}: não há sistema nativo com esse nome (declare com OLY_SYSTEM)`);
+      throw new ContractError(`addNativeSystem name=${name}: no native system with that name (declare it with OLY_SYSTEM)`);
     }
 
     return this.#registration(id, phase, name);
   }
 
   /**
-   * Registra um handler TS: chamado uma vez por lote de `type` em cada rodada, na ordem de registro. Lança
-   * ContractError durante frame.
+   * Registers a TS handler: called once per batch of `type` in each round, in registration order. Throws
+   * ContractError during a frame.
    */
   on<F extends Fields>(type: EventType<string, F>, name: string, handler: HandlerFunction<F>): HandlerRegistration {
     const eventType = this.#assertCanRegisterHandler("on", type, name);
@@ -283,10 +283,10 @@ export class Engine {
 
     const id = this.#bridge.addNativeHandler(this.#handle, eventType, name);
     if (id === InvalidHandler) {
-      throw new ContractError(`addNativeHandler name=${name}: não há handler nativo com esse nome (declare com OLY_HANDLER)`);
+      throw new ContractError(`addNativeHandler name=${name}: no native handler with that name (declare it with OLY_HANDLER)`);
     }
     if (id === HandlerTypeMismatch) {
-      throw new ContractError(`addNativeHandler name=${name} event=${type.name}: o handler nativo é de outro tipo de evento`);
+      throw new ContractError(`addNativeHandler name=${name} event=${type.name}: the native handler is for another event type`);
     }
 
     return this.#handlerRegistration(id, name);
@@ -297,7 +297,7 @@ export class Engine {
       return;
     }
     if (this.#inFrame) {
-      throw new ContractError("dispose: Engine em frame; libere depois do frame");
+      throw new ContractError("dispose: Engine in frame; dispose after the frame");
     }
 
     this.#disposed = true;
@@ -312,7 +312,7 @@ export class Engine {
       whilePaused: () => {
         this.#assertUsable("whilePaused");
         if (phase === Phase.Render) {
-          throw new ContractError(`whilePaused system=${name}: não vale para sistema da fase render`);
+          throw new ContractError(`whilePaused system=${name}: not valid for a system in the render phase`);
         }
 
         this.#bridge.setWhilePaused(this.#handle, id, true);
@@ -349,7 +349,7 @@ export class Engine {
   #restrictToStates(operation: string, subject: string, states: readonly State[], apply: (mask: number) => void): void {
     this.#assertUsable(operation);
     if (this.#inFrame) {
-      throw new ContractError(`${operation} ${subject}: restrição de estados durante frame`);
+      throw new ContractError(`${operation} ${subject}: state restriction during frame`);
     }
     this.#assertNotInterrupted(operation, subject);
 
@@ -369,14 +369,14 @@ export class Engine {
 
     const id = this.#bridge.engineAddNativeStateHook(this.#handle, when, index, name);
     if (id === InvalidStateHook) {
-      throw new ContractError(`${operation} name=${name}: não há gancho de estado nativo com esse nome (declare com OLY_STATE_HOOK)`);
+      throw new ContractError(`${operation} name=${name}: no native state hook with that name (declare it with OLY_STATE_HOOK)`);
     }
   }
 
   #assertCanRegisterStateHook(operation: string, state: State, name: string): number {
     this.#assertUsable(operation);
     if (this.#inFrame) {
-      throw new ContractError(`${operation} hook=${name}: registro durante frame`);
+      throw new ContractError(`${operation} hook=${name}: registration during frame`);
     }
     this.#assertNotInterrupted(operation, `hook=${name}`);
 
@@ -386,10 +386,10 @@ export class Engine {
   #invoke(systemId: number): void {
     const entry = this.#scriptSystems.get(systemId);
     if (entry === undefined) {
-      throw new ContractError(`sistema id=${systemId}: não é um sistema TS desta Engine`);
+      throw new ContractError(`system id=${systemId}: not a TS system of this Engine`);
     }
 
-    // Um sistema C++ anterior pode ter crescido a memória do WASM.
+    // A previous C++ system may have grown the WASM memory.
     this.#bridge.sync();
     setContextActive(entry.context, true);
     try {
@@ -402,10 +402,10 @@ export class Engine {
   #invokeHandler(id: number, address: number, count: number): void {
     const entry = this.#scriptHandlers.get(id);
     if (entry === undefined) {
-      throw new ContractError(`handler id=${id}: não é um handler TS desta Engine`);
+      throw new ContractError(`handler id=${id}: not a TS handler of this Engine`);
     }
 
-    // Um handler ou sistema C++ anterior pode ter crescido a memória do WASM.
+    // A previous C++ handler or system may have grown the WASM memory.
     this.#bridge.sync();
     const batch = new EventBatch(entry.type, count, address, this.#bridge);
     setContextActive(entry.context, true);
@@ -422,10 +422,10 @@ export class Engine {
   #invokeStateHook(id: number, otherSide: number): void {
     const entry = this.#scriptStateHooks.get(id);
     if (entry === undefined) {
-      throw new ContractError(`gancho id=${id}: não é um gancho de estado TS desta Engine`);
+      throw new ContractError(`hook id=${id}: not a TS state hook of this Engine`);
     }
 
-    // Um gancho, sistema ou handler C++ anterior pode ter crescido a memória do WASM.
+    // A previous C++ hook, system or handler may have grown the WASM memory.
     this.#bridge.sync();
     const current = stateAt(this.#runtime, this.#bridge.engineState(this.#handle));
     const other = stateAt(this.#runtime, otherSide >>> 0);
@@ -447,7 +447,7 @@ export class Engine {
   #assertCanRegisterHandler(operation: string, type: EventType, name: string): number {
     this.#assertUsable(operation);
     if (this.#inFrame) {
-      throw new ContractError(`${operation} handler=${name}: registro durante frame`);
+      throw new ContractError(`${operation} handler=${name}: registration during frame`);
     }
     this.#assertNotInterrupted(operation, `handler=${name}`);
 
@@ -456,24 +456,24 @@ export class Engine {
 
   #assertNotInterrupted(operation: string, subject: string): void {
     if (this.#interrupted) {
-      throw new ContractError(`${operation} ${subject}: o último frame foi interrompido por uma exceção; chame frame antes de registrar`);
+      throw new ContractError(`${operation} ${subject}: the last frame was interrupted by an exception; call frame before registering`);
     }
   }
 
   #assertCanRegister(operation: string, phase: Phase, name: string): void {
     this.#assertUsable(operation);
     if (this.#inFrame) {
-      throw new ContractError(`${operation} system=${name}: registro durante frame`);
+      throw new ContractError(`${operation} system=${name}: registration during frame`);
     }
     this.#assertNotInterrupted(operation, `system=${name}`);
     if (!Object.values(Phase).includes(phase)) {
-      throw new ContractError(`${operation} system=${name}: phase=${String(phase)} inválida`);
+      throw new ContractError(`${operation} system=${name}: invalid phase=${String(phase)}`);
     }
   }
 
   #assertUsable(operation: string): void {
     if (this.#disposed) {
-      throw new ContractError(`${operation}: Engine já liberada`);
+      throw new ContractError(`${operation}: Engine already disposed`);
     }
   }
 }

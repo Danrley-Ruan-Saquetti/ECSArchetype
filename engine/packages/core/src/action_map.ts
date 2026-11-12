@@ -36,9 +36,9 @@ const ActionReleased = 4;
 const ActionValid = 8;
 
 /**
- * Ligações e entrada do host vão para o núcleo C++, que guarda o estado; a leitura vem do snapshot no heap do WASM,
- * sem cruzar a fronteira. O mesmo objeto serve a `Engine` e aos contextos. Lança ContractError para botão fora da
- * tabela W3C, ação de outro esquema ou de outro tipo, ponteiro não finito e `Engine` liberada.
+ * Bindings and host input go to the C++ core, which keeps the state; reads come from the snapshot in the WASM heap,
+ * without crossing the boundary. The same object serves the `Engine` and the contexts. Throws ContractError for a button outside the
+ * W3C table, an action from another schema or of another kind, a non-finite pointer and a disposed `Engine`.
  */
 export class ActionMap {
   readonly #runtime: Runtime;
@@ -84,7 +84,7 @@ export class ActionMap {
     };
   }
 
-  /** Ligar de novo o mesmo botão ou eixo à ação não duplica. Vale a partir da próxima captura. */
+  /** Binding the same button or axis to the action again does not duplicate it. Takes effect from the next capture. */
   bind(action: ButtonAction, button: ButtonName): void;
   bind(action: Axis2dAction, binding: Axis2dBinding): void;
   bind(action: ActionType, target: ButtonName | Axis2dBinding): void {
@@ -134,7 +134,7 @@ export class ActionMap {
   pointerMove(x: number, y: number): void {
     this.#assertUsable("pointerMove");
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      throw new ContractError(`pointerMove x=${x} y=${y}: valor não finito`);
+      throw new ContractError(`pointerMove x=${x} y=${y}: non-finite value`);
     }
 
     this.#bridge.enginePointerMove(this.#engineHandle, x, y);
@@ -150,7 +150,7 @@ export class ActionMap {
     this.#assertUsable(operation);
     const index = actionIndexOf(this.#runtime, action);
     if (action.actionKind !== expected) {
-      throw new ContractError(`${operation} action=${action.name}: ação do tipo ${action.actionKind}, esperado ${expected}`);
+      throw new ContractError(`${operation} action=${action.name}: action of kind ${action.actionKind}, expected ${expected}`);
     }
 
     return index;
@@ -163,7 +163,7 @@ export class ActionMap {
 
 function usageOf(operation: string, button: ButtonName): number {
   if (!isButtonName(button)) {
-    throw new ContractError(`${operation} button=${String(button)}: botão fora da tabela W3C`);
+    throw new ContractError(`${operation} button=${String(button)}: button outside the W3C table`);
   }
 
   return buttonUsages[button];

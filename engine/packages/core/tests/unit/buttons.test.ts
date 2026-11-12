@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { buttonUsages, isButtonName } from "@oly/core/internal";
 
-test("amostras da tabela W3C para HID", () => {
+test("samples of the W3C to HID table", () => {
   const samples: Readonly<Record<string, number>> = {
     KeyA: 0x0007_0004,
     KeyW: 0x0007_001a,
@@ -34,7 +34,7 @@ test("amostras da tabela W3C para HID", () => {
   }
 });
 
-test("isButtonName aceita só nomes W3C da tabela", () => {
+test("isButtonName accepts only W3C names from the table", () => {
   assert.equal(isButtonName("KeyW"), true);
   assert.equal(isButtonName("w"), false);
   assert.equal(isButtonName("Unidentified"), false);

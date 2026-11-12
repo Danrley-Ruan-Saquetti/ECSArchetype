@@ -9,9 +9,9 @@ import type { ComponentType, Fields, SchemaType, ValueOf } from "./schema.js";
 import { spawnWith, type SpawnValues, type World } from "./world.js";
 
 /**
- * Base do HandlerContext, do TaskContext e do StateContext: mudanças estruturais diretas. `spawn` passa pela engine
- * (a entidade ganha o escopo do estado ativo) e o resto delega ao World. Rodam fora de qualquer iteração, então a
- * entidade citada num evento ou numa tarefa pode já ter morrido (confira com isAlive).
+ * Base of HandlerContext, TaskContext and StateContext: direct structural changes. `spawn` goes through the engine
+ * (the entity gets the scope of the active state) and the rest delegates to the World. They run outside any iteration, so the
+ * entity named in an event or a task may already be dead (check with isAlive).
  */
 export class DirectContext extends EngineContext {
   readonly #world: World;
@@ -25,18 +25,18 @@ export class DirectContext extends EngineContext {
     this.#engineHandle = engineHandle;
   }
 
-  /** Com estado ativo a entidade nasce com escopo e some na troca de estado, a menos que receba `persist`. */
+  /** With an active state the entity is born scoped and disappears on the state change, unless it gets `persist`. */
   spawn<const Ts extends readonly SchemaType[]>(types: Ts, values?: SpawnValues<Ts>): Entity {
     assertContextActive(this, "spawn");
 
     return spawnWith(this.#world, types, values as Readonly<Record<string, Partial<Record<string, number>>>> | undefined, () => this.#bridge.directSpawn(this.#engineHandle));
   }
 
-  /** Tira o escopo de estado da entidade. Lança ContractError para entidade morta. */
+  /** Removes the entity's state scope. Throws ContractError for a dead entity. */
   persist(entity: Entity): void {
     assertContextActive(this, "persist");
     if (!this.#world.isAlive(entity)) {
-      throw new ContractError(`persist entity=${formatEntity(entity)}: entidade morta`);
+      throw new ContractError(`persist entity=${formatEntity(entity)}: dead entity`);
     }
 
     this.#bridge.contextPersist(this.#engineHandle, entity);

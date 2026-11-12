@@ -1,4 +1,4 @@
-// Módulo Emscripten da Oly: exports da API C (prefixo `_`) e o heap. Ponteiros e handles são `number`.
+// Oly's Emscripten module: C API exports (prefix `_`) and the heap. Pointers and handles are `number`.
 export interface OlyModule {
   HEAPU8: Uint8Array;
   _malloc(bytes: number): number;
@@ -79,7 +79,7 @@ export interface OlyModule {
   _olySystemAdd(engine: number, index: number, generation: number, componentId: number, value: number): void;
   _olySystemRemove(engine: number, index: number, generation: number, componentId: number): void;
 
-  // Chamada de volta do núcleo (olyHostInvokeScript): o Runtime instala uma vez e despacha por engine.
+  // Callback from the core (olyHostInvokeScript): the Runtime installs it once and dispatches by engine.
   olyInvokeScript?: (engine: number, kind: number, id: number, events: number, eventCount: number) => void;
 }
 

@@ -1,6 +1,6 @@
 import type { ActionType, EventType, SchemaType, State } from "./schema.js";
 
-// FNV-1a 32 bits sobre as unidades de código do texto; resultado sem sinal.
+// 32-bit FNV-1a over the text's code units; unsigned result.
 export function fnv1a32(text: string): number {
   let hash = 0x811c9dc5;
   for (let position = 0; position < text.length; ++position) {
@@ -10,7 +10,7 @@ export function fnv1a32(text: string): number {
   return hash;
 }
 
-// Forma canônica: `Nome{campo:tipo,...};Tag;` na ordem de declaração, seguida de `!Nome{campo:tipo,...};` por evento e de `@nome:tipo;` por ação e de `#nome;` por estado.
+// Canonical form: `Name{field:type,...};Tag;` in declaration order, followed by `!Name{field:type,...};` per event, `@name:type;` per action and `#name;` per state.
 export function canonicalSchema(
   types: readonly SchemaType[],
   events: readonly EventType[] = [],

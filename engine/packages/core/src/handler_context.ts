@@ -10,8 +10,8 @@ import type { World } from "./world.js";
 export type HandlerFunction<F extends Fields = Fields> = (context: HandlerContext, batch: EventBatch<F>) => void;
 
 /**
- * Válido só durante a chamada do seu handler. Mudanças estruturais são diretas (DirectContext): o despacho
- * acontece fora de qualquer iteração, então a entidade citada num evento pode já ter morrido (confira com isAlive).
+ * Valid only during the call of its handler. Structural changes are direct (DirectContext): dispatch
+ * happens outside any iteration, so the entity named in an event may already be dead (check with isAlive).
  */
 export class HandlerContext extends DirectContext {
   readonly eventType: EventType;

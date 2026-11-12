@@ -1,6 +1,6 @@
 import { ContractError } from "./errors.js";
 
-/** generation * 2^32 + index. Com generation ≤ 2^21 − 1 o número cabe em 53 bits (inteiro seguro do JS). */
+/** generation * 2^32 + index. With generation ≤ 2^21 − 1 the number fits in 53 bits (JS safe integer). */
 export type Entity = number;
 
 export const MaxEntityGeneration = 0x1fffff;
@@ -10,7 +10,7 @@ const IndexRange = 2 ** 32;
 export function packEntity(index: number, generation: number): Entity {
   if (generation > MaxEntityGeneration) {
     throw new ContractError(
-      `packEntity e=${index}:${generation}: geração acima de ${MaxEntityGeneration} não cabe em um número JS`,
+      `packEntity e=${index}:${generation}: generation above ${MaxEntityGeneration} does not fit in a JS number`,
     );
   }
 

@@ -7,8 +7,8 @@ function importByHref(href: string): Promise<unknown> {
 }
 
 /**
- * Fábrica do módulo Emscripten (.mjs) a partir de uma URL, relativa à página quando há `location`. O .wasm é
- * buscado ao lado do .mjs. A fábrica rejeita com Error se o .mjs não exportar a fábrica Emscripten como default.
+ * Emscripten module (.mjs) factory from a URL, relative to the page when there is a `location`. The .wasm is
+ * fetched next to the .mjs. The factory rejects with Error if the .mjs does not export the Emscripten factory as default.
  */
 export function moduleFactoryFromUrl(url: string | URL, importModule: (href: string) => Promise<unknown> = importByHref): OlyModuleFactory {
   const base = globalThis.location?.href;
@@ -17,7 +17,7 @@ export function moduleFactoryFromUrl(url: string | URL, importModule: (href: str
   return async () => {
     const loaded = (await importModule(href)) as { default?: unknown };
     if (typeof loaded.default !== "function") {
-      throw new Error(`${href}: o módulo não exporta uma fábrica Emscripten como default`);
+      throw new Error(`${href}: the module does not export an Emscripten factory as default`);
     }
 
     return (loaded.default as EmscriptenFactory)({ locateFile: (path) => new URL(path, href).href });

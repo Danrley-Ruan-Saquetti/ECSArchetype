@@ -3,7 +3,7 @@ import type { ScalarType } from "./layout.js";
 import type { OlyModule } from "./module.js";
 import type { Schema } from "./schema.js";
 
-// Views sobre o buffer inteiro do WASM. O buffer muda quando a memória cresce: `refresh` recria as views.
+// Views over the whole WASM buffer. The buffer changes when memory grows: `refresh` recreates the views.
 export class Heap {
   buffer!: ArrayBuffer;
   u8!: Uint8Array;
@@ -88,8 +88,8 @@ export function writeScalar(heap: Heap, type: ScalarType, address: number, value
   }
 }
 
-// Área de rascunho: OlyEntity de saída (8 B), ponteiro de descritores (4 B), nº de blocos (4 B), valor de um
-// componente ou evento (`valueCapacity` B) e, por último, a mensagem de checkInvariants.
+// Scratch area: output OlyEntity (8 B), descriptors pointer (4 B), block count (4 B), value of a
+// component or event (`valueCapacity` B) and, last, the checkInvariants message.
 const OutputOffset = 0;
 const DescriptorsOffset = 8;
 const BlockCountOffset = 12;
@@ -99,7 +99,7 @@ const MessageCapacity = 256;
 const InitialIdCapacity = 32;
 const InitialStringCapacity = 64;
 
-// Único lugar que chama exports do WASM. Toda chamada que pode alocar no WASM termina em `sync()`.
+// The only place that calls WASM exports. Every call that may allocate in the WASM ends in `sync()`.
 export class Bridge {
   readonly module: OlyModule;
   readonly heap: Heap;
@@ -125,7 +125,7 @@ export class Bridge {
     this.stringPointer = this.allocate(this.stringCapacity);
   }
 
-  // Área de rascunho para montar o valor de um componente ou evento (zerada pelo chamador).
+  // Scratch area to build the value of a component or event (zeroed by the caller).
   get valuePointer(): number {
     return this.scratch + ValueOffset;
   }
@@ -194,7 +194,7 @@ export class Bridge {
     return this.module._olyComponentHas(world, entityIndex(entity), entityGeneration(entity), componentId) === 1;
   }
 
-  // Endereço do componente, ou 0 se a entidade está morta, o componente ausente ou é tag.
+  // Address of the component, or 0 if the entity is dead, the component is absent or is a tag.
   get(world: number, entity: Entity, componentId: number): number {
     return this.module._olyComponentGet(world, entityIndex(entity), entityGeneration(entity), componentId) >>> 0;
   }
@@ -247,7 +247,7 @@ export class Bridge {
     return this.module._olyEngineWorld(engine) >>> 0;
   }
 
-  // Um sistema TS pode lançar: a exceção JS atravessa o WASM e a memória pode ter crescido no meio.
+  // A TS system may throw: the JS exception crosses the WASM and memory may have grown in between.
   engineFrame(engine: number, nowSeconds: number): void {
     try {
       this.module._olyEngineFrame(engine, nowSeconds);
@@ -285,7 +285,7 @@ export class Bridge {
     return this.module._olyEngineInterpolation(engine);
   }
 
-  // 0xFFFFFFFF (OLY_INVALID_SYSTEM) se o nome nativo não existe.
+  // 0xFFFFFFFF (OLY_INVALID_SYSTEM) if the native name does not exist.
   addNativeSystem(engine: number, phase: number, name: string): number {
     const id = this.module._olyEngineAddNativeSystem(engine, phase, this.writeString(name)) >>> 0;
     this.sync();
@@ -300,7 +300,7 @@ export class Bridge {
     return id;
   }
 
-  // 0xFFFFFFFF (OLY_INVALID_HANDLER) se o nome nativo não existe; 0xFFFFFFFE (OLY_HANDLER_TYPE_MISMATCH) se é de outro tipo.
+  // 0xFFFFFFFF (OLY_INVALID_HANDLER) if the native name does not exist; 0xFFFFFFFE (OLY_HANDLER_TYPE_MISMATCH) if it is of another type.
   addNativeHandler(engine: number, eventType: number, name: string): number {
     const id = this.module._olyEngineAddNativeHandler(engine, eventType, this.writeString(name)) >>> 0;
     this.sync();
@@ -315,13 +315,13 @@ export class Bridge {
     return id;
   }
 
-  // Copia o valor para a fila de eventos do WASM, que pode crescer a memória.
+  // Copies the value into the WASM event queue, which may grow memory.
   engineEmit(engine: number, eventType: number, valuePointer: number): void {
     this.module._olyEngineEmit(engine, eventType, valuePointer);
     this.sync();
   }
 
-  // O descarte de tarefas chama o JS e pode crescer a memória do WASM.
+  // Discarding tasks calls into JS and may grow the WASM memory.
   engineScheduleScriptTask(engine: number, delaySeconds: number, intervalSeconds: number, scriptId: number): { slot: number; generation: number } {
     this.module._olyEngineScheduleScriptTask(engine, delaySeconds, intervalSeconds, scriptId, this.scratch + OutputOffset);
     this.sync();
@@ -361,7 +361,7 @@ export class Bridge {
     this.module._olyEngineSetHandlerStates(engine, handlerId, mask);
   }
 
-  // O nome nativo desconhecido volta como 0xFFFFFFFF.
+  // An unknown native name comes back as 0xFFFFFFFF.
   engineAddNativeStateHook(engine: number, when: number, state: number, name: string): number {
     const id = this.module._olyEngineAddNativeStateHook(engine, when, state, this.writeString(name)) >>> 0;
     this.sync();
@@ -431,7 +431,7 @@ export class Bridge {
     this.sync();
   }
 
-  // Estável até engineDestroy: o núcleo declara todas as ações do esquema na criação.
+  // Stable until engineDestroy: the core declares all schema actions at creation.
   engineActionSnapshot(engine: number): number {
     return this.module._olyEngineActionSnapshot(engine) >>> 0;
   }
@@ -459,7 +459,7 @@ export class Bridge {
     this.sync();
   }
 
-  // UTF-8 + NUL numa área de rascunho que cresce; o ponteiro vale até a próxima chamada.
+  // UTF-8 + NUL in a growing scratch area; the pointer is valid until the next call.
   writeString(text: string): number {
     const bytes = new TextEncoder().encode(text);
     if (bytes.length + 1 > this.stringCapacity) {

@@ -23,8 +23,8 @@ interface ContextInternals {
 let contextInternals!: ContextInternals;
 
 /**
- * O que o SystemContext, o HandlerContext, o TaskContext e o StateContext têm em comum. Válido só durante a chamada do seu sistema,
- * handler, tarefa ou gancho; fora dela, qualquer uso lança ContractError.
+ * What SystemContext, HandlerContext, TaskContext and StateContext have in common. Valid only during the call of its system,
+ * handler, task or hook; outside it, any use throws ContractError.
  */
 export class EngineContext {
   #active = false;
@@ -45,7 +45,7 @@ export class EngineContext {
       assertActive: (context, operation) => {
         if (!context.#active) {
           const { label, className, callNoun } = context.#kind;
-          throw new ContractError(`${operation} ${label}=${context.#name}: ${className} usado fora da chamada do ${callNoun}`);
+          throw new ContractError(`${operation} ${label}=${context.#name}: ${className} used outside the ${callNoun} call`);
         }
       },
     };
@@ -62,14 +62,14 @@ export class EngineContext {
     this.#world = world;
   }
 
-  /** O mesmo objeto de `Engine.actions`. */
+  /** The same object as `Engine.actions`. */
   get actions(): ActionMap {
     contextInternals.assertActive(this, "actions");
 
     return this.#actions;
   }
 
-  /** O mesmo objeto de `Engine.schedule`. */
+  /** The same object as `Engine.schedule`. */
   get schedule(): Scheduler {
     contextInternals.assertActive(this, "schedule");
 
@@ -106,14 +106,14 @@ export class EngineContext {
     this.#bridge.engineResume(this.#engineHandle);
   }
 
-  /** Vale o último pedido antes do passo 5; a troca de estado acontece lá. */
+  /** The last request before step 5 wins; the state change happens there. */
   requestState(state: State): void {
     contextInternals.assertActive(this, "requestState");
 
     this.#bridge.engineRequestState(this.#engineHandle, stateIndexOf(this.#runtime, state));
   }
 
-  /** `null` até a primeira troca. Só muda no passo 5. */
+  /** `null` until the first change. Only changes in step 5. */
   get state(): State | null {
     contextInternals.assertActive(this, "state");
 
@@ -150,7 +150,7 @@ export class EngineContext {
     return this.#world.isAlive(entity);
   }
 
-  /** Campos ausentes valem 0. O evento é despachado na rodada seguinte do passo em curso. */
+  /** Missing fields are 0. The event is dispatched in the next round of the current step. */
   emit<F extends Fields>(type: EventType<string, F>, value?: Partial<ValueOf<F>>): void {
     contextInternals.assertActive(this, "emit");
 

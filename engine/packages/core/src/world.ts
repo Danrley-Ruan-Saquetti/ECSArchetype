@@ -24,19 +24,19 @@ type SpawnValuesByName = Readonly<Record<string, Partial<Record<string, number>>
 let worldInternals!: WorldInternals;
 
 /**
- * Lança ContractError para uso depois de `dispose`, entidade morta, componente ausente em `get`/`set`, campo
- * desconhecido e mudança estrutural direta durante eachBlock ou durante `Engine.frame`.
+ * Throws ContractError for use after `dispose`, a dead entity, a missing component in `get`/`set`, an unknown
+ * field and a direct structural change during eachBlock or during `Engine.frame`.
  */
 export class World {
   readonly handle: number;
 
-  // Aumentado por Query.eachBlock: mudança estrutural com iteração em curso é erro de contrato.
+  // Incremented by Query.eachBlock: a structural change with an iteration in progress is a contract error.
   #iterationDepth = 0;
   readonly #runtime: Runtime;
   readonly #bridge: Bridge;
   readonly #owned: boolean;
   #disposed = false;
-  // Ligado pela Engine durante frame: as mudanças estruturais passam pelo SystemContext (adiadas).
+  // Set by the Engine during frame: structural changes go through the SystemContext (deferred).
   #structureLocked = false;
   readonly #queries = new Map<string, Query>();
 
@@ -59,7 +59,7 @@ export class World {
     };
   }
 
-  // `owned` falso: o World pertence a uma Engine, que o libera junto com ela.
+  // `owned` false: the World belongs to an Engine, which disposes it along with itself.
   constructor(runtime: Runtime, handle: number, owned = true) {
     this.#runtime = runtime;
     this.#bridge = bridgeOf(runtime);
@@ -132,8 +132,8 @@ export class World {
   }
 
   /**
-   * Memoizada por spec: a mesma combinação (com a ordem de read/write) devolve a mesma Query. Lança
-   * ContractError para tag em read/write ou tipo repetido em read/write.
+   * Memoized by spec: the same combination (with the read/write order) returns the same Query. Throws
+   * ContractError for a tag in read/write or a type repeated in read/write.
    */
   query(spec: QuerySpec): Query {
     this.#assertUsable("query");
@@ -147,10 +147,10 @@ export class World {
     for (const type of [...read, ...write] as SchemaType[]) {
       componentIdOf(this.#runtime, type);
       if (type.kind === "tag") {
-        throw new ContractError(`query type=${type.name}: tag não pode ir em read nem write; use with/without`);
+        throw new ContractError(`query type=${type.name}: a tag cannot go in read or write; use with/without`);
       }
       if (seen.has(type)) {
-        throw new ContractError(`query type=${type.name}: tipo repetido em read/write`);
+        throw new ContractError(`query type=${type.name}: type repeated in read/write`);
       }
       seen.add(type);
     }
@@ -190,10 +190,10 @@ export class World {
       return;
     }
     if (!this.#owned) {
-      throw new ContractError("dispose: World pertence à Engine; use engine.dispose()");
+      throw new ContractError("dispose: World belongs to the Engine; use engine.dispose()");
     }
     if (this.#iterationDepth > 0) {
-      throw new ContractError("dispose: World em iteração (eachBlock); libere depois do laço");
+      throw new ContractError("dispose: World in iteration (eachBlock); dispose after the loop");
     }
 
     this.#disposed = true;
@@ -214,7 +214,7 @@ export class World {
     const componentId = componentIdOf(this.#runtime, type);
     const address = this.#bridge.get(this.handle, entity, componentId);
     if (address === 0) {
-      throw contractError(operation, entity, type, "entidade não tem o componente");
+      throw contractError(operation, entity, type, "entity does not have the component");
     }
 
     return address;
@@ -222,7 +222,7 @@ export class World {
 
   #assertUsable(operation: string): void {
     if (this.#disposed) {
-      throw new ContractError(`${operation}: World já liberado`);
+      throw new ContractError(`${operation}: World already disposed`);
     }
   }
 
@@ -243,16 +243,16 @@ export class World {
   #assertStructuralChangeAllowed(operation: string, entity: Entity | null = null, type: SchemaType | null = null): void {
     this.#assertUsable(operation);
     if (this.#structureLocked) {
-      throw contractError(operation, entity, type, "mudança estrutural direta durante frame; use context.spawn/destroy/add/remove");
+      throw contractError(operation, entity, type, "direct structural change during frame; use context.spawn/destroy/add/remove");
     }
     if (this.#iterationDepth > 0) {
-      throw contractError(operation, entity, type, "mudança estrutural durante eachBlock");
+      throw contractError(operation, entity, type, "structural change during eachBlock");
     }
   }
 
   #assertAlive(operation: string, entity: Entity, type: SchemaType | null = null): void {
     if (!this.#bridge.isAlive(this.handle, entity)) {
-      throw contractError(operation, entity, type, "entidade morta");
+      throw contractError(operation, entity, type, "dead entity");
     }
   }
 }
@@ -269,8 +269,8 @@ export function leaveIteration(world: World): void {
   worldInternals.leaveIteration(world);
 }
 
-// O que World.spawn faz, com a criação da entidade escolhida por quem chama (o contexto direto cria pelo núcleo,
-// que aplica o escopo do estado).
+// What World.spawn does, with the entity creation chosen by the caller (the direct context creates through the core,
+// which applies the state scope).
 export function spawnWith(world: World, types: readonly SchemaType[], values: SpawnValuesByName | undefined, create: () => Entity): Entity {
   return worldInternals.spawnWith(world, types, values, create);
 }
@@ -279,7 +279,7 @@ export function setStructureLocked(world: World, locked: boolean): void {
   worldInternals.setStructureLocked(world, locked);
 }
 
-// A Engine dona do World o libera junto com o OlyEngine: aqui só marca como liberado.
+// The Engine that owns the World disposes it along with the OlyEngine: here it only marks it as disposed.
 export function releaseOwnedWorld(world: World): void {
   worldInternals.release(world);
 }

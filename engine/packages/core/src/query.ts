@@ -12,17 +12,17 @@ export interface QuerySpec {
   without?: readonly SchemaType[];
 }
 
-const BlockMessage = "bloco usado fora do callback de eachBlock";
+const BlockMessage = "block used outside the eachBlock callback";
 
-// Descritor de bloco de olyQueryBegin, em u32 no wasm32: [count, endereço das entidades, endereço de cada coluna...].
+// Block descriptor from olyQueryBegin, in u32 on wasm32: [count, entities address, address of each column...].
 const DescriptorHeaderLength = 2;
 
 let invalidateBlock!: (block: Block) => void;
 
 /**
- * Uma tabela do ECS: `count` linhas, as entidades e as colunas pedidas pela query. O bloco e as views de
- * `read`/`write` só valem dentro do callback de eachBlock (a mudança estrutural invalidaria os endereços).
- * Fora dele, os métodos do bloco lançam ContractError; as views não são conferidas.
+ * An ECS table: `count` rows, the entities and the columns requested by the query. The block and the
+ * `read`/`write` views are valid only inside the eachBlock callback (a structural change would invalidate the addresses).
+ * Outside it, the block methods throw ContractError; the views are not checked.
  */
 export class Block {
   readonly count: number;
@@ -74,7 +74,7 @@ export class Block {
   write<F extends Fields>(type: ComponentType<string, F>): WriteView<F> {
     this.#assertValid("write", type);
     if (!this.#writeTypes.includes(type)) {
-      throw new ContractError(`write type=${type.name}: tipo não está em write na query (só em read ou fora dela)`);
+      throw new ContractError(`write type=${type.name}: type is not in the query's write (only in read or outside it)`);
     }
 
     return this.#viewOf("write", type) as unknown as WriteView<F>;
@@ -86,10 +86,10 @@ export class Block {
       return cached;
     }
 
-    // Posição do tipo entre as colunas do descritor (read seguido de write).
+    // Position of the type among the descriptor columns (read followed by write).
     const position = this.#components.indexOf(type);
     if (position < 0) {
-      throw new ContractError(`${operation} type=${type.name}: tipo não está na query`);
+      throw new ContractError(`${operation} type=${type.name}: type is not in the query`);
     }
 
     const view = makeView(this.#bridge.heap, type.layout, this.#columnAddresses[position]!);
@@ -109,8 +109,8 @@ export class Block {
 let makeSingleRow!: (entity: Entity, values: ReadonlyMap<ComponentType, unknown>) => SingleRow;
 
 /**
- * A única linha de uma query: a entidade e uma cópia dos componentes de `read` e `write`, feita no momento
- * da consulta. Mudar a cópia não muda o World (use `world.set`).
+ * The single row of a query: the entity and a copy of the `read` and `write` components, taken at the moment
+ * of the query. Changing the copy does not change the World (use `world.set`).
  */
 export class SingleRow {
   readonly entity: Entity;
@@ -129,7 +129,7 @@ export class SingleRow {
   get<F extends Fields>(type: ComponentType<string, F>): ValueOf<F> {
     const value = this.#values.get(type);
     if (value === undefined) {
-      throw new ContractError(`get type=${type.name}: tipo não está na query`);
+      throw new ContractError(`get type=${type.name}: type is not in the query`);
     }
 
     return value as ValueOf<F>;
@@ -157,14 +157,14 @@ export class Query {
     this.#components = [...readTypes, ...writeTypes];
   }
 
-  /** Durante o callback, mudança estrutural direta no World (spawn/destroy/add/remove) lança ContractError. */
+  /** During the callback, a direct structural change on the World (spawn/destroy/add/remove) throws ContractError. */
   eachBlock(callback: (block: Block) => void): void {
     assertWorldUsable(this.#world, "eachBlock");
 
     const { iteration, blockCount, descriptors } = this.#bridge.queryBegin(this.#world.handle, this.#handle);
     const stride = DescriptorHeaderLength + this.#components.length;
     const start = descriptors >> 2;
-    // Cópia: a memória do WASM pode crescer durante o callback e invalidar a view sobre o heap.
+    // Copy: the WASM memory may grow during the callback and invalidate the view over the heap.
     const copy = this.#bridge.heap.u32.slice(start, start + blockCount * stride);
 
     enterIteration(this.#world);
@@ -185,12 +185,12 @@ export class Query {
     }
   }
 
-  /** Exatamente uma linha entre todas as tabelas casadas; senão ContractError. Cruza a fronteira duas vezes (Begin/End). */
+  /** Exactly one row across all matched tables; otherwise ContractError. Crosses the boundary twice (Begin/End). */
   single(): SingleRow {
     return this.#readSingle("single", true)!;
   }
 
-  /** `null` sem linhas; mais de uma é ContractError. */
+  /** `null` with no rows; more than one is ContractError. */
   trySingle(): SingleRow | null {
     return this.#readSingle("trySingle", false);
   }
@@ -223,8 +223,8 @@ export class Query {
     }
 
     if (rowCount > 1 || (rowCount === 0 && required)) {
-      const expected = required ? "1" : "0 ou 1";
-      throw new ContractError(`${operation}: query com ${rowCount} linhas; esperava ${expected}`);
+      const expected = required ? "1" : "0 or 1";
+      throw new ContractError(`${operation}: query with ${rowCount} rows; expected ${expected}`);
     }
 
     return row;

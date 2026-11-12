@@ -1,4 +1,4 @@
-// Superfície interna: para os pacotes irmãos da engine (client, codegen, testing). Jogos não importam daqui.
+// Internal surface: for the engine's sibling packages (client, codegen, testing). Games do not import from here.
 export { Bridge, Heap, readScalar, writeScalar } from "./bridge.js";
 export { MaxEntityGeneration, packEntity } from "./entity.js";
 export { makeView } from "./fields.js";

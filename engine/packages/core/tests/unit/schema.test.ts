@@ -4,11 +4,11 @@ import { test } from "node:test";
 import { ContractError, action, component, defineSchema, event, state, tag } from "@oly/core";
 import { canonicalSchema, fnv1a32, schemaHash } from "@oly/core/internal";
 
-test("component sem campos é erro", () => {
+test("component without fields is an error", () => {
   assert.throws(() => component("Empty", {}), /tag/);
 });
 
-test("nomes inválidos", () => {
+test("invalid names", () => {
   assert.throws(() => component("1abc", { x: "f32" }), ContractError);
   assert.throws(() => component("abc", { x: "f32" }), ContractError);
   assert.throws(() => component("Ok", { class: "f32" }), ContractError);
@@ -17,12 +17,12 @@ test("nomes inválidos", () => {
   assert.throws(() => tag("bad name"), ContractError);
 });
 
-test("tipo fora de esquema tem schemaIndex -1", () => {
+test("type outside a schema has schemaIndex -1", () => {
   assert.equal(component("Loose", { x: "f32" }).schemaIndex, -1);
   assert.equal(tag("LooseTag").schemaIndex, -1);
 });
 
-test("defineSchema atribui schemaIndex na ordem", () => {
+test("defineSchema assigns schemaIndex in order", () => {
   const first = component("First", { x: "f32" });
   const second = tag("Second");
 
@@ -33,52 +33,52 @@ test("defineSchema atribui schemaIndex na ordem", () => {
   assert.equal(schema.types.length, 2);
 });
 
-test("defineSchema rejeita nome repetido", () => {
+test("defineSchema rejects a repeated name", () => {
   assert.throws(() => defineSchema([component("Dup", { x: "f32" }), tag("Dup")]), ContractError);
 });
 
-test("tipo já usado em outro esquema é erro", () => {
+test("type already used in another schema is an error", () => {
   const shared = component("Shared", { x: "f32" });
   defineSchema([shared]);
 
   assert.throws(() => defineSchema([shared]), ContractError);
 });
 
-test("fnv1a32 bate com os valores de referência do FNV-1a", () => {
+test("fnv1a32 matches the FNV-1a reference values", () => {
   assert.equal(fnv1a32(""), 0x811c9dc5);
   assert.equal(fnv1a32("a"), 0xe40c292c);
 });
 
-test("forma canônica", () => {
+test("canonical form", () => {
   assert.equal(
     canonicalSchema([component("Position", { x: "f32", y: "f32" }), tag("Player")]),
     "Position{x:f32,y:f32};Player;",
   );
 });
 
-test("hash muda com ordem e com tipo de campo", () => {
+test("hash changes with order and with field type", () => {
   const base = schemaHash([component("A", { x: "f32" }), tag("B")]);
 
   assert.notEqual(base, schemaHash([tag("B"), component("A", { x: "f32" })]));
   assert.notEqual(base, schemaHash([component("A", { x: "f64" }), tag("B")]));
 });
 
-test("defineSchema guarda o hash dos seus tipos", () => {
+test("defineSchema stores the hash of its types", () => {
   const schema = defineSchema([component("H", { x: "f32" }), tag("T")]);
 
   assert.equal(schema.hash, schemaHash(schema.types));
 });
 
-test("event sem campos é erro", () => {
+test("event without fields is an error", () => {
   assert.throws(() => event("Hit", {}), ContractError);
 });
 
-test("event valida nome e campos como component", () => {
+test("event validates name and fields like component", () => {
   assert.throws(() => event("hit", { x: "f32" }), ContractError);
   assert.throws(() => event("Hit", { class: "f32" }), ContractError);
 });
 
-test("defineSchema separa tipos e eventos, cada um com o seu índice", () => {
+test("defineSchema separates types and events, each with its own index", () => {
   const typeA = component("A", { x: "f32" });
   const hit = event("Hit", { target: "entity", amount: "f32" });
   const typeT = tag("T");
@@ -94,7 +94,7 @@ test("defineSchema separa tipos e eventos, cada um com o seu índice", () => {
   assert.equal(typeT.schemaIndex, 1);
 });
 
-test("evento fora de esquema tem schemaIndex -1 e o layout dos campos", () => {
+test("event outside a schema has schemaIndex -1 and the fields layout", () => {
   const loose = event("Loose", { a: "u8", b: "f64" });
 
   assert.equal(loose.kind, "event");
@@ -102,43 +102,43 @@ test("evento fora de esquema tem schemaIndex -1 e o layout dos campos", () => {
   assert.equal(loose.layout.size, 16);
 });
 
-test("nome repetido entre componente e evento é erro", () => {
+test("name repeated between component and event is an error", () => {
   assert.throws(() => defineSchema([component("Dup", { x: "f32" }), event("Dup", { y: "f32" })]), ContractError);
 });
 
-test("evento já usado em outro esquema é erro", () => {
+test("event already used in another schema is an error", () => {
   const shared = event("SharedEvent", { x: "f32" });
   defineSchema([shared]);
 
   assert.throws(() => defineSchema([shared]), ContractError);
 });
 
-test("hash de esquema sem eventos não muda", () => {
+test("hash of a schema without events does not change", () => {
   assert.equal(schemaHash([component("Position", { x: "f32", y: "f32" }), tag("Player")]), 0x837c124);
 });
 
-test("forma canônica acrescenta os eventos depois dos tipos", () => {
+test("canonical form appends the events after the types", () => {
   assert.equal(
     canonicalSchema([component("Position", { x: "f32", y: "f32" })], [event("Hit", { target: "entity", amount: "f32" })]),
     "Position{x:f32,y:f32};!Hit{target:entity,amount:f32};",
   );
 });
 
-test("acrescentar um evento muda o hash", () => {
+test("adding an event changes the hash", () => {
   const types = [component("A", { x: "f32" })];
 
   assert.notEqual(schemaHash(types), schemaHash(types, [event("E", { x: "f32" })]));
   assert.equal(defineSchema([component("A2", { x: "f32" }), event("E2", { x: "f32" })]).hash, schemaHash([component("A2", { x: "f32" })], [event("E2", { x: "f32" })]));
 });
 
-test("action valida o nome e o tipo", () => {
+test("action validates the name and the kind", () => {
   assert.throws(() => action("Fire", "button"), ContractError);
   assert.throws(() => action("for", "button"), ContractError);
   assert.throws(() => action("fire", "trigger" as never), ContractError);
   assert.equal(action("fire", "button").schemaIndex, -1);
 });
 
-test("defineSchema separa as ações dos tipos e dos eventos", () => {
+test("defineSchema separates the actions from the types and the events", () => {
   const A = component("ActA", { x: "f32" });
   const fire = action("fire", "button");
   const Hit = event("ActHit", { x: "f32" });
@@ -153,12 +153,12 @@ test("defineSchema separa as ações dos tipos e dos eventos", () => {
   assert.equal(schema.events.length, 1);
 });
 
-test("nome de ação repetido entre ação e componente ou evento é erro", () => {
+test("action name repeated between action and component or event is an error", () => {
   assert.throws(() => defineSchema([component("Dup1", { x: "f32" }), action("Dup1", "button")]), ContractError);
   assert.throws(() => defineSchema([action("dup2", "button"), action("dup2", "pointer")]), ContractError);
 });
 
-test("acrescentar uma ação ou trocar o tipo dela muda o hash", () => {
+test("adding an action or changing its kind changes the hash", () => {
   const base = [component("HashAct", { x: "f32" })];
   const withoutActions = defineSchema([...base]).hash;
   const button = defineSchema([component("HashAct2", { x: "f32" }), action("go", "button")]).hash;
@@ -168,7 +168,7 @@ test("acrescentar uma ação ou trocar o tipo dela muda o hash", () => {
   assert.notEqual(button, axis);
 });
 
-test("state valida o nome", () => {
+test("state validates the name", () => {
   assert.throws(() => state("Menu"), ContractError);
   assert.throws(() => state("class"), ContractError);
   assert.throws(() => state("1menu"), ContractError);
@@ -176,7 +176,7 @@ test("state valida o nome", () => {
   assert.equal(state("menu").kind, "state");
 });
 
-test("defineSchema dá o índice dos estados na ordem de declaração", () => {
+test("defineSchema gives the state index in declaration order", () => {
   const A = component("StA", { x: "f32" });
   const menu = state("stMenu");
   const fire = action("stFire", "button");
@@ -191,23 +191,23 @@ test("defineSchema dá o índice dos estados na ordem de declaração", () => {
   assert.equal(schema.actions.length, 1);
 });
 
-test("nome de estado repetido entre estado, componente e ação é erro", () => {
+test("state name repeated between state, component and action is an error", () => {
   assert.throws(() => defineSchema([state("dupState1"), state("dupState1")]), ContractError);
   assert.throws(() => defineSchema([action("dupState2", "button"), state("dupState2")]), ContractError);
 });
 
-test("33 estados é erro com o máximo na mensagem", () => {
+test("33 states is an error with the maximum in the message", () => {
   const states = Array.from({ length: 33 }, (_, index) => state(`many${index}`));
 
-  assert.throws(() => defineSchema(states), /máximo/);
+  assert.throws(() => defineSchema(states), /maximum/);
   assert.doesNotThrow(() => defineSchema(Array.from({ length: 32 }, (_, index) => state(`ok${index}`))));
 });
 
-test("forma canônica acrescenta os estados depois das ações", () => {
+test("canonical form appends the states after the actions", () => {
   assert.equal(canonicalSchema([], [], [action("go", "button")], [state("menu"), state("playing")]), "@go:button;#menu;#playing;");
 });
 
-test("acrescentar ou renomear um estado muda o hash", () => {
+test("adding or renaming a state changes the hash", () => {
   const base = schemaHash([], [], [], [state("a1")]);
 
   assert.notEqual(base, schemaHash([], [], [], []));

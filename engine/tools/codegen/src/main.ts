@@ -10,7 +10,7 @@ function argumentValue(name: string): string {
   const position = process.argv.indexOf(name);
   const value = position >= 0 ? process.argv[position + 1] : undefined;
   if (value === undefined) {
-    console.error(`uso: node main.js --schema <schema.js> --out <diretório>  (falta ${name})`);
+    console.error(`usage: node main.js --schema <schema.js> --out <directory>  (missing ${name})`);
     process.exit(1);
   }
 
@@ -28,7 +28,7 @@ const outputDirectory = resolve(argumentValue("--out"));
 
 const loaded: { default?: unknown } = await import(pathToFileURL(schemaPath).href);
 if (!isSchema(loaded.default)) {
-  console.error(`${schemaPath}: o export default deve ser um Schema (use defineSchema)`);
+  console.error(`${schemaPath}: the default export must be a Schema (use defineSchema)`);
   process.exit(1);
 }
 

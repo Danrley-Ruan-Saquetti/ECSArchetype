@@ -9,24 +9,24 @@ const P = component("P", { a: "u8", b: "f64", owner: "entity" });
 const T = tag("T");
 const schema = defineSchema([P, T]);
 
-test("struct na ordem de declaração", () => {
+test("struct in declaration order", () => {
   assert.match(emitHeader(schema), /struct P \{\s*uint8_t a;\s*double b;\s*oly::ecs::Entity owner;\s*\};/);
 });
 
-test("static_asserts de tamanho e offsets", () => {
+test("size and offset static_asserts", () => {
   const header = emitHeader(schema);
 
   assert.match(header, /sizeof\(P\) == 24 && alignof\(P\) == 8/);
   assert.match(header, /offsetof\(P, b\) == 8/);
   assert.match(header, /offsetof\(P, owner\) == 16/);
-  assert.match(header, /esquema: layout de P diverge do TS/);
+  assert.match(header, /schema: layout of P diverges from TS/);
 });
 
-test("tag vira struct vazio", () => {
+test("tag becomes an empty struct", () => {
   assert.match(emitHeader(schema), /struct T \{\};/);
 });
 
-test("registro com hash e ids na ordem", () => {
+test("registry with hash and ids in order", () => {
   const registry = emitRegistry(schema);
 
   assert.ok(registry.includes(`0x${schema.hash.toString(16)}u`));
@@ -38,16 +38,16 @@ const Hit = event("Hit", { target: "entity", amount: "f32" });
 const Boom = event("Boom", { power: "u32" });
 const schemaWithEvents = defineSchema([component("Q", { a: "u8" }), Hit, tag("U"), Boom]);
 
-test("evento vira struct com static_assert de layout", () => {
+test("event becomes a struct with layout static_assert", () => {
   const header = emitHeader(schemaWithEvents);
 
   assert.match(header, /struct Hit \{\s*oly::ecs::Entity target;\s*float amount;\s*\};/);
   assert.match(header, /sizeof\(Hit\) == 12 && alignof\(Hit\) == 4/);
   assert.match(header, /offsetof\(Hit, amount\) == 8/);
-  assert.match(header, /esquema: layout de Hit diverge do TS/);
+  assert.match(header, /schema: layout of Hit diverges from TS/);
 });
 
-test("registro declara os eventos na ordem do esquema", () => {
+test("registry declares the events in schema order", () => {
   const registry = emitRegistry(schemaWithEvents);
 
   assert.ok(registry.includes('#include "oly/app/engine.hpp"'));
@@ -55,7 +55,7 @@ test("registro declara os eventos na ordem do esquema", () => {
   assert.match(registry, /schemaEvents\(\)/);
 });
 
-test("esquema sem eventos gera schemaEvents vazio", () => {
+test("schema without events generates an empty schemaEvents", () => {
   assert.match(emitRegistry(schema), /schemaEvents\(\) \{\s*return \{\};/);
 });
 
@@ -63,7 +63,7 @@ const fire = action("fire", "button");
 const move = action("move", "axis2d");
 const schemaWithActions = defineSchema([component("R", { a: "u8" }), fire, move]);
 
-test("header com ações declara actions::<nome> com o handle do tipo", () => {
+test("header with actions declares actions::<name> with the handle of the kind", () => {
   const header = emitHeader(schemaWithActions);
 
   assert.ok(header.includes('#include "oly/input/action_map.hpp"'));
@@ -71,24 +71,24 @@ test("header com ações declara actions::<nome> com o handle do tipo", () => {
   assert.ok(header.includes("inline constexpr oly::input::Axis2dAction move{1};"));
 });
 
-test("header sem ações não inclui o módulo input", () => {
+test("header without actions does not include the input module", () => {
   assert.ok(!emitHeader(schema).includes("oly/input"));
 });
 
-test("registro lista as ações na ordem do esquema", () => {
+test("registry lists the actions in schema order", () => {
   const registry = emitRegistry(schemaWithActions);
 
   assert.ok(registry.indexOf('{"fire", oly::input::ActionKind::Button}') >= 0);
   assert.ok(registry.indexOf('{"fire", oly::input::ActionKind::Button}') < registry.indexOf('{"move", oly::input::ActionKind::Axis2d}'));
 });
 
-test("esquema sem ações gera schemaActions vazio", () => {
+test("schema without actions generates an empty schemaActions", () => {
   assert.match(emitRegistry(schema), /schemaActions\(\) \{\s*return \{\};/);
 });
 
 const schemaWithStates = defineSchema([component("S", { a: "u8" }), state("menu"), state("playing")]);
 
-test("header com estados declara states::<nome> com o StateId", () => {
+test("header with states declares states::<name> with the StateId", () => {
   const header = emitHeader(schemaWithStates);
 
   assert.ok(header.includes('#include "oly/app/state.hpp"'));
@@ -97,11 +97,11 @@ test("header com estados declara states::<nome> com o StateId", () => {
   assert.ok(header.includes("inline constexpr oly::app::StateId playing{1};"));
 });
 
-test("header sem estados não inclui oly/app/state", () => {
+test("header without states does not include oly/app/state", () => {
   assert.ok(!emitHeader(schema).includes("oly/app/state"));
 });
 
-test("registro lista os estados na ordem do esquema", () => {
+test("registry lists the states in schema order", () => {
   const registry = emitRegistry(schemaWithStates);
 
   assert.ok(registry.indexOf('{"menu"}') >= 0);
@@ -109,6 +109,6 @@ test("registro lista os estados na ordem do esquema", () => {
   assert.match(registry, /schemaStates\(\)/);
 });
 
-test("esquema sem estados gera schemaStates vazio", () => {
+test("schema without states generates an empty schemaStates", () => {
   assert.match(emitRegistry(schema), /schemaStates\(\) \{\s*return \{\};/);
 });
