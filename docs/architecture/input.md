@@ -9,4 +9,4 @@
 - **Ligações**: trocáveis a qualquer hora, inclusive de dentro de um sistema. A troca vale na próxima captura.
 - **Snapshot**: `ActionState { float x; float y; uint32_t flags; }`, 12 B por ação. O endereço é estável na `OlyEngine`, então o TS lê as ações por views do heap, sem cruzar a fronteira ([bridge.md](bridge.md)).
 
-O host não é uma interface de plataforma: o núcleo nunca pergunta nada ao host, só recebe os eventos que ele empurra. No navegador, quem empurra é o `attachBrowserInput` ([pacotes-ts.md](pacotes-ts.md#olyclient)).
+O host não é uma interface de plataforma: o núcleo nunca pergunta nada ao host, só recebe os eventos que ele empurra. No navegador, quem empurra é o `attachBrowserInput` ([ts-packages.md](ts-packages.md#olyclient)).

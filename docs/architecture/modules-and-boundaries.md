@@ -45,6 +45,6 @@ Por que `detail/` e lint, e não pimpl: os templates do caminho quente (`Query<T
 ## Regras de vocabulário
 
 - Os conceitos de jogo (inimigo, moeda, dash) nunca entram em `engine/`. Nomes de jogo só aparecem em `engine/testing/fixture/` e em `games/`.
-- O mesmo verbo vale nas três superfícies (C++, API C, TS): `spawn`, `destroy`, `add`, `remove`, `has`, `get`, `query`, `eachBlock`. O glossário completo está em [glossario.md](glossario.md).
+- O mesmo verbo vale nas três superfícies (C++, API C, TS): `spawn`, `destroy`, `add`, `remove`, `has`, `get`, `query`, `eachBlock`. O glossário completo está em [glossary.md](glossary.md).
 - O prefixo `oly` aparece só na API C (`oly*`, `OlyWorld`, `OLY_API`) e no que é interno à ponte. Símbolos `extern "C"` vivem num espaço global único do módulo WASM, junto com a libc e os exports do jogo; o prefixo evita colisão. As APIs C++ (`oly::ecs::World`) e TS (`World`) não repetem `oly`.
 - O sufixo `ById` marca a variante por `ComponentId` em tempo de execução: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById`.

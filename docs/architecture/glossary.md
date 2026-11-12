@@ -34,6 +34,6 @@ O mesmo verbo vale para o mesmo conceito em C++, na API C e no TS.
 
 ## Regras de nome
 
-- O prefixo `oly` aparece só na API C (`oly*`, `OlyWorld`, `OLY_API`) e no que é interno à ponte (`OlyModule`). As APIs C++ e TS não repetem `oly` nos nomes. O motivo está em [modulos-e-fronteiras.md](modulos-e-fronteiras.md#regras-de-vocabulário).
+- O prefixo `oly` aparece só na API C (`oly*`, `OlyWorld`, `OLY_API`) e no que é interno à ponte (`OlyModule`). As APIs C++ e TS não repetem `oly` nos nomes. O motivo está em [modules-and-boundaries.md](modules-and-boundaries.md#regras-de-vocabulário).
 - `create` e "Raw" não existem como nomes. Uma entidade nasce por `spawn`; a variante por `ComponentId` usa o sufixo `ById`.
 - Não há aliases nem `using` de compatibilidade com nomes antigos.

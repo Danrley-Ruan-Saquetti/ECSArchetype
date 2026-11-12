@@ -30,4 +30,4 @@ oly::bridge + app + input + ecs + core ────────────┴�
 - **Hash do esquema**: FNV-1a 32 bits de uma forma canônica (componentes, tags, eventos, ações e estados). `loadRuntime` confere o hash e os tamanhos e lança `SchemaMismatchError` se o WASM foi gerado com outro esquema.
 - Link: `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=node,web`, memória que cresce. O resultado sai em `build/<preset>/games/<jogo>_game.{mjs,wasm}`.
 
-Veja também: [bridge.md](bridge.md) (como a `OlyEngine` declara o esquema na criação) e [pacotes-ts.md](pacotes-ts.md#olycodegen-e-olytesting) (o pacote do gerador).
+Veja também: [bridge.md](bridge.md) (como a `OlyEngine` declara o esquema na criação) e [ts-packages.md](ts-packages.md#olycodegen-e-olytesting) (o pacote do gerador).

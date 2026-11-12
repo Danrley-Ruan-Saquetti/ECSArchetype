@@ -1,6 +1,6 @@
 # Oly — modularização e revisão das APIs públicas — design
 
-Data: 2026-11-09. Base: branch `develop` depois da fase 1 da engine (`docs/superpowers/plans/2026-11-09-engine-fase1-ponte.md`).
+Data: 2026-11-09. Base: branch `develop` depois da fase 1 da engine (`docs/superpowers/plans/2026-11-09-engine-phase1-bridge.md`).
 Specs que continuam valendo: `2026-10-16-ecs-archetype-spec.md` (requisitos `R-*`, invariantes `I-*`, metas `NF-*`) e
 `2026-11-09-game-engine-design.md` (a engine e as fases 2–7).
 

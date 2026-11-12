@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/engine-fase2-loop` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Branch `feat/engine-phase2-loop` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Toolchain só em Docker: `DC="docker compose run --rm dev"` (nativo, `debug-asan`), `WC="docker compose run --rm wasm"` (Emscripten, node, npm). Presets `wasm-games*` exigem `make ts` antes.
 - `-Wall -Wextra -Wpedantic -Werror` em todo alvo C++; TS `strict` (§3).
 - Camadas: `core ← ecs ← app ← bridge ← jogos`. O `app` só usa a API pública do ECS; o ECS não muda nesta fase (se mudar, reexecutar `ecs_bench_*` e conferir NF-P1/P2/P5 como em `docs/benchmarks/README.md`).
@@ -67,7 +67,7 @@
     Registro por nome: `SystemFunction findNamedSystem(std::string_view name) noexcept` (nullptr se não existe); `struct NamedSystemRegistration { NamedSystemRegistration(std::string_view name, SystemFunction function); };` e a macro `OLY_SYSTEM(name)` (declara `void name(oly::app::SystemContext& context)` e um registro estático com o nome `#name`).
   - `engine.hpp`: `struct EngineConfig { double fixedHz = 60.0; uint32_t maxStepsPerFrame = 5; };` `class Engine` com `Engine(ecs::World& world, EngineConfig config = {})`, `ecs::World& world()`, `SystemId addSystem(Phase phase, std::string_view name, SystemFunction function, void* userData = nullptr)`, `void setWhilePaused(SystemId system, bool whilePaused)`, `void frame(double nowSeconds)`, `void setHidden(bool hidden)`, `void pause() noexcept`, `void resume() noexcept`, `bool paused() const noexcept`, `double time() const noexcept`, `double fixedDeltaTime() const noexcept`, `double interpolation() const noexcept`, `bool inFrame() const noexcept`.
 
-- [ ] **Step 1: Branch** `git switch -c feat/engine-fase2-loop`.
+- [ ] **Step 1: Branch** `git switch -c feat/engine-phase2-loop`.
 
 - [ ] **Step 2: Testes que falham.** `oly_add_module(NAME app DEPENDS ecs core)`; `tests/CMakeLists.txt` com `oly_add_test(MODULE app NAME loop SOURCES loop.cpp SUPPORT engine/runtime/ecs/tests/support)` e o mesmo para `systems`. `support/log.hpp`: `struct Log { std::vector<std::string> calls; std::vector<float> interpolations; std::vector<double> times; };` e `void recordName(SystemContext& context)` (empurra `context.name()` no `Log*` de `userData`; em `Render` também empurra `interpolation()`; nas outras, `time()`). Todos os testes chamam `checkInvariants(world)` no fim.
 
@@ -291,7 +291,7 @@ test("exceção em frame não para o laço: o próximo rAF já foi pedido", ...)
 ### Task 7: Custo do loop (§7), resultados e documentação
 
 **Files:**
-- Create: `engine/testing/bench/common.ts`, `engine/testing/bench/loop.ts`, `docs/benchmarks/bridge/loop_fase2.json` (gerado)
+- Create: `engine/testing/bench/common.ts`, `engine/testing/bench/loop.ts`, `docs/benchmarks/bridge/loop_phase2.json` (gerado)
 - Modify: `engine/testing/bench/boundary.ts` (usa `common.ts`), `docs/benchmarks/bridge/README.md`, `docs/benchmarks/README.md`, `CLAUDE.md`
 
 **Interfaces:**
@@ -306,7 +306,7 @@ test("exceção em frame não para o laço: o próximo rAF já foi pedido", ...)
 
 - [ ] **Step 2: Verificar que o `boundary.ts` refatorado ainda roda** — `$WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'` e `$WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs --out /tmp/b.json --sizes 1000 --rounds 2` → tabela de razões impressa, exit 0.
 
-- [ ] **Step 3: Medir** — `$WC node engine/testing/dist/bench/loop.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/loop_fase2.json --commit $(git rev-parse --short HEAD)` → exit 0 e três tabelas impressas.
+- [ ] **Step 3: Medir** — `$WC node engine/testing/dist/bench/loop.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/loop_phase2.json --commit $(git rev-parse --short HEAD)` → exit 0 e três tabelas impressas.
 
 - [ ] **Step 4: Registrar** — seção "Custo do loop — fase 2" em `docs/benchmarks/bridge/README.md` (comando, ambiente, protocolo, tabelas, leitura em poucas linhas: custo por chamada de volta, se intercalar custa mais que o nº de chamadas explica, e se vale agrupar sistemas TS) e uma linha em `docs/benchmarks/README.md`. Sem meta numérica (§7).
 

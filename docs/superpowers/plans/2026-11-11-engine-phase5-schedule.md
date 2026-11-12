@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/engine-fase5-schedule` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Branch `feat/engine-phase5-schedule` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Toolchain só em Docker: `DC="docker compose run --rm dev"` (nativo, `debug-asan`), `WC="docker compose run --rm wasm"` (Emscripten, node, npm). Presets `wasm-games*` exigem `make ts` antes.
 - `-Wall -Wextra -Wpedantic -Werror` em todo alvo C++; TS `strict` (§3).
 - Camadas: `core ← input ← app ← bridge ← jogos` e `core ← ecs ← app`. Nenhum módulo novo: a fila fica em `engine/runtime/app/include/oly/app/detail/` (§4.6). O ECS e o `input` não mudam.
@@ -95,7 +95,7 @@
   - `class TaskQueue` com `~TaskQueue()` (chama `discardAll`), não copiável; `TaskHandle push(double due, double interval, TaskFunction function, TaskDiscardFunction discard, const TaskPayload& payload)`, `bool cancel(TaskHandle task)`, `bool isPending(TaskHandle task) const`, `uint32_t pendingCount() const noexcept`, `void beginRun() noexcept`, `std::optional<DueTask> popDue(double limit)`, `void endRun()`, `void recoverFromInterruptedRun()`, `void discardAll()`.
   - Contrato: `cancel`/`isPending` com `slot` fora do intervalo e diferente de `InvalidTaskSlot` (`OLY_ASSERT`, mensagem de "Decisões"). A fila não valida atraso nem função; isso é do `Scheduler` (Task 2).
 
-- [ ] **Step 1: Branch** `git switch -c feat/engine-fase5-schedule`.
+- [ ] **Step 1: Branch** `git switch -c feat/engine-phase5-schedule`.
 
 - [ ] **Step 2: Testes que falham** em `tests/task_queue.cpp` (`oly_add_test(MODULE app NAME task_queue SOURCES task_queue.cpp)`). Sem `Engine` nem `World`: os callbacks não são chamados, só a ordem e o estado dos `DueTask` são conferidos. Um descarte de teste incrementa um contador global e grava o payload recebido.
 ```cpp

@@ -4,7 +4,7 @@ Oly: engine de jogos 2D em C++20 e TypeScript, sobre um ECS por arquétipos sing
 
 ## Documentação
 
-Comece por `docs/arquitetura/README.md`. Ele tem a visão geral e o índice de toda a documentação: arquitetura, glossário, comandos, specs, planos e benchmarks.
+Comece por `docs/architecture/README.md`. Ele tem a visão geral e o índice de toda a documentação: arquitetura, glossário, comandos, specs, planos e benchmarks.
 
 ## Regras que valem sempre
 
@@ -17,4 +17,4 @@ Comece por `docs/arquitetura/README.md`. Ele tem a visão geral e o índice de t
 
 ## Estilo de código
 
-@docs/desenvolvimento/estilo-de-codigo.md
+@docs/development/code-style.md

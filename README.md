@@ -127,9 +127,9 @@ Os resultados registrados e a situação de cada meta estão em [`docs/benchmark
 
 | Onde | O que tem |
 |---|---|
-| [`docs/arquitetura/`](docs/arquitetura/README.md) | arquitetura: visão geral, módulos e fronteiras, ECS, `Engine`, ponte, pacotes TS, jogos, decisões e limites |
-| [`docs/arquitetura/repositorio.md`](docs/arquitetura/repositorio.md) | estrutura do repositório |
-| [`docs/desenvolvimento/comandos.md`](docs/desenvolvimento/comandos.md) | todos os comandos de build, testes, benchmarks e jogos |
-| [`docs/desenvolvimento/estilo-de-codigo.md`](docs/desenvolvimento/estilo-de-codigo.md) | estilo de código |
+| [`docs/architecture/`](docs/architecture/README.md) | arquitetura: visão geral, módulos e fronteiras, ECS, `Engine`, ponte, pacotes TS, jogos, decisões e limites |
+| [`docs/architecture/repository.md`](docs/architecture/repository.md) | estrutura do repositório |
+| [`docs/development/commands.md`](docs/development/commands.md) | todos os comandos de build, testes, benchmarks e jogos |
+| [`docs/development/code-style.md`](docs/development/code-style.md) | estilo de código |
 | [`docs/benchmarks/`](docs/benchmarks/README.md) | resultados de benchmark |
 | [`docs/superpowers/specs/`](docs/superpowers/specs/) | specs (fonte da verdade dos requisitos) |

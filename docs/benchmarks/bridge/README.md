@@ -2,13 +2,13 @@
 
 > Os comandos abaixo usam os caminhos atuais; a fase 1 os rodou com `make engine-ts` e o preset `wasm-engine-release`.
 
-Resultado bruto: `boundary_fase1.json` (commit `e8b564c`, 2026-11-09). Gerado por `engine/testing/bench/boundary.ts`:
+Resultado bruto: `boundary_phase1.json` (commit `e8b564c`, 2026-11-09). Gerado por `engine/testing/bench/boundary.ts`:
 
 ```sh
 WC="docker compose run --rm wasm"
 $WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
 $WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs \
-  --out docs/benchmarks/bridge/boundary_fase1.json --commit $(git rev-parse --short HEAD)
+  --out docs/benchmarks/bridge/boundary_phase1.json --commit $(git rev-parse --short HEAD)
 ```
 
 ## Ambiente
@@ -77,13 +77,13 @@ As razões ficam na mesma faixa da fase 1 (diferenças dentro da dispersão de �
 
 ## Custo do loop — fase 2
 
-Resultado bruto: `loop_fase2.json` (commit `fca8946`, 2026-11-10). Gerado por `engine/testing/bench/loop.ts`:
+Resultado bruto: `loop_phase2.json` (commit `fca8946`, 2026-11-10). Gerado por `engine/testing/bench/loop.ts`:
 
 ```sh
 WC="docker compose run --rm wasm"
 $WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
 $WC node engine/testing/dist/bench/loop.js --module build/wasm-games-release/games/fixture_game.mjs \
-  --out docs/benchmarks/bridge/loop_fase2.json --commit $(git rev-parse --short HEAD)
+  --out docs/benchmarks/bridge/loop_phase2.json --commit $(git rev-parse --short HEAD)
 ```
 
 Ambiente: o mesmo das seções acima (Docker no WSL2, node 20.18, V8 11.3, Release com asserts desligados). Protocolo do `boundary.ts`:
@@ -125,12 +125,12 @@ Sem meta numérica (§7).
 
 ## Custo dos eventos — fase 3
 
-Resultado bruto: `events_fase3.json` (commit `3d331a8`, 2026-11-11). Gerado por `engine/testing/bench/events.ts`:
+Resultado bruto: `events_phase3.json` (commit `3d331a8`, 2026-11-11). Gerado por `engine/testing/bench/events.ts`:
 
 ```sh
 WC="docker compose run --rm wasm"
 $WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
-$WC node engine/testing/dist/bench/events.js --module build/wasm-games-release/games/fixture_game.mjs   --out docs/benchmarks/bridge/events_fase3.json --commit $(git rev-parse --short HEAD)
+$WC node engine/testing/dist/bench/events.js --module build/wasm-games-release/games/fixture_game.mjs   --out docs/benchmarks/bridge/events_phase3.json --commit $(git rev-parse --short HEAD)
 ```
 
 Ambiente: o mesmo das seções acima (Docker no WSL2, node 20.18, V8 11.3, Release com asserts desligados). Protocolo do `loop.ts`:

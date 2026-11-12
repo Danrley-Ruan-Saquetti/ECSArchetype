@@ -8,7 +8,7 @@
 
 **Tech Stack:** C++20 (gcc 14, clang/Emscripten 3.1.74), CMake ≥ 3.25 com presets, doctest 2.4.11, Google Benchmark 1.8.3, TypeScript 5.6.3, `@types/node` 20.17.6, `node:test`, Python 3 (scripts em `tools/`), Docker Compose (`dev`, `wasm`, `perf`).
 
-**Spec:** `docs/superpowers/specs/2026-11-09-oly-modularizacao-design.md` (e, para requisitos do ECS, `2026-10-16-ecs-archetype-spec.md`).
+**Spec:** `docs/superpowers/specs/2026-11-09-oly-modularization-design.md` (e, para requisitos do ECS, `2026-10-16-ecs-archetype-spec.md`).
 
 ## Global Constraints
 
@@ -596,7 +596,7 @@ Expected: as três passam. Regressão confirmada nas repetições bloqueia a ent
 $WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
 $WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/boundary_oly.json --commit $(git rev-parse --short HEAD)
 ```
-Expected: JSON gravado. Registrar no `bridge/README.md` uma tabela comparando com `boundary_fase1.json` (sem meta numérica).
+Expected: JSON gravado. Registrar no `bridge/README.md` uma tabela comparando com `boundary_phase1.json` (sem meta numérica).
 
 - [ ] **Step 5: Registrar** as razões `r1_*` na tabela e no texto de `docs/benchmarks/README.md` (mesmo formato da linha dos `e1_*`).
 

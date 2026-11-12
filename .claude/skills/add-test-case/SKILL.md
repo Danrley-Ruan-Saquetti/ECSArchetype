@@ -127,7 +127,7 @@ OLY_ASSERT failed: <expressão> | <mensagem formatada> (<arquivo>:<linha>)
 A busca é por `strstr` na linha inteira, então uma substring pode casar com a **expressão** ou com o **caminho do arquivo**, e não só com a mensagem. Escolha substrings que só a mensagem do assert pretendido teria:
 
 - **A operação** (`"add"`, `"flush"`, `"remove"`), que é o que separa este assert dos vizinhos.
-- **`"e="`** quando o assert é sobre uma entidade: confirma que a mensagem identifica a entidade, como `docs/desenvolvimento/estilo-de-codigo.md` exige.
+- **`"e="`** quando o assert é sobre uma entidade: confirma que a mensagem identifica a entidade, como `docs/development/code-style.md` exige.
 - **O nome do tipo**, quando o assert o imprime. Use um tipo local com nome próprio (`struct Position { float x; };` dentro da função, como em `getDeadEntity`), não `A` ou `B`: uma letra solta casa com quase qualquer mensagem e não prova nada.
 
 Antes de confiar no caso, leia o `OLY_ASSERT` alvo em `src/` e copie as substrings do formato dele.
@@ -140,7 +140,7 @@ O handler sai no primeiro assert. Nada depois da violação roda, então não po
 
 ### Assert novo junto com o caso
 
-Se o caso cobre um `OLY_ASSERT` que ainda vai ser escrito, a mensagem dele segue a regra de `docs/desenvolvimento/estilo-de-codigo.md` (operação, `Entity` como `e=%u:%u`, nome do tipo). As substrings do caso cobram exatamente essa regra, e é por isso que valem a pena.
+Se o caso cobre um `OLY_ASSERT` que ainda vai ser escrito, a mensagem dele segue a regra de `docs/development/code-style.md` (operação, `Entity` como `e=%u:%u`, nome do tipo). As substrings do caso cobram exatamente essa regra, e é por isso que valem a pena.
 
 ## 3. As verificações que todo teste carrega
 
@@ -158,7 +158,7 @@ Se o caso cobre um `OLY_ASSERT` que ainda vai ser escrito, a mensagem dele segue
 
 ## 4. Provar que roda
 
-Os comandos de build e teste, e como filtrar um teste pelo nome, estão em `docs/desenvolvimento/comandos.md`. Tudo roda no container, no preset padrão (ASan + UBSan + asserts).
+Os comandos de build e teste, e como filtrar um teste pelo nome, estão em `docs/development/commands.md`. Tudo roda no container, no preset padrão (ASan + UBSan + asserts).
 
 - **Suíte ou caso doctest:** rode só a suíte afetada (`make test T='^ecs\.<nome>'`) e confirme na saída que o número de casos subiu. "0 test cases" ou um filtro sem nenhum teste encontrado significa que a fiação falhou, não que passou.
 - **Caso de morte:** rode o executável direto, `build/debug-asan/tests/<módulo>_contract_death <nome>`, e leia a mensagem impressa no stderr. Ela precisa ser a do assert pretendido, não só "algum assert". Depois rode o filtro `<módulo>.contract_death.<nome>` pelo CTest para confirmar que o `foreach` criou o teste.

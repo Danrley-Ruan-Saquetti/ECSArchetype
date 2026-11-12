@@ -16,11 +16,11 @@ compare sempre razões medidas na mesma execução. Commit de referência dos n�
 | `ecs/m4_flush.json` | Flush coalescido vs adds diretos (task 18) | NF-P5 |
 | `ecs/m5_perf_fragmented.txt` | `perf stat` de `BM_IterateFragmented/A` (task 20) | — |
 | `ecs/e1_iterate.json`, `ecs/e1_fragmented.json`, `ecs/e1_flush.json` | Reexecução após `RawQuery`/`addRaw` (engine fase 1, task 2) | NF-P1, NF-P2, NF-P5 |
-| `bridge/boundary_fase1.json` | Fronteira WASM↔TS da engine; ver `bridge/README.md` (engine fase 1, task 8) | — |
+| `bridge/boundary_phase1.json` | Fronteira WASM↔TS da engine; ver `bridge/README.md` (engine fase 1, task 8) | — |
 | `ecs/r1_iterate.json`, `ecs/r1_fragmented.json`, `ecs/r1_flush.json` | Reexecução após a modularização em módulos Oly (task 10) | NF-P1, NF-P2, NF-P5 |
 | `bridge/boundary_oly.json` | Fronteira WASM↔TS após a modularização; comparação em `bridge/README.md` | — |
-| `bridge/loop_fase2.json` | Custo do loop da fase 2: sistemas vazios, intercalação e fronteira dentro do loop; ver `bridge/README.md` | — |
-| `bridge/events_fase3.json` | Custo dos eventos da fase 3: handler por lote (C++ e TS) e emissão do C++ e do TS; ver `bridge/README.md` | — |
+| `bridge/loop_phase2.json` | Custo do loop da fase 2: sistemas vazios, intercalação e fronteira dentro do loop; ver `bridge/README.md` | — |
+| `bridge/events_phase3.json` | Custo dos eventos da fase 3: handler por lote (C++ e TS) e emissão do C++ e do TS; ver `bridge/README.md` | — |
 
 ## NF-P5 — situação
 

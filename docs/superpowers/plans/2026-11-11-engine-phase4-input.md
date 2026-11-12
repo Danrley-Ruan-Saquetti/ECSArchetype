@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/engine-fase4-input` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Branch `feat/engine-phase4-input` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Toolchain só em Docker: `DC="docker compose run --rm dev"` (nativo, `debug-asan`), `WC="docker compose run --rm wasm"` (Emscripten, node, npm). Presets `wasm-games*` exigem `make ts` antes.
 - `-Wall -Wextra -Wpedantic -Werror` em todo alvo C++; TS `strict` (§3).
 - Camadas: `core ← input ← app ← bridge ← jogos` e `core ← ecs ← app`. `input` não inclui nada de `oly/ecs` nem de `oly/app` (o `oly.lint.boundaries` reprova). O ECS não muda nesta fase.
@@ -74,7 +74,7 @@
   - `class ActionMap` com os métodos do §4.5 (`declareButton`, `declareAxis2d`, `declarePointer`, os dois `bind`, `clearBindings`, `isBound`, `buttonDown`, `buttonUp`, `pointerMove`, `releaseAll`, `capture`, `button`, `axis2d`, `pointer`, `snapshot`) mais `ActionId declare(ActionKind kind, std::string_view name)`, `uint32_t actionCount() const noexcept`, `ActionKind kind(ActionId action) const`, `std::string_view name(ActionId action) const`, `void setDeclarationsLocked(bool locked) noexcept`.
   - Contratos (`OLY_ASSERT`, mensagem com a operação e o nome da ação quando houver): nome repetido (`já declarada`), declarar travado (`durante frame`), `ActionId` fora do intervalo (`fora do intervalo`), handle de outro tipo (`tipo`), usage `0` (`usage 0`), ponteiro não finito (`não finito`).
 
-- [ ] **Step 1: Branch** `git switch -c feat/engine-fase4-input`.
+- [ ] **Step 1: Branch** `git switch -c feat/engine-phase4-input`.
 
 - [ ] **Step 2: Testes que falham.** `tests/CMakeLists.txt`: `oly_add_test(MODULE input NAME unit SOURCES physical_button.cpp action_map.cpp)` e `oly_add_contract_death(MODULE input SOURCE contract_death.cpp CASES ...)`. `CMakeLists.txt` do módulo: `oly_add_module(NAME input DEPENDS core)` + `add_subdirectory(tests)` sob `OLY_BUILD_TESTS`, como o `app`. Sem `Engine` nem `World`: cada caso declara, liga, entrega input e chama `capture()`.
 ```cpp

@@ -1,6 +1,6 @@
 # Build, testes e ferramentas
 
-Os comandos do dia a dia estão em [../desenvolvimento/comandos.md](../desenvolvimento/comandos.md). Este arquivo explica a organização.
+Os comandos do dia a dia estão em [../development/commands.md](../development/commands.md). Este arquivo explica a organização.
 
 ## Toolchain
 
@@ -51,8 +51,8 @@ Opções do CMake: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WE
 
 ## Qualidade de código
 
-- Avisos, formatação e regras de estilo: [../desenvolvimento/estilo-de-codigo.md](../desenvolvimento/estilo-de-codigo.md).
-- O lint de fronteiras roda fora do Emscripten e nos presets `wasm-games*`, que têm Python no ambiente ([modulos-e-fronteiras.md](modulos-e-fronteiras.md)).
+- Avisos, formatação e regras de estilo: [../development/code-style.md](../development/code-style.md).
+- O lint de fronteiras roda fora do Emscripten e nos presets `wasm-games*`, que têm Python no ambiente ([modules-and-boundaries.md](modules-and-boundaries.md)).
 
 ## Automação do Claude Code (`.claude/`)
 

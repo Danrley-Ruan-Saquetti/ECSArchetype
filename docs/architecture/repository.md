@@ -44,4 +44,4 @@ engine/runtime/<m>/
 
 O caminho de include repete o nome do módulo (`#include "oly/ecs/world.hpp"`), então o include já diz de onde vem o header.
 
-Veja também: [modulos-e-fronteiras.md](modulos-e-fronteiras.md).
+Veja também: [modules-and-boundaries.md](modules-and-boundaries.md).

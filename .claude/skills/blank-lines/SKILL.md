@@ -1,5 +1,5 @@
 ---
-name: linhas-em-branco
+name: blank-lines
 description: Filosofia e regras de espaçamento vertical em código — onde colocar e onde remover linhas em branco para que elas separem ideias, não linhas. Use sempre que for escrever, editar, refatorar, formatar ou revisar código em qualquer linguagem imperativa (C, C++, Java, C#, PHP, TypeScript/JS, Python, Go, Rust), mesmo que o usuário não mencione linhas em branco. Use também quando o pedido envolver legibilidade, organização de funções, agrupamento de imports ou membros, estrutura de testes (Arrange/Act/Assert), configuração de formatadores (Prettier, Black, clang-format, gofmt, rustfmt, PHP-CS-Fixer) ou code review de estilo.
 ---
 
@@ -7,7 +7,7 @@ description: Filosofia e regras de espaçamento vertical em código — onde col
 
 Uma linha em branco é pontuação: separa **ideias**, não linhas. Cada uma afirma "aqui termina um passo". Se aparece onde não há mudança de passo, engana o leitor; se falta onde há, obriga o leitor a reconstruir a estrutura sozinho. O leitor primeiro varre a forma visual da função e só depois lê o detalhe — as linhas em branco são o que dá forma a essa primeira leitura.
 
-Para exemplos em várias linguagens, tabela de níveis de agrupamento, convenções por ecossistema e a seção de automação, leia `references/filosofia-completa.md`. Este arquivo traz o que é preciso para aplicar a filosofia no dia a dia.
+Para exemplos em várias linguagens, tabela de níveis de agrupamento, convenções por ecossistema e a seção de automação, leia `references/full-philosophy.md`. Este arquivo traz o que é preciso para aplicar a filosofia no dia a dia.
 
 ## Os seis princípios
 

@@ -32,4 +32,4 @@ O `bridge` (`engine/runtime/bridge/`) expõe a API C `extern "C"` (`c_api.cpp`, 
 - **Contexto atual.** `olyDirectSpawn` e `olyContextPersist` usam o contexto em que o TS está: direto num handler, tarefa ou gancho; adiado num sistema.
 - No build nativo, `oly::bridge::setScriptInvoker` troca o invocador para os testes.
 
-O lado TS que consome esta API está em [pacotes-ts.md](pacotes-ts.md). O contrato de link com o código gerado do jogo está em [esquema-e-codegen.md](esquema-e-codegen.md).
+O lado TS que consome esta API está em [ts-packages.md](ts-packages.md). O contrato de link com o código gerado do jogo está em [schema-and-codegen.md](schema-and-codegen.md).

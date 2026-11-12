@@ -24,6 +24,6 @@ O jogo sem DOM (`installGame`) fica separado da casca do navegador (`main.ts`). 
 
 ## Servir no navegador
 
-`make game G=arena` monta uma pasta estática em `build/wasm-games-release/web/arena/` (`index.html`, `main.js` do esbuild, `.mjs` e `.wasm`). O `.mjs` não entra no bundle: é carregado em tempo de execução. `make serve G=arena`, no serviço `web`, serve essa pasta na porta 8000 ([build-e-testes.md](build-e-testes.md)).
+`make game G=arena` monta uma pasta estática em `build/wasm-games-release/web/arena/` (`index.html`, `main.js` do esbuild, `.mjs` e `.wasm`). O `.mjs` não entra no bundle: é carregado em tempo de execução. `make serve G=arena`, no serviço `web`, serve essa pasta na porta 8000 ([build-and-tests.md](build-and-tests.md)).
 
 O checklist manual e a lista do que faltava na engine, do que é do jogo e do que foi contornado ficam em `games/arena/README.md`.

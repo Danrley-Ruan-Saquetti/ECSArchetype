@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/engine-fase3-eventos` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Branch `feat/engine-phase3-events` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Toolchain só em Docker: `DC="docker compose run --rm dev"` (nativo, `debug-asan`), `WC="docker compose run --rm wasm"` (Emscripten, node, npm). Presets `wasm-games*` exigem `make ts` antes.
 - `-Wall -Wextra -Wpedantic -Werror` em todo alvo C++; TS `strict` (§3).
 - Camadas: `core ← ecs ← app ← bridge ← jogos`. O ECS não muda nesta fase (se mudar, reexecutar `ecs_bench_*` e conferir NF-P1/P2/P5 como em `docs/benchmarks/README.md`).
@@ -69,7 +69,7 @@
   - `handler.hpp`: `class HandlerContext : public EngineContext` com `EventTypeId eventType() const`, `HandlerId handlerId() const`, `std::string_view name() const`, `void* userData() const`, `template <class T> std::span<const T> events() const`, `uint32_t eventCount() const`, `const void* eventData() const`, e diretas `Entity spawn()`, `template <class... Ts> Entity spawn(Ts&&...)`, `destroy(Entity)`, `template <class T> add(Entity, T&&)`, `template <class T> remove(Entity)`, `addById(Entity, ComponentId, void* value)`, `removeById(Entity, ComponentId)`. `using HandlerFunction = void (*)(HandlerContext& context);` `struct NamedHandler { HandlerFunction function; EventKey eventKey; };` `const NamedHandler* findNamedHandler(std::string_view name) noexcept;` `struct NamedHandlerRegistration { NamedHandlerRegistration(std::string_view name, HandlerFunction function, EventKey eventKey); };` macro `OLY_HANDLER(name, EventType)`.
   - `engine.hpp`: `EngineConfig` ganha `uint32_t maxEventRounds = 16;` (positivo, `OLY_ASSERT`). `Engine` ganha `template <class T> EventTypeId declareEvent(std::string_view name = oly::core::typeName<T>())`, `EventTypeId eventTypeOf(EventKey key) const noexcept`, `uint32_t eventTypeCount() const noexcept`, `template <class T> HandlerId on(std::string_view name, HandlerFunction function, void* userData = nullptr)`, `HandlerId onById(EventTypeId type, std::string_view name, HandlerFunction function, void* userData = nullptr)`, `template <class T> void emit(const T& event)`, `void emitById(EventTypeId type, const void* event)`. `HandlerId` é denso por `Engine`, na ordem de registro.
 
-- [ ] **Step 1: Branch** `git switch -c feat/engine-fase3-eventos`.
+- [ ] **Step 1: Branch** `git switch -c feat/engine-phase3-events`.
 
 - [ ] **Step 2: Testes que falham** em `tests/events.cpp` (`oly_add_test(MODULE app NAME events SOURCES events.cpp SUPPORT engine/runtime/ecs/tests/support)`). Eventos do teste: `struct Ping { uint32_t value; }; struct Echo { uint32_t depth; };`. Handlers gravam em `Log` (de `support/log.hpp`) via `userData`. Um passo por `frame` (helper `step(engine)`), `checkInvariants(world)` no fim de cada caso.
 ```cpp
@@ -282,7 +282,7 @@ test("evento sem handler é descartado no fim do passo", ...)
 ### Task 6: Custo dos eventos (§7), resultados e documentação
 
 **Files:**
-- Create: `engine/testing/bench/events.ts`, `docs/benchmarks/bridge/events_fase3.json` (gerado)
+- Create: `engine/testing/bench/events.ts`, `docs/benchmarks/bridge/events_phase3.json` (gerado)
 - Modify: `docs/benchmarks/bridge/README.md`, `docs/benchmarks/README.md`, `CLAUDE.md`
 
 **Interfaces:**
@@ -293,7 +293,7 @@ test("evento sem handler é descartado no fim do passo", ...)
   2. Emissão: `cpp` (`emitPings`) contra `ts` (sistema TS com N × `context.emit(Ping, { value: 1 })`), os dois com `sumPing`; razão `ts/cpp`.
   Saída JSON `{ meta, handler, emission }` com `meta` igual ao de `loop.ts`.
 
-- [ ] **Step 2: Medir** — `$WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'` e `$WC node engine/testing/dist/bench/events.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/events_fase3.json --commit $(git rev-parse --short HEAD)` → exit 0 e duas tabelas impressas.
+- [ ] **Step 2: Medir** — `$WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'` e `$WC node engine/testing/dist/bench/events.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/events_phase3.json --commit $(git rev-parse --short HEAD)` → exit 0 e duas tabelas impressas.
 
 - [ ] **Step 3: Registrar** — seção "Custo dos eventos — fase 3" em `docs/benchmarks/bridge/README.md` (comando, ambiente, protocolo, tabelas, leitura em poucas linhas: custo da chamada de volta por lote, custo por evento lido pelas views, e se vale emitir em lote a partir do TS) e uma linha em `docs/benchmarks/README.md`. Sem meta numérica (§7).
 

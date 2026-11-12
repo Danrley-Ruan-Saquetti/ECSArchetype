@@ -6,7 +6,7 @@ Data: 2026-11-09. Evolui o pacote descrito em `2026-10-16-ecs-archetype-spec.md`
 
 Revisão de 2026-11-10 (antes da fase 2): a engine passa a ser completa em C++, com o TypeScript como camada fina;
 o loop sai do TS e vai para o C++ (§1, §2, §4, §4.3, §5, §7, §8). Nomes seguem a modularização
-(`2026-11-09-oly-modularizacao-design.md`): prefixo `oly`, `OLY_ASSERT`, módulos em `engine/runtime/<m>/`.
+(`2026-11-09-oly-modularization-design.md`): prefixo `oly`, `OLY_ASSERT`, módulos em `engine/runtime/<m>/`.
 
 Revisão de 2026-11-10 (antes da fase 3): §4.4 detalhado para os eventos — handlers recebem lotes por tipo,
 despacho tipo a tipo dentro de cada rodada da cascata, fluxo de referência da morte de um inimigo, e o jogo (não a

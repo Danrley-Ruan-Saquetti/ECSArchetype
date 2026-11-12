@@ -482,7 +482,7 @@ test("crescimento da memória durante eachBlock", () => {
 ### Task 8: Benchmark da fronteira, resultados e documentação
 
 **Files:**
-- Create: `engine/bench/boundary.ts`, `bench/results/engine/boundary_fase1.json`, `bench/results/engine/README.md`
+- Create: `engine/bench/boundary.ts`, `bench/results/engine/boundary_phase1.json`, `bench/results/engine/README.md`
 - Modify: `bench/results/README.md`, `CLAUDE.md`
 
 **Interfaces:**
@@ -502,7 +502,7 @@ test("crescimento da memória durante eachBlock", () => {
 Run: `$WC sh -c 'make engine-ts && cmake --preset wasm-engine-release && cmake --build --preset wasm-engine-release -j && node build/ts/bench/boundary.js --module build/wasm-engine-release/engine/fixture_game.mjs --out /tmp/boundary.json --sizes 1000 --rounds 2'`
 Expected: tabela com uma linha (N = 1000), exit 0.
 
-- [ ] **Step 3: Medir** com os quatro tamanhos e 10 rodadas, `--commit $(git rev-parse --short HEAD)` e `--out bench/results/engine/boundary_fase1.json`.
+- [ ] **Step 3: Medir** com os quatro tamanhos e 10 rodadas, `--commit $(git rev-parse --short HEAD)` e `--out bench/results/engine/boundary_phase1.json`.
 
 - [ ] **Step 4: `bench/results/engine/README.md`:** máquina e versões (Emscripten 3.1.74, node e V8 do JSON), protocolo, tabela por N com bytes do conjunto de trabalho (`N × (8 + 8 + 8)` B para a engine) e a classificação contra L1d 32 KiB / L2 512 KiB / L3 16 MiB (cabe ou não em cache), as três razões com a dispersão entre rodadas, e uma leitura curta do que os números dizem sobre a decisão SoA-por-campo (§4.2) — sem meta numérica nesta fase (§7). Linha em `bench/results/README.md` apontando para `engine/README.md`.
 

@@ -36,23 +36,23 @@ Três regras guiam o desenho:
 
 | Arquivo | Conteúdo |
 |---|---|
-| [repositorio.md](repositorio.md) | mapa das pastas e forma de um módulo |
-| [modulos-e-fronteiras.md](modulos-e-fronteiras.md) | grafo de dependências, como as fronteiras são garantidas, regras de vocabulário |
+| [repository.md](repository.md) | mapa das pastas e forma de um módulo |
+| [modules-and-boundaries.md](modules-and-boundaries.md) | grafo de dependências, como as fronteiras são garantidas, regras de vocabulário |
 | [core.md](core.md) | utilitários base (`OLY_ASSERT` e outros) |
 | [ecs.md](ecs.md) | o ECS por arquétipos: camadas, índices, custos, iteração, `CommandBuffer` |
 | [input.md](input.md) | ações de input e botões físicos HID |
 | [app.md](app.md) | a `Engine`: loop, sistemas, pausa, eventos, schedule, estados, recuperação |
 | [bridge.md](bridge.md) | a API C e a chamada de volta para o TS |
-| [esquema-e-codegen.md](esquema-e-codegen.md) | o esquema do jogo, o gerador e o módulo WASM de cada jogo |
-| [pacotes-ts.md](pacotes-ts.md) | `@oly/core`, `@oly/client`, `@oly/codegen`, `@oly/testing` |
-| [jogos.md](jogos.md) | o jogo de validação `games/arena` |
-| [build-e-testes.md](build-e-testes.md) | Docker, presets, testes e qualidade de código |
-| [desempenho.md](desempenho.md) | metas, situação atual e custos da fronteira |
-| [decisoes.md](decisoes.md) | decisões arquiteturais principais, com motivo e custo aceito |
-| [limites.md](limites.md) | limites conhecidos e o que fica fora do escopo |
-| [glossario.md](glossario.md) | o mesmo verbo em C++, API C e TS |
+| [schema-and-codegen.md](schema-and-codegen.md) | o esquema do jogo, o gerador e o módulo WASM de cada jogo |
+| [ts-packages.md](ts-packages.md) | `@oly/core`, `@oly/client`, `@oly/codegen`, `@oly/testing` |
+| [games.md](games.md) | o jogo de validação `games/arena` |
+| [build-and-tests.md](build-and-tests.md) | Docker, presets, testes e qualidade de código |
+| [performance.md](performance.md) | metas, situação atual e custos da fronteira |
+| [decisions.md](decisions.md) | decisões arquiteturais principais, com motivo e custo aceito |
+| [limits.md](limits.md) | limites conhecidos e o que fica fora do escopo |
+| [glossary.md](glossary.md) | o mesmo verbo em C++, API C e TS |
 
-Para trabalhar no código: [../desenvolvimento/comandos.md](../desenvolvimento/comandos.md) (build, testes, benchmarks, jogos) e [../desenvolvimento/estilo-de-codigo.md](../desenvolvimento/estilo-de-codigo.md).
+Para trabalhar no código: [../development/commands.md](../development/commands.md) (build, testes, benchmarks, jogos) e [../development/code-style.md](../development/code-style.md).
 
 ## Documentos de referência
 
@@ -63,7 +63,7 @@ As specs são a fonte da verdade. Os planos registram, fase a fase, como cada pa
 | `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md` | ECS: requisitos `R-*`, invariantes `I-1..I-11`, metas `NF-*` |
 | `docs/superpowers/specs/2026-11-06-wasm-cost-study-design.md` | estudo de custo nativo × WASM |
 | `docs/superpowers/specs/2026-11-09-game-engine-design.md` | a engine: loop, eventos, input, schedule, estados, jogo de validação |
-| `docs/superpowers/specs/2026-11-09-oly-modularizacao-design.md` | módulos, fronteiras, nomes e superfícies públicas |
+| `docs/superpowers/specs/2026-11-09-oly-modularization-design.md` | módulos, fronteiras, nomes e superfícies públicas |
 | `docs/superpowers/plans/` | planos de implementação por fase |
 | `CLAUDE.md` | índice para o Claude Code e regras que valem sempre |
 | `docs/benchmarks/` | resultados e situação das metas |

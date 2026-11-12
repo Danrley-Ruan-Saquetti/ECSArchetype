@@ -13,7 +13,7 @@ A engine no lado TS (`engine/packages/core/`), sem DOM nem node (`types: []`): r
 - **Erros**: `ContractError`, `SchemaMismatchError`.
 - **Interno** (`@oly/core/internal`, só para `engine/`): `Bridge`, `bridgeOf`, `moduleOf`, `componentIdOf`, `Heap`, layout e hash.
 
-A lista pública exata é `engine/packages/core/api/public-exports.txt` ([modulos-e-fronteiras.md](modulos-e-fronteiras.md#como-as-fronteiras-são-garantidas)).
+A lista pública exata é `engine/packages/core/api/public-exports.txt` ([modules-and-boundaries.md](modules-and-boundaries.md#como-as-fronteiras-são-garantidas)).
 
 Regras de implementação:
 
@@ -36,5 +36,5 @@ Loop e input ficam separados porque mudam por motivos diferentes.
 
 ## `@oly/codegen` e `@oly/testing`
 
-- `@oly/codegen` (`engine/tools/codegen/`): o bin `oly-codegen --schema <schema.js> --out <dir>`, chamado pelo `oly_add_game` ([esquema-e-codegen.md](esquema-e-codegen.md)).
+- `@oly/codegen` (`engine/tools/codegen/`): o bin `oly-codegen --schema <schema.js> --out <dir>`, chamado pelo `oly_add_game` ([schema-and-codegen.md](schema-and-codegen.md)).
 - `@oly/testing` (`engine/testing/`, privado): o jogo `fixture` (`engine/testing/fixture/`, único lugar da engine com nomes de jogo), os testes de integração contra o WASM real (`tests/wasm/`) e os benchmarks da fronteira, do loop e dos eventos (`bench/`). Ele fica fora do `@oly/core` para não criar ciclo nas project references nem pôr nomes de jogo no pacote.

@@ -1,5 +1,5 @@
 ---
-name: comentarios-de-codigo
+name: code-comments
 description: 'Carregue ANTES da primeira linha de código de qualquer tarefa que escreva, altere, planeje ou revise código, de qualquer tamanho: uma linha, um rename, um literal virando constante, um bugfix, um teste, um script, uma migração, uma feature inteira. Vale igualmente para elaborar plano, spec ou design de implementação (mesmo antes de existir código), executar task de plano, refatorar, responder com trecho de código, revisar diff ou PR e delegar código a subagente. Toda edição decide comentários mesmo sem ninguém pedir: escreve um novo, deixa um antigo virar mentira ou copia o eco do plano. Traz os critérios de que comentário entra, fica, vira código (nome, tipo, constante) ou sai, em código, docstrings, API pública e configs. Soma às skills de linguagem, projeto ou fluxo (brainstorm, plano, implementação, revisão); ter carregado uma delas não dispensa esta. Use também para comentar, documentar ou limpar comentários. Dispensável só quando nenhuma linha de código é escrita, planejada ou revisada.'
 
 ---
@@ -15,7 +15,7 @@ Por isso todo comentário é uma de duas coisas:
 
 Confundir os dois produz tanto código poluído quanto código mudo. O objetivo não é "poucos comentários" nem "muitos": é zero comentários do tipo 1 e todos os do tipo 2.
 
-Para a argumentação completa (assimetria de verificação, respostas a objeções), leia `references/filosofia-completa.md` quando precisar justificar uma decisão ao usuário ou resolver um caso que esta página não cobre.
+Para a argumentação completa (assimetria de verificação, respostas a objeções), leia `references/full-philosophy.md` quando precisar justificar uma decisão ao usuário ou resolver um caso que esta página não cobre.
 
 ## Fronteira
 

@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/engine-fase6-estados` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Branch `feat/engine-phase6-states` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Toolchain só em Docker: `DC="docker compose run --rm dev"` (nativo, `debug-asan`), `WC="docker compose run --rm wasm"` (Emscripten, node, npm). Presets `wasm-games*` exigem `make ts` antes.
 - `-Wall -Wextra -Wpedantic -Werror` em todo alvo C++; TS `strict` (§3).
 - Camadas: `core ← input ← app ← bridge ← jogos` e `core ← ecs ← app`. Nenhum módulo novo; o ECS e o `input` não mudam. A tag fica em `engine/runtime/app/include/oly/app/detail/` (§4.7); o `bridge` não a inclui.
@@ -22,7 +22,7 @@
 - Nada de conceito de jogo em `engine/runtime` nem em `engine/packages`; nomes de jogo só em `engine/testing/fixture/` e nos testes.
 - Sem benchmark nesta fase (§7).
 - Glossário (`CLAUDE.md`): mesmo verbo nas três camadas — `requestState`, `state`, `onEnter`/`onExit`, `persist`, `inState` (C++ `setSystemStates`/`setHandlerStates`). `oly` só na API C.
-- Estilo `CLAUDE.md` e skills `linhas-em-branco`/`comentarios-de-codigo`: chaves em todo bloco, nomes completos, dados no topo da classe, um `namespace` por arquivo, includes do projeto com aspas depois da biblioteca padrão. Não formatar à mão (hook `clang-format`). Comentário só para razão, restrição externa ou contrato não óbvio; nada de narração da edição; testes em Arrange/Act/Assert.
+- Estilo `CLAUDE.md` e skills `blank-lines`/`code-comments`: chaves em todo bloco, nomes completos, dados no topo da classe, um `namespace` por arquivo, includes do projeto com aspas depois da biblioteca padrão. Não formatar à mão (hook `clang-format`). Comentário só para razão, restrição externa ou contrato não óbvio; nada de narração da edição; testes em Arrange/Act/Assert.
 
 ### Decisões que o spec deixa em aberto (fixadas aqui)
 
@@ -60,7 +60,7 @@
 **Interfaces:**
 - Produces (`oly::app::detail::TaskQueue`): `Slot` ganha `bool scoped = false`; `TaskHandle push(double due, double interval, TaskFunction function, TaskDiscardFunction discard, const TaskPayload& payload, bool scoped = false)`; `bool persist(TaskHandle task)` (contrato de slot de `matches`, operação `"persist"`); `void cancelScoped()` (descarte uma vez por tarefa, inclusive as com escopo agendadas por descartes).
 
-- [ ] **Step 1: Branch** `git switch -c feat/engine-fase6-estados`.
+- [ ] **Step 1: Branch** `git switch -c feat/engine-phase6-states`.
 
 - [ ] **Step 2: Testes que falham** em `tests/task_queue.cpp` (mesmo contador de descartes da fase 5):
 ```cpp

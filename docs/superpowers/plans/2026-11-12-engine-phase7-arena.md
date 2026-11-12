@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Branch `feat/engine-fase7-arena` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Branch `feat/engine-phase7-arena` a partir de `develop`. Commits, comentários, mensagens de assert e de erro em pt-BR; commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Toolchain só em Docker: `DC="docker compose run --rm dev"` (nativo, `debug-asan`), `WC="docker compose run --rm wasm"` (Emscripten, node, npm). Presets `wasm-games*` exigem `make ts` antes. Na imagem do emsdk o `npm` não está no `PATH`: fora do `Makefile`, use `$WC sh -c '"$(dirname "$(command -v node)")/npm" …'`.
 - `-Wall -Wextra -Wpedantic -Werror` em todo alvo C++; TS `strict` (§3).
 - Camadas: `core ← input ← app ← bridge ← jogos` e `core ← ecs ← app`. Nenhum módulo novo. O jogo declara em `DEPENDS` todo módulo que inclui (`ecs app bridge`; `input` só se incluir `oly/input/...`).
@@ -20,7 +20,7 @@
 - **Regra das faltas (§4.9):** se o jogo precisar de algo genérico que a engine não tem, pare a task e trate como tarefa da engine na mesma fase (C++ primeiro, depois API C e TS, testes no módulo, casos de morte, `CLAUDE.md`/spec) e registre na lista da fase (Task 7). Executor por subagente: reporte a falta em vez de contornar.
 - Fronteira: nada por entidade. `single` cruza um número constante de vezes por chamada; handlers TS recebem lote.
 - Sem benchmark nesta fase (§7).
-- Estilo `CLAUDE.md` e skills `linhas-em-branco`/`comentarios-de-codigo`: chaves em todo bloco, nomes completos, dados no topo da classe, um `namespace` por arquivo, includes do projeto com aspas depois da biblioteca padrão. Não formatar à mão (hook `clang-format`). Comentário só para razão, restrição externa ou contrato não óbvio; nada de narração da edição; testes em Arrange/Act/Assert.
+- Estilo `CLAUDE.md` e skills `blank-lines`/`code-comments`: chaves em todo bloco, nomes completos, dados no topo da classe, um `namespace` por arquivo, includes do projeto com aspas depois da biblioteca padrão. Não formatar à mão (hook `clang-format`). Comentário só para razão, restrição externa ou contrato não óbvio; nada de narração da edição; testes em Arrange/Act/Assert.
 
 ### Decisões que o spec deixa em aberto (fixadas aqui)
 
@@ -68,7 +68,7 @@
 **Interfaces:**
 - Produces (`oly::ecs::Query<Ts...>`): `std::tuple<Entity, Ts&...> single();` `std::optional<std::tuple<Entity, Ts&...>> trySingle();` (`Ts` const → `const T&`). Contratos e mensagens nas decisões acima.
 
-- [ ] **Step 1: Branch** `git switch -c feat/engine-fase7-arena`.
+- [ ] **Step 1: Branch** `git switch -c feat/engine-phase7-arena`.
 
 - [ ] **Step 2: Testes que falham** em `tests/queries.cpp` (componentes de `support/components.hpp`; `CHECK_INVARIANTS(world)` no fim):
 ```cpp

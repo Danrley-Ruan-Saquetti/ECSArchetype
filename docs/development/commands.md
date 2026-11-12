@@ -1,6 +1,6 @@
 # Comandos
 
-Não há toolchain C++ no host Windows: tudo roda em container via Docker Compose. Os serviços estão descritos em [../arquitetura/build-e-testes.md](../arquitetura/build-e-testes.md#toolchain).
+Não há toolchain C++ no host Windows: tudo roda em container via Docker Compose. Os serviços estão descritos em [../architecture/build-and-tests.md](../architecture/build-and-tests.md#toolchain).
 
 ```sh
 DC="docker compose run --rm dev"     # gcc:14 + cmake + perf
@@ -31,7 +31,7 @@ $DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<arquivo>.json --
 
 - Executáveis: `ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmented`, `ecs_bench_flush`.
 - `tools/perf_fragmented.sh` roda `perf stat` no serviço `perf` (privilegiado).
-- Compare sempre razões da mesma execução; o ambiente WSL2 é ruidoso ([../arquitetura/desempenho.md](../arquitetura/desempenho.md)).
+- Compare sempre razões da mesma execução; o ambiente WSL2 é ruidoso ([../architecture/performance.md](../architecture/performance.md)).
 
 ## WASM, TypeScript e jogos
 

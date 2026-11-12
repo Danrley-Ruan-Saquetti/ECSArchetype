@@ -42,7 +42,7 @@ Os dois índices só mudam em `findOrCreate`, que também registra o arquétipo 
 
 ## Templates e `ById`
 
-Os templates de `world.hpp` são finos e delegam para funções não template por `ComponentId` em `world.cpp` (`addById`, `removeById` etc.), o que reduz tempo de compilação e tamanho de binário. O caminho quente (`get<T>`, `Query::each`, `eachBlock`) **não** delega: ele fica inline, porque uma indireção ali afetaria as metas NF-P1 e NF-P2 ([desempenho.md](desempenho.md)).
+Os templates de `world.hpp` são finos e delegam para funções não template por `ComponentId` em `world.cpp` (`addById`, `removeById` etc.), o que reduz tempo de compilação e tamanho de binário. O caminho quente (`get<T>`, `Query::each`, `eachBlock`) **não** delega: ele fica inline, porque uma indireção ali afetaria as metas NF-P1 e NF-P2 ([performance.md](performance.md)).
 
 ## Iteração e mudanças estruturais
 
@@ -63,6 +63,6 @@ Regras de validade:
 
 ## Corretude
 
-- As invariantes I-1 a I-11, o fuzz contra modelo e o `LifeCounter` estão em [build-e-testes.md](build-e-testes.md#testes).
+- As invariantes I-1 a I-11, o fuzz contra modelo e o `LifeCounter` estão em [build-and-tests.md](build-and-tests.md#testes).
 - Ao mudar a lógica estrutural, mantenha `checkInvariants` cobrindo o que mudou, inclusive as caches de `QueryById` (que entram em `checkQueries`).
 - Os ganchos só de teste (`flushSequential`, `setGeneration`, `CommandBuffer::forEach`) ficam em `detail/test_access.hpp` (`WorldTestAccess`, `EntityStoreTestAccess`, `CommandBufferTestAccess`). As classes públicas não têm nada "para teste".
