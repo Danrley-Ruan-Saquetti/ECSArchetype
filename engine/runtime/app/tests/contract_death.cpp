@@ -4,10 +4,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include <vector>
 
 #include "oly/app/engine.hpp"
 #include "oly/app/handler.hpp"
+#include "oly/app/state_context.hpp"
 #include "oly/app/task_context.hpp"
 #include "oly/core/assert.hpp"
 
@@ -230,6 +232,85 @@ namespace {
     engine.schedule().cancel(TaskHandle{7, 0});
   }
 
+  void declareStateFromSystem(SystemContext& context) {
+    static_cast<Engine*>(context.userData())->declareState("tarde");
+  }
+
+  void declareStateDuringFrame() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.addSystem(Phase::Update, "declarador", declareStateFromSystem, &engine);
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
+  void declareStateTwice() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.declareState("a");
+    engine.declareState("a");
+  }
+
+  void tooManyStates() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    for (uint32_t index = 0; index <= oly::app::MaxStates; ++index) {
+      engine.declareState("estado" + std::to_string(index));
+    }
+  }
+
+  void requestStateOutOfRange() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareState("a");
+    engine.declareState("b");
+
+    engine.requestState(5);
+  }
+
+  void onEnterFromSystem(SystemContext& context) {
+    Engine& engine = *static_cast<Engine*>(context.userData());
+    engine.onEnter(0, "tarde", [](oly::app::StateContext&) {});
+  }
+
+  void onEnterDuringFrame() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareState("a");
+    engine.addSystem(Phase::Update, "registrador", onEnterFromSystem, &engine);
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
+  void setSystemStatesFromSystem(SystemContext& context) {
+    Engine& engine = *static_cast<Engine*>(context.userData());
+    engine.setSystemStates(context.systemId(), {0});
+  }
+
+  void systemStatesDuringFrame() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareState("a");
+    engine.addSystem(Phase::Update, "restritor", setSystemStatesFromSystem, &engine);
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
+  void systemStateMaskUndeclared() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.declareState("a");
+    engine.declareState("b");
+    const auto system = engine.addSystem(Phase::Update, "s", [](SystemContext&) {});
+
+    engine.setSystemStateMask(system, 0b100);
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -256,6 +337,13 @@ int main(int argumentCount, char** arguments) {
     {"schedule_null_function", scheduleNullFunction, {"schedule", "função nula"}},
     {"task_payload_wrong_type", taskPayloadWrongType, {"payload", "Other"}},
     {"cancel_slot_out_of_range", cancelSlotOutOfRange, {"cancel", "fora do intervalo"}},
+    {"declare_state_during_frame", declareStateDuringFrame, {"declareState", "durante frame"}},
+    {"declare_state_twice", declareStateTwice, {"declareState", "já declarado"}},
+    {"too_many_states", tooManyStates, {"declareState", "máximo"}},
+    {"request_state_out_of_range", requestStateOutOfRange, {"requestState", "fora do intervalo"}},
+    {"on_enter_during_frame", onEnterDuringFrame, {"onEnter", "durante frame"}},
+    {"system_states_during_frame", systemStatesDuringFrame, {"setSystemStates", "durante frame"}},
+    {"system_state_mask_undeclared", systemStateMaskUndeclared, {"setSystemStates", "não declarado"}},
   };
 
   if (argumentCount != 2) {

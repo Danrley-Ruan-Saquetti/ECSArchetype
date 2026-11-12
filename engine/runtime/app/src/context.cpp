@@ -15,6 +15,14 @@ namespace oly::app {
     return engine_->time();
   }
 
+  void EngineContext::requestState(StateId state) {
+    engine_->requestState(state);
+  }
+
+  StateId EngineContext::state() const noexcept {
+    return engine_->state();
+  }
+
   void EngineContext::pause() noexcept {
     engine_->pause();
   }

@@ -6,6 +6,7 @@
 
 #include "oly/app/event.hpp"
 #include "oly/app/scheduler.hpp"
+#include "oly/app/state.hpp"
 #include "oly/core/assert.hpp"
 #include "oly/core/type_name.hpp"
 #include "oly/ecs/world.hpp"
@@ -29,6 +30,9 @@ namespace oly::app {
    public:
     float fixedDeltaTime() const noexcept;
     double time() const noexcept;
+
+    void requestState(StateId state);
+    StateId state() const noexcept;
 
     void pause() noexcept;
     void resume() noexcept;

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <initializer_list>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -13,6 +14,7 @@
 #include "oly/app/handler.hpp"
 #include "oly/app/phase.hpp"
 #include "oly/app/scheduler.hpp"
+#include "oly/app/state.hpp"
 #include "oly/app/system.hpp"
 #include "oly/core/assert.hpp"
 #include "oly/core/type_name.hpp"
@@ -37,6 +39,7 @@ namespace oly::app {
       std::string name;
       SystemId id;
       bool whilePaused;
+      StateMask states;
     };
 
     struct HandlerEntry {
@@ -44,6 +47,7 @@ namespace oly::app {
       void* userData;
       std::string name;
       HandlerId id;
+      StateMask states;
     };
 
     ecs::World& world_;
@@ -56,11 +60,29 @@ namespace oly::app {
 
     detail::EventQueues queues_;
     std::vector<std::vector<HandlerEntry>> handlers_; // [EventTypeId]
-    HandlerId handlerCount_ = 0;
+    std::vector<std::pair<EventTypeId, uint32_t>> handlerLocations_; // [HandlerId]: (tipo, posição no tipo)
     uint32_t eventRoundsThisStep_ = 0;
 
     input::ActionMap actions_;
     Scheduler scheduler_{*this};
+
+    struct StateHookEntry {
+      StateHookFunction function;
+      void* userData;
+      std::string name;
+      StateHookId id;
+    };
+
+    struct StateEntry {
+      std::string name;
+      std::vector<StateHookEntry> enterHooks;
+      std::vector<StateHookEntry> exitHooks;
+    };
+
+    std::vector<StateEntry> states_; // [StateId]
+    StateHookId stateHookCount_ = 0;
+    StateId state_ = NoState;
+    StateId requestedState_ = NoState;
 
     double accumulator_ = 0.0;
     double lastTime_ = 0.0;
@@ -131,8 +153,8 @@ namespace oly::app {
 
     // nowSeconds não pode recuar (OLY_ASSERT). Roda até maxStepsPerFrame passos fixos e depois a fase Render uma
     // vez; os passos inteiros que não couberam são descartados e só a fração fica acumulada. O primeiro frame só
-    // registra o tempo. Se o frame anterior foi interrompido por exceção, este descarta os comandos e os eventos
-    // pendentes (inclusive os emitidos depois da exceção) e também só registra o tempo; as tarefas agendadas ficam.
+    // registra o tempo. Se o frame anterior foi interrompido por exceção, este descarta os comandos, os eventos
+    // e o pedido de estado pendentes (inclusive os emitidos depois da exceção) e também só registra o tempo; as tarefas agendadas ficam.
     void frame(double nowSeconds);
     // Oculto, frame não faz nada; ao mostrar, o próximo frame só registra o tempo. Não mexe na pausa do jogo.
     // Ocultar solta todos os botões (o jogador pode soltá-los com a aba fora de foco).
@@ -145,6 +167,32 @@ namespace oly::app {
     const input::ActionMap& actions() const noexcept {
       return actions_;
     }
+
+    // Estados planos: a ordem de declaração dá o StateId (denso, no máximo MaxStates). Não pode ser chamado durante
+    // frame, repetir o nome nem passar do máximo (OLY_ASSERT).
+    StateId declareState(std::string_view name);
+    uint32_t stateCount() const noexcept {
+      return static_cast<uint32_t>(states_.size());
+    }
+    // Vale dentro e fora de frame; o último pedido antes do passo 5 vence e a troca acontece lá, pausado ou não.
+    // Um pedido feito num gancho de estado vale no passo seguinte.
+    void requestState(StateId state);
+    // NoState até a primeira troca. Só muda no passo 5.
+    StateId state() const noexcept {
+      return state_;
+    }
+    // Na troca rodam os onExit do estado que sai, a limpeza do escopo e os onEnter do que entra, cada grupo na ordem
+    // de registro. Um gancho pode emitir eventos, agendar tarefas e fazer mudanças estruturais diretas, mas não
+    // registrar nada. Não podem ser registrados durante frame (OLY_ASSERT). StateHookId conta entrada e saída juntos.
+    StateHookId onEnter(StateId state, std::string_view name, StateHookFunction function, void* userData = nullptr);
+    StateHookId onExit(StateId state, std::string_view name, StateHookFunction function, void* userData = nullptr);
+    // Restringe o sistema ou o handler aos estados dados, em todas as fases, inclusive render; lista ou máscara
+    // vazia tira a restrição. Sem estado ativo, quem tem restrição não roda. Não podem ser chamados durante frame
+    // (OLY_ASSERT).
+    void setSystemStates(SystemId system, std::initializer_list<StateId> states);
+    void setSystemStateMask(SystemId system, StateMask mask);
+    void setHandlerStates(HandlerId handler, std::initializer_list<StateId> states);
+    void setHandlerStateMask(HandlerId handler, StateMask mask);
 
     // Vale dentro e fora de frame; as tarefas sobrevivem à recuperação de exceção.
     Scheduler& schedule() noexcept {
@@ -188,11 +236,20 @@ namespace oly::app {
     void dispatchEvents();
     void runDueSchedule();
 
-    // Etapas do passo fixo previstas na spec (2026-11-09-game-engine-design.md §4.3); a vazia espera os estados
-    // de jogo.
+    void checkState(const char* operation, StateId state) const;
+    void checkStateMask(const char* operation, StateMask mask) const;
+    StateMask maskOf(const char* operation, std::initializer_list<StateId> states) const;
+    StateHookId addStateHook(const char* operation, bool entering, StateId state, std::string_view name, StateHookFunction function, void* userData);
+    void runStateHooks(const std::vector<StateHookEntry>& hooks, StateId from, StateId to, bool entering);
+
+    bool runsInState(StateMask states) const noexcept {
+      return states == 0 || (state_ != NoState && ((states >> state_) & 1u) != 0);
+    }
+
+    // Etapas do passo fixo previstas na spec (2026-11-09-game-engine-design.md §4.3).
     void captureActions() {
       actions_.capture();
     }
-    void applyStateTransition() {}
+    void applyStateTransition();
   };
 }

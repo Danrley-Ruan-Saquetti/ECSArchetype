@@ -9,6 +9,7 @@
 #include "log.hpp"
 #include "oly/app/engine.hpp"
 #include "oly/app/handler.hpp"
+#include "oly/app/state_context.hpp"
 #include "oly/app/task_context.hpp"
 
 using oly::app::Engine;
@@ -77,6 +78,28 @@ namespace {
 
   void countEchoes(HandlerContext& context) {
     static_cast<EventShared*>(context.userData())->echoes += static_cast<int>(context.eventCount());
+  }
+
+  struct StateShared {
+    oly::app::StateId target = oly::app::NoState;
+    int calls = 0;
+  };
+
+  void requestThenThrowOnSecondCall(SystemContext& context) {
+    StateShared& shared = *static_cast<StateShared*>(context.userData());
+    ++shared.calls;
+    if (shared.calls == 2) {
+      context.requestState(shared.target);
+      throw std::runtime_error("boom");
+    }
+  }
+
+  void throwHook(oly::app::StateContext&) {
+    throw std::runtime_error("boom");
+  }
+
+  void countHook(oly::app::StateContext& context) {
+    ++static_cast<StateShared*>(context.userData())->calls;
   }
 }
 
@@ -154,6 +177,61 @@ TEST_CASE("exceção num handler descarta os eventos pendentes no frame seguinte
   engine.frame(4.0 / 60);
 
   CHECK(shared.echoes == 1);
+  CHECK_INVARIANTS(world);
+}
+
+
+TEST_CASE("a recuperação descarta o pedido pendente") {
+  oly::ecs::World world;
+  Engine engine(world);
+  StateShared shared;
+  const auto first = engine.declareState("a");
+  shared.target = engine.declareState("b");
+  engine.addSystem(Phase::Update, "requester", requestThenThrowOnSecondCall, &shared);
+  engine.requestState(first);
+  engine.frame(0.0);
+  engine.frame(1.0 / 60);
+
+  CHECK_THROWS(engine.frame(2.0 / 60));
+  engine.frame(3.0 / 60);
+  engine.frame(4.0 / 60);
+  engine.frame(5.0 / 60);
+
+  CHECK(engine.state() == first);
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("exceção em onExit: o estado não muda") {
+  oly::ecs::World world;
+  Engine engine(world);
+  const auto first = engine.declareState("a");
+  const auto second = engine.declareState("b");
+  engine.onExit(first, "thrower", throwHook);
+  engine.requestState(first);
+  engine.frame(0.0);
+  engine.frame(1.0 / 60);
+  engine.requestState(second);
+
+  CHECK_THROWS(engine.frame(2.0 / 60));
+
+  CHECK(engine.state() == first);
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("exceção em onEnter: o estado já é o novo e os ganchos seguintes não rodam") {
+  oly::ecs::World world;
+  Engine engine(world);
+  StateShared shared;
+  const auto first = engine.declareState("a");
+  engine.onEnter(first, "thrower", throwHook);
+  engine.onEnter(first, "second", countHook, &shared);
+  engine.requestState(first);
+  engine.frame(0.0);
+
+  CHECK_THROWS(engine.frame(1.0 / 60));
+
+  CHECK(engine.state() == first);
+  CHECK(shared.calls == 0);
   CHECK_INVARIANTS(world);
 }
 #endif

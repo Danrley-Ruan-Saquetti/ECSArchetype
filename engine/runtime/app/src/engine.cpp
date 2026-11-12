@@ -24,7 +24,7 @@ namespace oly::app {
     std::vector<SystemEntry>& entries = phases_[static_cast<uint32_t>(phase)];
 
     systemLocations_.emplace_back(phase, static_cast<uint32_t>(entries.size()));
-    entries.push_back(SystemEntry{function, userData, std::string(name), id, false});
+    entries.push_back(SystemEntry{function, userData, std::string(name), id, false, 0});
 
     return id;
   }
@@ -51,8 +51,9 @@ namespace oly::app {
     OLY_ASSERT(!inFrame_, "on: handler \"%.*s\" registrado durante frame", static_cast<int>(name.size()), name.data());
     OLY_ASSERT(type < queues_.typeCount(), "on: handler \"%.*s\" para o tipo de evento %u não declarado", static_cast<int>(name.size()), name.data(), type);
 
-    const HandlerId id = handlerCount_++;
-    handlers_[type].push_back(HandlerEntry{function, userData, std::string(name), id});
+    const HandlerId id = static_cast<HandlerId>(handlerLocations_.size());
+    handlerLocations_.emplace_back(type, static_cast<uint32_t>(handlers_[type].size()));
+    handlers_[type].push_back(HandlerEntry{function, userData, std::string(name), id, 0});
 
     return id;
   }
@@ -81,6 +82,7 @@ namespace oly::app {
   void Engine::recoverFromInterruptedFrame() {
     commands_ = world_.commands();
     queues_.clear();
+    requestedState_ = NoState;
     scheduler_.queue_.recoverFromInterruptedRun();
     inFrame_ = false;
     actions_.setDeclarationsLocked(false);
@@ -174,6 +176,10 @@ namespace oly::app {
 
         const std::byte* data = queues_.batchData(type);
         for (HandlerEntry& entry : handlers_[type]) {
+          if (!runsInState(entry.states)) {
+            continue;
+          }
+
           HandlerContext context(*this, world_, type, entry.id, entry.name, entry.userData, data, count);
           entry.function(context);
         }
@@ -199,6 +205,10 @@ namespace oly::app {
   void Engine::runPhase(Phase phase) {
     for (SystemEntry& entry : phases_[static_cast<uint32_t>(phase)]) {
       if (isGameplayPhase(phase) && entry.whilePaused != pausedThisStep_) {
+        continue;
+      }
+
+      if (!runsInState(entry.states)) {
         continue;
       }
 
