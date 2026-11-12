@@ -1,115 +1,115 @@
 ---
 name: bench-compare
-description: Mede os benchmarks do ECS em Release, confere as metas de desempenho NF-P1, NF-P2 e NF-P5 como razões contra a linha de base medida na mesma execução e registra o resultado em docs/benchmarks/. Use quando o usuário pedir para medir, rodar os benchmarks, conferir as metas NF-P ou verificar se uma mudança trouxe regressão de desempenho.
-argument-hint: "<prefixo> [iterate] [fragmented] [flush]"
+description: Measures the ECS benchmarks in Release, checks the performance targets NF-P1, NF-P2 and NF-P5 as ratios against the baseline measured in the same run and records the result in docs/benchmarks/. Use when the user asks to measure, run the benchmarks, check the NF-P targets or verify whether a change introduced a performance regression.
+argument-hint: "<prefix> [iterate] [fragmented] [flush]"
 disable-model-invocation: true
 ---
 
 # bench-compare
 
-Uma rodada completa: build Release → executar os benchmarks com repetições → calcular as razões de cada meta → comparar com a situação registrada → atualizar `docs/benchmarks/README.md`. Cada etapa tem um jeito fácil de errar sem perceber, e o erro só aparece como um número que parece plausível. Esta skill existe para que a rodada saia comparável com as anteriores.
+A full round: Release build → run the benchmarks with repetitions → compute the ratios for each target → compare with the recorded status → update `docs/benchmarks/README.md`. Each step has an easy way to go wrong without noticing, and the error only shows up as a number that looks plausible. This skill exists so that the round comes out comparable with the previous ones.
 
-## Fronteira
+## Boundary
 
-**Território** — define como uma medição vira veredito de meta: qual benchmark é dividido por qual linha de base, com qual limite, a partir de qual estatística, e como o resultado é registrado.
+**Territory** — defines how a measurement becomes a target verdict: which benchmark is divided by which baseline, with which limit, from which statistic, and how the result is recorded.
 
-**Fora da fronteira** — os valores das metas (vêm da seção 7 da spec); o que fazer quando uma meta falha (investigar com profiling, mudar código); as metas que não são razões (NF-P3 vetorização, NF-P4 zero alocações); comparações entre variantes de compilação ou entre nativo e WASM; criar o commit, que é ato do usuário.
+**Outside the boundary** — the target values (they come from section 7 of the spec); what to do when a target fails (investigate with profiling, change code); the targets that are not ratios (NF-P3 vectorization, NF-P4 zero allocations); comparisons between build variants or between native and WASM; creating the commit, which is the user's act.
 
-**O que não preciso saber** — o que cada benchmark mede por dentro e como o ECS é implementado. A skill compara medianas; entender por que uma razão mudou é outro trabalho, que começa depois do veredito.
+**What I do not need to know** — what each benchmark measures inside and how the ECS is implemented. The skill compares medians; understanding why a ratio changed is another job, which starts after the verdict.
 
-**Contrato de borda** — recebo um prefixo para os arquivos de resultado (ex.: `r2`) e, opcionalmente, quais executáveis rodar; entrego os JSON em `docs/benchmarks/ecs/<prefixo>_<executável>.json`, uma tabela de razões com veredito por meta e o `README.md` de resultados atualizado, sem commit.
+**Edge contract** — I receive a prefix for the result files (e.g. `r2`) and, optionally, which executables to run; I deliver the JSON files in `docs/benchmarks/ecs/<prefix>_<executable>.json`, a ratio table with a verdict per target and the updated results `README.md`, without a commit.
 
-## A regra das razões
+## The ratio rule
 
-O ambiente (Docker sobre WSL2) é ruidoso: o mesmo benchmark já oscilou 2× entre execuções. Por isso toda meta é uma **razão entre dois benchmarks do mesmo JSON**, medidos na mesma execução, que sofrem o mesmo ruído e o cancelam.
+The environment (Docker on WSL2) is noisy: the same benchmark has already swung 2× between runs. That is why every target is a **ratio between two benchmarks from the same JSON**, measured in the same run, which suffer the same noise and cancel it.
 
-- Veredito de meta: só pela razão de `tools/bench_ratio.py`, nunca por ns/entidade.
-- Comparar com uma rodada anterior: compare **razão com razão** (ex.: a razão de NF-P5 a N = 100000 era ~0,85 e agora é X). Nunca compare ns de uma rodada com ns de outra; esses números não são comparáveis entre execuções.
-- Números absolutos podem aparecer no README como contexto (custo por entidade, por exemplo), sempre identificados como da rodada em questão, nunca como critério.
+- Target verdict: only by the ratio from `tools/bench_ratio.py`, never by ns/entity.
+- Comparing with a previous round: compare **ratio with ratio** (e.g. the NF-P5 ratio at N = 100000 was ~0.85 and now it is X). Never compare ns from one round with ns from another; those numbers are not comparable across runs.
+- Absolute numbers may appear in the README as context (cost per entity, for example), always identified as belonging to the round in question, never as a criterion.
 
-## Tabela de metas
+## Target table
 
-Os limites vêm da seção 7 de `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md`. Se a spec e esta tabela divergirem, a spec vence: avise o usuário e use o valor da spec.
+The limits come from section 7 of `docs/superpowers/specs/2026-10-16-ecs-archetype-spec.md`. If the spec and this table diverge, the spec wins: warn the user and use the spec's value.
 
-| Meta | Executável | `--name` | `--baseline` | `--max` |
+| Target | Executable | `--name` | `--baseline` | `--max` |
 |---|---|---|---|---|
 | NF-P1 | `ecs_bench_iterate` | `BM_IterateSingle_ECS/1000000` | `BM_IterateSingle_SoA/1000000` | `1.10` |
 | NF-P2 | `ecs_bench_fragmented` | `BM_IterateFragmented/64` | `BM_IterateSingle_SoA/1000000` | `1.25` |
 | NF-P5 (N = 1000) | `ecs_bench_flush` | `BM_FlushCoalesced/1000` | `BM_DirectAdds/1000` | `0.5` |
 | NF-P5 (N = 100000) | `ecs_bench_flush` | `BM_FlushCoalesced/100000` | `BM_DirectAdds/100000` | `0.5` |
 
-Pontos que costumam sair errados:
+Points that often come out wrong:
 
-- **NF-P2 usa a linha de base do próprio `ecs_bench_fragmented`**, que tem a sua `BM_IterateSingle_SoA/1000000`. Dividir pela SoA do JSON de `ecs_bench_iterate` mistura duas execuções e anula o propósito da razão.
-- **NF-P5 é "pelo menos 2× mais rápido"**, então o limite é `--max 0.5` (flush / adds diretos ≤ 0,5), não `2.0`.
-- **NF-P5 a N = 100000 não é atendida** neste ambiente (~0,85, registrado no README). Uma falha ali é a situação conhecida; o que importa é se a razão piorou em relação à registrada.
+- **NF-P2 uses the baseline of `ecs_bench_fragmented` itself**, which has its own `BM_IterateSingle_SoA/1000000`. Dividing by the SoA from the `ecs_bench_iterate` JSON mixes two runs and defeats the purpose of the ratio.
+- **NF-P5 is "at least 2× faster"**, so the limit is `--max 0.5` (flush / direct adds ≤ 0.5), not `2.0`.
+- **NF-P5 at N = 100000 is not met** in this environment (~0.85, recorded in the README). A failure there is the known status; what matters is whether the ratio got worse compared to the recorded one.
 
-## Fluxo
+## Flow
 
-Todos os comandos rodam no container: `DC="docker compose run --rm dev"`.
+All commands run in the container: `DC="docker compose run --rm dev"`.
 
-### 1. Preparar
+### 1. Prepare
 
-- Defina o prefixo a partir de `$ARGUMENTS`. Sem prefixo, pergunte: os arquivos de `docs/benchmarks/ecs/` são o histórico do projeto (`m0_…`, `m3_…`, `e1_…`, `r1_…`), e um nome genérico sobrescreveria um registro.
-- Se `docs/benchmarks/ecs/<prefixo>_*.json` já existir, pare e pergunte antes de sobrescrever.
-- Anote o commit (`git rev-parse --short HEAD`) e se a árvore está suja. O README registra o commit de referência; números de uma árvore suja precisam dizer isso.
-- Sem argumento de executáveis, rode os três (`iterate`, `fragmented`, `flush`).
+- Set the prefix from `$ARGUMENTS`. Without a prefix, ask: the files in `docs/benchmarks/ecs/` are the project history (`m0_…`, `m3_…`, `e1_…`, `r1_…`), and a generic name would overwrite a record.
+- If `docs/benchmarks/ecs/<prefix>_*.json` already exists, stop and ask before overwriting.
+- Note the commit (`git rev-parse --short HEAD`) and whether the tree is dirty. The README records the reference commit; numbers from a dirty tree must say so.
+- With no executables argument, run all three (`iterate`, `fragmented`, `flush`).
 
-### 2. Build Release
+### 2. Release build
 
 ```sh
 $DC make build PRESET=release
 ```
 
-Tem que ser o preset `release`: o padrão `debug-asan` liga ASan, UBSan e asserts, e qualquer razão medida nele é sem sentido. Se o build falhar, pare: não há o que medir.
+It has to be the `release` preset: the default `debug-asan` enables ASan, UBSan and asserts, and any ratio measured with it is meaningless. If the build fails, stop: there is nothing to measure.
 
-### 3. Executar
+### 3. Run
 
-Para cada executável escolhido:
-
-```sh
-$DC ./build/release/bench/ecs_bench_<executável> --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_out=docs/benchmarks/ecs/<prefixo>_<executável>.json
-```
-
-- As três flags são necessárias juntas: `bench_ratio.py` lê o agregado `<nome>_median`, que só existe com repetições. Sem `--benchmark_repetitions` ele sai com código 2 (nome não encontrado).
-- `--benchmark_out` grava o JSON; a saída no console não serve de registro.
-- Uma rodada leva minutos (`ecs_bench_fragmented` monta 1M entidades por caso). Use timeout longo ou execução em segundo plano, e rode um executável por vez: dois benchmarks em paralelo disputam cache e CPU e contaminam ambos.
-
-### 4. Calcular as razões
-
-Para cada linha da tabela de metas cujo executável foi rodado:
+For each chosen executable:
 
 ```sh
-$DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<prefixo>_<executável>.json --name <name> --baseline <baseline> --max <max>
+$DC ./build/release/bench/ecs_bench_<executable> --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_out=docs/benchmarks/ecs/<prefix>_<executable>.json
 ```
 
-Leia o código de saída, não só o texto:
+- The three flags are needed together: `bench_ratio.py` reads the `<name>_median` aggregate, which only exists with repetitions. Without `--benchmark_repetitions` it exits with code 2 (name not found).
+- `--benchmark_out` writes the JSON; the console output does not serve as a record.
+- A round takes minutes (`ecs_bench_fragmented` builds 1M entities per case). Use a long timeout or background execution, and run one executable at a time: two benchmarks in parallel compete for cache and CPU and contaminate both.
 
-- `0` — atende (`ratio <= max`).
-- `1` — não atende.
-- `2` — nome não encontrado. É erro da rodada (flags faltando, nome de benchmark mudou), não veredito. Confira os nomes com `--benchmark_list_tests` e corrija antes de seguir.
+### 4. Compute the ratios
 
-### 5. Confirmar uma falha
+For each row of the target table whose executable was run:
 
-Antes de declarar que uma meta deixou de ser atendida (ou que uma razão piorou em relação ao registrado), repita a execução daquele executável inteiro e recalcule. O ruído do ambiente basta para empurrar uma razão no limite para o outro lado. Só uma falha que se repete é regressão; relate as duas razões.
+```sh
+$DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<prefix>_<executable>.json --name <name> --baseline <baseline> --max <max>
+```
 
-Nunca afrouxe o `--max` para a meta passar.
+Read the exit code, not just the text:
 
-### 6. Registrar em `docs/benchmarks/README.md`
+- `0` — met (`ratio <= max`).
+- `1` — not met.
+- `2` — name not found. It is an error of the round (missing flags, benchmark name changed), not a verdict. Check the names with `--benchmark_list_tests` and fix it before going on.
 
-- Uma linha por arquivo novo na tabela de arquivos, com o conteúdo e as metas que ele cobre.
-- As razões obtidas por meta, com o commit de referência e a razão anteriormente registrada, quando houver.
-- Se a situação de uma meta mudou (passou a atender, deixou de atender), atualize a seção de situação dela, como a de NF-P5.
+### 5. Confirm a failure
 
-Edite o que já existe em vez de duplicar seções. Não faça commit: proponha a mensagem (`bench: ...`, em pt-BR) e deixe o usuário decidir.
+Before declaring that a target is no longer met (or that a ratio got worse compared to the recorded one), repeat the run of that whole executable and recompute. The environment's noise is enough to push a ratio at the limit to the other side. Only a failure that repeats is a regression; report both ratios.
 
-## Relatório final
+Never loosen `--max` to make the target pass.
 
-Termine com uma tabela neste formato, seguida de uma ou duas frases sobre o que mudou em relação à rodada registrada:
+### 6. Record in `docs/benchmarks/README.md`
 
-| Meta | Razão | Limite | Anterior | Veredito |
+- One row per new file in the file table, with the content and the targets it covers.
+- The ratios obtained per target, with the reference commit and the previously recorded ratio, when there is one.
+- If a target's status changed (it became met, it stopped being met), update its status section, like the NF-P5 one.
+
+Edit what already exists instead of duplicating sections. Do not commit: propose the message (`bench: ...`, in English) and let the user decide.
+
+## Final report
+
+End with a table in this format, followed by one or two sentences about what changed compared to the recorded round:
+
+| Target | Ratio | Limit | Previous | Verdict |
 |---|---|---|---|---|
-| NF-P1 | 1,04 | ≤ 1,10 | 1,02 | atende |
-| NF-P5 (N = 100000) | 0,87 | ≤ 0,50 | ~0,85 | não atende (situação conhecida) |
+| NF-P1 | 1.04 | ≤ 1.10 | 1.02 | met |
+| NF-P5 (N = 100000) | 0.87 | ≤ 0.50 | ~0.85 | not met (known status) |
 
-Inclua o commit medido, se a árvore estava suja e quais execuções foram repetidas.
+Include the measured commit, whether the tree was dirty and which runs were repeated.

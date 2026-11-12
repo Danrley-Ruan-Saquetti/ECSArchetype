@@ -1,20 +1,20 @@
 # CLAUDE.md
 
-Oly: engine de jogos 2D em C++20 e TypeScript, sobre um ECS por arquétipos single-thread (projeto de estudo e benchmark). Núcleo C++ compilado para WASM, API C `oly*`, camada TS fina.
+Oly: 2D game engine in C++20 and TypeScript, on top of a single-threaded archetype ECS (study and benchmark project). C++ core compiled to WASM, C API `oly*`, thin TS layer.
 
-## Documentação
+## Documentation
 
-Comece por `docs/architecture/README.md`. Ele tem a visão geral e o índice de toda a documentação: arquitetura, glossário, comandos, specs, planos e benchmarks.
+Start with `docs/architecture/README.md`. It has the overview and the index of all documentation: architecture, glossary, commands, specs, plans and benchmarks.
 
-## Regras que valem sempre
+## Rules that always apply
 
-- Toolchain só no Docker: `docker compose run --rm dev ...` (C++ nativo) e `docker compose run --rm wasm ...` (WASM e TS). Não há compilador C++ no host.
-- Commits, comentários e mensagens de assert em pt-BR.
-- Não formate `.cpp`/`.hpp` à mão: o hook `.claude/hooks/clang-format.sh` formata após cada edição (falha se o Docker estiver parado).
-- Use os nomes do glossário. Sem aliases ou `using` de compatibilidade com nomes antigos. Conceitos de jogo nunca em `engine/`; nomes de jogo só em `engine/testing/fixture/` e `games/`.
-- Ao mudar `table`, `archetype`, `query*`, `command_buffer` ou `world`: mantenha `checkInvariants` cobrindo a mudança e rode os agentes `spec-conformance-reviewer` e `perf-reviewer`.
-- Teste novo: use a skill `add-test-case`.
+- Toolchain only in Docker: `docker compose run --rm dev ...` (native C++) and `docker compose run --rm wasm ...` (WASM and TS). There is no C++ compiler on the host.
+- Commits, comments and assert messages in English.
+- Do not format `.cpp`/`.hpp` by hand: the `.claude/hooks/clang-format.sh` hook formats after each edit (it fails if Docker is stopped).
+- Use the glossary names. No aliases or compatibility `using` with old names. Game concepts never in `engine/`; game names only in `engine/testing/fixture/` and `games/`.
+- When changing `table`, `archetype`, `query*`, `command_buffer` or `world`: keep `checkInvariants` covering the change and run the `spec-conformance-reviewer` and `perf-reviewer` agents.
+- New test: use the `add-test-case` skill.
 
-## Estilo de código
+## Code style
 
 @docs/development/code-style.md

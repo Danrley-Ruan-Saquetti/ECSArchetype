@@ -1,9 +1,9 @@
 #!/bin/sh
-# Uso: perf_fragmented.sh <ecs_bench_fragmented> <saída>
-# Para cada A roda BM_IterateFragmented/A sob `perf stat` e escreve uma linha CSV:
+# Usage: perf_fragmented.sh <ecs_bench_fragmented> <output>
+# For each A, runs BM_IterateFragmented/A under `perf stat` and writes one CSV line:
 #   A,ns_per_entity,cycles,instructions,cache_misses_per_entity,l1d_misses_per_entity
-# Os eventos são divididos por (iterações × 1M entidades). Eles incluem a montagem do mundo
-# (fora do laço medido), então os valores por entidade são limites superiores.
+# The events are divided by (iterations × 1M entities). They include building the world
+# (outside the measured loop), so the per-entity values are upper bounds.
 set -eu
 
 binary=$1
@@ -19,7 +19,7 @@ for archetype_count in 1 8 64 512 4096; do
 import json
 import sys
 
-ENTITY_COUNT = 1_000_000  # kEntityCount de engine/runtime/ecs/bench/fragmentation.cpp
+ENTITY_COUNT = 1_000_000  # kEntityCount from engine/runtime/ecs/bench/fragmentation.cpp
 
 archetype_count, perf_path, benchmark_path = sys.argv[1:4]
 
@@ -28,7 +28,7 @@ for line in open(perf_path):
     fields = line.strip().split(",")
     if len(fields) > 2 and not line.startswith("#"):
         if not fields[0].replace(".", "").isdigit():
-            sys.exit("evento não suportado: " + line.strip())
+            sys.exit("unsupported event: " + line.strip())
         events[fields[2].split(":")[0]] = float(fields[0])
 
 benchmark = json.load(open(benchmark_path))["benchmarks"][0]

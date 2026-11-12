@@ -1,4 +1,4 @@
-# Exceções WASM só onde o doctest as captura (CHECK_THROWS). No-op fora do Emscripten.
+# WASM exceptions only where doctest catches them (CHECK_THROWS). No-op outside Emscripten.
 function(oly_wasm_exceptions target)
   if(EMSCRIPTEN)
     target_compile_options(${target} PRIVATE -fwasm-exceptions)
@@ -6,7 +6,7 @@ function(oly_wasm_exceptions target)
   endif()
 endfunction()
 
-# Variáveis de ambiente do processo node chegam ao getenv do teste. No-op fora do Emscripten.
+# Environment variables of the node process reach the test's getenv. No-op outside Emscripten.
 function(oly_wasm_node_env target)
   if(EMSCRIPTEN)
     set(nodeEnvironmentScript ${PROJECT_SOURCE_DIR}/cmake/wasm/node_env.js)

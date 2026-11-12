@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Compara a mediana (real_time) de dois benchmarks de um JSON do Google Benchmark.
+"""Compares the median (real_time) of two benchmarks in a Google Benchmark JSON.
 
-Saída: `ratio=<x>`; exit 0 se ratio <= --max, 1 se maior, 2 se algum nome não existir.
-Rodar sempre com `python3 -I`.
+Output: `ratio=<x>`; exit 0 if ratio <= --max, 1 if greater, 2 if a name does not exist.
+Always run with `python3 -I`.
 """
 import argparse
 import json
@@ -32,7 +32,7 @@ def main():
     baseline = median(benchmarks, arguments.baseline)
     for label, value in (("name", measured), ("baseline", baseline)):
         if value is None:
-            print(f"benchmark não encontrado ({label})", file=sys.stderr)
+            print(f"benchmark not found ({label})", file=sys.stderr)
             return 2
 
     ratio = measured / baseline

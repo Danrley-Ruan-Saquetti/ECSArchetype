@@ -2,17 +2,17 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(OLY_BUILD_TESTS "Compila os testes" ON)
-option(OLY_BUILD_BENCH "Compila os benchmarks" OFF)
+option(OLY_BUILD_TESTS "Build the tests" ON)
+option(OLY_BUILD_BENCH "Build the benchmarks" OFF)
 option(OLY_SANITIZE "ASan + UBSan" OFF)
-option(OLY_WERROR "Avisos viram erros" ON)
-option(OLY_VEC_REPORT "Relatório de vetorização nos benchmarks" OFF)
-option(OLY_BUILD_GAMES "Compila os jogos (exige make ts antes)" OFF)
-set(OLY_ENABLE_ASSERTS "" CACHE STRING "0/1; vazio = 0 com NDEBUG, senão 1")
+option(OLY_WERROR "Warnings become errors" ON)
+option(OLY_VEC_REPORT "Vectorization report in the benchmarks" OFF)
+option(OLY_BUILD_GAMES "Build the games (requires make ts first)" OFF)
+set(OLY_ENABLE_ASSERTS "" CACHE STRING "0/1; empty = 0 with NDEBUG, otherwise 1")
 
 if(EMSCRIPTEN)
-  # ALLOW_MEMORY_GROWTH: os benchmarks criam 1M entidades. EXIT_RUNTIME=1: sem ele o ctest não vê o código de
-  # saída do programa rodando no node.
+  # ALLOW_MEMORY_GROWTH: the benchmarks create 1M entities. EXIT_RUNTIME=1: without it ctest does not see the exit
+  # code of the program running in node.
   add_link_options(-sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1)
 endif()
 
@@ -27,7 +27,7 @@ else()
 endif()
 
 if(OLY_SANITIZE)
-  # Global: as dependências também são instrumentadas, evitando mistura de runtimes.
+  # Global: the dependencies are instrumented too, avoiding mixed runtimes.
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined)
 endif()

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Roda a escada de variantes intercalada (V0, V1, ..., V0, V1, ...) e grava um JSON por rodada e variante.
-# Uso: tools/run_ladder.sh <rodadas> <bench> [variantes...]   (no host; os binários já precisam estar compilados)
-# OLY_LADDER_EXTRA_ARGS: argumentos extras para o benchmark (ex.: --benchmark_min_time=0.01s, só para teste).
+# Runs the variant ladder interleaved (V0, V1, ..., V0, V1, ...) and writes one JSON per round and variant.
+# Usage: tools/run_ladder.sh <rounds> <bench> [variants...]   (on the host; the binaries must already be built)
+# OLY_LADDER_EXTRA_ARGS: extra arguments for the benchmark (e.g. --benchmark_min_time=0.01s, for testing only).
 set -euo pipefail
-# Git Bash no host Windows converteria os caminhos POSIX passados ao docker compose.
+# Git Bash on the Windows host would convert the POSIX paths passed to docker compose.
 export MSYS_NO_PATHCONV=1
 
 if [ "$#" -lt 2 ]; then
-  echo "uso: $0 <rodadas> <bench> [variantes...]" >&2
+  echo "usage: $0 <rounds> <bench> [variants...]" >&2
   exit 1
 fi
 
@@ -32,11 +32,11 @@ command_for() {
     V3) echo "wasm node ./build/wasm-scalar/bench/$bench.js" ;;
     V4) echo "wasm node ./build/wasm-simd/bench/$bench.js" ;;
     VX) echo "wasm ./build/native-clang-avx2/bench/$bench" ;;
-    *) echo "variante desconhecida: $1" >&2; return 1 ;;
+    *) echo "unknown variant: $1" >&2; return 1 ;;
   esac
 }
 
-# Recusa variante desconhecida antes da primeira rodada, não no meio da escada.
+# Rejects an unknown variant before the first round, not halfway up the ladder.
 for variant in "${variants[@]}"; do
   command_for "$variant" > /dev/null
 done
@@ -46,10 +46,10 @@ for round in $(seq 1 "$rounds"); do
   for variant in "${variants[@]}"; do
     read -r service command <<< "$(command_for "$variant")"
     target="$output_directory/${variant}_r${round}.json"
-    echo "rodada $round/$rounds: $variant ($bench)" >&2
+    echo "round $round/$rounds: $variant ($bench)" >&2
     if ! docker compose run --rm -T "$service" sh -c "$command $protocol" > "$target.tmp"; then
       rm -f "$target.tmp"
-      echo "falhou: $variant rodada $round" >&2
+      echo "failed: $variant round $round" >&2
       exit 1
     fi
     mv "$target.tmp" "$target"

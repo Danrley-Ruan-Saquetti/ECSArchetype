@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Reprova includes que atravessam as fronteiras entre módulos da Oly.
+"""Rejects includes that cross the boundaries between Oly modules.
 
-Uso: python3 -I tools/check_boundaries.py --root <repo> --manifest <json>
-Sai 0 sem violações; sai 1 imprimindo "<arquivo>:<linha>: <motivo>" por violação.
+Usage: python3 -I tools/check_boundaries.py --root <repo> --manifest <json>
+Exits 0 with no violations; exits 1 printing "<file>:<line>: <reason>" per violation.
 """
 import argparse
 import json
@@ -22,7 +22,7 @@ TS_IMPORT_PATTERN = re.compile(r"""(?:\bfrom\s+|\bimport\s*\(?\s*)["'](\.{1,2}/[
 
 def load_owners(manifest):
     owners = [(entry["directory"].rstrip("/") + "/", entry["name"], set(entry["depends"])) for entry in manifest["modules"] + manifest["games"]]
-    # Prefixo mais longo primeiro: owner_of fica com o primeiro que casa, que assim é o diretório mais específico.
+    # Longest prefix first: owner_of keeps the first match, which is therefore the most specific directory.
     return sorted(owners, key=lambda owner: len(owner[0]), reverse=True)
 
 
@@ -51,10 +51,10 @@ def check_cpp_file(path, relative_path, owners):
                 continue
             included_module, included_path = match.group(1), match.group(2)
             if owner is not None and included_module != owner and included_module not in depends:
-                violations.append(f"{relative_path}:{line_number}: {owner} inclui oly/{included_module} sem declarar {included_module} em DEPENDS")
+                violations.append(f"{relative_path}:{line_number}: {owner} includes oly/{included_module} without declaring {included_module} in DEPENDS")
             inside_included_module = relative_path.startswith(f"{RUNTIME_PREFIX}{included_module}/")
             if included_path.startswith("detail/") and not inside_included_module:
-                violations.append(f"{relative_path}:{line_number}: oly/{included_module}/detail é interno ao módulo {included_module}")
+                violations.append(f"{relative_path}:{line_number}: oly/{included_module}/detail is internal to module {included_module}")
 
     return violations
 
@@ -78,13 +78,13 @@ def check_ts_file(path, relative_path, root):
             for match in TS_IMPORT_PATTERN.finditer(line):
                 specifier = match.group(1)
                 if specifier.startswith("@oly/core/internal") and not inside_engine:
-                    violations.append(f"{relative_path}:{line_number}: @oly/core/internal só pode ser usado dentro de engine/")
+                    violations.append(f"{relative_path}:{line_number}: @oly/core/internal can only be used inside engine/")
                 if specifier.startswith("@oly/client") and inside_core:
-                    violations.append(f"{relative_path}:{line_number}: @oly/core não pode depender de @oly/client")
+                    violations.append(f"{relative_path}:{line_number}: @oly/core cannot depend on @oly/client")
                 if specifier.startswith(".") and package_directory is not None:
                     resolved = os.path.abspath(os.path.join(os.path.dirname(path), specifier))
                     if os.path.commonpath([resolved, os.path.abspath(package_directory)]) != os.path.abspath(package_directory):
-                        violations.append(f"{relative_path}:{line_number}: import relativo atravessa pacotes; use o nome do pacote")
+                        violations.append(f"{relative_path}:{line_number}: relative import crosses packages; use the package name")
 
     return violations
 

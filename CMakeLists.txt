@@ -16,7 +16,7 @@ if(OLY_BUILD_GAMES)
   add_subdirectory(games)
 endif()
 
-# Manifesto de fronteiras para o oly.lint.boundaries: módulos e jogos com seus DEPENDS.
+# Boundary manifest for oly.lint.boundaries: modules and games with their DEPENDS.
 function(oly_manifest_entries property outputVariable)
   get_property(entries GLOBAL PROPERTY ${property})
   set(json "")

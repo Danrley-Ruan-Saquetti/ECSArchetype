@@ -1,52 +1,52 @@
 ---
 name: add-test-case
-description: Adiciona testes ao ECS do jeito que o build e o contrato esperam, seja uma suíte doctest nova em engine/runtime/<módulo>/tests/, um TEST_CASE numa suíte existente ou um caso de morte em contract_death (violação de contrato que deve disparar OLY_ASSERT). Use sempre que for escrever, criar ou registrar um teste neste repositório, cobrir um requisito R-* ou uma invariante I-* com teste, testar uma violação de contrato ou um assert novo, ou quando um arquivo em tests/ de um módulo parecer não estar rodando, mesmo que o usuário não diga "suíte" nem "contract_death".
-argument-hint: "[suite <nome> | caso <nome> | morte <nome>]"
+description: Adds tests to the ECS the way the build and the contract expect, whether a new doctest suite in engine/runtime/<module>/tests/, a TEST_CASE in an existing suite or a death case in contract_death (a contract violation that must trigger OLY_ASSERT). Use whenever you write, create or register a test in this repository, cover a requirement R-* or an invariant I-* with a test, test a contract violation or a new assert, or when a file in a module's tests/ seems not to be running, even if the user does not say "suite" or "contract_death".
+argument-hint: "[suite <name> | case <name> | death <name>]"
 ---
 
 # add-test-case
 
-Um teste novo neste repositório tem passos que não aparecem no código que ele testa. Uma suíte que não foi registrada no CMake do módulo compila zero vezes e passa sempre. Um caso de morte que ficou fora da lista do `foreach` nunca roda. Já uma substring frouxa demais faz o caso passar por causa de outro assert. Nenhum desses erros quebra o build. Esta skill existe para que o teste novo rode de verdade e falhe pelo motivo certo.
+A new test in this repository has steps that do not show up in the code it tests. A suite that was not registered in the module's CMake compiles zero times and always passes. A death case left out of the `foreach` list never runs. And a substring that is too loose makes the case pass because of another assert. None of these errors breaks the build. This skill exists so that the new test really runs and fails for the right reason.
 
-## Fronteira
+## Boundary
 
-**Território**: escolhe onde o teste mora (suíte nova, `TEST_CASE` numa suíte existente ou caso de morte), define a fiação que cada forma exige para ser compilada e executada, e estabelece as verificações que todo teste carrega (invariantes após cada operação, contagem de vida para componentes não triviais, substrings que identificam o assert certo).
+**Territory**: chooses where the test lives (new suite, `TEST_CASE` in an existing suite or death case), defines the wiring each form needs to be compiled and run, and sets the checks every test carries (invariants after each operation, life counting for non-trivial components, substrings that identify the right assert).
 
-**Fora da fronteira**: qual comportamento merece teste e qual é o resultado esperado (vem da spec e do pedido do usuário); corrigir a implementação quando o teste falha; a mensagem do `OLY_ASSERT` em si, que é escrita junto com o código que ela protege; benchmarks; criar o commit, que é ato do usuário.
+**Outside the boundary**: which behavior deserves a test and what the expected result is (comes from the spec and the user's request); fixing the implementation when the test fails; the `OLY_ASSERT` message itself, which is written together with the code it protects; benchmarks; creating the commit, which is the user's act.
 
-**O que não preciso saber**: como `World`, `Table` e `CommandBuffer` funcionam por dentro. O teste exercita a API pública e confere o resultado com `checkInvariants(world)` (função livre de `diagnostics.hpp`), que já conhece as invariantes. Se um teste precisar ler estrutura interna para decidir se passou, provavelmente falta uma invariante, e isso é outra conversa.
+**What I do not need to know**: how `World`, `Table` and `CommandBuffer` work inside. The test exercises the public API and checks the result with `checkInvariants(world)` (free function in `diagnostics.hpp`), which already knows the invariants. If a test needs to read internal structure to decide whether it passed, an invariant is probably missing, and that is another conversation.
 
-**Contrato de borda**: recebo o comportamento a testar (ou a violação de contrato a provocar) e, opcionalmente, a forma; entrego o arquivo de teste alterado ou criado, a fiação no `tests/CMakeLists.txt` do módulo e a saída da execução que mostra o teste novo rodando e passando. Não faço commit.
+**Edge contract**: I receive the behavior to test (or the contract violation to provoke) and, optionally, the form; I deliver the changed or created test file, the wiring in the module's `tests/CMakeLists.txt` and the run output that shows the new test running and passing. I do not commit.
 
-## 1. Escolher a forma
+## 1. Choose the form
 
-| O que se quer provar | Forma |
+| What you want to prove | Form |
 |---|---|
-| Comportamento correto de um módulo que já tem suíte | `TEST_CASE` na suíte existente do módulo |
-| Módulo ou recurso novo, sem suíte que o represente | Suíte nova (arquivo novo em `tests/`) |
-| Uso proibido pelo contrato aborta com `OLY_ASSERT` | Caso de morte em `contract_death.cpp` do módulo (`ecs` ou `bridge`) |
-| Exceção do código do usuário atravessa o ECS sem corromper estado | `CHECK_THROWS` numa suíte doctest |
+| Correct behavior of a module that already has a suite | `TEST_CASE` in the module's existing suite |
+| New module or feature, with no suite representing it | New suite (new file in `tests/`) |
+| A use forbidden by the contract aborts with `OLY_ASSERT` | Death case in the module's `contract_death.cpp` (`ecs` or `bridge`) |
+| An exception from user code crosses the ECS without corrupting state | `CHECK_THROWS` in a doctest suite |
 
-Por que a violação de contrato não pode ser um `TEST_CASE`: o handler padrão de `OLY_ASSERT` chama `std::abort()`, o que derruba o executável inteiro da suíte. Além disso, `OLY_ASSERT` some com `OLY_ENABLE_ASSERTS=0`, e as suítes doctest também rodam no preset `release`. Por isso um `TEST_CASE` nunca pode depender de um assert disparar. Casos de morte só existem com asserts ligados (`OLY_ENABLE_ASSERTS`). `contract_death` só é compilado quando os asserts estão ligados, e por isso esses casos moram lá.
+Why a contract violation cannot be a `TEST_CASE`: the default `OLY_ASSERT` handler calls `std::abort()`, which takes down the whole suite executable. Besides, `OLY_ASSERT` disappears with `OLY_ENABLE_ASSERTS=0`, and the doctest suites also run in the `release` preset. So a `TEST_CASE` can never depend on an assert firing. Death cases only exist with asserts enabled (`OLY_ENABLE_ASSERTS`). `contract_death` is only compiled when asserts are enabled, and that is why these cases live there.
 
-Na dúvida entre suíte nova e existente, prefira a existente: cada suíte é um executável a mais para compilar e linkar.
+When in doubt between a new and an existing suite, prefer the existing one: each suite is one more executable to compile and link.
 
-## 2a. Suíte nova
+## 2a. New suite
 
-Dois passos, e o segundo é o que se esquece:
+Two steps, and the second is the one that gets forgotten:
 
-1. Crie `engine/runtime/<módulo>/tests/<nome>.cpp`.
-2. Registre em `engine/runtime/<módulo>/tests/CMakeLists.txt`, junto dos outros `oly_add_test`:
+1. Create `engine/runtime/<module>/tests/<name>.cpp`.
+2. Register it in `engine/runtime/<module>/tests/CMakeLists.txt`, next to the other `oly_add_test`:
 
    ```cmake
-   oly_add_test(MODULE ecs NAME <nome> SOURCES <nome>.cpp)
+   oly_add_test(MODULE ecs NAME <name> SOURCES <name>.cpp)
    ```
 
-   O teste aparece no ctest como `<módulo>.<nome>` e o executável é `build/<preset>/tests/<módulo>_<nome>`. Fontes de apoio entram em `SOURCES` (ex.: `support/alloc_counter.cpp`, se a suíte usar `alloc_counter.hpp`). Os testes **não** entram por glob: um `.cpp` em `tests/` sem essa linha simplesmente não existe para o build. Já as fontes de `src/` entram por glob, o que costuma confundir.
+   The test shows up in ctest as `<module>.<name>` and the executable is `build/<preset>/tests/<module>_<name>`. Support sources go into `SOURCES` (e.g. `support/alloc_counter.cpp`, if the suite uses `alloc_counter.hpp`). Tests do **not** come in by glob: a `.cpp` in `tests/` without that line simply does not exist for the build. The `src/` sources, on the other hand, come in by glob, which is often confusing.
 
-O que `oly_add_test` já faz e você não deve repetir: liga `doctest_main.cpp` (de `engine/runtime/core/tests/support/`) (então o arquivo **não** define `main` nem `DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN`), põe o `tests/support` do módulo no include path (por isso é `"components.hpp"`, sem caminho), aplica os avisos com `-Werror` e registra o executável no CTest com o mesmo nome.
+What `oly_add_test` already does and you must not repeat: links `doctest_main.cpp` (from `engine/runtime/core/tests/support/`) (so the file does **not** define `main` or `DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN`), puts the module's `tests/support` on the include path (that is why it is `"components.hpp"`, without a path), applies the warnings with `-Werror` and registers the executable in CTest under the same name.
 
-Modelo:
+Template:
 
 ```cpp
 #include <doctest/doctest.h>
@@ -57,7 +57,7 @@ Modelo:
 #include "components.hpp"
 #include "oly/ecs/world.hpp"
 
-TEST_CASE("remove de componente preserva os valores das outras entidades") {
+TEST_CASE("removing a component preserves the values of the other entities") {
   oly::ecs::World world;
   std::vector<oly::ecs::Entity> entities;
   for (uint64_t i = 0; i < 16; ++i) {
@@ -73,7 +73,7 @@ TEST_CASE("remove de componente preserva os valores das outras entidades") {
   }
 }
 
-TEST_CASE("I-2: remove de LifeCounter destrói exatamente um valor") {
+TEST_CASE("I-2: removing LifeCounter destroys exactly one value") {
   LifeCounter::alive = 0;
   {
     oly::ecs::World world;
@@ -88,15 +88,15 @@ TEST_CASE("I-2: remove de LifeCounter destrói exatamente um valor") {
 }
 ```
 
-## 2b. Caso numa suíte existente
+## 2b. Case in an existing suite
 
-Só o `TEST_CASE`; a fiação já existe. Confira que o arquivo aparece num `oly_add_test` antes de confiar que ele roda: um arquivo órfão em `tests/` é exatamente o defeito que esta skill previne.
+Only the `TEST_CASE`; the wiring already exists. Check that the file appears in an `oly_add_test` before trusting that it runs: an orphan file in `tests/` is exactly the defect this skill prevents.
 
-## 2c. Caso de morte
+## 2c. Death case
 
-`<módulo>_contract_death` (`ecs_contract_death`, `bridge_contract_death`) é um executável sem doctest. Cada caso é um argumento de linha de comando. O handler instalado confere se a mensagem do assert contém todas as substrings exigidas: sai com 0 se contém e com 2 se falta alguma. Se o caso terminar sem assert, `main` devolve 1. Um caso novo mexe em **três** lugares, e os três precisam usar o mesmo nome:
+`<module>_contract_death` (`ecs_contract_death`, `bridge_contract_death`) is an executable without doctest. Each case is a command-line argument. The installed handler checks whether the assert message contains all the required substrings: it exits with 0 if it does and with 2 if any is missing. If the case ends without an assert, `main` returns 1. A new case touches **three** places, and all three must use the same name:
 
-1. **A função**, dentro do `namespace` anônimo de `engine/runtime/<módulo>/tests/contract_death.cpp`, em `camelCase`, sem retorno e sem parâmetros:
+1. **The function**, inside the anonymous `namespace` of `engine/runtime/<module>/tests/contract_death.cpp`, in `camelCase`, with no return value and no parameters:
 
    ```cpp
    void removeDuringEach() {
@@ -106,66 +106,66 @@ Só o `TEST_CASE`; a fiação já existe. Confira que o arquivo aparece num `oly
    }
    ```
 
-2. **A entrada na tabela `cases`** de `main`, com o nome em `snake_case` e as substrings exigidas:
+2. **The entry in the `cases` table** of `main`, with the name in `snake_case` and the required substrings:
 
    ```cpp
    {"remove_during_each", removeDuringEach, {"remove", "e="}},
    ```
 
-3. **O nome em `CASES`** na chamada `oly_add_contract_death(MODULE <módulo> SOURCE contract_death.cpp CASES ...)` de `tests/CMakeLists.txt`. Esta lista é o que cria o teste CTest `<módulo>.contract_death.<nome>`. Sem ela o caso compila, existe na tabela e **nunca roda**, e nada avisa.
+3. **The name in `CASES`** in the `oly_add_contract_death(MODULE <module> SOURCE contract_death.cpp CASES ...)` call of `tests/CMakeLists.txt`. This list is what creates the CTest test `<module>.contract_death.<name>`. Without it the case compiles, exists in the table and **never runs**, and nothing warns you.
 
-Se o nome estiver na lista mas faltar na tabela, o executável sai com 64 ("caso desconhecido") e o teste falha. Esse erro aparece sozinho; o contrário, não.
+If the name is in the list but missing from the table, the executable exits with 64 ("unknown case") and the test fails. That error shows up on its own; the opposite does not.
 
-### Escolher as substrings
+### Choosing the substrings
 
-O handler recebe a mensagem completa, montada por `assertFail` como:
+The handler receives the full message, built by `assertFail` as:
 
 ```
-OLY_ASSERT failed: <expressão> | <mensagem formatada> (<arquivo>:<linha>)
+OLY_ASSERT failed: <expression> | <formatted message> (<file>:<line>)
 ```
 
-A busca é por `strstr` na linha inteira, então uma substring pode casar com a **expressão** ou com o **caminho do arquivo**, e não só com a mensagem. Escolha substrings que só a mensagem do assert pretendido teria:
+The search is a `strstr` over the whole line, so a substring can match the **expression** or the **file path**, and not only the message. Choose substrings that only the intended assert's message would have:
 
-- **A operação** (`"add"`, `"flush"`, `"remove"`), que é o que separa este assert dos vizinhos.
-- **`"e="`** quando o assert é sobre uma entidade: confirma que a mensagem identifica a entidade, como `docs/development/code-style.md` exige.
-- **O nome do tipo**, quando o assert o imprime. Use um tipo local com nome próprio (`struct Position { float x; };` dentro da função, como em `getDeadEntity`), não `A` ou `B`: uma letra solta casa com quase qualquer mensagem e não prova nada.
+- **The operation** (`"add"`, `"flush"`, `"remove"`), which is what separates this assert from its neighbors.
+- **`"e="`** when the assert is about an entity: it confirms the message identifies the entity, as `docs/development/code-style.md` requires.
+- **The type name**, when the assert prints it. Use a local type with its own name (`struct Position { float x; };` inside the function, as in `getDeadEntity`), not `A` or `B`: a lone letter matches almost any message and proves nothing.
 
-Antes de confiar no caso, leia o `OLY_ASSERT` alvo em `src/` e copie as substrings do formato dele.
+Before trusting the case, read the target `OLY_ASSERT` in `src/` and copy the substrings from its format.
 
-### Uma violação por vez
+### One violation at a time
 
-Vários asserts juntam duas condições numa só, como `isAlive(entity) && iterating_ == 0` em `destroy`, `add` e `remove`, e imprimem a mesma mensagem para qualquer uma das duas. Um caso "durante iteração" que usa uma entidade já destruída passa, mas pelo motivo errado. Monte o cenário de modo que só a violação pretendida esteja presente: entidade viva quando o caso é sobre iteração, sem iteração quando o caso é sobre entidade morta.
+Several asserts join two conditions into one, like `isAlive(entity) && iterating_ == 0` in `destroy`, `add` and `remove`, and print the same message for either of them. A "during iteration" case that uses an already destroyed entity passes, but for the wrong reason. Build the scenario so that only the intended violation is present: entity alive when the case is about iteration, no iteration when the case is about a dead entity.
 
-O handler sai no primeiro assert. Nada depois da violação roda, então não ponha verificações depois dela.
+The handler exits on the first assert. Nothing after the violation runs, so do not put checks after it.
 
-### Assert novo junto com o caso
+### New assert together with the case
 
-Se o caso cobre um `OLY_ASSERT` que ainda vai ser escrito, a mensagem dele segue a regra de `docs/development/code-style.md` (operação, `Entity` como `e=%u:%u`, nome do tipo). As substrings do caso cobram exatamente essa regra, e é por isso que valem a pena.
+If the case covers an `OLY_ASSERT` that is still to be written, its message follows the rule in `docs/development/code-style.md` (operation, `Entity` as `e=%u:%u`, type name). The case's substrings enforce exactly that rule, and that is why they are worth it.
 
-## 3. As verificações que todo teste carrega
+## 3. The checks every test carries
 
-**`CHECK_INVARIANTS(world)` depois de cada operação estrutural** (spawn, destroy, add, remove, flush). Não basta uma vez no fim: uma operação que corrompe o estado e outra que o "conserta" por acaso passam numa checagem final. A macro está em `components.hpp`, chama a função livre `oly::ecs::checkInvariants` e mostra o motivo da falha. Ela não existe em `contract_death`, que não tem doctest e onde o processo morre antes de qualquer checagem.
+**`CHECK_INVARIANTS(world)` after each structural operation** (spawn, destroy, add, remove, flush). Once at the end is not enough: one operation that corrupts the state and another that "fixes" it by chance pass a final check. The macro is in `components.hpp`, calls the free function `oly::ecs::checkInvariants` and shows the failure reason. It does not exist in `contract_death`, which has no doctest and where the process dies before any check.
 
-**Valores derivados da entidade ou do índice** (`A{i}`, `B{i, 2 * i}`), não constantes. Quando todas as linhas valem `A{1}`, uma troca de linhas mal feita num swap-remove continua dando o valor certo. Com valores distintos, ela aparece como valor errado.
+**Values derived from the entity or the index** (`A{i}`, `B{i, 2 * i}`), not constants. When every row is `A{1}`, a botched row swap in a swap-remove still gives the right value. With distinct values, it shows up as a wrong value.
 
-**`LifeCounter` sempre que o teste envolve um componente não trivial** (move, remove, destroy, flush com componente que tem destrutor). Ele conta construções menos destruições e pega moved-from não destruído e double destroy (I-2). Três cuidados:
+**`LifeCounter` whenever the test involves a non-trivial component** (move, remove, destroy, flush with a component that has a destructor). It counts constructions minus destructions and catches an undestroyed moved-from and a double destroy (I-2). Three precautions:
 
-- `LifeCounter::alive` é `static inline`, compartilhado por todos os `TEST_CASE` do executável. Zere no início do caso.
-- Ponha o `World` num bloco `{ }` e confira `alive == 0` **depois** do bloco: é isso que prova que o destrutor do `World` destruiu tudo o que sobrou.
-- Os tipos triviais (`A`, `B`, `Wide`) vão pelo caminho `memcpy` e não exercitam move/destroy. Se o código testado tem os dois caminhos, cubra os dois.
+- `LifeCounter::alive` is `static inline`, shared by all the `TEST_CASE`s of the executable. Reset it at the start of the case.
+- Put the `World` in a `{ }` block and check `alive == 0` **after** the block: that is what proves the `World` destructor destroyed everything that was left.
+- The trivial types (`A`, `B`, `Wide`) go through the `memcpy` path and do not exercise move/destroy. If the code under test has both paths, cover both.
 
-**Aleatoriedade**: se o teste sortear operações, use a semente e o número de operações de `engine/runtime/ecs/tests/support/model.hpp` (`fuzzSeed()`, `fuzzOperationCount()`, variáveis `OLY_FUZZ_SEED` e `OLY_FUZZ_OPS`) e imprima a semente no stderr, como as suítes de fuzz já fazem. Um teste aleatório sem semente reproduzível falha uma vez e nunca mais.
+**Randomness**: if the test draws operations at random, use the seed and the operation count from `engine/runtime/ecs/tests/support/model.hpp` (`fuzzSeed()`, `fuzzOperationCount()`, variables `OLY_FUZZ_SEED` and `OLY_FUZZ_OPS`) and print the seed to stderr, as the fuzz suites already do. A random test without a reproducible seed fails once and never again.
 
-## 4. Provar que roda
+## 4. Prove that it runs
 
-Os comandos de build e teste, e como filtrar um teste pelo nome, estão em `docs/development/commands.md`. Tudo roda no container, no preset padrão (ASan + UBSan + asserts).
+The build and test commands, and how to filter a test by name, are in `docs/development/commands.md`. Everything runs in the container, in the default preset (ASan + UBSan + asserts).
 
-- **Suíte ou caso doctest:** rode só a suíte afetada (`make test T='^ecs\.<nome>'`) e confirme na saída que o número de casos subiu. "0 test cases" ou um filtro sem nenhum teste encontrado significa que a fiação falhou, não que passou.
-- **Caso de morte:** rode o executável direto, `build/debug-asan/tests/<módulo>_contract_death <nome>`, e leia a mensagem impressa no stderr. Ela precisa ser a do assert pretendido, não só "algum assert". Depois rode o filtro `<módulo>.contract_death.<nome>` pelo CTest para confirmar que o `foreach` criou o teste.
-- **Prova de que o teste detecta o defeito**, quando for barato: troque uma substring por uma que não existe (o caso deve sair com 2) ou comente a linha que viola o contrato (deve sair com 1), rode e desfaça. Um teste que nunca foi visto falhando não foi visto testando.
+- **Doctest suite or case:** run only the affected suite (`make test T='^ecs\.<name>'`) and confirm in the output that the number of cases went up. "0 test cases" or a filter with no test found means the wiring failed, not that it passed.
+- **Death case:** run the executable directly, `build/debug-asan/tests/<module>_contract_death <name>`, and read the message printed to stderr. It must be the intended assert's message, not just "some assert". Then run the `<module>.contract_death.<name>` filter through CTest to confirm the `foreach` created the test.
+- **Proof that the test detects the defect**, when it is cheap: swap a substring for one that does not exist (the case must exit with 2) or comment out the line that violates the contract (it must exit with 1), run and undo. A test that was never seen failing was never seen testing.
 
-Se um teste existente quebrar, pare e relate: decidir se o defeito está no teste ou no código está fora desta skill.
+If an existing test breaks, stop and report: deciding whether the defect is in the test or in the code is outside this skill.
 
-## Relatório final
+## Final report
 
-Liste os arquivos tocados e, para cada teste novo, uma linha: nome, forma (suíte nova, caso em suíte existente, caso de morte), o que ele prova e a evidência de que rodou (contagem de casos na saída do doctest, ou a mensagem do assert impressa pelo `contract_death`). Proponha a mensagem de commit (`test: ...`, em pt-BR) sem commitar.
+List the touched files and, for each new test, one line: name, form (new suite, case in an existing suite, death case), what it proves and the evidence that it ran (case count in the doctest output, or the assert message printed by `contract_death`). Propose the commit message (`test: ...`, in English) without committing.

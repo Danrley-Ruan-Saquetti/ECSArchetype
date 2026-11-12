@@ -37,7 +37,7 @@ class CheckBoundariesTest(unittest.TestCase):
             code = check_boundaries.main(["--root", self.root, "--manifest", manifestPath])
         return code, output.getvalue()
 
-    def test_include_declarado_passa(self):
+    def test_declared_include_passes(self):
         self.write("engine/runtime/ecs/src/x.cpp", '#include "oly/core/assert.hpp"\n')
 
         code, output = self.run_check([("core", "engine/runtime/core", []), ("ecs", "engine/runtime/ecs", ["core"])])
@@ -45,24 +45,24 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(output, "")
 
-    def test_include_nao_declarado_falha(self):
+    def test_undeclared_include_fails(self):
         self.write("engine/runtime/bridge/src/x.cpp", '#include <cstdint>\n\n#include "oly/core/assert.hpp"\n')
 
         code, output = self.run_check([("ecs", "engine/runtime/ecs", []), ("bridge", "engine/runtime/bridge", ["ecs"])])
 
         self.assertEqual(code, 1)
         self.assertIn("engine/runtime/bridge/src/x.cpp:3:", output)
-        self.assertIn("sem declarar core", output)
+        self.assertIn("without declaring core", output)
 
-    def test_detail_de_fora_falha(self):
+    def test_detail_from_outside_fails(self):
         self.write("engine/runtime/bridge/src/x.cpp", '#include "oly/ecs/detail/table.hpp"\n')
 
         code, output = self.run_check([("ecs", "engine/runtime/ecs", []), ("bridge", "engine/runtime/bridge", ["ecs"])])
 
         self.assertEqual(code, 1)
-        self.assertIn("oly/ecs/detail é interno ao módulo ecs", output)
+        self.assertIn("oly/ecs/detail is internal to module ecs", output)
 
-    def test_detail_nos_testes_do_modulo_passa(self):
+    def test_detail_in_module_tests_passes(self):
         self.write("engine/runtime/ecs/tests/t.cpp", '#include "oly/ecs/detail/table.hpp"\n')
 
         code, output = self.run_check([("ecs", "engine/runtime/ecs", [])])
@@ -70,7 +70,7 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(output, "")
 
-    def test_jogo_usa_os_depends_do_jogo(self):
+    def test_game_uses_game_depends(self):
         self.write("engine/fixture/systems.cpp", '#include "oly/core/assert.hpp"\n')
 
         code, output = self.run_check(
@@ -81,15 +81,15 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("engine/fixture/systems.cpp:1:", output)
 
-    def test_internal_fora_de_engine_falha(self):
+    def test_internal_outside_engine_fails(self):
         self.write("games/x/src/a.ts", 'import { Bridge } from "@oly/core/internal";\n')
 
         code, output = self.run_check([])
 
         self.assertEqual(code, 1)
-        self.assertIn("games/x/src/a.ts:1: @oly/core/internal só pode ser usado dentro de engine/", output)
+        self.assertIn("games/x/src/a.ts:1: @oly/core/internal can only be used inside engine/", output)
 
-    def test_internal_dentro_de_engine_passa(self):
+    def test_internal_inside_engine_passes(self):
         self.write("engine/testing/tests/a.ts", 'import { Bridge } from "@oly/core/internal";\n')
 
         code, output = self.run_check([])
@@ -97,15 +97,15 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(output, "")
 
-    def test_core_importando_client_falha(self):
+    def test_core_importing_client_fails(self):
         self.write("engine/packages/core/src/a.ts", 'import { moduleFactoryFromUrl } from "@oly/client";\n')
 
         code, output = self.run_check([])
 
         self.assertEqual(code, 1)
-        self.assertIn("engine/packages/core/src/a.ts:1: @oly/core não pode depender de @oly/client", output)
+        self.assertIn("engine/packages/core/src/a.ts:1: @oly/core cannot depend on @oly/client", output)
 
-    def test_relativo_entre_pacotes_falha(self):
+    def test_relative_across_packages_fails(self):
         self.write("engine/packages/client/package.json", "{}")
         self.write("engine/packages/core/package.json", "{}")
         self.write("engine/packages/client/src/a.ts", 'import { World } from "../../core/src/world.js";\n')
@@ -113,7 +113,7 @@ class CheckBoundariesTest(unittest.TestCase):
         code, output = self.run_check([])
 
         self.assertEqual(code, 1)
-        self.assertIn("engine/packages/client/src/a.ts:1: import relativo atravessa pacotes; use o nome do pacote", output)
+        self.assertIn("engine/packages/client/src/a.ts:1: relative import crosses packages; use the package name", output)
 
 
 if __name__ == "__main__":

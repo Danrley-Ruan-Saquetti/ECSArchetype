@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Extrai o corpo de uma função desmontada (nome demanglado casando com a regex) para um arquivo de texto.
-# Uso: tools/extract_codegen.sh <binário> <regex-da-função> <saída>   (rodar dentro do container)
-# .wasm usa llvm-objdump do emsdk; qualquer outro usa objdump (sintaxe Intel). A regex é ERE do awk.
+# Extracts the body of a disassembled function (demangled name matching the regex) to a text file.
+# Usage: tools/extract_codegen.sh <binary> <function-regex> <output>   (run inside the container)
+# .wasm uses the emsdk llvm-objdump; anything else uses objdump (Intel syntax). The regex is awk ERE.
 set -euo pipefail
 
 if [ "$#" -ne 3 ]; then
-  echo "uso: $0 <binário> <regex-da-função> <saída>" >&2
+  echo "usage: $0 <binary> <function-regex> <output>" >&2
   exit 1
 fi
 
@@ -14,7 +14,7 @@ pattern=$2
 output=$3
 
 if [ ! -f "$binary" ]; then
-  echo "binário não encontrado: $binary" >&2
+  echo "binary not found: $binary" >&2
   exit 1
 fi
 
@@ -50,12 +50,12 @@ print_body='
 matches=$(PATTERN=$pattern awk "$list_functions" "$disassembly")
 
 if [ -z "$matches" ]; then
-  echo "função não encontrada: $pattern em $binary" >&2
+  echo "function not found: $pattern in $binary" >&2
   exit 1
 fi
 
 if [ "$(printf '%s\n' "$matches" | wc -l)" -gt 1 ]; then
-  echo "regex ambígua: $pattern casa com:" >&2
+  echo "ambiguous regex: $pattern matches:" >&2
   printf '%s\n' "$matches" >&2
   exit 1
 fi
@@ -63,7 +63,7 @@ fi
 TARGET=$matches awk "$print_body" "$disassembly" > "$body"
 
 if [ ! -s "$body" ]; then
-  echo "corpo vazio para: $matches" >&2
+  echo "empty body for: $matches" >&2
   exit 1
 fi
 

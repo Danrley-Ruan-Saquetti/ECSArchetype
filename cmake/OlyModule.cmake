@@ -1,5 +1,5 @@
-# Registro no manifesto de fronteiras: <nome>|<diretório relativo à raiz>|<dependências separadas por vírgula>.
-# Vírgula e não ponto e vírgula, para o item não ser quebrado como lista da propriedade.
+# Boundary manifest entry: <name>|<directory relative to the root>|<comma-separated dependencies>.
+# Comma and not semicolon, so the entry is not split as a property list.
 function(oly_register_target property name directory)
   file(RELATIVE_PATH relativeDirectory ${PROJECT_SOURCE_DIR} ${directory})
   list(JOIN ARGN "," dependencies)
@@ -37,7 +37,7 @@ function(oly_add_module)
   oly_register_target(OLY_MODULES ${MODULE_NAME} ${CMAKE_CURRENT_SOURCE_DIR} ${MODULE_DEPENDS})
 endfunction()
 
-# oly_add_test(MODULE <m> NAME <suíte> SOURCES <arqs...> [SUPPORT <dirs...>])
+# oly_add_test(MODULE <m> NAME <suite> SOURCES <files...> [SUPPORT <dirs...>])
 function(oly_add_test)
   cmake_parse_arguments(TEST "" "MODULE;NAME" "SOURCES;SUPPORT" ${ARGN})
   set(target ${TEST_MODULE}_${TEST_NAME})
@@ -59,8 +59,8 @@ function(oly_add_test)
   add_test(NAME ${TEST_MODULE}.${TEST_NAME} COMMAND ${target})
 endfunction()
 
-# oly_add_contract_death(MODULE <m> SOURCE <arq> CASES <casos...>)
-# Testes de morte: um executável próprio, só com asserts ligados; um teste ctest por caso.
+# oly_add_contract_death(MODULE <m> SOURCE <file> CASES <cases...>)
+# Death tests: a dedicated executable, only with asserts enabled; one ctest test per case.
 function(oly_add_contract_death)
   cmake_parse_arguments(DEATH "" "MODULE;SOURCE" "CASES" ${ARGN})
   if(NOT OLY_ASSERTS_ENABLED)
@@ -79,7 +79,7 @@ function(oly_add_contract_death)
   endforeach()
 endfunction()
 
-# oly_add_bench(MODULE <m> NAME <n> SOURCES <arqs...>)
+# oly_add_bench(MODULE <m> NAME <n> SOURCES <files...>)
 function(oly_add_bench)
   cmake_parse_arguments(BENCH "" "MODULE;NAME" "SOURCES" ${ARGN})
   set(target ${BENCH_MODULE}_bench_${BENCH_NAME})
@@ -91,7 +91,7 @@ function(oly_add_bench)
   oly_warnings(${target})
 
   if(EMSCRIPTEN)
-    # benchmark 1.8.3 desliga o inline asm no Emscripten: lá só existe DoNotOptimize(const&), obsoleta.
+    # benchmark 1.8.3 disables inline asm on Emscripten: there only DoNotOptimize(const&) exists, which is deprecated.
     target_compile_options(${target} PRIVATE -Wno-deprecated-declarations)
   endif()
 

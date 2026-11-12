@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Monta a escada de custos entre variantes a partir de JSONs do Google Benchmark.
+"""Builds the cost ladder between variants from Google Benchmark JSONs.
 
-Uso: bench_ladder.py --run V0=a.json --run V0=b.json --run V1=c.json ... [--pair ECS=SoA] [--filter REGEX]
-Cada --run é uma rodada; as variantes precisam ter o mesmo número de rodadas. Markdown no stdout.
-Exit 2 se um JSON não abre, tem `error_occurred` ou se as rodadas não casam. Rodar com `python3 -I`.
+Usage: bench_ladder.py --run V0=a.json --run V0=b.json --run V1=c.json ... [--pair ECS=SoA] [--filter REGEX]
+Each --run is one round; the variants must have the same number of rounds. Markdown on stdout.
+Exit 2 if a JSON does not open, has `error_occurred` or if the rounds do not match. Run with `python3 -I`.
 """
 import argparse
 import json
@@ -11,14 +11,14 @@ import re
 import statistics
 import sys
 
-# Variantes e degraus do estudo de custo WASM: docs/superpowers/specs/2026-11-06-wasm-cost-study-design.md §4.
+# Variants and steps of the WASM cost study: docs/superpowers/specs/2026-11-06-wasm-cost-study-design.md §4.
 VARIANT_ORDER = ["V0", "V1", "V2", "V2S", "V3", "V4", "VX"]
 STEPS = [("V1", "V0"), ("V2", "V1"), ("V3", "V2"), ("V3", "V2S"), ("V4", "V3"), ("V4", "V2"), ("V4", "V0"), ("VX", "V1")]
 
 NANOSECONDS_PER_UNIT = {"ns": 1, "us": 1e3, "ms": 1e6, "s": 1e9}
 
 DASH = "—"
-HEADER = "Razões entre variantes vêm de execuções diferentes (intercaladas); ver dispersão."
+HEADER = "Ratios between variants come from different runs (interleaved); see spread."
 
 
 class LadderError(Exception):
@@ -26,16 +26,16 @@ class LadderError(Exception):
 
 
 def load_medians(path):
-    """Nome (sem `_median`) -> real_time em ns."""
+    """Name (without `_median`) -> real_time in ns."""
     try:
         with open(path, encoding="utf-8") as handle:
             benchmarks = json.load(handle)["benchmarks"]
     except (OSError, ValueError, KeyError) as error:
-        raise LadderError(f"{path}: não foi possível ler o JSON ({error})")
+        raise LadderError(f"{path}: could not read the JSON ({error})")
 
     failed = [entry.get("name", "?") for entry in benchmarks if entry.get("error_occurred")]
     if failed:
-        raise LadderError(f"{path}: benchmark com error_occurred: {', '.join(failed)}")
+        raise LadderError(f"{path}: benchmark with error_occurred: {', '.join(failed)}")
 
     medians = {}
     for entry in benchmarks:
@@ -44,11 +44,11 @@ def load_medians(path):
             continue
         unit = entry.get("time_unit", "ns")
         if unit not in NANOSECONDS_PER_UNIT:
-            raise LadderError(f"{path}: time_unit desconhecida '{unit}' em {name}")
+            raise LadderError(f"{path}: unknown time_unit '{unit}' in {name}")
         medians[name[: -len("_median")]] = entry["real_time"] * NANOSECONDS_PER_UNIT[unit]
 
     if not medians:
-        raise LadderError(f"{path}: nenhuma mediana encontrada (faltou --benchmark_report_aggregates_only?)")
+        raise LadderError(f"{path}: no median found (missing --benchmark_report_aggregates_only?)")
     return medians
 
 
@@ -67,7 +67,7 @@ def spread_across_rounds(rounds, name):
 
 
 def ratio_of(rounds_a, name_a, rounds_b, name_b):
-    """(mediana, mín, máx) das razões a/b rodada a rodada, ou None se algum lado faltar."""
+    """(median, min, max) of the round-by-round a/b ratios, or None if either side is missing."""
     ratios = []
     for round_a, round_b in zip(rounds_a, rounds_b):
         if name_a not in round_a or name_b not in round_b or round_b[name_b] == 0:
@@ -121,12 +121,12 @@ def render_markdown(runs, pair=None, name_filter=None):
     sections = [HEADER]
 
     rows = [(name, [format_spread(spread_across_rounds(runs[variant], name), 1) for variant in variants]) for name in names]
-    sections.append(table(f"Mediana de real_time por variante (ns; mediana entre {rounds_count} rodadas [mín–máx])", variants, rows))
+    sections.append(table(f"Median real_time per variant (ns; median across {rounds_count} rounds [min–max])", variants, rows))
 
     steps = [(variant_a, variant_b) for variant_a, variant_b in STEPS if variant_a in runs and variant_b in runs]
     if steps:
         rows = [(name, [format_spread(step_ratio(runs[variant_a], runs[variant_b], name), 2) for variant_a, variant_b in steps]) for name in names]
-        sections.append(table("Degraus (razão rodada a rodada: mediana [mín–máx])", [f"{variant_a}/{variant_b}" for variant_a, variant_b in steps], rows))
+        sections.append(table("Steps (round-by-round ratio: median [min–max])", [f"{variant_a}/{variant_b}" for variant_a, variant_b in steps], rows))
 
     if pair is not None:
         numerator, baseline = pair
@@ -135,7 +135,7 @@ def render_markdown(runs, pair=None, name_filter=None):
             if numerator in name:
                 baseline_name = name.replace(numerator, baseline)
                 rows.append((name, [format_spread(ratio_of(runs[variant], name, runs[variant], baseline_name), 2) for variant in variants]))
-        sections.append(table(f"Razão {numerator}/{baseline} por variante (mesma rodada)", variants, rows))
+        sections.append(table(f"{numerator}/{baseline} ratio per variant (same round)", variants, rows))
 
     return "\n\n".join(sections) + "\n"
 
@@ -143,14 +143,14 @@ def render_markdown(runs, pair=None, name_filter=None):
 def parse_run(text):
     variant, separator, path = text.partition("=")
     if not separator or not variant or not path:
-        raise argparse.ArgumentTypeError(f"esperado VARIANTE=arquivo.json, recebi '{text}'")
+        raise argparse.ArgumentTypeError(f"expected VARIANT=file.json, got '{text}'")
     return variant, path
 
 
 def parse_pair(text):
     numerator, separator, baseline = text.partition("=")
     if not separator or not numerator or not baseline:
-        raise argparse.ArgumentTypeError(f"esperado ECS=SoA, recebi '{text}'")
+        raise argparse.ArgumentTypeError(f"expected ECS=SoA, got '{text}'")
     return numerator, baseline
 
 
@@ -168,7 +168,7 @@ def main(argv=None):
 
         counts = {variant: len(rounds) for variant, rounds in runs.items()}
         if len(set(counts.values())) != 1:
-            raise LadderError(f"nº de rodadas diferente entre variantes: {counts}")
+            raise LadderError(f"number of rounds differs between variants: {counts}")
 
         output = render_markdown(runs, arguments.pair, arguments.filter)
     except LadderError as error:

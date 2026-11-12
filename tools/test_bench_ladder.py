@@ -17,7 +17,7 @@ def write_json(directory, medians, unit="ns", error_name=None):
         benchmarks.append({"name": name + "_mean", "aggregate_name": "mean", "real_time": value * 100, "time_unit": unit})
         benchmarks.append({"name": name + "_median", "aggregate_name": "median", "real_time": value, "time_unit": unit})
     if error_name is not None:
-        benchmarks.append({"name": error_name, "error_occurred": True, "error_message": "sem memória"})
+        benchmarks.append({"name": error_name, "error_occurred": True, "error_message": "out of memory"})
 
     path = tempfile.mktemp(suffix=".json", dir=directory)
     with open(path, "w", encoding="utf-8") as handle:
@@ -85,14 +85,14 @@ class BenchLadderTest(unittest.TestCase):
         self.assertIn("BM_Z/1000000", errors)
 
     def test_unreadable_json_exits_2(self):
-        path = os.path.join(self.directory.name, "quebrado.json")
+        path = os.path.join(self.directory.name, "broken.json")
         with open(path, "w", encoding="utf-8") as handle:
-            handle.write("{nao e json")
+            handle.write("{not json")
 
         code, _, errors = run_main(["--run", "V0=" + path])
 
         self.assertEqual(code, 2)
-        self.assertIn("quebrado.json", errors)
+        self.assertIn("broken.json", errors)
 
     def test_unequal_rounds_exits_2(self):
         first = write_json(self.directory.name, {"BM_X/1000": 10})
@@ -103,7 +103,7 @@ class BenchLadderTest(unittest.TestCase):
 
         self.assertEqual(code, 2)
         self.assertEqual(output, "")
-        self.assertIn("rodadas", errors)
+        self.assertIn("rounds", errors)
 
     def test_pair_normalization(self):
         path = write_json(self.directory.name, {"BM_X_ECS/1000": 30, "BM_X_SoA/1000": 10})
