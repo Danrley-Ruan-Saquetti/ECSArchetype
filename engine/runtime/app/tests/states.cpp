@@ -115,7 +115,7 @@ namespace {
 
 OLY_STATE_HOOK(namedEnter) {}
 
-TEST_CASE("estado inicial entra no passo 5 do primeiro passo; sistemas inState só rodam a partir do seguinte") {
+TEST_CASE("initial state enters in stage 5 of the first step; inState systems only run from the next one") {
   Fixture fixture;
   fixture.engine.onEnter(fixture.menu, "menu", recordHook, &fixture.probe);
   const auto system = fixture.engine.addSystem(Phase::Update, "menuSystem", recordName, &fixture.probe.log);
@@ -135,7 +135,7 @@ TEST_CASE("estado inicial entra no passo 5 do primeiro passo; sistemas inState s
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("state() só muda no passo 5") {
+TEST_CASE("state() only changes in stage 5") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "requester", requestWhenSeen, &fixture.probe);
   fixture.probe.requestWhen = fixture.playing;
@@ -152,7 +152,7 @@ TEST_CASE("state() só muda no passo 5") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("onExit antes de onEnter, cada um na ordem de registro, com fromState e toState") {
+TEST_CASE("onExit before onEnter, each in registration order, with fromState and toState") {
   Fixture fixture;
   fixture.engine.onEnter(fixture.playing, "b1", recordHook, &fixture.probe);
   fixture.engine.onExit(fixture.menu, "a1", recordHook, &fixture.probe);
@@ -170,7 +170,7 @@ TEST_CASE("onExit antes de onEnter, cada um na ordem de registro, com fromState 
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("dois pedidos no mesmo passo: vale o último") {
+TEST_CASE("two requests in the same step: the last one wins") {
   Fixture fixture;
   fixture.engine.onEnter(fixture.menu, "menu", recordHook, &fixture.probe);
   fixture.start();
@@ -184,7 +184,7 @@ TEST_CASE("dois pedidos no mesmo passo: vale o último") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("reentrada roda onExit e onEnter do mesmo estado") {
+TEST_CASE("reentry runs onExit and onEnter of the same state") {
   Fixture fixture;
   fixture.engine.onEnter(fixture.playing, "playing", recordHook, &fixture.probe);
   fixture.engine.onExit(fixture.playing, "playing", recordHook, &fixture.probe);
@@ -198,7 +198,7 @@ TEST_CASE("reentrada roda onExit e onEnter do mesmo estado") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("pedido feito num gancho vale no passo seguinte") {
+TEST_CASE("request made in a hook takes effect in the next step") {
   Fixture fixture;
   fixture.probe.next = fixture.gameOver;
   fixture.engine.onEnter(fixture.playing, "playing", requestNextHook, &fixture.probe);
@@ -215,7 +215,7 @@ TEST_CASE("pedido feito num gancho vale no passo seguinte") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("troca em passo pausado acontece e não mexe na pausa") {
+TEST_CASE("change in a paused step happens and does not touch the pause") {
   Fixture fixture;
   fixture.start();
   fixture.engine.pause();
@@ -228,7 +228,7 @@ TEST_CASE("troca em passo pausado acontece e não mexe na pausa") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("inState combina com whilePaused") {
+TEST_CASE("inState combines with whilePaused") {
   Fixture fixture;
   const auto system = fixture.engine.addSystem(Phase::Update, "pausedMenu", recordName, &fixture.probe.log);
   fixture.engine.setWhilePaused(system, true);
@@ -256,7 +256,7 @@ TEST_CASE("inState combina com whilePaused") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("inState vale na fase render") {
+TEST_CASE("inState applies in the render phase") {
   Fixture fixture;
   const auto inMenu = fixture.engine.addSystem(Phase::Render, "menuRender", recordName, &fixture.probe.log);
   const auto inPlaying = fixture.engine.addSystem(Phase::Render, "playingRender", recordName, &fixture.probe.log);
@@ -272,7 +272,7 @@ TEST_CASE("inState vale na fase render") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("lista vazia tira a restrição") {
+TEST_CASE("empty list removes the restriction") {
   Fixture fixture;
   const auto system = fixture.engine.addSystem(Phase::Update, "free", recordName, &fixture.probe.log);
   fixture.engine.setSystemStates(system, {fixture.menu});
@@ -285,7 +285,7 @@ TEST_CASE("lista vazia tira a restrição") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("handler com inState: confere o estado em cada rodada e no despacho do item 6 vale o novo") {
+TEST_CASE("handler with inState: checks the state in each round, and in the dispatch of item 6 the new one applies") {
   Fixture fixture;
   Log inPlayingLog;
   Log inMenuLog;
@@ -305,7 +305,7 @@ TEST_CASE("handler com inState: confere o estado em cada rodada e no despacho do
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("evento emitido em gancho é despachado no mesmo passo e conta no limite de rodadas") {
+TEST_CASE("event emitted in a hook is dispatched in the same step and counts toward the round limit") {
   Fixture fixture(EngineConfig{.maxEventRounds = 2});
   fixture.engine.declareEvent<Ping>("Ping");
   fixture.engine.on<Ping>("counter", countPings, &fixture.probe.log);
@@ -320,7 +320,7 @@ TEST_CASE("evento emitido em gancho é despachado no mesmo passo e conta no limi
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("pedido com a aba oculta espera o primeiro passo depois de voltar") {
+TEST_CASE("request with the hidden tab waits for the first step after returning") {
   Fixture fixture;
   fixture.start();
   fixture.engine.setHidden(true);
@@ -339,7 +339,7 @@ TEST_CASE("pedido com a aba oculta espera o primeiro passo depois de voltar") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("requestState e state pelo contexto de sistema") {
+TEST_CASE("requestState and state through the system context") {
   Fixture fixture;
   fixture.probe.next = fixture.playing;
   fixture.engine.addSystem(Phase::Update, "requester", seeAndRequest<SystemContext>, &fixture.probe);
@@ -352,7 +352,7 @@ TEST_CASE("requestState e state pelo contexto de sistema") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("requestState e state pelo contexto de handler") {
+TEST_CASE("requestState and state through the handler context") {
   Fixture fixture;
   fixture.probe.next = fixture.playing;
   fixture.engine.declareEvent<Ping>("Ping");
@@ -367,7 +367,7 @@ TEST_CASE("requestState e state pelo contexto de handler") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("requestState e state pelo contexto de tarefa") {
+TEST_CASE("requestState and state through the task context") {
   Fixture fixture;
   Probe* probe = &fixture.probe;
   probe->next = fixture.playing;
@@ -381,7 +381,7 @@ TEST_CASE("requestState e state pelo contexto de tarefa") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("requestState e state pelo contexto de gancho") {
+TEST_CASE("requestState and state through the hook context") {
   Fixture fixture;
   fixture.probe.next = fixture.playing;
   fixture.engine.onEnter(fixture.menu, "requester", seeAndRequest<StateContext>, &fixture.probe);
@@ -398,12 +398,12 @@ TEST_CASE("requestState e state pelo contexto de gancho") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("OLY_STATE_HOOK registra por nome") {
+TEST_CASE("OLY_STATE_HOOK registers by name") {
   CHECK(oly::app::findNamedStateHook("namedEnter") == &namedEnter);
-  CHECK(oly::app::findNamedStateHook("nenhum") == nullptr);
+  CHECK(oly::app::findNamedStateHook("none") == nullptr);
 }
 
-TEST_CASE("inState com o estado de índice 31 usa o bit mais alto da máscara") {
+TEST_CASE("inState with the state at index 31 uses the highest bit of the mask") {
   oly::ecs::World world;
   Engine engine(world);
   Probe probe;

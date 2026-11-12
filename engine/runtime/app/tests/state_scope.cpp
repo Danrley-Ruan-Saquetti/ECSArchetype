@@ -176,7 +176,7 @@ namespace {
   }
 }
 
-TEST_CASE("entidades criadas por sistema, handler, tarefa e gancho com estado ativo são destruídas na troca") {
+TEST_CASE("entities created by a system, handler, task and hook with an active state are destroyed on the change") {
   Fixture fixture;
   Created created;
   Entity fromTask{};
@@ -205,7 +205,7 @@ TEST_CASE("entidades criadas por sistema, handler, tarefa e gancho com estado at
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("spawn direto no World é persistente") {
+TEST_CASE("direct spawn on the World is persistent") {
   Fixture fixture;
   fixture.switchTo(fixture.menu);
   const Entity setup = fixture.world.spawn(Position{});
@@ -217,7 +217,7 @@ TEST_CASE("spawn direto no World é persistente") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("sem estado ativo nenhuma entidade recebe a tag") {
+TEST_CASE("with no active state no entity receives the tag") {
   Fixture fixture;
   Entity entity{};
   fixture.engine.schedule().after(0.0, spawnFromTask, &entity);
@@ -229,7 +229,7 @@ TEST_CASE("sem estado ativo nenhuma entidade recebe a tag") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("spawn com componentes num contexto direto entra com a tag numa transição só") {
+TEST_CASE("spawn with components in a direct context gets the tag in a single transition") {
   Fixture fixture;
   Entity entity{};
   fixture.switchTo(fixture.menu);
@@ -242,7 +242,7 @@ TEST_CASE("spawn com componentes num contexto direto entra com a tag numa transi
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("o que onExit cria é limpo na mesma troca; o que onEnter cria fica até a troca seguinte") {
+TEST_CASE("what onExit creates is cleared on the same change; what onEnter creates stays until the next change") {
   Fixture fixture;
   ExitEnter shared;
   fixture.engine.onExit(fixture.menu, "exit", spawnAndScheduleOnExit, &shared);
@@ -263,7 +263,7 @@ TEST_CASE("o que onExit cria é limpo na mesma troca; o que onEnter cria fica at
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("persist num sistema no passo da troca: add e remove da tag se anulam e a entidade sobrevive") {
+TEST_CASE("persist in a system in the step of the change: the tag's add and remove cancel out and the entity survives") {
   Fixture fixture;
   SpawnAndPersist state;
   state.target = fixture.playing;
@@ -279,7 +279,7 @@ TEST_CASE("persist num sistema no passo da troca: add e remove da tag se anulam 
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("persist num contexto direto tira a tag; sem a tag não faz nada") {
+TEST_CASE("persist in a direct context removes the tag; without the tag it does nothing") {
   Fixture fixture;
   Entity entity{};
   fixture.switchTo(fixture.menu);
@@ -295,7 +295,7 @@ TEST_CASE("persist num contexto direto tira a tag; sem a tag não faz nada") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("tarefas com escopo são canceladas com descarte uma vez; persist mantém; não pendente devolve false") {
+TEST_CASE("scoped tasks are cancelled with discard once; persist keeps them; not pending returns false") {
   Fixture fixture;
   int discards = 0;
   fixture.switchTo(fixture.menu);
@@ -316,7 +316,7 @@ TEST_CASE("tarefas com escopo são canceladas com descarte uma vez; persist mant
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("tarefa agendada fora de frame com estado ativo tem escopo") {
+TEST_CASE("task scheduled outside frame with an active state is scoped") {
   Fixture fixture;
   fixture.switchTo(fixture.menu);
 
@@ -326,7 +326,7 @@ TEST_CASE("tarefa agendada fora de frame com estado ativo tem escopo") {
   CHECK(!fixture.engine.schedule().isPending(task));
 }
 
-TEST_CASE("descarte que agenda durante a limpeza também é cancelado") {
+TEST_CASE("discard that schedules during the cleanup is also cancelled") {
   Fixture fixture;
   int discards = 0;
   fixture.switchTo(fixture.menu);
@@ -338,7 +338,7 @@ TEST_CASE("descarte que agenda durante a limpeza também é cancelado") {
   CHECK(fixture.engine.schedule().pendingCount() == 0);
 }
 
-TEST_CASE("evento emitido em onExit sobre entidade com escopo chega com a entidade já destruída") {
+TEST_CASE("event emitted in onExit about a scoped entity arrives with the entity already destroyed") {
   Fixture fixture;
   CitationProbe probe;
   fixture.engine.declareEvent<Cited>("Cited");
@@ -355,7 +355,7 @@ TEST_CASE("evento emitido em onExit sobre entidade com escopo chega com a entida
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("playing → gameOver → playing sem sobras no World") {
+TEST_CASE("playing → gameOver → playing with no leftovers in the World") {
   Fixture fixture;
   fixture.engine.onEnter(fixture.playing, "populate", spawnThreeAndRepeat);
   fixture.world.spawn(Position{});

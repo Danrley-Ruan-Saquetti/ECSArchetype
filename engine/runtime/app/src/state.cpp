@@ -6,7 +6,7 @@
 
 namespace oly::app {
   namespace {
-    // Estático local, não global (mesmo motivo de namedSystems).
+    // Local static, not global (same reason as namedSystems).
     std::vector<std::pair<std::string, StateHookFunction>>& namedStateHooks() {
       static std::vector<std::pair<std::string, StateHookFunction>> hooks;
       return hooks;

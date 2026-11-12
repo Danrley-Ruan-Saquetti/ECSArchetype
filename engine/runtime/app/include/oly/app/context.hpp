@@ -16,7 +16,7 @@
 namespace oly::app {
   class Engine;
 
-  // O que sistemas e handlers têm em comum: relógio, pausa, leitura do mundo e emissão de eventos.
+  // What systems and handlers have in common: clock, pause, reading the world and emitting events.
   class EngineContext {
    protected:
     Engine* engine_;
@@ -27,7 +27,7 @@ namespace oly::app {
         world_(&world) {}
 
     EventTypeId eventTypeOf(EventKey key) const noexcept;
-    // Verdadeiro quando há estado ativo: o que o contexto cria nasce com escopo.
+    // True when a state is active: what the context creates is born scoped.
     bool spawnsScoped() const noexcept;
 
    public:
@@ -63,12 +63,12 @@ namespace oly::app {
       return world_->isAlive(entity);
     }
 
-    // O evento é despachado na rodada seguinte do passo em curso.
+    // The event is dispatched in the next round of the current step.
     template <class T>
     void emit(const T& event) {
       const EventTypeId type = eventTypeOf(eventKey<T>());
       [[maybe_unused]] constexpr std::string_view name = oly::core::typeName<T>();
-      OLY_ASSERT(type != InvalidEventType, "emit: evento \"%.*s\" não declarado", static_cast<int>(name.size()), name.data());
+      OLY_ASSERT(type != InvalidEventType, "emit: event \"%.*s\" not declared", static_cast<int>(name.size()), name.data());
 
       emitById(type, &event);
     }
@@ -77,14 +77,14 @@ namespace oly::app {
     Scheduler& schedule() const noexcept;
   };
 
-  // Mudanças estruturais diretas no World, para quem roda fora de qualquer iteração (handlers, tarefas e ganchos de estado).
+  // Direct structural changes on the World, for code that runs outside any iteration (handlers, tasks and state hooks).
   class DirectContext : public EngineContext {
    protected:
     DirectContext(Engine& engine, ecs::World& world) noexcept
       : EngineContext(engine, world) {}
 
    public:
-    // Com estado ativo a entidade nasce com escopo (some na troca de estado) até receber persist.
+    // With an active state the entity is born scoped (it disappears on a state change) until it receives persist.
     ecs::Entity spawn() {
       if (spawnsScoped()) {
         return world_->spawn(detail::StateScoped{});
@@ -100,7 +100,7 @@ namespace oly::app {
 
       return world_->spawn(std::forward<Ts>(components)...);
     }
-    // Tira o escopo; a entidade precisa estar viva (OLY_ASSERT) e sem a tag não há efeito.
+    // Removes the scope; the entity must be alive (OLY_ASSERT) and without the tag there is no effect.
     void persist(ecs::Entity entity);
     void destroy(ecs::Entity entity) {
       world_->destroy(entity);

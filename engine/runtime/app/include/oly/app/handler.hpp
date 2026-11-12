@@ -13,8 +13,8 @@
 namespace oly::app {
   class Engine;
 
-  // Válido só durante a chamada do handler. Mudanças estruturais são diretas: o despacho acontece fora de
-  // qualquer iteração, então a entidade citada num evento pode já ter morrido (confira com isAlive).
+  // Valid only during the handler call. Structural changes are direct: dispatch happens outside
+  // any iteration, so the entity referenced in an event may already be dead (check with isAlive).
   class HandlerContext : public DirectContext {
    private:
     friend class Engine;
@@ -49,11 +49,11 @@ namespace oly::app {
       return userData_;
     }
 
-    // O lote do tipo do handler; não muda enquanto os handlers do tipo rodam.
+    // The batch of the handler's type; it does not change while the handlers of that type run.
     template <class T>
     std::span<const T> events() const {
       [[maybe_unused]] constexpr std::string_view typeName = oly::core::typeName<T>();
-      OLY_ASSERT(eventTypeOf(eventKey<T>()) == eventType_, "events: tipo \"%.*s\" não é o do evento do handler \"%.*s\"", static_cast<int>(typeName.size()), typeName.data(), static_cast<int>(name_.size()), name_.data());
+      OLY_ASSERT(eventTypeOf(eventKey<T>()) == eventType_, "events: type \"%.*s\" is not the event type of handler \"%.*s\"", static_cast<int>(typeName.size()), typeName.data(), static_cast<int>(name_.size()), name_.data());
 
       return std::span<const T>(static_cast<const T*>(eventData_), eventCount_);
     }
@@ -72,7 +72,7 @@ namespace oly::app {
     EventKey eventKey;
   };
 
-  // nullptr se o nome não existe.
+  // nullptr if the name does not exist.
   const NamedHandler* findNamedHandler(std::string_view name) noexcept;
 
   struct NamedHandlerRegistration {
@@ -80,7 +80,7 @@ namespace oly::app {
   };
 }
 
-// Define `void name(HandlerContext& context, std::span<const EventType> events)` e o registra por nome.
+// Defines `void name(HandlerContext& context, std::span<const EventType> events)` and registers it by name.
 #define OLY_HANDLER(name, EventType)                                                                                          \
   void name(oly::app::HandlerContext& context, std::span<const EventType> events);                                            \
   static void name##Adapter(oly::app::HandlerContext& context) {                                                              \

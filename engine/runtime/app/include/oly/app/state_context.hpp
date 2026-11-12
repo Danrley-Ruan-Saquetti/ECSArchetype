@@ -8,8 +8,8 @@
 namespace oly::app {
   class Engine;
 
-  // Válido só durante a chamada do gancho. Roda no passo 5, fora de qualquer iteração, com mudanças estruturais
-  // diretas como as do HandlerContext.
+  // Valid only during the hook call. Runs in stage 5, outside any iteration, with direct structural changes
+  // like those of HandlerContext.
   class StateContext : public DirectContext {
    private:
     friend class Engine;
@@ -40,14 +40,14 @@ namespace oly::app {
     void* userData() const noexcept {
       return userData_;
     }
-    // fromState é NoState na primeira troca.
+    // fromState is NoState on the first change.
     StateId fromState() const noexcept {
       return fromState_;
     }
     StateId toState() const noexcept {
       return toState_;
     }
-    // Verdadeiro no onEnter; um gancho nativo registrado nos dois momentos usa isto para saber o lado.
+    // True in onEnter; a native hook registered for both moments uses this to know which side it is on.
     bool entering() const noexcept {
       return entering_;
     }

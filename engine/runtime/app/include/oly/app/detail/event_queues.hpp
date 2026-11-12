@@ -9,8 +9,8 @@
 #include "oly/app/event.hpp"
 
 namespace oly::app::detail {
-  // Por tipo, duas filas de bytes crus no layout do struct: `pending` recebe as emissões e `dispatching` é o lote
-  // da rodada em curso. Emitir durante a rodada escreve em `pending`, então o lote nunca muda nem se move.
+  // Per type, two queues of raw bytes in the struct's layout: `pending` receives the emissions and `dispatching` is the batch
+  // of the current round. Emitting during the round writes to `pending`, so the batch never changes or moves.
   class EventQueues {
    private:
     struct Queue {
@@ -31,11 +31,11 @@ namespace oly::app::detail {
 
     void push(EventTypeId type, const void* event);
 
-    // Troca `pending` e `dispatching` dos tipos com pendência; false se não há nada pendente.
+    // Swaps `pending` and `dispatching` of the types with pending events; false if nothing is pending.
     bool beginRound();
     const std::byte* batchData(EventTypeId type) const;
     uint32_t batchCount(EventTypeId type) const;
-    // Mantém a capacidade: depois do aquecimento, o despacho não aloca.
+    // Keeps the capacity: after warm-up, dispatch does not allocate.
     void endRound();
 
     void clear();

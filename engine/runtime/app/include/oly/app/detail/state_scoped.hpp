@@ -1,6 +1,6 @@
 #pragma once
 
 namespace oly::app::detail {
-  // Tag de escopo: toda entidade criada com um estado ativo a recebe e a troca de estado destrói as que ainda a têm.
+  // Scope tag: every entity created with an active state receives it, and a state change destroys the ones that still have it.
   struct StateScoped {};
 }

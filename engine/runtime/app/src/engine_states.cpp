@@ -5,11 +5,11 @@
 
 namespace oly::app {
   StateId Engine::declareState(std::string_view name) {
-    OLY_ASSERT(!inFrame_, "declareState: estado \"%.*s\" declarado durante frame", static_cast<int>(name.size()), name.data());
-    OLY_ASSERT(states_.size() < MaxStates, "declareState: estado \"%.*s\" passa do máximo de %u", static_cast<int>(name.size()), name.data(), MaxStates);
+    OLY_ASSERT(!inFrame_, "declareState: state \"%.*s\" declared during frame", static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(states_.size() < MaxStates, "declareState: state \"%.*s\" exceeds the maximum of %u", static_cast<int>(name.size()), name.data(), MaxStates);
 
     for ([[maybe_unused]] const StateEntry& declared : states_) {
-      OLY_ASSERT(declared.name != name, "declareState: estado \"%.*s\" já declarado", static_cast<int>(name.size()), name.data());
+      OLY_ASSERT(declared.name != name, "declareState: state \"%.*s\" already declared", static_cast<int>(name.size()), name.data());
     }
 
     states_.push_back(StateEntry{std::string(name), {}, {}});
@@ -36,8 +36,8 @@ namespace oly::app {
   }
 
   void Engine::setSystemStateMask(SystemId system, StateMask mask) {
-    OLY_ASSERT(!inFrame_, "setSystemStates: restrição de estados durante frame");
-    OLY_ASSERT(system < systemLocations_.size(), "setSystemStates: system=%u fora do intervalo (%zu sistemas)", system, systemLocations_.size());
+    OLY_ASSERT(!inFrame_, "setSystemStates: state restriction during frame");
+    OLY_ASSERT(system < systemLocations_.size(), "setSystemStates: system=%u out of range (%zu systems)", system, systemLocations_.size());
     checkStateMask("setSystemStates", mask);
 
     const auto [phase, position] = systemLocations_[system];
@@ -49,8 +49,8 @@ namespace oly::app {
   }
 
   void Engine::setHandlerStateMask(HandlerId handler, StateMask mask) {
-    OLY_ASSERT(!inFrame_, "setHandlerStates: restrição de estados durante frame");
-    OLY_ASSERT(handler < handlerLocations_.size(), "setHandlerStates: handler=%u fora do intervalo (%zu handlers)", handler, handlerLocations_.size());
+    OLY_ASSERT(!inFrame_, "setHandlerStates: state restriction during frame");
+    OLY_ASSERT(handler < handlerLocations_.size(), "setHandlerStates: handler=%u out of range (%zu handlers)", handler, handlerLocations_.size());
     checkStateMask("setHandlerStates", mask);
 
     const auto [type, position] = handlerLocations_[handler];
@@ -97,11 +97,11 @@ namespace oly::app {
   }
 
   void Engine::checkState([[maybe_unused]] const char* operation, [[maybe_unused]] StateId state) const {
-    OLY_ASSERT(state < states_.size(), "%s: state=%u fora do intervalo (%u estados)", operation, state, static_cast<uint32_t>(states_.size()));
+    OLY_ASSERT(state < states_.size(), "%s: state=%u out of range (%u states)", operation, state, static_cast<uint32_t>(states_.size()));
   }
 
   void Engine::checkStateMask([[maybe_unused]] const char* operation, [[maybe_unused]] StateMask mask) const {
-    OLY_ASSERT(states_.size() == MaxStates || (mask >> states_.size()) == 0, "%s: máscara 0x%x com estado não declarado (%u estados)", operation, mask, static_cast<uint32_t>(states_.size()));
+    OLY_ASSERT(states_.size() == MaxStates || (mask >> states_.size()) == 0, "%s: mask 0x%x with undeclared state (%u states)", operation, mask, static_cast<uint32_t>(states_.size()));
   }
 
   StateMask Engine::maskOf(const char* operation, std::initializer_list<StateId> states) const {
@@ -116,7 +116,7 @@ namespace oly::app {
   }
 
   StateHookId Engine::addStateHook(const char* operation, bool entering, StateId state, std::string_view name, StateHookFunction function, void* userData) {
-    OLY_ASSERT(!inFrame_, "%s: gancho \"%.*s\" registrado durante frame", operation, static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(!inFrame_, "%s: hook \"%.*s\" registered during frame", operation, static_cast<int>(name.size()), name.data());
     checkState(operation, state);
 
     const StateHookId id = stateHookCount_++;

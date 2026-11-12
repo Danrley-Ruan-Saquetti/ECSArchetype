@@ -1,5 +1,5 @@
-// Cada caso viola um contrato do app e precisa disparar OLY_ASSERT com as substrings exigidas; só é compilado com
-// asserts ligados. Mesmo protocolo do contract_death do ecs.
+// Each case violates an app contract and must trigger OLY_ASSERT with the required substrings; it is only compiled with
+// asserts enabled. Same protocol as the ecs contract_death.
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -29,7 +29,7 @@ namespace {
     if (g_required) {
       for (const char* needle : *g_required) {
         if (!std::strstr(message, needle)) {
-          std::fprintf(stderr, "mensagem sem a substring exigida: \"%s\"\n", needle);
+          std::fprintf(stderr, "message missing the required substring: \"%s\"\n", needle);
           std::fflush(stderr);
           std::_Exit(2);
         }
@@ -42,7 +42,7 @@ namespace {
 
   void addSystemFromSystem(SystemContext& context) {
     Engine& engine = *static_cast<Engine*>(context.userData());
-    engine.addSystem(Phase::Update, "outro", [](SystemContext&) {});
+    engine.addSystem(Phase::Update, "other", [](SystemContext&) {});
   }
 
   void addSystemDuringFrame() {
@@ -57,7 +57,7 @@ namespace {
   void whilePausedRender() {
     oly::ecs::World world;
     Engine engine(world);
-    const auto system = engine.addSystem(Phase::Render, "desenho", [](SystemContext&) {});
+    const auto system = engine.addSystem(Phase::Render, "drawing", [](SystemContext&) {});
 
     engine.setWhilePaused(system, true);
   }
@@ -103,14 +103,14 @@ namespace {
 
   void onFromSystem(SystemContext& context) {
     Engine& engine = *static_cast<Engine*>(context.userData());
-    engine.on<Ping>("tarde", nothing);
+    engine.on<Ping>("late", nothing);
   }
 
   void onDuringFrame() {
     oly::ecs::World world;
     Engine engine(world);
     engine.declareEvent<Ping>();
-    engine.addSystem(Phase::Update, "registrador", onFromSystem, &engine);
+    engine.addSystem(Phase::Update, "registrar", onFromSystem, &engine);
 
     engine.frame(0.0);
     engine.frame(1.0 / 60);
@@ -124,7 +124,7 @@ namespace {
   void declareEventDuringFrame() {
     oly::ecs::World world;
     Engine engine(world);
-    engine.addSystem(Phase::Update, "declarador", declareEventFromSystem, &engine);
+    engine.addSystem(Phase::Update, "declarer", declareEventFromSystem, &engine);
 
     engine.frame(0.0);
     engine.frame(1.0 / 60);
@@ -137,7 +137,7 @@ namespace {
   void declareActionDuringFrame() {
     oly::ecs::World world;
     Engine engine(world);
-    engine.addSystem(Phase::Update, "declarador", declareActionFromSystem);
+    engine.addSystem(Phase::Update, "declarer", declareActionFromSystem);
 
     engine.frame(0.0);
     engine.frame(1.0 / 60);
@@ -167,7 +167,7 @@ namespace {
     Engine engine(world);
     engine.declareEvent<Ping>();
     engine.declareEvent<Echo>();
-    engine.on<Ping>("errado", readWrongType);
+    engine.on<Ping>("wrong", readWrongType);
     engine.emit(Ping{});
 
     engine.frame(0.0);
@@ -233,13 +233,13 @@ namespace {
   }
 
   void declareStateFromSystem(SystemContext& context) {
-    static_cast<Engine*>(context.userData())->declareState("tarde");
+    static_cast<Engine*>(context.userData())->declareState("late");
   }
 
   void declareStateDuringFrame() {
     oly::ecs::World world;
     Engine engine(world);
-    engine.addSystem(Phase::Update, "declarador", declareStateFromSystem, &engine);
+    engine.addSystem(Phase::Update, "declarer", declareStateFromSystem, &engine);
 
     engine.frame(0.0);
     engine.frame(1.0 / 60);
@@ -258,7 +258,7 @@ namespace {
     Engine engine(world);
 
     for (uint32_t index = 0; index <= oly::app::MaxStates; ++index) {
-      engine.declareState("estado" + std::to_string(index));
+      engine.declareState("state" + std::to_string(index));
     }
   }
 
@@ -273,14 +273,14 @@ namespace {
 
   void onEnterFromSystem(SystemContext& context) {
     Engine& engine = *static_cast<Engine*>(context.userData());
-    engine.onEnter(0, "tarde", [](oly::app::StateContext&) {});
+    engine.onEnter(0, "late", [](oly::app::StateContext&) {});
   }
 
   void onEnterDuringFrame() {
     oly::ecs::World world;
     Engine engine(world);
     engine.declareState("a");
-    engine.addSystem(Phase::Update, "registrador", onEnterFromSystem, &engine);
+    engine.addSystem(Phase::Update, "registrar", onEnterFromSystem, &engine);
 
     engine.frame(0.0);
     engine.frame(1.0 / 60);
@@ -295,7 +295,7 @@ namespace {
     oly::ecs::World world;
     Engine engine(world);
     engine.declareState("a");
-    engine.addSystem(Phase::Update, "restritor", setSystemStatesFromSystem, &engine);
+    engine.addSystem(Phase::Update, "restrictor", setSystemStatesFromSystem, &engine);
 
     engine.frame(0.0);
     engine.frame(1.0 / 60);
@@ -351,37 +351,37 @@ namespace {
 
 int main(int argumentCount, char** arguments) {
   static const std::vector<Case> cases = {
-    {"add_system_during_frame", addSystemDuringFrame, {"addSystem", "durante frame"}},
+    {"add_system_during_frame", addSystemDuringFrame, {"addSystem", "during frame"}},
     {"while_paused_render", whilePausedRender, {"whilePaused", "render"}},
-    {"frame_time_backwards", frameTimeBackwards, {"frame", "tempo"}},
-    {"emit_undeclared_event", emitUndeclaredEvent, {"emit", "não declarado"}},
-    {"on_undeclared_event", onUndeclaredEvent, {"on", "não declarado"}},
-    {"declare_event_twice", declareEventTwice, {"declareEvent", "já declarado"}},
-    {"on_during_frame", onDuringFrame, {"on", "durante frame"}},
-    {"declare_event_during_frame", declareEventDuringFrame, {"declareEvent", "durante frame"}},
-    {"declare_action_during_frame", declareActionDuringFrame, {"declare", "durante frame"}},
-    {"event_round_limit", eventRoundLimit, {"dispatchEvents", "rodadas", "Echo"}},
-    {"events_wrong_type", eventsWrongType, {"events", "tipo"}},
-    {"schedule_negative_delay", scheduleNegativeDelay, {"schedule", "atraso"}},
-    {"schedule_not_finite_delay", scheduleNotFiniteDelay, {"schedule", "atraso"}},
-    {"every_zero_interval", everyZeroInterval, {"every", "intervalo"}},
-    {"schedule_null_function", scheduleNullFunction, {"schedule", "função nula"}},
+    {"frame_time_backwards", frameTimeBackwards, {"frame", "time"}},
+    {"emit_undeclared_event", emitUndeclaredEvent, {"emit", "not declared"}},
+    {"on_undeclared_event", onUndeclaredEvent, {"on", "not declared"}},
+    {"declare_event_twice", declareEventTwice, {"declareEvent", "already declared"}},
+    {"on_during_frame", onDuringFrame, {"on", "during frame"}},
+    {"declare_event_during_frame", declareEventDuringFrame, {"declareEvent", "during frame"}},
+    {"declare_action_during_frame", declareActionDuringFrame, {"declare", "during frame"}},
+    {"event_round_limit", eventRoundLimit, {"dispatchEvents", "rounds", "Echo"}},
+    {"events_wrong_type", eventsWrongType, {"events", "type"}},
+    {"schedule_negative_delay", scheduleNegativeDelay, {"schedule", "delay"}},
+    {"schedule_not_finite_delay", scheduleNotFiniteDelay, {"schedule", "delay"}},
+    {"every_zero_interval", everyZeroInterval, {"every", "interval"}},
+    {"schedule_null_function", scheduleNullFunction, {"schedule", "null function"}},
     {"task_payload_wrong_type", taskPayloadWrongType, {"payload", "Other"}},
-    {"cancel_slot_out_of_range", cancelSlotOutOfRange, {"cancel", "fora do intervalo"}},
-    {"declare_state_during_frame", declareStateDuringFrame, {"declareState", "durante frame"}},
-    {"declare_state_twice", declareStateTwice, {"declareState", "já declarado"}},
-    {"too_many_states", tooManyStates, {"declareState", "máximo"}},
-    {"request_state_out_of_range", requestStateOutOfRange, {"requestState", "fora do intervalo"}},
-    {"on_enter_during_frame", onEnterDuringFrame, {"onEnter", "durante frame"}},
-    {"system_states_during_frame", systemStatesDuringFrame, {"setSystemStates", "durante frame"}},
-    {"system_state_mask_undeclared", systemStateMaskUndeclared, {"setSystemStates", "não declarado"}},
-    {"system_states_unknown_system", systemStatesUnknownSystem, {"setSystemStates", "fora do intervalo"}},
-    {"handler_states_unknown_handler", handlerStatesUnknownHandler, {"setHandlerStates", "fora do intervalo"}},
+    {"cancel_slot_out_of_range", cancelSlotOutOfRange, {"cancel", "out of range"}},
+    {"declare_state_during_frame", declareStateDuringFrame, {"declareState", "during frame"}},
+    {"declare_state_twice", declareStateTwice, {"declareState", "already declared"}},
+    {"too_many_states", tooManyStates, {"declareState", "maximum"}},
+    {"request_state_out_of_range", requestStateOutOfRange, {"requestState", "out of range"}},
+    {"on_enter_during_frame", onEnterDuringFrame, {"onEnter", "during frame"}},
+    {"system_states_during_frame", systemStatesDuringFrame, {"setSystemStates", "during frame"}},
+    {"system_state_mask_undeclared", systemStateMaskUndeclared, {"setSystemStates", "undeclared"}},
+    {"system_states_unknown_system", systemStatesUnknownSystem, {"setSystemStates", "out of range"}},
+    {"handler_states_unknown_handler", handlerStatesUnknownHandler, {"setHandlerStates", "out of range"}},
     {"persist_dead_entity", persistDeadEntity, {"remove", "StateScoped"}},
   };
 
   if (argumentCount != 2) {
-    std::fprintf(stderr, "uso: app_contract_death <caso>\n");
+    std::fprintf(stderr, "usage: app_contract_death <case>\n");
     return 64;
   }
 
@@ -393,10 +393,10 @@ int main(int argumentCount, char** arguments) {
     g_required = &testCase.required;
     oly::core::setAssertHandler(&handler);
     testCase.run();
-    std::fprintf(stderr, "assert não disparou\n");
+    std::fprintf(stderr, "assert did not fire\n");
     return 1;
   }
 
-  std::fprintf(stderr, "caso desconhecido: %s\n", arguments[1]);
+  std::fprintf(stderr, "unknown case: %s\n", arguments[1]);
   return 64;
 }

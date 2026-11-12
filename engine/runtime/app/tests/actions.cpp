@@ -85,7 +85,7 @@ namespace {
   constexpr ButtonState idle{false, false, false};
 }
 
-TEST_CASE("uma captura por passo, também pausado") {
+TEST_CASE("one capture per step, also when paused") {
   Fixture fixture;
   const auto system = fixture.engine.addSystem(Phase::Update, "whilePaused", record, &fixture.recorder);
   fixture.engine.setWhilePaused(system, true);
@@ -101,7 +101,7 @@ TEST_CASE("uma captura por passo, também pausado") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("bordas só no primeiro passo do frame") {
+TEST_CASE("edges only in the first step of the frame") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", record, &fixture.recorder);
 
@@ -117,7 +117,7 @@ TEST_CASE("bordas só no primeiro passo do frame") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("frame sem passo guarda a borda para o próximo passo") {
+TEST_CASE("frame without a step keeps the edge for the next step") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", record, &fixture.recorder);
 
@@ -135,7 +135,7 @@ TEST_CASE("frame sem passo guarda a borda para o próximo passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("sair da pausa por uma ação num sistema whilePaused") {
+TEST_CASE("leaving the pause through an action in a whilePaused system") {
   Fixture fixture;
   const auto toggle = fixture.engine.addSystem(Phase::Update, "toggle", resumeOnToggle, &fixture.recorder);
   fixture.engine.setWhilePaused(toggle, true);
@@ -153,7 +153,7 @@ TEST_CASE("sair da pausa por uma ação num sistema whilePaused") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("setHidden(true) solta os botões") {
+TEST_CASE("setHidden(true) releases the buttons") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", record, &fixture.recorder);
 
@@ -170,7 +170,7 @@ TEST_CASE("setHidden(true) solta os botões") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("sistema religa e a troca vale na captura seguinte") {
+TEST_CASE("system rebinds and the change takes effect on the next capture") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "rebind", rebindOnce, &fixture.recorder);
   fixture.engine.actions().clearBindings(fixture.recorder.action.id);
@@ -185,7 +185,7 @@ TEST_CASE("sistema religa e a troca vale na captura seguinte") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("handler lê as ações pelo mesmo contexto") {
+TEST_CASE("handler reads the actions through the same context") {
   Fixture fixture;
   fixture.engine.declareEvent<Ping>("Ping");
   fixture.engine.addSystem(Phase::Update, "emit", emitPing);

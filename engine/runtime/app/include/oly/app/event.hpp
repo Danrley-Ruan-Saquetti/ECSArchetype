@@ -13,7 +13,7 @@ namespace oly::app {
     EventKey nextEventKey() noexcept;
   }
 
-  // Denso por processo e separado dos ComponentId: eventos não são componentes.
+  // Dense per process and separate from ComponentId: events are not components.
   template <class T>
   EventKey eventKey() noexcept {
     static const EventKey key = detail::nextEventKey();

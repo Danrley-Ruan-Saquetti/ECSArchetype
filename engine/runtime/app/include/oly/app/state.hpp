@@ -6,7 +6,7 @@
 namespace oly::app {
   class StateContext;
 
-  // Índice denso na ordem de declaração. A máscara de inState tem um bit por estado, por isso o máximo é 32.
+  // Dense index in declaration order. The inState mask has one bit per state, hence the maximum of 32.
   using StateId = uint32_t;
   using StateMask = uint32_t;
   using StateHookId = uint32_t;
@@ -16,7 +16,7 @@ namespace oly::app {
 
   using StateHookFunction = void (*)(StateContext& context);
 
-  // nullptr se o nome não existe.
+  // nullptr if the name does not exist.
   StateHookFunction findNamedStateHook(std::string_view name) noexcept;
 
   struct NamedStateHookRegistration {

@@ -68,7 +68,7 @@ namespace {
   };
 }
 
-TEST_CASE("popDue devolve na ordem de vencimento e, no empate, de criação") {
+TEST_CASE("popDue returns in due-time order and, on ties, in creation order") {
   Fixture fixture;
   fixture.push(2.0, taskA);
   fixture.push(1.0, taskB);
@@ -82,7 +82,7 @@ TEST_CASE("popDue devolve na ordem de vencimento e, no empate, de criação") {
   CHECK(order == std::vector<TaskFunction>{taskB, taskC, taskA});
 }
 
-TEST_CASE("popDue respeita o limite") {
+TEST_CASE("popDue respects the limit") {
   Fixture fixture;
   fixture.push(1.0, taskA);
 
@@ -90,7 +90,7 @@ TEST_CASE("popDue respeita o limite") {
   CHECK(fixture.queue.popDue(1.0));
 }
 
-TEST_CASE("after sai da fila antes de ser devolvido") {
+TEST_CASE("after leaves the queue before being returned") {
   Fixture fixture;
   fixture.push(1.0, taskA);
 
@@ -103,7 +103,7 @@ TEST_CASE("after sai da fila antes de ser devolvido") {
   CHECK(discardCount == 0);
 }
 
-TEST_CASE("every volta ao heap sem deriva") {
+TEST_CASE("every goes back to the heap without drift") {
   Fixture fixture;
   fixture.push(0.1, taskA, 0.1);
 
@@ -120,7 +120,7 @@ TEST_CASE("every volta ao heap sem deriva") {
   CHECK(fixture.queue.popDue(0.31));
 }
 
-TEST_CASE("every atrasado pula para o primeiro múltiplo depois do limite") {
+TEST_CASE("late every jumps to the first multiple after the limit") {
   Fixture fixture;
   fixture.push(0.1, taskA, 0.1);
 
@@ -129,7 +129,7 @@ TEST_CASE("every atrasado pula para o primeiro múltiplo depois do limite") {
   CHECK(fixture.queue.popDue(0.61));
 }
 
-TEST_CASE("every com intervalo minúsculo dispara uma vez por chamada de popDue") {
+TEST_CASE("every with a tiny interval fires once per popDue call") {
   Fixture fixture;
   const double limit = 1.0 / 60.0;
   fixture.push(1e-9, taskA, 1e-9);
@@ -139,7 +139,7 @@ TEST_CASE("every com intervalo minúsculo dispara uma vez por chamada de popDue"
   CHECK(fixture.queue.popDue(limit + 1e-8).has_value());
 }
 
-TEST_CASE("every com intervalo abaixo de um ulp do limite não repete na mesma rodada") {
+TEST_CASE("every with an interval below one ulp of the limit does not repeat in the same round") {
   Fixture fixture;
   const double limit = 3000.0;
   fixture.push(limit, taskA, 1e-13);
@@ -149,7 +149,7 @@ TEST_CASE("every com intervalo abaixo de um ulp do limite não repete na mesma r
   CHECK(fixture.queue.popDue(limit + 1.0).has_value());
 }
 
-TEST_CASE("every com intervalo denormal não trava a tarefa") {
+TEST_CASE("every with a denormal interval does not get the task stuck") {
   Fixture fixture;
   fixture.push(1.0, taskA, 5e-324);
 
@@ -158,7 +158,7 @@ TEST_CASE("every com intervalo denormal não trava a tarefa") {
   CHECK(fixture.queue.popDue(2.0).has_value());
 }
 
-TEST_CASE("cancelada não sai em popDue e cancelar de novo devolve false") {
+TEST_CASE("cancelled task does not come out of popDue and cancelling again returns false") {
   Fixture fixture;
   const TaskHandle handle = fixture.push(1.0, taskA);
 
@@ -168,7 +168,7 @@ TEST_CASE("cancelada não sai em popDue e cancelar de novo devolve false") {
   CHECK(discardCount == 1);
 }
 
-TEST_CASE("handle antigo não cancela a tarefa que reusou o slot") {
+TEST_CASE("stale handle does not cancel the task that reused the slot") {
   Fixture fixture;
   const TaskHandle first = fixture.push(1.0, taskA);
   fixture.queue.cancel(first);
@@ -180,14 +180,14 @@ TEST_CASE("handle antigo não cancela a tarefa que reusou o slot") {
   CHECK(fixture.queue.isPending(second));
 }
 
-TEST_CASE("handle padrão: cancel e isPending devolvem false") {
+TEST_CASE("default handle: cancel and isPending return false") {
   Fixture fixture;
 
   CHECK(!fixture.queue.cancel(TaskHandle{}));
   CHECK(!fixture.queue.isPending(TaskHandle{}));
 }
 
-TEST_CASE("push durante a execução só entra no heap no endRun") {
+TEST_CASE("push during the run only enters the heap at endRun") {
   Fixture fixture;
 
   fixture.queue.beginRun();
@@ -201,7 +201,7 @@ TEST_CASE("push durante a execução só entra no heap no endRun") {
   CHECK(fixture.queue.popDue(1.0));
 }
 
-TEST_CASE("recoverFromInterruptedRun guarda as tarefas criadas antes da exceção") {
+TEST_CASE("recoverFromInterruptedRun keeps the tasks created before the exception") {
   Fixture fixture;
 
   fixture.queue.beginRun();
@@ -211,7 +211,7 @@ TEST_CASE("recoverFromInterruptedRun guarda as tarefas criadas antes da exceçã
   CHECK(fixture.queue.popDue(1.0));
 }
 
-TEST_CASE("descarte recebe a cópia do payload e roda uma vez") {
+TEST_CASE("discard receives the copy of the payload and runs once") {
   Fixture fixture;
   const TaskHandle handle = fixture.queue.push(1.0, 0.0, taskA, recordDiscard, TaskPayload::of(Value{7}));
 
@@ -221,7 +221,7 @@ TEST_CASE("descarte recebe a cópia do payload e roda uma vez") {
   CHECK(discardCount == 1);
 }
 
-TEST_CASE("discardAll descarta cada pendente uma vez, inclusive o agendado por um descarte") {
+TEST_CASE("discardAll discards each pending task once, including the one scheduled by a discard") {
   Fixture fixture;
   queueToReenter = &fixture.queue;
   fixture.queue.push(1.0, 0.0, taskA, discardAndSchedule, {});
@@ -234,7 +234,7 @@ TEST_CASE("discardAll descarta cada pendente uma vez, inclusive o agendado por u
   CHECK(!fixture.queue.popDue(10.0));
 }
 
-TEST_CASE("destrutor descarta o que estiver pendente") {
+TEST_CASE("destructor discards whatever is pending") {
   Fixture fixture;
 
   {
@@ -246,7 +246,7 @@ TEST_CASE("destrutor descarta o que estiver pendente") {
   CHECK(discardCount == 2);
 }
 
-TEST_CASE("payloadKey distingue tipos e TaskPayload::of copia os bytes") {
+TEST_CASE("payloadKey distinguishes types and TaskPayload::of copies the bytes") {
   const TaskPayload payload = TaskPayload::of(Value{42});
 
   CHECK(oly::app::payloadKey<Value>() != oly::app::payloadKey<Other>());
@@ -254,7 +254,7 @@ TEST_CASE("payloadKey distingue tipos e TaskPayload::of copia os bytes") {
   CHECK(reinterpret_cast<const Value*>(payload.bytes)->number == 42);
 }
 
-TEST_CASE("push sem escopo por padrão: cancelScoped não mexe") {
+TEST_CASE("push is unscoped by default: cancelScoped does not touch it") {
   Fixture fixture;
   const TaskHandle handle = fixture.push(1.0, taskA);
 
@@ -264,7 +264,7 @@ TEST_CASE("push sem escopo por padrão: cancelScoped não mexe") {
   CHECK(discardCount == 0);
 }
 
-TEST_CASE("cancelScoped cancela só as com escopo, com descarte uma vez") {
+TEST_CASE("cancelScoped cancels only the scoped ones, with discard once") {
   Fixture fixture;
   fixture.pushScoped(1.0, taskA);
   fixture.pushScoped(2.0, taskB);
@@ -277,7 +277,7 @@ TEST_CASE("cancelScoped cancela só as com escopo, com descarte uma vez") {
   CHECK(fixture.queue.isPending(unscoped));
 }
 
-TEST_CASE("cancelScoped repete para tarefas com escopo agendadas por descartes") {
+TEST_CASE("cancelScoped repeats for scoped tasks scheduled by discards") {
   Fixture fixture;
   queueToReenter = &fixture.queue;
   fixture.queue.push(1.0, 0.0, taskA, discardAndScheduleScoped, {}, true);
@@ -288,7 +288,7 @@ TEST_CASE("cancelScoped repete para tarefas com escopo agendadas por descartes")
   CHECK(fixture.queue.pendingCount() == 0);
 }
 
-TEST_CASE("persist tira o escopo") {
+TEST_CASE("persist removes the scope") {
   Fixture fixture;
   const TaskHandle handle = fixture.pushScoped(1.0, taskA);
 
@@ -300,7 +300,7 @@ TEST_CASE("persist tira o escopo") {
   CHECK(discardCount == 0);
 }
 
-TEST_CASE("persist de tarefa não pendente ou de TaskHandle{} devolve false") {
+TEST_CASE("persist of a non-pending task or of TaskHandle{} returns false") {
   Fixture fixture;
   const TaskHandle canceled = fixture.pushScoped(1.0, taskA);
   fixture.queue.cancel(canceled);
@@ -309,7 +309,7 @@ TEST_CASE("persist de tarefa não pendente ou de TaskHandle{} devolve false") {
   CHECK(!fixture.queue.persist(TaskHandle{}));
 }
 
-TEST_CASE("cancelScoped não pega entradas antigas de um slot reusado sem escopo") {
+TEST_CASE("cancelScoped does not catch stale entries of a slot reused without scope") {
   Fixture fixture;
   const TaskHandle scoped = fixture.pushScoped(1.0, taskA);
   fixture.queue.cancel(scoped);

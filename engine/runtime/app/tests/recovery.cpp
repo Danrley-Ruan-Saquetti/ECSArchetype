@@ -1,5 +1,5 @@
-// A exceção C++ atravessa a Engine, o que só é seguro fora do Emscripten (sem -fwasm-exceptions).
-// O caso real, exceção JS, é testado pelos testes TS.
+// The C++ exception crosses the Engine, which is only safe outside Emscripten (without -fwasm-exceptions).
+// The real case, a JS exception, is covered by the TS tests.
 #if !defined(__EMSCRIPTEN__)
 #include <doctest/doctest.h>
 
@@ -107,7 +107,7 @@ namespace {
   }
 }
 
-TEST_CASE("exceção num sistema deixa o spawn adiado sem aplicar") {
+TEST_CASE("exception in a system leaves the deferred spawn unapplied") {
   oly::ecs::World world;
   Engine engine(world);
   Shared shared;
@@ -120,7 +120,7 @@ TEST_CASE("exceção num sistema deixa o spawn adiado sem aplicar") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("frame seguinte à exceção só registra o tempo e o próximo volta a rodar") {
+TEST_CASE("frame after the exception only records the time and the next one runs again") {
   oly::ecs::World world;
   Engine engine(world);
   Shared shared;
@@ -135,7 +135,7 @@ TEST_CASE("frame seguinte à exceção só registra o tempo e o próximo volta a
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("tarefas sobrevivem à recuperação, inclusive as criadas antes da exceção") {
+TEST_CASE("tasks survive recovery, including those created before the exception") {
   oly::ecs::World world;
   Engine engine(world);
   TaskCounts counts;
@@ -160,7 +160,7 @@ TEST_CASE("tarefas sobrevivem à recuperação, inclusive as criadas antes da ex
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("exceção num handler descarta os eventos pendentes no frame seguinte") {
+TEST_CASE("exception in a handler discards the pending events in the next frame") {
   oly::ecs::World world;
   Engine engine(world);
   EventShared shared;
@@ -184,7 +184,7 @@ TEST_CASE("exceção num handler descarta os eventos pendentes no frame seguinte
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("a recuperação descarta o pedido pendente") {
+TEST_CASE("recovery discards the pending request") {
   oly::ecs::World world;
   Engine engine(world);
   StateShared shared;
@@ -204,7 +204,7 @@ TEST_CASE("a recuperação descarta o pedido pendente") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("exceção em onExit: o estado não muda") {
+TEST_CASE("exception in onExit: the state does not change") {
   oly::ecs::World world;
   Engine engine(world);
   const auto first = engine.declareState("a");
@@ -221,7 +221,7 @@ TEST_CASE("exceção em onExit: o estado não muda") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("exceção em onEnter: o estado já é o novo e os ganchos seguintes não rodam") {
+TEST_CASE("exception in onEnter: the state is already the new one and the following hooks do not run") {
   oly::ecs::World world;
   Engine engine(world);
   StateShared shared;
@@ -238,7 +238,7 @@ TEST_CASE("exceção em onEnter: o estado já é o novo e os ganchos seguintes n
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("exceção em onExit não limpa o escopo") {
+TEST_CASE("exception in onExit does not clear the scope") {
   oly::ecs::World world;
   Engine engine(world);
   oly::ecs::Entity scoped{};

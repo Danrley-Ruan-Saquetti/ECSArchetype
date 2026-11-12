@@ -35,7 +35,7 @@ namespace {
   };
 }
 
-TEST_CASE("pausado: só whilePaused roda, relógio congela, render continua") {
+TEST_CASE("paused: only whilePaused runs, the clock freezes, render continues") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
   const auto pausedSystem = fixture.engine.addSystem(Phase::Update, "p", recordName, &fixture.log);
@@ -52,7 +52,7 @@ TEST_CASE("pausado: só whilePaused roda, relógio congela, render continua") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("resume volta a rodar os sistemas de gameplay no lugar dos whilePaused") {
+TEST_CASE("resume runs the gameplay systems again instead of the whilePaused ones") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
   const auto pausedSystem = fixture.engine.addSystem(Phase::Update, "p", recordName, &fixture.log);
@@ -70,7 +70,7 @@ TEST_CASE("resume volta a rodar os sistemas de gameplay no lugar dos whilePaused
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("pause pedido por um sistema não interrompe o passo atual") {
+TEST_CASE("pause requested by a system does not interrupt the current step") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "pauser", pauseSelf, &fixture.log);
   fixture.engine.addSystem(Phase::UpdateAfter, "a", recordName, &fixture.log);
@@ -83,7 +83,7 @@ TEST_CASE("pause pedido por um sistema não interrompe o passo atual") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("pause pedido por um sistema vale no próximo passo") {
+TEST_CASE("pause requested by a system takes effect in the next step") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "pauser", pauseSelf, &fixture.log);
   fixture.engine.addSystem(Phase::UpdateAfter, "a", recordName, &fixture.log);
@@ -97,7 +97,7 @@ TEST_CASE("pause pedido por um sistema vale no próximo passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("sistema whilePaused retoma pelo contexto") {
+TEST_CASE("whilePaused system resumes through the context") {
   Fixture fixture;
   const auto pausedSystem = fixture.engine.addSystem(Phase::Update, "p", resumeSelf, &fixture.log);
   fixture.engine.setWhilePaused(pausedSystem, true);
@@ -112,7 +112,7 @@ TEST_CASE("sistema whilePaused retoma pelo contexto") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("aba oculta ignora frames") {
+TEST_CASE("hidden tab ignores frames") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
   fixture.engine.addSystem(Phase::Render, "r", recordName, &fixture.log);
@@ -125,7 +125,7 @@ TEST_CASE("aba oculta ignora frames") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("primeiro frame depois da aba oculta só registra o tempo") {
+TEST_CASE("first frame after the hidden tab only records the time") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "u", recordName, &fixture.log);
   fixture.engine.addSystem(Phase::Render, "r", recordName, &fixture.log);
@@ -141,7 +141,7 @@ TEST_CASE("primeiro frame depois da aba oculta só registra o tempo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("aba oculta não desfaz a pausa do jogo") {
+TEST_CASE("hidden tab does not undo the game pause") {
   Fixture fixture;
   fixture.engine.pause();
 

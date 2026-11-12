@@ -149,7 +149,7 @@ namespace {
   }
 }
 
-TEST_CASE("handler recebe o lote inteiro, na ordem de emissão") {
+TEST_CASE("handler receives the whole batch, in emission order") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", emitOneTwoThree);
   fixture.engine.on<Ping>("pings", recordPingValues, &fixture.recorder);
@@ -161,7 +161,7 @@ TEST_CASE("handler recebe o lote inteiro, na ordem de emissão") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("handlers do mesmo tipo na ordem de registro") {
+TEST_CASE("handlers of the same type in registration order") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", emitOneTwoThree);
   fixture.engine.on<Ping>("h1", recordHandlerName, &fixture.log);
@@ -174,7 +174,7 @@ TEST_CASE("handlers do mesmo tipo na ordem de registro") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("tipos despachados na ordem de declaração, não na de emissão") {
+TEST_CASE("types dispatched in declaration order, not in emission order") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", [](SystemContext& context) {
     context.emit(Echo{0});
@@ -189,7 +189,7 @@ TEST_CASE("tipos despachados na ordem de declaração, não na de emissão") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("evento emitido durante a rodada vai para a rodada seguinte") {
+TEST_CASE("event emitted during the round goes to the next round") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", emitPingZero);
   fixture.engine.on<Ping>("ping", traceRoundsAndCascade, &fixture.recorder);
@@ -201,7 +201,7 @@ TEST_CASE("evento emitido durante a rodada vai para a rodada seguinte") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("lote não muda quando o handler emite muitos do próprio tipo") {
+TEST_CASE("batch does not change when the handler emits many of its own type") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", emitPingZero);
   fixture.engine.on<Ping>("flood", flood, &fixture.recorder);
@@ -213,7 +213,7 @@ TEST_CASE("lote não muda quando o handler emite muitos do próprio tipo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("cascata termina no mesmo passo quando as filas esvaziam") {
+TEST_CASE("cascade ends in the same step when the queues empty") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", emitEchoZero);
   fixture.engine.on<Echo>("cascade", cascadeEcho, &fixture.recorder);
@@ -224,7 +224,7 @@ TEST_CASE("cascata termina no mesmo passo quando as filas esvaziam") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("handler faz mudança estrutural direta") {
+TEST_CASE("handler makes a direct structural change") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", emitPingZero);
   fixture.engine.on<Ping>("spawn", spawnFromHandler, &fixture.recorder);
@@ -237,7 +237,7 @@ TEST_CASE("handler faz mudança estrutural direta") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("evento sem handler é descartado no fim do passo") {
+TEST_CASE("event without a handler is discarded at the end of the step") {
   Fixture fixture;
   fixture.engine.emit(Ping{1});
   fixture.step();
@@ -249,13 +249,13 @@ TEST_CASE("evento sem handler é descartado no fim do passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("OLY_HANDLER registra por nome com o tipo") {
+TEST_CASE("OLY_HANDLER registers by name with the type") {
   CHECK(oly::app::findNamedHandler("appTestPingHandler") != nullptr);
   CHECK(oly::app::findNamedHandler("appTestPingHandler")->eventKey == oly::app::eventKey<Ping>());
-  CHECK(oly::app::findNamedHandler("naoExiste") == nullptr);
+  CHECK(oly::app::findNamedHandler("doesNotExist") == nullptr);
 }
 
-TEST_CASE("limite de rodadas configurável: exatamente maxEventRounds rodadas é permitido") {
+TEST_CASE("configurable round limit: exactly maxEventRounds rounds is allowed") {
   EngineConfig config;
   config.maxEventRounds = 3;
   Fixture fixture(config);

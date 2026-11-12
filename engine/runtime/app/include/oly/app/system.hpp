@@ -15,7 +15,7 @@ namespace oly::app {
   using SystemId = uint32_t;
   using SystemFunction = void (*)(SystemContext& context);
 
-  // Válido só durante a chamada do sistema. Mudanças estruturais são adiadas até o fim da fase.
+  // Valid only during the system call. Structural changes are deferred until the end of the phase.
   class SystemContext : public EngineContext {
    private:
     friend class Engine;
@@ -50,7 +50,7 @@ namespace oly::app {
 
     float interpolation() const noexcept;
 
-    // Com estado ativo a entidade nasce com escopo (some na troca de estado) até receber persist.
+    // With an active state the entity is born scoped (it disappears on a state change) until it receives persist.
     ecs::Entity spawn();
     template <class... Ts>
     ecs::Entity spawn(Ts&&... components) {
@@ -58,7 +58,7 @@ namespace oly::app {
       (commands_->add(entity, std::forward<Ts>(components)), ...);
       return entity;
     }
-    // Adiado como o remove: sem efeito se a entidade não tiver a tag.
+    // Deferred like remove: no effect if the entity does not have the tag.
     void persist(ecs::Entity entity);
     void destroy(ecs::Entity entity) {
       commands_->destroy(entity);
@@ -79,7 +79,7 @@ namespace oly::app {
     }
   };
 
-  // nullptr se o nome não existe.
+  // nullptr if the name does not exist.
   SystemFunction findNamedSystem(std::string_view name) noexcept;
 
   struct NamedSystemRegistration {

@@ -6,8 +6,8 @@
 
 namespace oly::app {
   namespace {
-    // Estático local, não global (mesmo motivo de namedSystems); deque porque findNamedHandler devolve ponteiros
-    // que precisam sobreviver a novos registros.
+    // Local static, not global (same reason as namedSystems); deque because findNamedHandler returns pointers
+    // that must survive new registrations.
     std::deque<std::pair<std::string, NamedHandler>>& namedHandlers() {
       static std::deque<std::pair<std::string, NamedHandler>> handlers;
       return handlers;

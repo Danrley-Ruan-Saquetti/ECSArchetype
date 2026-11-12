@@ -176,7 +176,7 @@ namespace {
   }
 }
 
-TEST_CASE("fluxo de referência: dano, moeda, pontos e destruição no fim do despacho") {
+TEST_CASE("reference flow: damage, coin, score and destruction at the end of dispatch") {
   Fixture fixture;
   registerReferenceFlow(fixture);
   const oly::ecs::Entity enemy = spawnEnemy(fixture.world);
@@ -199,7 +199,7 @@ TEST_CASE("fluxo de referência: dano, moeda, pontos e destruição no fim do de
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("evento repetido: duas mortes do mesmo inimigo no mesmo lote") {
+TEST_CASE("repeated event: two deaths of the same enemy in the same batch") {
   Fixture fixture;
   fixture.recorder.deathsEmittedPerStep = 2;
   registerReferenceFlow(fixture);
@@ -218,7 +218,7 @@ TEST_CASE("evento repetido: duas mortes do mesmo inimigo no mesmo lote") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("entidade destruída numa rodada anterior chega morta à rodada seguinte") {
+TEST_CASE("entity destroyed in an earlier round arrives dead in the next round") {
   Fixture fixture;
   fixture.engine.on<EnemyDied>("destroy", destroyThenAnnounce, &fixture.recorder);
   fixture.engine.on<CoinDropped>("observe", observeDestroyed, &fixture.recorder);
@@ -232,7 +232,7 @@ TEST_CASE("entidade destruída numa rodada anterior chega morta à rodada seguin
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("handlers rodam em passo pausado") {
+TEST_CASE("handlers run in a paused step") {
   Fixture fixture;
   const auto system = fixture.engine.addSystem(Phase::Update, "emit", emitPingWhilePaused);
   fixture.engine.setWhilePaused(system, true);
@@ -247,7 +247,7 @@ TEST_CASE("handlers rodam em passo pausado") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("evento emitido em Render é despachado no passo seguinte") {
+TEST_CASE("event emitted in Render is dispatched in the next step") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Render, "render", renderEmitsOnce, &fixture.log);
   fixture.engine.on<Ping>("ping", recordPingInLog, &fixture.log);
@@ -261,7 +261,7 @@ TEST_CASE("evento emitido em Render é despachado no passo seguinte") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("evento emitido fora de frame vai para o próximo passo") {
+TEST_CASE("event emitted outside frame goes to the next step") {
   Fixture fixture;
   fixture.engine.on<Ping>("pings", recordPingValues, &fixture.recorder);
   fixture.engine.emit(Ping{7});
@@ -277,7 +277,7 @@ TEST_CASE("evento emitido fora de frame vai para o próximo passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("handler vê o time() do início do passo, igual aos sistemas") {
+TEST_CASE("handler sees the time() of the step start, same as the systems") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "emit", emitPingEveryStep, &fixture.recorder);
   fixture.engine.on<Ping>("time", recordHandlerTime, &fixture.recorder);

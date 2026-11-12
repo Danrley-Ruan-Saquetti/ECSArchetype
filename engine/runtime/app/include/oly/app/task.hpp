@@ -20,7 +20,7 @@ namespace oly::app {
   inline constexpr std::size_t MaxTaskPayloadSize = 32;
   inline constexpr std::size_t MaxTaskPayloadAlignment = 8;
 
-  // O handle padrão não referencia tarefa nenhuma.
+  // The default handle references no task.
   struct TaskHandle {
     uint32_t slot = InvalidTaskSlot;
     uint32_t generation = 0;
@@ -32,7 +32,7 @@ namespace oly::app {
     PayloadKey nextPayloadKey() noexcept;
   }
 
-  // Denso por processo, como eventKey.
+  // Dense per process, like eventKey.
   template <class P>
   PayloadKey payloadKey() noexcept {
     static const PayloadKey key = detail::nextPayloadKey();
@@ -46,9 +46,9 @@ namespace oly::app {
 
     template <class P>
     static TaskPayload of(const P& value) {
-      static_assert(std::is_trivially_copyable_v<P>, "TaskPayload: o payload precisa ser trivialmente copiável");
-      static_assert(sizeof(P) <= MaxTaskPayloadSize, "TaskPayload: payload maior que 32 bytes");
-      static_assert(alignof(P) <= MaxTaskPayloadAlignment, "TaskPayload: alinhamento do payload maior que 8");
+      static_assert(std::is_trivially_copyable_v<P>, "TaskPayload: the payload must be trivially copyable");
+      static_assert(sizeof(P) <= MaxTaskPayloadSize, "TaskPayload: payload larger than 32 bytes");
+      static_assert(alignof(P) <= MaxTaskPayloadAlignment, "TaskPayload: payload alignment larger than 8");
 
       TaskPayload payload;
       std::memcpy(payload.bytes, &value, sizeof(P));

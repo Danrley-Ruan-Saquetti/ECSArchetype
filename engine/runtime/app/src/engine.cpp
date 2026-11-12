@@ -12,13 +12,13 @@ namespace oly::app {
       config_(config),
       fixedDeltaTime_(1.0 / config.fixedHz),
       commands_(world.commands()) {
-    OLY_ASSERT(config.fixedHz > 0.0, "Engine: fixedHz=%f deve ser positivo", config.fixedHz);
-    OLY_ASSERT(config.maxStepsPerFrame > 0, "Engine: maxStepsPerFrame deve ser positivo");
-    OLY_ASSERT(config.maxEventRounds > 0, "Engine: maxEventRounds deve ser positivo");
+    OLY_ASSERT(config.fixedHz > 0.0, "Engine: fixedHz=%f must be positive", config.fixedHz);
+    OLY_ASSERT(config.maxStepsPerFrame > 0, "Engine: maxStepsPerFrame must be positive");
+    OLY_ASSERT(config.maxEventRounds > 0, "Engine: maxEventRounds must be positive");
   }
 
   SystemId Engine::addSystem(Phase phase, std::string_view name, SystemFunction function, void* userData) {
-    OLY_ASSERT(!inFrame_, "addSystem: sistema \"%.*s\" registrado durante frame", static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(!inFrame_, "addSystem: system \"%.*s\" registered during frame", static_cast<int>(name.size()), name.data());
 
     const SystemId id = static_cast<SystemId>(systemLocations_.size());
     std::vector<SystemEntry>& entries = phases_[static_cast<uint32_t>(phase)];
@@ -32,14 +32,14 @@ namespace oly::app {
   void Engine::setWhilePaused(SystemId system, bool whilePaused) {
     const auto [phase, position] = systemLocations_[system];
     SystemEntry& entry = phases_[static_cast<uint32_t>(phase)][position];
-    OLY_ASSERT(isGameplayPhase(phase), "setWhilePaused: sistema \"%s\" de render não pode ter whilePaused", entry.name.c_str());
+    OLY_ASSERT(isGameplayPhase(phase), "setWhilePaused: render system \"%s\" cannot be whilePaused", entry.name.c_str());
 
     entry.whilePaused = whilePaused;
   }
 
   EventTypeId Engine::declareEventType(EventKey key, std::string_view name, uint32_t size) {
-    OLY_ASSERT(!inFrame_, "declareEvent: evento \"%.*s\" declarado durante frame", static_cast<int>(name.size()), name.data());
-    OLY_ASSERT(queues_.typeOf(key) == InvalidEventType, "declareEvent: evento \"%.*s\" já declarado", static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(!inFrame_, "declareEvent: event \"%.*s\" declared during frame", static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(queues_.typeOf(key) == InvalidEventType, "declareEvent: event \"%.*s\" already declared", static_cast<int>(name.size()), name.data());
 
     const EventTypeId type = queues_.declare(key, name, size);
     handlers_.emplace_back();
@@ -48,8 +48,8 @@ namespace oly::app {
   }
 
   HandlerId Engine::onById(EventTypeId type, std::string_view name, HandlerFunction function, void* userData) {
-    OLY_ASSERT(!inFrame_, "on: handler \"%.*s\" registrado durante frame", static_cast<int>(name.size()), name.data());
-    OLY_ASSERT(type < queues_.typeCount(), "on: handler \"%.*s\" para o tipo de evento %u não declarado", static_cast<int>(name.size()), name.data(), type);
+    OLY_ASSERT(!inFrame_, "on: handler \"%.*s\" registered during frame", static_cast<int>(name.size()), name.data());
+    OLY_ASSERT(type < queues_.typeCount(), "on: handler \"%.*s\" for event type %u not declared", static_cast<int>(name.size()), name.data(), type);
 
     const HandlerId id = static_cast<HandlerId>(handlerLocations_.size());
     handlerLocations_.emplace_back(type, static_cast<uint32_t>(handlers_[type].size()));
@@ -59,7 +59,7 @@ namespace oly::app {
   }
 
   void Engine::emitById(EventTypeId type, const void* event) {
-    OLY_ASSERT(type < queues_.typeCount(), "emit: tipo de evento %u não declarado", type);
+    OLY_ASSERT(type < queues_.typeCount(), "emit: event type %u not declared", type);
 
     queues_.push(type, event);
   }
@@ -78,7 +78,7 @@ namespace oly::app {
     hasLastTime_ = false;
   }
 
-  // Uma exceção de sistema (ex.: JS desenrolando o WASM sem destrutores) deixa inFrame_ ligado.
+  // An exception from a system (e.g. JS unwinding the WASM without destructors) leaves inFrame_ set.
   void Engine::recoverFromInterruptedFrame() {
     commands_ = world_.commands();
     queues_.clear();
@@ -102,7 +102,7 @@ namespace oly::app {
       hasLastTime_ = true;
       return;
     }
-    OLY_ASSERT(nowSeconds >= lastTime_, "frame: tempo %f menor que o anterior %f", nowSeconds, lastTime_);
+    OLY_ASSERT(nowSeconds >= lastTime_, "frame: time %f less than the previous %f", nowSeconds, lastTime_);
 
     inFrame_ = true;
     actions_.setDeclarationsLocked(true);
@@ -120,7 +120,7 @@ namespace oly::app {
       ++stepsRun;
     }
 
-    // Descartar os passos que não couberam evita a espiral de atraso (spec game-engine-design §4.3).
+    // Discarding the steps that did not fit avoids the lag spiral (spec game-engine-design §4.3).
     if (accumulator_ >= threshold) {
       accumulator_ = std::fmod(accumulator_, fixedDeltaTime_);
       if (accumulator_ >= threshold) {
@@ -135,7 +135,7 @@ namespace oly::app {
   }
 
   void Engine::runFixedStep() {
-    // Fixada no início: pause/resume pedidos por um sistema só valem no próximo passo.
+    // Fixed at the start: pause/resume requested by a system only take effect in the next step.
     pausedThisStep_ = pauseRequested_;
     eventRoundsThisStep_ = 0;
 
@@ -151,7 +151,7 @@ namespace oly::app {
     dispatchEvents();
     applyStateTransition();
 
-    // O relógio só avança depois do despacho: os handlers veem o mesmo time() dos sistemas do passo.
+    // The clock only advances after dispatch: handlers see the same time() as the step's systems.
     if (!pausedThisStep_) {
       ++steps_;
     }
@@ -160,9 +160,9 @@ namespace oly::app {
   void Engine::dispatchEvents() {
     while (queues_.beginRound()) {
       if (eventRoundsThisStep_ == config_.maxEventRounds) {
-        OLY_ASSERT(false, "dispatchEvents: limite de %u rodadas de eventos estourado; pendentes: %s", config_.maxEventRounds, queues_.pendingNames().c_str());
+        OLY_ASSERT(false, "dispatchEvents: limit of %u event rounds exceeded; pending: %s", config_.maxEventRounds, queues_.pendingNames().c_str());
 
-        // Sem asserts, descarta o que sobrou para o passo seguir com estado definido.
+        // Without asserts, discards what is left so the step continues in a defined state.
         queues_.clear();
         return;
       }

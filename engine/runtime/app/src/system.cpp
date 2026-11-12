@@ -8,8 +8,8 @@
 
 namespace oly::app {
   namespace {
-    // Estático local, não global: OLY_SYSTEM registra durante a inicialização estática de outros arquivos, cuja
-    // ordem relativa a este não é definida.
+    // Local static, not global: OLY_SYSTEM registers during the static initialization of other files, whose
+    // order relative to this one is undefined.
     std::vector<std::pair<std::string, SystemFunction>>& namedSystems() {
       static std::vector<std::pair<std::string, SystemFunction>> systems;
       return systems;

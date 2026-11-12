@@ -11,7 +11,7 @@ using oly::app::Engine;
 using oly::app::EngineConfig;
 using oly::app::Phase;
 
-TEST_CASE("primeiro frame só registra o tempo") {
+TEST_CASE("first frame only records the time") {
   oly::ecs::World world;
   Engine engine(world);
   Log log;
@@ -25,7 +25,7 @@ TEST_CASE("primeiro frame só registra o tempo") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("frame em múltiplos exatos de 1/60 roda um passo por frame") {
+TEST_CASE("frame at exact multiples of 1/60 runs one step per frame") {
   oly::ecs::World world;
   Engine engine(world);
   Log log;
@@ -41,7 +41,7 @@ TEST_CASE("frame em múltiplos exatos de 1/60 roda um passo por frame") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("frações acumulam entre frames") {
+TEST_CASE("fractions accumulate across frames") {
   oly::ecs::World world;
   Engine engine(world);
   Log log;
@@ -56,7 +56,7 @@ TEST_CASE("frações acumulam entre frames") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("frame com salto grande roda no máximo maxStepsPerFrame passos") {
+TEST_CASE("frame with a large jump runs at most maxStepsPerFrame steps") {
   oly::ecs::World world;
   Engine engine(world, EngineConfig{.fixedHz = 60.0, .maxStepsPerFrame = 5});
   Log log;
@@ -69,7 +69,7 @@ TEST_CASE("frame com salto grande roda no máximo maxStepsPerFrame passos") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("passos além de maxStepsPerFrame são descartados") {
+TEST_CASE("steps beyond maxStepsPerFrame are discarded") {
   oly::ecs::World world;
   Engine engine(world, EngineConfig{.fixedHz = 60.0, .maxStepsPerFrame = 5});
   Log log;
@@ -83,7 +83,7 @@ TEST_CASE("passos além de maxStepsPerFrame são descartados") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("render recebe a interpolação") {
+TEST_CASE("render receives the interpolation") {
   oly::ecs::World world;
   Engine engine(world);
   Log log;
@@ -103,7 +103,7 @@ namespace {
   }
 }
 
-TEST_CASE("time é o início do passo e fixedDeltaTime vem do fixedHz") {
+TEST_CASE("time is the start of the step and fixedDeltaTime comes from fixedHz") {
   oly::ecs::World world;
   Engine engine(world, EngineConfig{.fixedHz = 50.0});
   Log log;

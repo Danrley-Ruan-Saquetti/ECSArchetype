@@ -46,7 +46,7 @@ namespace {
   }
 }
 
-TEST_CASE("fases em ordem e, dentro da fase, ordem de registro") {
+TEST_CASE("phases in order and, within a phase, registration order") {
   oly::ecs::World world;
   Engine engine(world);
   Log log;
@@ -63,12 +63,12 @@ TEST_CASE("fases em ordem e, dentro da fase, ordem de registro") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("OLY_SYSTEM registra por nome") {
+TEST_CASE("OLY_SYSTEM registers by name") {
   CHECK(oly::app::findNamedSystem("appTestNamed") != nullptr);
-  CHECK(oly::app::findNamedSystem("naoExiste") == nullptr);
+  CHECK(oly::app::findNamedSystem("doesNotExist") == nullptr);
 }
 
-TEST_CASE("spawn adiado: viva só na fase seguinte") {
+TEST_CASE("deferred spawn: alive only in the next phase") {
   oly::ecs::World world;
   Engine engine(world);
   Shared shared;
@@ -84,7 +84,7 @@ TEST_CASE("spawn adiado: viva só na fase seguinte") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("comandos de render aplicados ao fim do frame") {
+TEST_CASE("render commands applied at the end of the frame") {
   oly::ecs::World world;
   Engine engine(world);
   Shared shared;
@@ -97,7 +97,7 @@ TEST_CASE("comandos de render aplicados ao fim do frame") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("destroy e add adiados na mesma fase resolvem como o CommandBuffer") {
+TEST_CASE("destroy and add deferred in the same phase resolve like the CommandBuffer") {
   oly::ecs::World world;
   Engine engine(world);
   Shared shared;

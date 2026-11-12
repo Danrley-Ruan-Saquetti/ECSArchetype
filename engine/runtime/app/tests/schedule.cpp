@@ -159,7 +159,7 @@ namespace {
   };
 }
 
-TEST_CASE("after agendado fora de frame dispara no passo cujo início alcança o vencimento") {
+TEST_CASE("after scheduled outside frame fires in the step whose start reaches the due time") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   fixture.engine.schedule().after(2.0 / 60, markTask, Mark{&fixture.log, 'a'});
@@ -171,7 +171,7 @@ TEST_CASE("after agendado fora de frame dispara no passo cujo início alcança o
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("after(0) fora de frame roda no passo 2 do próximo passo") {
+TEST_CASE("after(0) outside frame runs in stage 2 of the next step") {
   Fixture fixture;
   fixture.engine.addSystem(Phase::Update, "s", recordName, &fixture.log);
   fixture.engine.frame(0.0);
@@ -183,7 +183,7 @@ TEST_CASE("after(0) fora de frame roda no passo 2 do próximo passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("after(0) dentro de uma tarefa só roda no passo seguinte") {
+TEST_CASE("after(0) inside a task only runs in the next step") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   fixture.engine.schedule().after(0.0, chainTask, Chain{&fixture.log, 1});
@@ -200,7 +200,7 @@ TEST_CASE("after(0) dentro de uma tarefa só roda no passo seguinte") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("after(0) agendado por um sistema roda no passo seguinte ao dele") {
+TEST_CASE("after(0) scheduled by a system runs in the step after its own") {
   Fixture fixture;
   SchedulingSystem system{&fixture.log};
   fixture.engine.addSystem(Phase::Update, "scheduler", scheduleOnceFromSystem, &system);
@@ -217,7 +217,7 @@ TEST_CASE("after(0) agendado por um sistema roda no passo seguinte ao dele") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("after(0) agendado na fase render roda no próximo passo") {
+TEST_CASE("after(0) scheduled in the render phase runs in the next step") {
   Fixture fixture;
   SchedulingSystem system{&fixture.log};
   fixture.engine.addSystem(Phase::Render, "scheduler", scheduleOnceFromSystem, &system);
@@ -234,7 +234,7 @@ TEST_CASE("after(0) agendado na fase render roda no próximo passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("mesmo passo: ordem de vencimento e, no empate, de criação") {
+TEST_CASE("same step: due-time order and, on ties, creation order") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   Scheduler& schedule = fixture.engine.schedule();
@@ -248,7 +248,7 @@ TEST_CASE("mesmo passo: ordem de vencimento e, no empate, de criação") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("every sem deriva") {
+TEST_CASE("every without drift") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   fixture.engine.schedule().every(0.025, markTask, Mark{&fixture.log, 'e'});
@@ -262,7 +262,7 @@ TEST_CASE("every sem deriva") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("every com intervalo menor que o passo vira uma vez por passo") {
+TEST_CASE("every with an interval smaller than the step becomes once per step") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   fixture.engine.schedule().every(0.004, markTask, Mark{&fixture.log, 'e'});
@@ -273,7 +273,7 @@ TEST_CASE("every com intervalo menor que o passo vira uma vez por passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("every com o intervalo do passo não perde disparo em jogo longo") {
+TEST_CASE("every with the step interval does not miss a firing in a long game") {
   Fixture fixture;
   int runs = 0;
   int discards = 0;
@@ -285,12 +285,12 @@ TEST_CASE("every com o intervalo do passo não perde disparo em jogo longo") {
   CHECK(runs == 19999);
 }
 
-TEST_CASE("cancelar antes, durante e depois") {
+TEST_CASE("cancel before, during and after") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   Scheduler& schedule = fixture.engine.schedule();
 
-  SUBCASE("antes de vencer") {
+  SUBCASE("before it is due") {
     const TaskHandle handle = schedule.after(1.0 / 60, markTask, Mark{&fixture.log, 'a'});
 
     CHECK(schedule.cancel(handle));
@@ -299,7 +299,7 @@ TEST_CASE("cancelar antes, durante e depois") {
     CHECK(fixture.log.times.empty());
   }
 
-  SUBCASE("durante o passo em que a outra venceria") {
+  SUBCASE("during the step in which the other would be due") {
     const TaskHandle second = schedule.after(1.5 / 60, markTask, Mark{&fixture.log, 'b'});
     schedule.after(1.2 / 60, cancelTargetTask, CancelTarget{second});
 
@@ -309,7 +309,7 @@ TEST_CASE("cancelar antes, durante e depois") {
     CHECK(!schedule.isPending(second));
   }
 
-  SUBCASE("depois de disparar") {
+  SUBCASE("after firing") {
     const TaskHandle handle = schedule.after(1.0 / 60, markTask, Mark{&fixture.log, 'a'});
     fixture.steps(3);
 
@@ -320,7 +320,7 @@ TEST_CASE("cancelar antes, durante e depois") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("every cancela a si mesma dentro do callback") {
+TEST_CASE("every cancels itself inside the callback") {
   Fixture fixture;
   int runs = 0;
   int discards = 0;
@@ -335,7 +335,7 @@ TEST_CASE("every cancela a si mesma dentro do callback") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("after: lastRun verdadeiro, cancelar a si mesmo devolve false e o descarte nunca roda depois") {
+TEST_CASE("after: lastRun true, cancelling itself returns false and the discard never runs afterwards") {
   Fixture fixture;
   bool lastRun = false;
   bool cancelled = true;
@@ -351,7 +351,7 @@ TEST_CASE("after: lastRun verdadeiro, cancelar a si mesmo devolve false e o desc
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("pausado nada vence e o relógio fica parado") {
+TEST_CASE("while paused nothing comes due and the clock stays still") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   fixture.engine.schedule().after(1.0 / 60, markTask, Mark{&fixture.log, 'a'});
@@ -368,7 +368,7 @@ TEST_CASE("pausado nada vence e o relógio fica parado") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("aba oculta não dispara e não acumula") {
+TEST_CASE("hidden tab does not fire and does not accumulate") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   fixture.engine.schedule().after(2.0 / 60, markTask, Mark{&fixture.log, 'a'});
@@ -387,7 +387,7 @@ TEST_CASE("aba oculta não dispara e não acumula") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("passos descartados não avançam o relógio") {
+TEST_CASE("discarded steps do not advance the clock") {
   oly::ecs::World world;
   EngineConfig config;
   config.maxStepsPerFrame = 2;
@@ -403,7 +403,7 @@ TEST_CASE("passos descartados não avançam o relógio") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("payload é copiado ao agendar") {
+TEST_CASE("payload is copied when scheduling") {
   Fixture fixture;
   fixture.engine.frame(0.0);
   Mark mark{&fixture.log, 'a'};
@@ -416,7 +416,7 @@ TEST_CASE("payload é copiado ao agendar") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("tarefa faz mudanças estruturais diretas") {
+TEST_CASE("task makes direct structural changes") {
   Fixture fixture;
   const oly::ecs::Entity existing = fixture.world.spawn(Position{});
   const oly::ecs::Entity doomed = fixture.world.spawn(Position{});
@@ -432,7 +432,7 @@ TEST_CASE("tarefa faz mudanças estruturais diretas") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("evento emitido numa tarefa é despachado no mesmo passo") {
+TEST_CASE("event emitted in a task is dispatched in the same step") {
   Fixture fixture;
   Log handlerLog;
   fixture.engine.declareEvent<Ping>();
@@ -448,7 +448,7 @@ TEST_CASE("evento emitido numa tarefa é despachado no mesmo passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("context.schedule() é o mesmo Scheduler da Engine") {
+TEST_CASE("context.schedule() is the same Scheduler as the Engine's") {
   Fixture fixture;
   Scheduler* captured = nullptr;
   fixture.engine.addSystem(Phase::Update, "capture", captureScheduler, &captured);
@@ -460,7 +460,7 @@ TEST_CASE("context.schedule() é o mesmo Scheduler da Engine") {
   CHECK_INVARIANTS(fixture.world);
 }
 
-TEST_CASE("destruir a Engine descarta as tarefas pendentes uma vez") {
+TEST_CASE("destroying the Engine discards the pending tasks once") {
   int runs = 0;
   int discards = 0;
 
@@ -475,7 +475,7 @@ TEST_CASE("destruir a Engine descarta as tarefas pendentes uma vez") {
   CHECK(discards == 2);
 }
 
-TEST_CASE("cancel e isPending com TaskHandle{} devolvem false") {
+TEST_CASE("cancel and isPending with TaskHandle{} return false") {
   Fixture fixture;
 
   CHECK(!fixture.engine.schedule().cancel(TaskHandle{}));

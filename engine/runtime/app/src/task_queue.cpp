@@ -160,7 +160,7 @@ namespace oly::app::detail {
       return false;
     }
 
-    OLY_ASSERT(task.slot < slots_.size(), "%s: slot=%u fora do intervalo (%u slots)", operation, task.slot, static_cast<uint32_t>(slots_.size()));
+    OLY_ASSERT(task.slot < slots_.size(), "%s: slot=%u out of range (%u slots)", operation, task.slot, static_cast<uint32_t>(slots_.size()));
     (void)operation;
 
     if (task.slot >= slots_.size()) {
@@ -188,8 +188,8 @@ namespace oly::app::detail {
       next = slot.anchor + slot.periods * slot.interval;
     }
 
-    // Intervalo menor que um ulp do limite (ou denormal) não sai do lugar; sem isto a tarefa repetiria na mesma
-    // rodada ou travaria em infinito.
+    // An interval smaller than one ulp of the limit (or denormal) does not move; without this the task would repeat in the same
+    // round or get stuck at infinity.
     if (!(next > limit) || !std::isfinite(next)) {
       next = std::nextafter(limit, std::numeric_limits<double>::infinity());
     }
