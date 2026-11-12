@@ -2,8 +2,10 @@
 
 #include <cstdint>
 #include <string_view>
+#include <utility>
 
 #include "oly/app/event.hpp"
+#include "oly/app/scheduler.hpp"
 #include "oly/core/assert.hpp"
 #include "oly/core/type_name.hpp"
 #include "oly/ecs/world.hpp"
@@ -64,5 +66,40 @@ namespace oly::app {
       emitById(type, &event);
     }
     void emitById(EventTypeId type, const void* event);
+
+    Scheduler& schedule() const noexcept;
+  };
+
+  // Mudanças estruturais diretas no World, para quem roda fora de qualquer iteração (handlers e tarefas).
+  class DirectContext : public EngineContext {
+   protected:
+    DirectContext(Engine& engine, ecs::World& world) noexcept
+      : EngineContext(engine, world) {}
+
+   public:
+    ecs::Entity spawn() {
+      return world_->spawn();
+    }
+    template <class... Ts>
+    ecs::Entity spawn(Ts&&... components) {
+      return world_->spawn(std::forward<Ts>(components)...);
+    }
+    void destroy(ecs::Entity entity) {
+      world_->destroy(entity);
+    }
+    template <class T>
+    void add(ecs::Entity entity, T&& value) {
+      world_->add(entity, std::forward<T>(value));
+    }
+    template <class T>
+    void remove(ecs::Entity entity) {
+      world_->template remove<T>(entity);
+    }
+    void addById(ecs::Entity entity, ecs::ComponentId componentId, void* value) {
+      world_->addById(entity, componentId, value);
+    }
+    void removeById(ecs::Entity entity, ecs::ComponentId componentId) {
+      world_->removeById(entity, componentId);
+    }
   };
 }

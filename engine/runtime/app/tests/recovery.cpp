@@ -9,11 +9,13 @@
 #include "log.hpp"
 #include "oly/app/engine.hpp"
 #include "oly/app/handler.hpp"
+#include "oly/app/task_context.hpp"
 
 using oly::app::Engine;
 using oly::app::HandlerContext;
 using oly::app::Phase;
 using oly::app::SystemContext;
+using oly::app::TaskContext;
 
 namespace {
   struct Shared {
@@ -31,6 +33,24 @@ namespace {
     }
 
     ++shared.stepsAfterFailure;
+  }
+
+  struct TaskCounts {
+    int everyRuns = 0;
+    int childRuns = 0;
+  };
+
+  void countChild(TaskContext& context) {
+    ++context.payload<TaskCounts*>()->childRuns;
+  }
+
+  void scheduleChildThenThrowOnce(TaskContext& context) {
+    TaskCounts* counts = context.payload<TaskCounts*>();
+    ++counts->everyRuns;
+    if (counts->everyRuns == 1) {
+      context.schedule().after(0.0, countChild, counts);
+      throw std::runtime_error("boom");
+    }
   }
 
   struct Ping {
@@ -85,6 +105,31 @@ TEST_CASE("frame seguinte à exceção só registra o tempo e o próximo volta a
   engine.frame(3.0 / 60);
 
   CHECK(shared.stepsAfterFailure == 1);
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("tarefas sobrevivem à recuperação, inclusive as criadas antes da exceção") {
+  oly::ecs::World world;
+  Engine engine(world);
+  TaskCounts counts;
+  TaskCounts* countsPointer = &counts;
+  const auto handle = engine.schedule().every(1.0 / 60, scheduleChildThenThrowOnce, countsPointer);
+  engine.frame(0.0);
+  engine.frame(1.0 / 60);
+  CHECK_THROWS(engine.frame(2.0 / 60));
+
+  engine.frame(3.0 / 60);
+
+  CHECK(engine.schedule().isPending(handle));
+  CHECK(engine.schedule().pendingCount() == 2);
+
+  for (int step = 4; step < 8; ++step) {
+    engine.frame(static_cast<double>(step) / 60);
+  }
+
+  CHECK(counts.everyRuns > 1);
+  CHECK(counts.childRuns == 1);
+  CHECK(engine.schedule().isPending(handle));
   CHECK_INVARIANTS(world);
 }
 

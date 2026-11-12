@@ -1,15 +1,12 @@
 #include "oly/app/engine.hpp"
 
 #include <cmath>
+#include <optional>
 
+#include "oly/app/task_context.hpp"
 #include "oly/core/assert.hpp"
 
 namespace oly::app {
-  namespace {
-    // Erro de ponto flutuante no acumulador não pode perder nem duplicar um passo.
-    constexpr double StepTolerance = 1e-9;
-  }
-
   Engine::Engine(ecs::World& world, EngineConfig config)
     : world_(world),
       config_(config),
@@ -84,6 +81,7 @@ namespace oly::app {
   void Engine::recoverFromInterruptedFrame() {
     commands_ = world_.commands();
     queues_.clear();
+    scheduler_.queue_.recoverFromInterruptedRun();
     inFrame_ = false;
     actions_.setDeclarationsLocked(false);
     restartClock();
@@ -183,6 +181,19 @@ namespace oly::app {
 
       queues_.endRound();
     }
+  }
+
+  void Engine::runDueSchedule() {
+    detail::TaskQueue& queue = scheduler_.queue_;
+    const double limit = time() + fixedDeltaTime_ * StepTolerance;
+
+    queue.beginRun();
+    while (std::optional<detail::DueTask> due = queue.popDue(limit)) {
+      TaskContext context(*this, world_, due->handle, due->lastRun, due->payload);
+      due->function(context);
+    }
+
+    queue.endRun();
   }
 
   void Engine::runPhase(Phase phase) {

@@ -34,4 +34,8 @@ namespace oly::app {
   void EngineContext::emitById(EventTypeId type, const void* event) {
     engine_->emitById(type, event);
   }
+
+  Scheduler& EngineContext::schedule() const noexcept {
+    return engine_->schedule();
+  }
 }

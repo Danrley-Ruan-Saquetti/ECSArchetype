@@ -1,5 +1,6 @@
 // Cada caso viola um contrato do app e precisa disparar OLY_ASSERT com as substrings exigidas; só é compilado com
 // asserts ligados. Mesmo protocolo do contract_death do ecs.
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -7,6 +8,7 @@
 
 #include "oly/app/engine.hpp"
 #include "oly/app/handler.hpp"
+#include "oly/app/task_context.hpp"
 #include "oly/core/assert.hpp"
 
 namespace {
@@ -14,6 +16,8 @@ namespace {
   using oly::app::HandlerContext;
   using oly::app::Phase;
   using oly::app::SystemContext;
+  using oly::app::TaskContext;
+  using oly::app::TaskHandle;
 
   const std::vector<const char*>* g_required = nullptr;
 
@@ -168,6 +172,64 @@ namespace {
     engine.frame(1.0 / 60);
   }
 
+  struct Mark {
+    int value;
+  };
+
+  struct Other {
+    double value;
+  };
+
+  void nothingTask(TaskContext&) {}
+
+  void readWrongPayload(TaskContext& context) {
+    context.payload<Other>();
+  }
+
+  void scheduleNegativeDelay() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.schedule().after(-1.0, nothingTask);
+  }
+
+  void scheduleNotFiniteDelay() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.schedule().after(NAN, nothingTask);
+  }
+
+  void everyZeroInterval() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.schedule().every(0.0, nothingTask);
+  }
+
+  void scheduleNullFunction() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.schedule().after(1.0, nullptr);
+  }
+
+  void taskPayloadWrongType() {
+    oly::ecs::World world;
+    Engine engine(world);
+    engine.schedule().after(0.0, readWrongPayload, Mark{1});
+
+    engine.frame(0.0);
+    engine.frame(1.0 / 60);
+  }
+
+  void cancelSlotOutOfRange() {
+    oly::ecs::World world;
+    Engine engine(world);
+
+    engine.schedule().cancel(TaskHandle{7, 0});
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -188,6 +250,12 @@ int main(int argumentCount, char** arguments) {
     {"declare_action_during_frame", declareActionDuringFrame, {"declare", "durante frame"}},
     {"event_round_limit", eventRoundLimit, {"dispatchEvents", "rodadas", "Echo"}},
     {"events_wrong_type", eventsWrongType, {"events", "tipo"}},
+    {"schedule_negative_delay", scheduleNegativeDelay, {"schedule", "atraso"}},
+    {"schedule_not_finite_delay", scheduleNotFiniteDelay, {"schedule", "atraso"}},
+    {"every_zero_interval", everyZeroInterval, {"every", "intervalo"}},
+    {"schedule_null_function", scheduleNullFunction, {"schedule", "função nula"}},
+    {"task_payload_wrong_type", taskPayloadWrongType, {"payload", "Other"}},
+    {"cancel_slot_out_of_range", cancelSlotOutOfRange, {"cancel", "fora do intervalo"}},
   };
 
   if (argumentCount != 2) {

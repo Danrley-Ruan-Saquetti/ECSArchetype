@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <span>
 #include <string_view>
-#include <utility>
 
 #include "oly/app/context.hpp"
 #include "oly/app/event.hpp"
@@ -16,7 +15,7 @@ namespace oly::app {
 
   // Válido só durante a chamada do handler. Mudanças estruturais são diretas: o despacho acontece fora de
   // qualquer iteração, então a entidade citada num evento pode já ter morrido (confira com isAlive).
-  class HandlerContext : public EngineContext {
+  class HandlerContext : public DirectContext {
    private:
     friend class Engine;
 
@@ -28,7 +27,7 @@ namespace oly::app {
     uint32_t eventCount_;
 
     HandlerContext(Engine& engine, ecs::World& world, EventTypeId eventType, HandlerId handlerId, std::string_view name, void* userData, const void* eventData, uint32_t eventCount) noexcept
-      : EngineContext(engine, world),
+      : DirectContext(engine, world),
         eventType_(eventType),
         handlerId_(handlerId),
         name_(name),
@@ -63,31 +62,6 @@ namespace oly::app {
     }
     const void* eventData() const noexcept {
       return eventData_;
-    }
-
-    ecs::Entity spawn() {
-      return world_->spawn();
-    }
-    template <class... Ts>
-    ecs::Entity spawn(Ts&&... components) {
-      return world_->spawn(std::forward<Ts>(components)...);
-    }
-    void destroy(ecs::Entity entity) {
-      world_->destroy(entity);
-    }
-    template <class T>
-    void add(ecs::Entity entity, T&& value) {
-      world_->add(entity, std::forward<T>(value));
-    }
-    template <class T>
-    void remove(ecs::Entity entity) {
-      world_->template remove<T>(entity);
-    }
-    void addById(ecs::Entity entity, ecs::ComponentId componentId, void* value) {
-      world_->addById(entity, componentId, value);
-    }
-    void removeById(ecs::Entity entity, ecs::ComponentId componentId) {
-      world_->removeById(entity, componentId);
     }
   };
 

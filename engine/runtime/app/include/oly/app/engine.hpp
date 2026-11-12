@@ -12,6 +12,7 @@
 #include "oly/app/event.hpp"
 #include "oly/app/handler.hpp"
 #include "oly/app/phase.hpp"
+#include "oly/app/scheduler.hpp"
 #include "oly/app/system.hpp"
 #include "oly/core/assert.hpp"
 #include "oly/core/type_name.hpp"
@@ -27,6 +28,9 @@ namespace oly::app {
 
   class Engine {
    private:
+    // Erro de ponto flutuante no acumulador não pode perder nem duplicar um passo.
+    static constexpr double StepTolerance = 1e-9;
+
     struct SystemEntry {
       SystemFunction function;
       void* userData;
@@ -56,6 +60,7 @@ namespace oly::app {
     uint32_t eventRoundsThisStep_ = 0;
 
     input::ActionMap actions_;
+    Scheduler scheduler_{*this};
 
     double accumulator_ = 0.0;
     double lastTime_ = 0.0;
@@ -127,7 +132,7 @@ namespace oly::app {
     // nowSeconds não pode recuar (OLY_ASSERT). Roda até maxStepsPerFrame passos fixos e depois a fase Render uma
     // vez; os passos inteiros que não couberam são descartados e só a fração fica acumulada. O primeiro frame só
     // registra o tempo. Se o frame anterior foi interrompido por exceção, este descarta os comandos e os eventos
-    // pendentes (inclusive os emitidos depois da exceção) e também só registra o tempo.
+    // pendentes (inclusive os emitidos depois da exceção) e também só registra o tempo; as tarefas agendadas ficam.
     void frame(double nowSeconds);
     // Oculto, frame não faz nada; ao mostrar, o próximo frame só registra o tempo. Não mexe na pausa do jogo.
     // Ocultar solta todos os botões (o jogador pode soltá-los com a aba fora de foco).
@@ -139,6 +144,14 @@ namespace oly::app {
     }
     const input::ActionMap& actions() const noexcept {
       return actions_;
+    }
+
+    // Vale dentro e fora de frame; as tarefas sobrevivem à recuperação de exceção.
+    Scheduler& schedule() noexcept {
+      return scheduler_;
+    }
+    const Scheduler& schedule() const noexcept {
+      return scheduler_;
     }
 
     // Pedidos no meio de um passo valem a partir do próximo passo fixo.
@@ -173,13 +186,13 @@ namespace oly::app {
     void runFixedStep();
     void runPhase(Phase phase);
     void dispatchEvents();
+    void runDueSchedule();
 
-    // Etapas do passo fixo previstas na spec (2026-11-09-game-engine-design.md §4.3); as vazias esperam
-    // schedule e estados de jogo.
+    // Etapas do passo fixo previstas na spec (2026-11-09-game-engine-design.md §4.3); a vazia espera os estados
+    // de jogo.
     void captureActions() {
       actions_.capture();
     }
-    void runDueSchedule() {}
     void applyStateTransition() {}
   };
 }
