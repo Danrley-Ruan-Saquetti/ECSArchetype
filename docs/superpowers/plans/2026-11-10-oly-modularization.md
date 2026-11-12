@@ -1,238 +1,238 @@
-# Oly — modularização e revisão das APIs públicas — plano de implementação
+# Oly — modularization and review of the public APIs — implementation plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reorganizar o repositório na engine **Oly** (módulos C++ `core`/`ecs`/`bridge` e pacotes TS `@oly/core`/`@oly/client`/`@oly/codegen`/`@oly/testing`), com fronteiras garantidas pelo build e superfícies públicas enxutas, sem mudar comportamento nem desempenho.
+**Goal:** Reorganize the repository into the **Oly** engine (C++ modules `core`/`ecs`/`bridge` and TS packages `@oly/core`/`@oly/client`/`@oly/codegen`/`@oly/testing`), with boundaries enforced by the build and lean public surfaces, without changing behaviour or performance.
 
-**Architecture:** Cada módulo C++ vira `engine/runtime/<m>/{include/oly/<m>,src,tests,bench}` criado por `oly_add_module`, que liga só os `DEPENDS`; um script (`oly.lint.boundaries`) reprova includes não declarados, `detail/` usado de fora e imports TS proibidos. O lado TS vira npm workspaces com project references e saída em `dist/` por pacote. As renomeações seguem o glossário do spec (§5.2) e não deixam aliases.
+**Architecture:** Each C++ module becomes `engine/runtime/<m>/{include/oly/<m>,src,tests,bench}` created by `oly_add_module`, which links only the `DEPENDS`; a script (`oly.lint.boundaries`) rejects undeclared includes, `detail/` used from outside and forbidden TS imports. The TS side becomes npm workspaces with project references and output in `dist/` per package. Renames follow the spec's glossary (§5.2) and leave no aliases.
 
-**Tech Stack:** C++20 (gcc 14, clang/Emscripten 3.1.74), CMake ≥ 3.25 com presets, doctest 2.4.11, Google Benchmark 1.8.3, TypeScript 5.6.3, `@types/node` 20.17.6, `node:test`, Python 3 (scripts em `tools/`), Docker Compose (`dev`, `wasm`, `perf`).
+**Tech Stack:** C++20 (gcc 14, clang/Emscripten 3.1.74), CMake ≥ 3.25 with presets, doctest 2.4.11, Google Benchmark 1.8.3, TypeScript 5.6.3, `@types/node` 20.17.6, `node:test`, Python 3 (scripts in `tools/`), Docker Compose (`dev`, `wasm`, `perf`).
 
-**Spec:** `docs/superpowers/specs/2026-11-09-oly-modularization-design.md` (e, para requisitos do ECS, `2026-10-16-ecs-archetype-spec.md`).
+**Spec:** `docs/superpowers/specs/2026-11-09-oly-modularization-design.md` (and, for ECS requirements, `2026-10-16-ecs-archetype-spec.md`).
 
 ## Global Constraints
 
-- Branch `refactor/oly-modulos` a partir de `develop`. Cada task termina verde e com commit.
-- Arquivos existentes mudam de lugar só com `git mv` (histórico preservado).
-- Sem funcionalidade nova, sem mudar layout de dados, regras de validade ou o caminho quente.
-- Anti-objetivo: nada de pimpl, `virtual` ou indireção em `Query<Ts...>::each`/`eachBlock` e `World::get`; as APIs template não delegam para as `ById`.
-- Sem aliases, shims ou `using` de compatibilidade com nomes antigos (inclusive `namespace ecs = oly::ecs;`).
-- Metas que continuam valendo: NF-P1 ≤ 1,10; NF-P2 ≤ 1,25; NF-P5 (`/1000`) ≤ 0,5.
-- O prefixo `oly` aparece só na API C (`oly*`, `OlyWorld`, `OLY_API`) e no que é interno à ponte (`OlyModule`, `_oly*`). APIs C++ e TS não repetem `oly` nos nomes.
-- Nomes de jogo só em `engine/testing/fixture/`. Conceitos de jogo nunca em `engine/`.
-- Versões TS exatas: `typescript` 5.6.3, `@types/node` 20.17.6; sem bundler; testes com `node:test`.
-- Commits, comentários e mensagens de assert em pt-BR; estilo do `CLAUDE.md` (chaves sempre, nomes completos, dados no topo da classe, um bloco `namespace` por arquivo).
-- Specs e planos antigos e os JSON/TXT históricos de benchmark não são editados.
-- Comandos: `DC="docker compose run --rm dev"`, `WC="docker compose run --rm wasm"`.
+- Branch `refactor/oly-modules` from `develop`. Each task ends green and with a commit.
+- Existing files change place only with `git mv` (history preserved).
+- No new functionality, no change to data layout, validity rules or the hot path.
+- Anti-goal: no pimpl, `virtual` or indirection in `Query<Ts...>::each`/`eachBlock` and `World::get`; the template APIs do not delegate to the `ById` ones.
+- No aliases, shims or compatibility `using` with old names (including `namespace ecs = oly::ecs;`).
+- Targets that still apply: NF-P1 ≤ 1.10; NF-P2 ≤ 1.25; NF-P5 (`/1000`) ≤ 0.5.
+- The `oly` prefix appears only in the C API (`oly*`, `OlyWorld`, `OLY_API`) and in what is internal to the bridge (`OlyModule`, `_oly*`). C++ and TS APIs do not repeat `oly` in names.
+- Game names only in `engine/testing/fixture/`. Game concepts never in `engine/`.
+- Exact TS versions: `typescript` 5.6.3, `@types/node` 20.17.6; no bundler; tests with `node:test`.
+- Commits, comments and assert messages in English; `CLAUDE.md` style (braces always, full names, data at the top of the class, one `namespace` block per file).
+- Old specs and plans and the historical benchmark JSON/TXT files are not edited.
+- Commands: `DC="docker compose run --rm dev"`, `WC="docker compose run --rm wasm"`.
 
 ## Review Focus
 
-1. **`eachBlock` aninhado pela API C e pelo TS** (mesma query e queries diferentes): os descritores do laço externo continuam válidos depois que o interno começa e termina. Teste na Task 6 (`bridge.c_api`) e na Task 8 (TS).
-2. **Exceção dentro do callback de iteração** (C++ `QueryById::eachBlock`, TS `Query.eachBlock`): a iteração é encerrada e o `World` volta a aceitar mudança estrutural. Testes nas Tasks 5 e 8.
-3. **`QueryIteration` movida**: o objeto movido não encerra a iteração de novo (sem decremento duplo) e o destino encerra uma vez. Teste na Task 5.
-4. **Alocação em regime na iteração por ID**: o segundo `iterate()` na mesma profundidade não aloca. Teste na Task 5 (com `AllocCounter`).
-5. **Memória do WASM crescendo durante `eachBlock`** (query nova criada dentro do callback, que aloca no WASM): o bloco externo continua lendo os valores certos. Teste na Task 8.
+1. **Nested `eachBlock` through the C API and TS** (same query and different queries): the outer loop's descriptors stay valid after the inner one starts and ends. Test in Task 6 (`bridge.c_api`) and in Task 8 (TS).
+2. **Exception inside the iteration callback** (C++ `QueryById::eachBlock`, TS `Query.eachBlock`): the iteration is ended and the `World` accepts structural changes again. Tests in Tasks 5 and 8.
+3. **Moved `QueryIteration`**: the moved-from object does not end the iteration again (no double decrement) and the destination ends it once. Test in Task 5.
+4. **Steady-state allocation in iteration by ID**: the second `iterate()` at the same depth does not allocate. Test in Task 5 (with `AllocCounter`).
+5. **WASM memory growing during `eachBlock`** (new query created inside the callback, which allocates in WASM): the outer block keeps reading the right values. Test in Task 8.
 
-## Tabela "caminho antigo → novo" (§9 do spec)
+## "Old path → new" table (§9 of the spec)
 
-| Antes | Depois |
+| Before | After |
 |---|---|
 | `include/ecs/detail/{assert,align,small_map,type_name}.hpp`, `src/assert.cpp` | `engine/runtime/core/include/oly/core/…`, `engine/runtime/core/src/assert.cpp` |
-| `include/ecs/*.hpp`, `src/*.cpp` | `engine/runtime/ecs/include/oly/ecs/…` (internos em `detail/`, Task 4), `engine/runtime/ecs/src/` |
+| `include/ecs/*.hpp`, `src/*.cpp` | `engine/runtime/ecs/include/oly/ecs/…` (internals in `detail/`, Task 4), `engine/runtime/ecs/src/` |
 | `include/ecs/type_info.hpp` / `raw_query.hpp` | `oly/ecs/component.hpp` / `oly/ecs/query_by_id.hpp` |
-| `tests/**` (menos `support/doctest_main.cpp`) | `engine/runtime/ecs/tests/**` (`raw_query.cpp` → `query_by_id.cpp`) |
+| `tests/**` (except `support/doctest_main.cpp`) | `engine/runtime/ecs/tests/**` (`raw_query.cpp` → `query_by_id.cpp`) |
 | `tests/support/doctest_main.cpp` | `engine/runtime/core/tests/support/doctest_main.cpp` |
 | `bench/*.cpp`, `bench/common.hpp` | `engine/runtime/ecs/bench/` |
-| `engine/include/engine/*.hpp`, `engine/src/c_api.cpp`, `engine/tests/*` | `engine/runtime/bridge/{include/oly/bridge,src,tests}/` (`world_handle.hpp` some, entra `world.hpp`) |
+| `engine/include/engine/*.hpp`, `engine/src/c_api.cpp`, `engine/tests/*` | `engine/runtime/bridge/{include/oly/bridge,src,tests}/` (`world_handle.hpp` goes away, `world.hpp` comes in) |
 | `engine/ts/*` | `engine/packages/core/src/*` |
 | `engine/generator/*` | `engine/tools/codegen/src/*` |
 | `engine/test/unit/{entity,layout,schema}.test.ts` | `engine/packages/core/tests/unit/` |
 | `engine/test/unit/generator.test.ts` | `engine/tools/codegen/tests/generator.test.ts` |
 | `engine/fixture/*`, `engine/test/wasm/*`, `engine/bench/boundary.ts` | `engine/testing/{fixture,tests/wasm,bench}/` |
-| `engine/package.json`, `engine/package-lock.json`, `engine/tsconfig.json`, `engine/module-package.json` | `package.json`, `package-lock.json`, `tsconfig.base.json`, `tsconfig.json` na raiz + um `package.json`/`tsconfig.json` por pacote; `module-package.json` some |
+| `engine/package.json`, `engine/package-lock.json`, `engine/tsconfig.json`, `engine/module-package.json` | `package.json`, `package-lock.json`, `tsconfig.base.json`, `tsconfig.json` at the root + one `package.json`/`tsconfig.json` per package; `module-package.json` goes away |
 | `tools/wasm/node_env.js` | `cmake/wasm/node_env.js` |
 | `bench/results/**` | `docs/benchmarks/**` (`engine/` → `bridge/`, `m*`/`e1_*` → `ecs/`) |
-| `build/ts/**` | `<pacote>/dist/**` (e `dist-tests/**` para testes) |
+| `build/ts/**` | `<package>/dist/**` (and `dist-tests/**` for tests) |
 | ctest `unit_world`, `contract_death.<c>`, `engine_c_api`, `engine_ts_unit`, `engine_ts_wasm` | `ecs.unit_world`, `ecs.contract_death.<c>`, `bridge.c_api`, `ts.core.unit` + `ts.codegen.unit`, `ts.testing.wasm` |
-| executáveis `bench_iterate` etc. | `ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmented`, `ecs_bench_flush` |
+| executables `bench_iterate` etc. | `ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmented`, `ecs_bench_flush` |
 
-Ajustes de nome não cobertos pelo glossário (registrados aqui, §11 do spec): `World::archetypeCount` → função livre `archetypeCount(const World&)` em `diagnostics.hpp`; `ECS_FUZZ_SEED`/`ECS_FUZZ_OPS` → `OLY_FUZZ_SEED`/`OLY_FUZZ_OPS`; `ECS_LADDER_EXTRA_ARGS` → `OLY_LADDER_EXTRA_ARGS`; `ENGINE_FIXTURE_MODULE` → `OLY_FIXTURE_MODULE`; caso de morte `raw_query_end_without_begin` deixa de existir (o par manual sai da API) e entra `query_by_id_iteration_out_of_order`; os rótulos `ts-engine`/`ts-engine-raw` do benchmark da fronteira ficam, para comparar com a fase 1. `RawField`/`ReadField.raw()` do TS ficam (§8.2 os lista como públicos): o "Raw deixa de existir" do glossário vale para as variantes por ID.
+Name adjustments not covered by the glossary (recorded here, §11 of the spec): `World::archetypeCount` → free function `archetypeCount(const World&)` in `diagnostics.hpp`; `ECS_FUZZ_SEED`/`ECS_FUZZ_OPS` → `OLY_FUZZ_SEED`/`OLY_FUZZ_OPS`; `ECS_LADDER_EXTRA_ARGS` → `OLY_LADDER_EXTRA_ARGS`; `ENGINE_FIXTURE_MODULE` → `OLY_FIXTURE_MODULE`; death case `raw_query_end_without_begin` ceases to exist (the manual pair leaves the API) and `query_by_id_iteration_out_of_order` comes in; the labels `ts-engine`/`ts-engine-raw` of the boundary benchmark stay, to compare with phase 1. TS `RawField`/`ReadField.raw()` stay (§8.2 lists them as public): the glossary's "Raw ceases to exist" applies to the by-ID variants.
 
 ---
 
-### Task 1: Árvore C++ e build por módulo
+### Task 1: C++ tree and per-module build
 
 **Files:**
-- Move (`git mv`): ver tabela acima, linhas C++ e `tools/wasm/node_env.js`. `tests/CMakeLists.txt` → `engine/runtime/ecs/tests/CMakeLists.txt`; `bench/CMakeLists.txt` → `engine/runtime/ecs/bench/CMakeLists.txt`; `engine/tests/*` → `engine/runtime/bridge/tests/`.
+- Move (`git mv`): see the table above, C++ rows and `tools/wasm/node_env.js`. `tests/CMakeLists.txt` → `engine/runtime/ecs/tests/CMakeLists.txt`; `bench/CMakeLists.txt` → `engine/runtime/ecs/bench/CMakeLists.txt`; `engine/tests/*` → `engine/runtime/bridge/tests/`.
 - Create: `cmake/OlyOptions.cmake`, `cmake/OlyWarnings.cmake`, `cmake/OlyWasm.cmake`, `cmake/OlyModule.cmake`, `cmake/OlyGame.cmake`, `cmake/Dependencies.cmake`, `engine/runtime/CMakeLists.txt`, `engine/runtime/{core,ecs,bridge}/CMakeLists.txt`, `engine/runtime/core/tests/{CMakeLists.txt,unit_small_map.cpp}`.
-- Modify: `CMakeLists.txt`, `engine/CMakeLists.txt`, `CMakePresets.json`, `Makefile`, todos os `#include` dos arquivos movidos, `engine/generator/emit_cpp.ts` (só os dois includes emitidos).
+- Modify: `CMakeLists.txt`, `engine/CMakeLists.txt`, `CMakePresets.json`, `Makefile`, every `#include` of the moved files, `engine/generator/emit_cpp.ts` (only the two emitted includes).
 
 **Interfaces:**
-- Produces (CMake, usadas por todas as tasks seguintes):
-  - `oly_add_module(NAME <m> [DEPENDS <m...>] [OBJECT | HEADER_ONLY])` → alvo `oly_<m>`, alias `oly::<m>`; compila `src/*.cpp` (glob `CONFIGURE_DEPENDS`), `include/` como `PUBLIC`, `DEPENDS` ligados `PUBLIC` como `oly::<dep>`; acrescenta `<m>|<diretório relativo à raiz>|<deps separados por ;>` à propriedade global `OLY_MODULES`.
-  - `oly_add_test(MODULE <m> NAME <suíte> SOURCES <arqs...> [SUPPORT <dirs...>])` → executável `<m>_<suíte>` em `${CMAKE_BINARY_DIR}/tests/`, ligado a `oly::<m>` e doctest, com `engine/runtime/core/tests/support/doctest_main.cpp`, `<módulo>/tests/support` e os `SUPPORT` como include; ctest `<m>.<suíte>`; aplica `oly_warnings`, `oly_wasm_exceptions`, `oly_wasm_node_env`.
-  - `oly_add_contract_death(MODULE <m> SOURCE <arq> CASES <casos...>)` → só quando os asserts estão ligados; executável `<m>_contract_death`; ctest `<m>.contract_death.<caso>`.
-  - `oly_add_bench(MODULE <m> NAME <n> SOURCES <arqs...>)` → executável `<m>_bench_<n>` em `${CMAKE_BINARY_DIR}/bench/` (mesmas flags de hoje: `-Wno-deprecated-declarations` no Emscripten, relatório de vetorização com `OLY_VEC_REPORT`).
-  - `oly_add_game(<alvo> SCHEMA_JS <js> SOURCES <cpp...> DEPENDS <m...>)` → como o `engine_add_game` atual; liga só `oly::<m>` dos `DEPENDS`; registra `<alvo>|<diretório das fontes>|<deps>` na propriedade global `OLY_GAMES`; saída `.mjs` em `${CMAKE_BINARY_DIR}/games/`.
-  - `oly_warnings(<alvo>)`, `oly_wasm_exceptions(<alvo>)`, `oly_wasm_node_env(<alvo>)`.
-  - Opções: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR`, `OLY_VEC_REPORT`, `OLY_ENABLE_ASSERTS`, `OLY_BUILD_GAMES`. Até a Task 3, `oly::core` publica a definição `ECS_ENABLE_ASSERTS=<valor de OLY_ENABLE_ASSERTS resolvido>` (o macro só muda de nome na Task 3).
-  - Presets: `wasm-engine`/`wasm-engine-release` → `wasm-games`/`wasm-games-release`; os demais mantêm o nome. Make: `ts`, `games-test` (no lugar de `engine-ts`, `engine-test`).
+- Produces (CMake, used by all following tasks):
+  - `oly_add_module(NAME <m> [DEPENDS <m...>] [OBJECT | HEADER_ONLY])` → target `oly_<m>`, alias `oly::<m>`; compiles `src/*.cpp` (glob `CONFIGURE_DEPENDS`), `include/` as `PUBLIC`, `DEPENDS` linked `PUBLIC` as `oly::<dep>`; appends `<m>|<directory relative to the root>|<deps separated by ;>` to the global property `OLY_MODULES`.
+  - `oly_add_test(MODULE <m> NAME <suite> SOURCES <files...> [SUPPORT <dirs...>])` → executable `<m>_<suite>` in `${CMAKE_BINARY_DIR}/tests/`, linked to `oly::<m>` and doctest, with `engine/runtime/core/tests/support/doctest_main.cpp`, `<module>/tests/support` and the `SUPPORT` dirs as include; ctest `<m>.<suite>`; applies `oly_warnings`, `oly_wasm_exceptions`, `oly_wasm_node_env`.
+  - `oly_add_contract_death(MODULE <m> SOURCE <file> CASES <cases...>)` → only when asserts are on; executable `<m>_contract_death`; ctest `<m>.contract_death.<case>`.
+  - `oly_add_bench(MODULE <m> NAME <n> SOURCES <files...>)` → executable `<m>_bench_<n>` in `${CMAKE_BINARY_DIR}/bench/` (same flags as today: `-Wno-deprecated-declarations` in Emscripten, vectorization report with `OLY_VEC_REPORT`).
+  - `oly_add_game(<target> SCHEMA_JS <js> SOURCES <cpp...> DEPENDS <m...>)` → like the current `engine_add_game`; links only `oly::<m>` of the `DEPENDS`; registers `<target>|<sources directory>|<deps>` in the global property `OLY_GAMES`; `.mjs` output in `${CMAKE_BINARY_DIR}/games/`.
+  - `oly_warnings(<target>)`, `oly_wasm_exceptions(<target>)`, `oly_wasm_node_env(<target>)`.
+  - Options: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR`, `OLY_VEC_REPORT`, `OLY_ENABLE_ASSERTS`, `OLY_BUILD_GAMES`. Until Task 3, `oly::core` publishes the definition `ECS_ENABLE_ASSERTS=<resolved value of OLY_ENABLE_ASSERTS>` (the macro only changes name in Task 3).
+  - Presets: `wasm-engine`/`wasm-engine-release` → `wasm-games`/`wasm-games-release`; the others keep their names. Make: `ts`, `games-test` (replacing `engine-ts`, `engine-test`).
 
-Decisões: `project(Oly VERSION 1.0 LANGUAGES CXX)`. `engine/CMakeLists.txt` continua como agregador da engine: `add_subdirectory(runtime)` e, com `OLY_BUILD_GAMES`, o jogo fixture e os testes TS (nesta task ainda com os caminhos `build/ts/...` de hoje; a Task 7 os move para `engine/testing/CMakeLists.txt`). `engine/runtime/CMakeLists.txt` adiciona `core`, `ecs`, `bridge` nessa ordem. Dependências: `core` sem deps; `ecs DEPENDS core`; `bridge DEPENDS ecs core OBJECT`; `fixture_game DEPENDS ecs bridge`. Os testes do `bridge` usam `SUPPORT engine/runtime/ecs/tests/support` (componentes `A`, `B`, `Tag`). O `core` ganha uma suíte mínima para ter ciclo de teste próprio.
+Decisions: `project(Oly VERSION 1.0 LANGUAGES CXX)`. `engine/CMakeLists.txt` remains the engine aggregator: `add_subdirectory(runtime)` and, with `OLY_BUILD_GAMES`, the fixture game and the TS tests (in this task still with today's `build/ts/...` paths; Task 7 moves them to `engine/testing/CMakeLists.txt`). `engine/runtime/CMakeLists.txt` adds `core`, `ecs`, `bridge` in that order. Dependencies: `core` without deps; `ecs DEPENDS core`; `bridge DEPENDS ecs core OBJECT`; `fixture_game DEPENDS ecs bridge`. The `bridge` tests use `SUPPORT engine/runtime/ecs/tests/support` (components `A`, `B`, `Tag`). `core` gains a minimal suite to have its own test cycle.
 
-- [ ] **Step 1: Criar o branch**
+- [ ] **Step 1: Create the branch**
 
-Run: `git switch -c refactor/oly-modulos develop`
+Run: `git switch -c refactor/oly-modules develop`
 
-- [ ] **Step 2: Escrever a suíte do `core`** (`engine/runtime/core/tests/unit_small_map.cpp`)
+- [ ] **Step 2: Write the `core` suite** (`engine/runtime/core/tests/unit_small_map.cpp`)
 
 ```cpp
-TEST_CASE("SmallMap insere, encontra e mantém a ordem das chaves")   // find de chave ausente == nullptr; find(k) devolve o valor inserido
-TEST_CASE("alignUp arredonda para o próximo múltiplo")               // alignUp(0,64)==0, alignUp(1,64)==64, alignUp(64,64)==64, alignUp(65,8)==72
+TEST_CASE("SmallMap inserts, finds and keeps the key order")   // find of a missing key == nullptr; find(k) returns the inserted value
+TEST_CASE("alignUp rounds to the next multiple")               // alignUp(0,64)==0, alignUp(1,64)==64, alignUp(64,64)==64, alignUp(65,8)==72
 ```
-Use a API atual de `SmallMap` (a que `world.hpp` usa: `find`, iteração `for (auto& [k, v] : map)`) e de `alignUp`.
+Use the current API of `SmallMap` (the one `world.hpp` uses: `find`, iteration `for (auto& [k, v] : map)`) and of `alignUp`.
 
-- [ ] **Step 3: Mover os arquivos com `git mv`** segundo a tabela e trocar os includes: `"ecs/detail/X.hpp"` (X ∈ assert, align, small_map, type_name) → `"oly/core/X.hpp"`; `"ecs/X.hpp"` → `"oly/ecs/X.hpp"`; `"engine/X.hpp"` → `"oly/bridge/X.hpp"`. Em `emit_cpp.ts`, os includes emitidos passam a `"oly/ecs/entity.hpp"` e `"oly/bridge/schema_registry.hpp"`.
+- [ ] **Step 3: Move the files with `git mv`** following the table and replace the includes: `"ecs/detail/X.hpp"` (X ∈ assert, align, small_map, type_name) → `"oly/core/X.hpp"`; `"ecs/X.hpp"` → `"oly/ecs/X.hpp"`; `"engine/X.hpp"` → `"oly/bridge/X.hpp"`. In `emit_cpp.ts`, the emitted includes become `"oly/ecs/entity.hpp"` and `"oly/bridge/schema_registry.hpp"`.
 
-- [ ] **Step 4: Escrever `cmake/*.cmake`, os `CMakeLists.txt` dos módulos e a raiz** com as interfaces acima. A raiz faz só: opções/presets (`include(OlyOptions)` …), `include(Dependencies)` (doctest com `OLY_BUILD_TESTS`, benchmark com `OLY_BUILD_BENCH`), `enable_testing()`, `add_subdirectory(engine)`. Registros de teste: `ecs` — `unit_table`, `unit_type_info`, `unit_entity`, `unit_archetype`, `unit_world` (+ `support/alloc_counter.cpp`), `invariants`, `fuzz_vs_model`, `nontrivial`, `queries`, `command_buffer`, `raw_query`; `contract_death` com os 10 casos atuais; `bridge` — `c_api` (`c_api.cpp`, `test_schema_registry.cpp`); `core` — `unit_small_map`. Benchmarks `ecs`: `iterate`, `transitions`, `fragmented` (fonte `fragmentation.cpp`), `flush`. Testes TS: `ts.core.unit` (hoje `build/ts/test/unit/`) e `ts.testing.wasm` (hoje `build/ts/test/wasm/`, com `ENGINE_FIXTURE_MODULE=$<TARGET_FILE:fixture_game>`).
+- [ ] **Step 4: Write `cmake/*.cmake`, the modules' `CMakeLists.txt` and the root** with the interfaces above. The root only does: options/presets (`include(OlyOptions)` …), `include(Dependencies)` (doctest with `OLY_BUILD_TESTS`, benchmark with `OLY_BUILD_BENCH`), `enable_testing()`, `add_subdirectory(engine)`. Test registrations: `ecs` — `unit_table`, `unit_type_info`, `unit_entity`, `unit_archetype`, `unit_world` (+ `support/alloc_counter.cpp`), `invariants`, `fuzz_vs_model`, `nontrivial`, `queries`, `command_buffer`, `raw_query`; `contract_death` with the current 10 cases; `bridge` — `c_api` (`c_api.cpp`, `test_schema_registry.cpp`); `core` — `unit_small_map`. `ecs` benchmarks: `iterate`, `transitions`, `fragmented` (source `fragmentation.cpp`), `flush`. TS tests: `ts.core.unit` (today `build/ts/test/unit/`) and `ts.testing.wasm` (today `build/ts/test/wasm/`, with `ENGINE_FIXTURE_MODULE=$<TARGET_FILE:fixture_game>`).
 
-- [ ] **Step 5: Atualizar `CMakePresets.json` e `Makefile`**: `ECS_*` → `OLY_*`, `ENGINE_BUILD_FIXTURE` → `OLY_BUILD_GAMES`, presets `wasm-games`/`wasm-games-release` (configure, build e test). Make: `ts` (por enquanto `cd engine && npm ci se preciso && npm run build`) e `games-test: ts` + `$(MAKE) test PRESET=wasm-games`.
+- [ ] **Step 5: Update `CMakePresets.json` and `Makefile`**: `ECS_*` → `OLY_*`, `ENGINE_BUILD_FIXTURE` → `OLY_BUILD_GAMES`, presets `wasm-games`/`wasm-games-release` (configure, build and test). Make: `ts` (for now `cd engine && npm ci if needed && npm run build`) and `games-test: ts` + `$(MAKE) test PRESET=wasm-games`.
 
-- [ ] **Step 6: Verificar os nomes no ctest**
+- [ ] **Step 6: Check the names in ctest**
 
 Run: `$DC sh -c 'cmake --preset debug-asan >/dev/null && ctest --preset debug-asan -N'`
-Expected: lista `core.unit_small_map`, `ecs.unit_world`, `ecs.contract_death.add_during_each`, …, `bridge.c_api`; nenhum nome sem prefixo de módulo.
+Expected: lists `core.unit_small_map`, `ecs.unit_world`, `ecs.contract_death.add_during_each`, …, `bridge.c_api`; no name without a module prefix.
 
-- [ ] **Step 7: Rodar tudo**
+- [ ] **Step 7: Run everything**
 
 Run: `$DC make test`, `$DC make test PRESET=release`, `$WC make test PRESET=wasm-debug`, `$WC make games-test`
-Expected: todos verdes, mesmo número de casos de `contract_death` de antes (10).
+Expected: all green, same number of `contract_death` cases as before (10).
 
-- [ ] **Step 8: Conferir os presets do estudo de custo e o relwithdebinfo**
+- [ ] **Step 8: Check the cost-study presets and relwithdebinfo**
 
 Run: `$DC make build PRESET=relwithdebinfo`; `$WC make test PRESET=native-clang`; `$WC make test PRESET=wasm-simd`
-Expected: compila; testes verdes; `build/release/bench/ecs_bench_iterate` existe após o build do release.
+Expected: compiles; tests green; `build/release/bench/ecs_bench_iterate` exists after the release build.
 
 - [ ] **Step 9: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor: árvore por módulos (core, ecs, bridge) e build com oly_add_module"
+git commit -m "refactor: per-module tree (core, ecs, bridge) and build with oly_add_module"
 ```
 
 ---
 
-### Task 2: `oly.lint.boundaries` (regras C++)
+### Task 2: `oly.lint.boundaries` (C++ rules)
 
 **Files:**
 - Create: `tools/check_boundaries.py`, `tools/test_check_boundaries.py`
-- Modify: `CMakeLists.txt` (manifesto + registro no ctest)
+- Modify: `CMakeLists.txt` (manifest + ctest registration)
 
 **Interfaces:**
-- Consumes: propriedades globais `OLY_MODULES` e `OLY_GAMES` (Task 1).
-- Produces: `${CMAKE_BINARY_DIR}/oly_boundaries.json` no formato `{"modules": [{"name": "ecs", "directory": "engine/runtime/ecs", "depends": ["core"]}, …], "games": [{"name": "fixture_game", "directory": "engine/fixture", "depends": ["ecs", "bridge"]}]}` (diretórios relativos à raiz), escrito no fim da configuração. CLI: `python3 -I tools/check_boundaries.py --root <repo> --manifest <json>`; sai 0 sem violações; sai 1 imprimindo uma linha `<arquivo relativo>:<linha>: <motivo>` por violação. A Task 8 acrescenta regras TS a este script.
+- Consumes: global properties `OLY_MODULES` and `OLY_GAMES` (Task 1).
+- Produces: `${CMAKE_BINARY_DIR}/oly_boundaries.json` in the format `{"modules": [{"name": "ecs", "directory": "engine/runtime/ecs", "depends": ["core"]}, …], "games": [{"name": "fixture_game", "directory": "engine/fixture", "depends": ["ecs", "bridge"]}]}` (directories relative to the root), written at the end of configuration. CLI: `python3 -I tools/check_boundaries.py --root <repo> --manifest <json>`; exits 0 with no violations; exits 1 printing one line `<relative file>:<line>: <reason>` per violation. Task 8 adds TS rules to this script.
 
-Regras C++ (arquivos `.hpp`/`.cpp` fora de `build/` e `node_modules/`; include = `#include "oly/<x>/…"`):
-- **R1** arquivo dentro do diretório de um módulo ou jogo `<m>` inclui `oly/<x>/` com `x ≠ m` e `x ∉ depends(m)` → motivo `"<m> inclui oly/<x> sem declarar <x> em DEPENDS"`.
-- **R2** arquivo fora de `engine/runtime/<x>/` inclui `oly/<x>/detail/` → motivo `"oly/<x>/detail é interno ao módulo <x>"`.
+C++ rules (`.hpp`/`.cpp` files outside `build/` and `node_modules/`; include = `#include "oly/<x>/…"`):
+- **R1** a file inside the directory of a module or game `<m>` includes `oly/<x>/` with `x ≠ m` and `x ∉ depends(m)` → reason `"<m> includes oly/<x> without declaring <x> in DEPENDS"`.
+- **R2** a file outside `engine/runtime/<x>/` includes `oly/<x>/detail/` → reason `"oly/<x>/detail is internal to module <x>"`.
 
-- [ ] **Step 1: Escrever os testes do script** (`tools/test_check_boundaries.py`, `unittest`, mesmo esquema de import de `tools/test_bench_ladder.py`; cada teste monta uma árvore num diretório temporário e um manifesto)
+- [ ] **Step 1: Write the script's tests** (`tools/test_check_boundaries.py`, `unittest`, same import scheme as `tools/test_bench_ladder.py`; each test builds a tree in a temporary directory and a manifest)
 
 ```python
-def test_include_declarado_passa(self)            # ecs inclui oly/core, ecs depends [core] → código 0, saída vazia
-def test_include_nao_declarado_falha(self)        # bridge inclui oly/core com depends [ecs] → 1; saída contém "engine/runtime/bridge/src/x.cpp:3:" e "sem declarar core"
-def test_detail_de_fora_falha(self)               # bridge inclui oly/ecs/detail/table.hpp → 1; "oly/ecs/detail é interno ao módulo ecs"
-def test_detail_nos_testes_do_modulo_passa(self)  # engine/runtime/ecs/tests/t.cpp inclui oly/ecs/detail/table.hpp → 0
-def test_jogo_usa_os_depends_do_jogo(self)        # jogo com depends [ecs, bridge] incluindo oly/core → 1
+def test_declared_include_passes(self)            # ecs includes oly/core, ecs depends [core] → code 0, empty output
+def test_undeclared_include_fails(self)        # bridge includes oly/core with depends [ecs] → 1; output contains "engine/runtime/bridge/src/x.cpp:3:" and "without declaring core"
+def test_detail_from_outside_fails(self)               # bridge includes oly/ecs/detail/table.hpp → 1; "oly/ecs/detail is internal to module ecs"
+def test_detail_in_module_tests_passes(self)  # engine/runtime/ecs/tests/t.cpp includes oly/ecs/detail/table.hpp → 0
+def test_game_uses_game_depends(self)        # game with depends [ecs, bridge] including oly/core → 1
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [ ] **Step 2: Run and see it fail**
 
 Run: `$DC python3 -I tools/test_check_boundaries.py`
-Expected: FAIL/ERROR (`check_boundaries` não existe).
+Expected: FAIL/ERROR (`check_boundaries` does not exist).
 
-- [ ] **Step 3: Implementar `tools/check_boundaries.py`** com a CLI e as regras acima (expressão regular por linha; o módulo dono de um arquivo é o de maior prefixo de diretório).
+- [ ] **Step 3: Implement `tools/check_boundaries.py`** with the CLI and the rules above (regular expression per line; a file's owning module is the one with the longest directory prefix).
 
-- [ ] **Step 4: Rodar os testes do script**
+- [ ] **Step 4: Run the script's tests**
 
 Run: `$DC python3 -I tools/test_check_boundaries.py`
-Expected: OK (5 testes).
+Expected: OK (5 tests).
 
-- [ ] **Step 5: Manifesto e ctest.** No fim da raiz, montar o JSON a partir de `OLY_MODULES`/`OLY_GAMES` e `file(WRITE …)`. Fora do Emscripten e com `find_package(Python3 COMPONENTS Interpreter)`, registrar `oly.lint.boundaries` (`${Python3_EXECUTABLE} -I tools/check_boundaries.py --root ${PROJECT_SOURCE_DIR} --manifest ${CMAKE_BINARY_DIR}/oly_boundaries.json`) e `oly.lint.boundaries_selftest` (o arquivo de testes do Step 1).
+- [ ] **Step 5: Manifest and ctest.** At the end of the root, build the JSON from `OLY_MODULES`/`OLY_GAMES` and `file(WRITE …)`. Outside Emscripten and with `find_package(Python3 COMPONENTS Interpreter)`, register `oly.lint.boundaries` (`${Python3_EXECUTABLE} -I tools/check_boundaries.py --root ${PROJECT_SOURCE_DIR} --manifest ${CMAKE_BINARY_DIR}/oly_boundaries.json`) and `oly.lint.boundaries_selftest` (the test file from Step 1).
 
-- [ ] **Step 6: Verificar no repositório e uma violação à mão**
+- [ ] **Step 6: Check on the repository and a violation by hand**
 
 Run: `$DC make test T='^oly\.'`
-Expected: 2 testes, verdes.
-Depois, acrescentar `#include "oly/bridge/c_api.hpp"` em `engine/runtime/ecs/src/world.cpp` e rodar o script direto (o build quebraria antes do ctest, porque o `ecs` não enxerga os headers do `bridge`): `$DC sh -c 'cmake --preset debug-asan >/dev/null && python3 -I tools/check_boundaries.py --root . --manifest build/debug-asan/oly_boundaries.json'` → código 1 com `engine/runtime/ecs/src/world.cpp:<linha>: ecs inclui oly/bridge sem declarar bridge em DEPENDS`. Desfazer.
+Expected: 2 tests, green.
+Then add `#include "oly/bridge/c_api.hpp"` to `engine/runtime/ecs/src/world.cpp` and run the script directly (the build would break before ctest, because `ecs` does not see the `bridge` headers): `$DC sh -c 'cmake --preset debug-asan >/dev/null && python3 -I tools/check_boundaries.py --root . --manifest build/debug-asan/oly_boundaries.json'` → code 1 with `engine/runtime/ecs/src/world.cpp:<line>: ecs includes oly/bridge without declaring bridge in DEPENDS`. Undo.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add tools/check_boundaries.py tools/test_check_boundaries.py CMakeLists.txt
-git commit -m "build: oly.lint.boundaries verifica DEPENDS e uso de detail/ no ctest"
+git commit -m "build: oly.lint.boundaries checks DEPENDS and detail/ usage in ctest"
 ```
 
 ---
 
-### Task 3: Nome Oly no C++ (namespaces, assert, opções)
+### Task 3: Oly name in C++ (namespaces, assert, options)
 
 **Files:**
-- Modify: todos os `.hpp`/`.cpp` de `engine/runtime/**`, `engine/fixture/systems.cpp`, `engine/generator/emit_cpp.ts`, `engine/test/unit/generator.test.ts`, `engine/runtime/ecs/tests/support/model.hpp`, `cmake/OlyOptions.cmake`/`OlyModule.cmake`
+- Modify: every `.hpp`/`.cpp` in `engine/runtime/**`, `engine/fixture/systems.cpp`, `engine/generator/emit_cpp.ts`, `engine/test/unit/generator.test.ts`, `engine/runtime/ecs/tests/support/model.hpp`, `cmake/OlyOptions.cmake`/`OlyModule.cmake`
 
 **Interfaces:**
 - Produces:
-  - `namespace oly::core`: `AssertHandler`, `setAssertHandler`, `detail::assertFail`, `SmallMap`, `alignUp`, `alignedAllocate`, `alignedFree`, `typeName<T>()` (sai de `detail`, é utilitário público do core). Macros `OLY_ASSERT(cond, fmt, ...)` e `OLY_ENABLE_ASSERTS` (definição pública de `oly::core`).
-  - `namespace oly::ecs` para tudo do ECS (o `ecs::detail` atual vira `oly::ecs::detail`); dentro dele, o core é citado como `core::SmallMap` etc.
-  - `namespace oly::bridge`: `schemaHash()`, `schemaComponentIds()` (tipo `std::span<const oly::ecs::ComponentId>`).
-  - Código gerado: `oly::ecs::Entity` nos campos `entity`, registro em `namespace oly::bridge { … }` com `oly::ecs::componentId<T>()`; comentário de topo `// Gerado por oly-codegen: não edite.`
+  - `namespace oly::core`: `AssertHandler`, `setAssertHandler`, `detail::assertFail`, `SmallMap`, `alignUp`, `alignedAllocate`, `alignedFree`, `typeName<T>()` (leaves `detail`, it is a public core utility). Macros `OLY_ASSERT(cond, fmt, ...)` and `OLY_ENABLE_ASSERTS` (public definition of `oly::core`).
+  - `namespace oly::ecs` for everything in the ECS (the current `ecs::detail` becomes `oly::ecs::detail`); inside it, core is referred to as `core::SmallMap` etc.
+  - `namespace oly::bridge`: `schemaHash()`, `schemaComponentIds()` (type `std::span<const oly::ecs::ComponentId>`).
+  - Generated code: `oly::ecs::Entity` in `entity` fields, registry in `namespace oly::bridge { … }` with `oly::ecs::componentId<T>()`; top comment `// Generated by oly-codegen: do not edit.`
   - Fuzz: `OLY_FUZZ_SEED`, `OLY_FUZZ_OPS`.
 
-- [ ] **Step 1: Atualizar o teste do gerador** (`generator.test.ts`): as expressões passam a exigir `oly::ecs::Entity owner;`, `oly::ecs::componentId<P>\(\),\s*oly::ecs::componentId<T>\(\)` e `namespace oly::bridge`.
+- [ ] **Step 1: Update the generator test** (`generator.test.ts`): the expressions now require `oly::ecs::Entity owner;`, `oly::ecs::componentId<P>\(\),\s*oly::ecs::componentId<T>\(\)` and `namespace oly::bridge`.
 
-- [ ] **Step 2: Ver falhar**
+- [ ] **Step 2: See it fail**
 
 Run: `$WC sh -c 'make ts && node --test build/ts/test/unit/'`
-Expected: FAIL nos testes de struct e de registro.
+Expected: FAIL in the struct and registry tests.
 
-- [ ] **Step 3: Renomear namespaces e macros** no C++, no `emit_cpp.ts` e no CMake (`OLY_ENABLE_ASSERTS=<0|1>` como definição pública de `oly::core`). Testes e benchmarks usam o nome qualificado completo (`oly::ecs::World`), sem alias de namespace.
+- [ ] **Step 3: Rename namespaces and macros** in C++, in `emit_cpp.ts` and in CMake (`OLY_ENABLE_ASSERTS=<0|1>` as a public definition of `oly::core`). Tests and benchmarks use the fully qualified name (`oly::ecs::World`), without a namespace alias.
 
-- [ ] **Step 4: Rodar tudo**
+- [ ] **Step 4: Run everything**
 
 Run: `$DC make test`, `$DC make test PRESET=release`, `$WC make test PRESET=wasm-debug`, `$WC make games-test`
-Expected: verdes.
+Expected: green.
 
-- [ ] **Step 5: Varredura**
+- [ ] **Step 5: Sweep**
 
 Run: `git grep -nE '\bECS_[A-Z_]+|(^|[^:])\becs::|namespace (ecs|engine)\b|\bengine::' -- engine cmake CMakeLists.txt CMakePresets.json Makefile tools`
-Expected: só ocorrências da API C `engine*`/`ENGINE_API`/`Engine*` (Task 6) e de `tools/run_ladder.sh` (`ECS_LADDER_EXTRA_ARGS`, Task 10); nenhuma em C++ fora da API C.
+Expected: only occurrences in the C API `engine*`/`ENGINE_API`/`Engine*` (Task 6) and in `tools/run_ladder.sh` (`ECS_LADDER_EXTRA_ARGS`, Task 10); none in C++ outside the C API.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor: namespaces oly::core, oly::ecs, oly::bridge e OLY_ASSERT"
+git commit -m "refactor: namespaces oly::core, oly::ecs, oly::bridge and OLY_ASSERT"
 ```
 
 ---
 
-### Task 4: Superfície pública do ECS (`detail/`, `component.hpp`, `diagnostics.hpp`, acessores de teste)
+### Task 4: ECS public surface (`detail/`, `component.hpp`, `diagnostics.hpp`, test accessors)
 
 **Files:**
 - Move (`git mv`): `oly/ecs/{table,archetype}.hpp` → `oly/ecs/detail/`; `oly/ecs/type_info.hpp` → `oly/ecs/component.hpp`; `src/type_info.cpp` → `src/component.cpp`.
 - Create: `oly/ecs/diagnostics.hpp`, `src/diagnostics.cpp`, `oly/ecs/detail/{entity_store,query_cache,command_plan,test_access}.hpp`, `engine/runtime/ecs/tests/surface.cpp`
-- Modify: `world.hpp`, `entity.hpp`, `query.hpp`, `command_buffer.hpp`, `raw_query.hpp`, `world.cpp`, `command_buffer.cpp`, testes que usam os ganchos (`command_buffer.cpp`, `unit_entity.cpp`, `unit_world.cpp`), `bench/{iterate,transitions}.cpp`, `bridge/src/c_api.cpp`
+- Modify: `world.hpp`, `entity.hpp`, `query.hpp`, `command_buffer.hpp`, `raw_query.hpp`, `world.cpp`, `command_buffer.cpp`, tests that use the hooks (`command_buffer.cpp`, `unit_entity.cpp`, `unit_world.cpp`), `bench/{iterate,transitions}.cpp`, `bridge/src/c_api.cpp`
 
 **Interfaces:**
-- Produces (headers públicos; tudo o mais em `oly::ecs::detail`):
-  - `entity.hpp`: `Entity`, `NullEntity`, `EntityHash` (sem `EntityRecord`/`EntityStore`, que vão para `detail/entity_store.hpp`).
+- Produces (public headers; everything else in `oly::ecs::detail`):
+  - `entity.hpp`: `Entity`, `NullEntity`, `EntityHash` (without `EntityRecord`/`EntityStore`, which go to `detail/entity_store.hpp`).
   - `component.hpp`: `ComponentId`, `componentId<T>()`, `TypeInfo`, `typeInfo(ComponentId)`, `registeredTypeCount()`.
-  - `query.hpp`: `With`, `Without`, `Query<Ts...>` com públicos só `each`, `eachBlock`, `matchedCount`, `writes`. `QueryCacheBase`, `MatchedTable`, `IterationGuard`, `signatureMatches` em `detail/query_cache.hpp`; `initialize`/`matches`/`isMatched`/`onArchetypeCreated` privados com `friend class World` (as sobrescritas virtuais continuam chamáveis pelo ponteiro de base).
-  - `command_buffer.hpp`: `CommandBuffer` com públicos `spawn`, `destroy`, `add<T>`, `remove<T>`, `addRaw`, `removeRaw` (renomeados na Task 5), `commandCount`, `empty`, `clear`, move/destrutor. Construtor por `EntityStore&`, `plan`, `netEffect`, `forEach`, `store` privados (`friend class World`, `friend struct detail::CommandBufferTestAccess`). `CommandOperation`, `CommandView`, `NetComponentOperation`, `EntityPlan`, `NetEffect`, `CommandPlan` em `detail/command_plan.hpp`.
-  - `diagnostics.hpp`: `struct ArchetypeStats` (campo `signature` como `std::vector<ComponentId>`), `struct WorldStats`, `bool checkInvariants(const World&, std::string* why = nullptr)`, `WorldStats stats(const World&)`, `uint64_t signatureLookupCount(const World&)`, `uint32_t archetypeCount(const World&)`. `World` declara essas funções `friend`; `World::checkInvariants`, `stats`, `signatureLookupCount`, `archetypeCount` deixam de existir.
-  - `detail/test_access.hpp`: `struct WorldTestAccess { static void flushSequential(World&, CommandBuffer&); };`, `struct CommandBufferTestAccess { template <class F> static void forEach(const CommandBuffer&, F&& callback); };`, `struct EntityStoreTestAccess { static void setGeneration(EntityStore&, uint32_t index, uint32_t generation) noexcept; };`. `World::flushSequential` e `EntityStore::setGenerationForTest` deixam de ser membros públicos.
+  - `query.hpp`: `With`, `Without`, `Query<Ts...>` with only `each`, `eachBlock`, `matchedCount`, `writes` public. `QueryCacheBase`, `MatchedTable`, `IterationGuard`, `signatureMatches` in `detail/query_cache.hpp`; `initialize`/`matches`/`isMatched`/`onArchetypeCreated` private with `friend class World` (the virtual overrides remain callable through the base pointer).
+  - `command_buffer.hpp`: `CommandBuffer` with public `spawn`, `destroy`, `add<T>`, `remove<T>`, `addRaw`, `removeRaw` (renamed in Task 5), `commandCount`, `empty`, `clear`, move/destructor. Constructor from `EntityStore&`, `plan`, `netEffect`, `forEach`, `store` private (`friend class World`, `friend struct detail::CommandBufferTestAccess`). `CommandOperation`, `CommandView`, `NetComponentOperation`, `EntityPlan`, `NetEffect`, `CommandPlan` in `detail/command_plan.hpp`.
+  - `diagnostics.hpp`: `struct ArchetypeStats` (field `signature` as `std::vector<ComponentId>`), `struct WorldStats`, `bool checkInvariants(const World&, std::string* why = nullptr)`, `WorldStats stats(const World&)`, `uint64_t signatureLookupCount(const World&)`, `uint32_t archetypeCount(const World&)`. `World` declares these functions `friend`; `World::checkInvariants`, `stats`, `signatureLookupCount`, `archetypeCount` cease to exist.
+  - `detail/test_access.hpp`: `struct WorldTestAccess { static void flushSequential(World&, CommandBuffer&); };`, `struct CommandBufferTestAccess { template <class F> static void forEach(const CommandBuffer&, F&& callback); };`, `struct EntityStoreTestAccess { static void setGeneration(EntityStore&, uint32_t index, uint32_t generation) noexcept; };`. `World::flushSequential` and `EntityStore::setGenerationForTest` stop being public members.
 
-- [ ] **Step 1: Escrever o teste de superfície** (`engine/runtime/ecs/tests/surface.cpp`, registrado como `ecs.surface`). Conceitos-sonda por template (o acesso privado é falha de substituição só dentro de template):
+- [ ] **Step 1: Write the surface test** (`engine/runtime/ecs/tests/surface.cpp`, registered as `ecs.surface`). Probe concepts via template (private access is a substitution failure only inside a template):
 
 ```cpp
 template <class W> concept HasMemberStats = requires(W& world) { world.stats(); };
@@ -243,7 +243,7 @@ template <class C> concept HasForEach = requires(C& commands) { commands.forEach
 template <class C> concept HasStore = requires(C& commands) { commands.store(); };
 template <class Q> concept HasOnArchetypeCreated = requires(Q& query, oly::ecs::detail::Archetype& archetype) { query.onArchetypeCreated(archetype); };
 
-TEST_CASE("World e CommandBuffer não expõem diagnóstico nem ganchos de teste") {
+TEST_CASE("World and CommandBuffer expose neither diagnostics nor test hooks") {
   static_assert(!HasMemberStats<oly::ecs::World>);
   static_assert(!HasMemberCheckInvariants<oly::ecs::World>);
   static_assert(!HasFlushSequential<oly::ecs::World, oly::ecs::CommandBuffer>);
@@ -251,35 +251,35 @@ TEST_CASE("World e CommandBuffer não expõem diagnóstico nem ganchos de teste"
   static_assert(!HasOnArchetypeCreated<oly::ecs::Query<int>>);
   static_assert(!std::is_constructible_v<oly::ecs::CommandBuffer, oly::ecs::detail::EntityStore&>);
 }
-TEST_CASE("diagnóstico por funções livres") {   // world.spawn… ainda é create nesta task
-  // cria uma entidade com A; CHECK(oly::ecs::checkInvariants(world)); CHECK(oly::ecs::archetypeCount(world) == 2);
+TEST_CASE("diagnostics through free functions") {   // world.spawn… is still create in this task
+  // creates an entity with A; CHECK(oly::ecs::checkInvariants(world)); CHECK(oly::ecs::archetypeCount(world) == 2);
   // CHECK(oly::ecs::stats(world).liveEntities == 1); CHECK(oly::ecs::signatureLookupCount(world) > 0)
 }
 ```
-(Use um componente de `support/components.hpp` em vez de `int` se `Query<int>` não for instanciável.)
+(Use a component from `support/components.hpp` instead of `int` if `Query<int>` cannot be instantiated.)
 
-- [ ] **Step 2: Ver falhar**
+- [ ] **Step 2: See it fail**
 
 Run: `$DC make test T='ecs\.surface'`
-Expected: falha de compilação (`oly/ecs/diagnostics.hpp` não existe) ou `static_assert` falhando.
+Expected: compile failure (`oly/ecs/diagnostics.hpp` does not exist) or a failing `static_assert`.
 
-- [ ] **Step 3: Implementar a divisão** conforme as interfaces. `diagnostics.cpp` recebe `stats` e a contagem; o corpo de `checkInvariants` e seus auxiliares (`checkArchetypes` … `checkEdges`) podem continuar em `world.cpp` como membros privados chamados pela função livre amiga. Testes, benchmarks e a API C passam a usar as funções livres e os acessores de `detail/test_access.hpp`.
+- [ ] **Step 3: Implement the split** according to the interfaces. `diagnostics.cpp` receives `stats` and the count; the body of `checkInvariants` and its helpers (`checkArchetypes` … `checkEdges`) may stay in `world.cpp` as private members called by the friend free function. Tests, benchmarks and the C API now use the free functions and the accessors from `detail/test_access.hpp`.
 
-- [ ] **Step 4: Rodar tudo e conferir as fronteiras**
+- [ ] **Step 4: Run everything and check the boundaries**
 
 Run: `$DC make test`, `$DC make test PRESET=release`, `$WC make test PRESET=wasm-debug`, `$WC make games-test`
-Expected: verdes, inclusive `oly.lint.boundaries`. O `c_api.cpp` não pode incluir `oly/ecs/detail/` diretamente; até a Task 5 ele chega a `Table` só pelo `raw_query.hpp` (a Task 5 elimina esse uso com `QueryIteration`).
+Expected: green, including `oly.lint.boundaries`. `c_api.cpp` must not include `oly/ecs/detail/` directly; until Task 5 it reaches `Table` only through `raw_query.hpp` (Task 5 removes that use with `QueryIteration`).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor: superfície do ECS com detail/, component.hpp e diagnostics.hpp"
+git commit -m "refactor: ECS surface with detail/, component.hpp and diagnostics.hpp"
 ```
 
 ---
 
-### Task 5: Vocabulário do ECS e API por ID (`spawn`, `ById`, `QueryById`, `QueryIteration`)
+### Task 5: ECS vocabulary and by-ID API (`spawn`, `ById`, `QueryById`, `QueryIteration`)
 
 **Files:**
 - Move (`git mv`): `oly/ecs/raw_query.hpp` → `oly/ecs/query_by_id.hpp`; `tests/raw_query.cpp` → `tests/query_by_id.cpp`
@@ -287,72 +287,72 @@ git commit -m "refactor: superfície do ECS com detail/, component.hpp e diagnos
 
 **Interfaces:**
 - Produces:
-  - `World::spawn()`, `template <class... Ts> Entity World::spawn(Ts&&...)`; `World::create` deixa de existir. `CommandBuffer::spawn()` fica.
-  - `void World::addById(Entity, ComponentId, void* value)`, `void removeById(Entity, ComponentId)`, `bool hasById(Entity, ComponentId) const noexcept`, `void* tryGetById(Entity, ComponentId) noexcept` (nulo se morta, ausente ou tag), `void* getById(Entity, ComponentId)` (assert `"getById e=%u:%u type=%.*s"` se morta ou ausente; tag também é erro). `CommandBuffer::addById`/`removeById`. As versões template continuam com o caminho próprio.
+  - `World::spawn()`, `template <class... Ts> Entity World::spawn(Ts&&...)`; `World::create` ceases to exist. `CommandBuffer::spawn()` stays.
+  - `void World::addById(Entity, ComponentId, void* value)`, `void removeById(Entity, ComponentId)`, `bool hasById(Entity, ComponentId) const noexcept`, `void* tryGetById(Entity, ComponentId) noexcept` (null if dead, missing or tag), `void* getById(Entity, ComponentId)` (assert `"getById e=%u:%u type=%.*s"` if dead or missing; a tag is also an error). `CommandBuffer::addById`/`removeById`. The template versions keep their own path.
   - `query_by_id.hpp`:
     ```cpp
     struct QueryByIdSpec { std::vector<ComponentId> read{}, write{}, with{}, without{}; };
-    class BlockById {   // valor leve, vale enquanto a iteração existir
+    class BlockById {   // lightweight value, valid while the iteration exists
       uint32_t count() const noexcept;
       std::span<const Entity> entities() const noexcept;
-      void* column(size_t index) const noexcept;   // index na ordem read seguida de write
+      void* column(size_t index) const noexcept;   // index in read order followed by write
     };
-    class QueryIteration {   // só movível; ++iterating ao nascer, -- no destrutor (uma vez)
+    class QueryIteration {   // move-only; ++iterating on creation, -- in the destructor (once)
       uint32_t blockCount() const noexcept;
       BlockById block(uint32_t index) const noexcept;
-      std::span<const uintptr_t> descriptors() const noexcept;   // blockCount × (2 + components().size()): [count, entidades, colunas...]
+      std::span<const uintptr_t> descriptors() const noexcept;   // blockCount × (2 + components().size()): [count, entities, columns...]
     };
     class QueryById {
-      template <class F> void eachBlock(F&& callback);   // callback(const BlockById&), só tabelas não vazias
+      template <class F> void eachBlock(F&& callback);   // callback(const BlockById&), only non-empty tables
       QueryIteration iterate();
       std::span<const ComponentId> components() const noexcept;
       size_t matchedCount() const noexcept;
     };
-    QueryById& World::queryById(const QueryByIdSpec&);   // cacheada pela spec
+    QueryById& World::queryById(const QueryByIdSpec&);   // cached by spec
     ```
-    `beginIteration`/`endIteration`/`iterationDepth`/`matchedTables` deixam de ser públicos; `RawMatchedTable` vira `detail::MatchedTableById`. Os descritores de `iterate()` vêm de um pool da `QueryById` (um `std::vector<uintptr_t>` por nível de aninhamento; cresce até a maior profundidade vista e não encolhe). Encerrar uma `QueryIteration` que não é a mais interna da sua `QueryById` é erro de contrato: `OLY_ASSERT(…, "iterate: iteração encerrada fora de ordem (nível=%u, profundidade=%u)", …)`. `eachBlock` usa `iterate()` por dentro.
-  - Mensagens de assert com os verbos novos: `"spawn durante iteração=%u"`, `"queryById: tag em read/write type=%.*s"`, `"queryById: componente repetido …"`, `"queryById: componente desconhecido id=%u"` (mantendo `e=`/tipo onde já havia).
-  - `contract_death` (`ecs`): `add_during_each`, `get_dead_entity`, `flush_during_each`, `command_after_destroy`, `destroy_during_each_block`, `query_by_id_tag_in_read` {`queryById`, `tag`}, `query_by_id_repeated_component` {`queryById`, `repetido`}, `query_by_id_unknown_component` {`queryById`, `desconhecido`}, `query_by_id_iteration_out_of_order` {`iterate`, `fora de ordem`}, `add_during_query_by_id_iteration` {`add`}, `get_by_id_missing` {`getById`, `e=`}, `spawn_during_each` {`spawn`, `iteração`}.
+    `beginIteration`/`endIteration`/`iterationDepth`/`matchedTables` stop being public; `RawMatchedTable` becomes `detail::MatchedTableById`. The descriptors of `iterate()` come from a pool in the `QueryById` (one `std::vector<uintptr_t>` per nesting level; grows to the largest depth seen and does not shrink). Ending a `QueryIteration` that is not the innermost of its `QueryById` is a contract error: `OLY_ASSERT(…, "iterate: iteration ended out of order (level=%u, depth=%u)", …)`. `eachBlock` uses `iterate()` internally.
+  - Assert messages with the new verbs: `"spawn during iteration=%u"`, `"queryById: tag in read/write type=%.*s"`, `"queryById: repeated component …"`, `"queryById: unknown component id=%u"` (keeping `e=`/type where they already were).
+  - `contract_death` (`ecs`): `add_during_each`, `get_dead_entity`, `flush_during_each`, `command_after_destroy`, `destroy_during_each_block`, `query_by_id_tag_in_read` {`queryById`, `tag`}, `query_by_id_repeated_component` {`queryById`, `repeated`}, `query_by_id_unknown_component` {`queryById`, `unknown`}, `query_by_id_iteration_out_of_order` {`iterate`, `out of order`}, `add_during_query_by_id_iteration` {`add`}, `get_by_id_missing` {`getById`, `e=`}, `spawn_during_each` {`spawn`, `iteration`}.
 
-- [ ] **Step 1: Reescrever `tests/query_by_id.cpp`** (casos atuais adaptados ao `BlockById` + os novos)
+- [ ] **Step 1: Rewrite `tests/query_by_id.cpp`** (current cases adapted to `BlockById` + the new ones)
 
 ```cpp
-TEST_CASE("eachBlock entrega count, entidades e colunas na ordem read, write")   // valores escritos via column(1) aparecem em get<B>
-TEST_CASE("iterate marca o World como iterando até o destrutor")                // isIterating() true dentro do escopo, false depois
-TEST_CASE("iterate aninhado mantém os blocos de cada nível")                    // outer.descriptors() igual antes e depois de um inner na mesma query
-TEST_CASE("QueryIteration movida encerra a iteração uma vez só")                 // auto b = std::move(a); após destruir os dois, isIterating()==false e checkInvariants ok
-TEST_CASE("exceção no callback de eachBlock encerra a iteração")                 // CHECK_THROWS(query.eachBlock(lança)); depois isIterating()==false e spawn funciona
-TEST_CASE("iterate em regime não aloca")                                        // primeiro iterate() aquece; AllocCounter: segundo iterate() na mesma profundidade == 0 alocações
-TEST_CASE("getById e tryGetById")                                               // tryGetById de ausente/tag/morta == nullptr; getById devolve o mesmo endereço de get<A>
+TEST_CASE("eachBlock delivers count, entities and columns in read, write order")   // values written via column(1) show up in get<B>
+TEST_CASE("iterate marks the World as iterating until the destructor")                // isIterating() true inside the scope, false after
+TEST_CASE("nested iterate keeps the blocks of each level")                    // outer.descriptors() equal before and after an inner one on the same query
+TEST_CASE("moved QueryIteration ends the iteration only once")                 // auto b = std::move(a); after destroying both, isIterating()==false and checkInvariants ok
+TEST_CASE("exception in the eachBlock callback ends the iteration")                 // CHECK_THROWS(query.eachBlock(throws)); then isIterating()==false and spawn works
+TEST_CASE("steady-state iterate does not allocate")                                        // first iterate() warms up; AllocCounter: second iterate() at the same depth == 0 allocations
+TEST_CASE("getById and tryGetById")                                               // tryGetById of missing/tag/dead == nullptr; getById returns the same address as get<A>
 ```
-Registrar com `SOURCES query_by_id.cpp support/alloc_counter.cpp` (o teste de alocação só roda onde `AllocCounter` funciona hoje — use o mesmo guarda de `unit_world.cpp`).
+Register with `SOURCES query_by_id.cpp support/alloc_counter.cpp` (the allocation test only runs where `AllocCounter` works today — use the same guard as `unit_world.cpp`).
 
-- [ ] **Step 2: Escrever/renomear os casos de `contract_death`** da lista acima (função + nome no `CASES`).
+- [ ] **Step 2: Write/rename the `contract_death` cases** from the list above (function + name in `CASES`).
 
-- [ ] **Step 3: Ver falhar**
+- [ ] **Step 3: See it fail**
 
 Run: `$DC make test T='ecs\.(query_by_id|contract_death)'`
-Expected: falha de compilação (`QueryById`, `iterate`, `getById` inexistentes).
+Expected: compile failure (`QueryById`, `iterate`, `getById` do not exist).
 
-- [ ] **Step 4: Implementar** as interfaces; trocar `create` → `spawn` em todo o repositório C++ (testes, benchmarks, `model.hpp`); `c_api.cpp` passa a usar `queryById`/`iterate`/`*ById` mantendo os nomes C `engine*` (renomeados na Task 6), guardando a `QueryIteration` ativa da query numa pilha dentro do `EngineWorld` (a Task 6 formaliza isso como `OlyIteration`).
+- [ ] **Step 4: Implement** the interfaces; replace `create` → `spawn` across the whole C++ repository (tests, benchmarks, `model.hpp`); `c_api.cpp` now uses `queryById`/`iterate`/`*ById` while keeping the C names `engine*` (renamed in Task 6), storing the query's active `QueryIteration` in a stack inside `EngineWorld` (Task 6 formalizes this as `OlyIteration`).
 
-- [ ] **Step 5: Rodar tudo**
+- [ ] **Step 5: Run everything**
 
 Run: `$DC make test`, `$DC make test PRESET=release`, `$WC make test PRESET=wasm-debug`, `$WC make games-test`
-Expected: verdes; `ctest -N` mostra 12 casos `ecs.contract_death.*`.
+Expected: green; `ctest -N` shows 12 `ecs.contract_death.*` cases.
 
-- [ ] **Step 6: Revisão de desempenho do diff** — despachar o agente `perf-reviewer` sobre `git diff HEAD` (foco: `World::spawn<Ts...>`, `get<T>`, `Query::each` sem mudança de código gerado; pool sem alocação). Corrigir o que ele confirmar.
+- [ ] **Step 6: Performance review of the diff** — dispatch the `perf-reviewer` agent over `git diff HEAD` (focus: `World::spawn<Ts...>`, `get<T>`, `Query::each` with no change in generated code; pool without allocation). Fix what it confirms.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor: spawn, variantes ById e QueryById com QueryIteration RAII"
+git commit -m "refactor: spawn, ById variants and QueryById with RAII QueryIteration"
 ```
 
 ---
 
-### Task 6: API C `oly*` e `OlyWorld` opaco
+### Task 6: C API `oly*` and opaque `OlyWorld`
 
 **Files:**
 - Create: `engine/runtime/bridge/include/oly/bridge/world.hpp`, `engine/runtime/bridge/tests/contract_death.cpp`
@@ -360,9 +360,9 @@ git commit -m "refactor: spawn, variantes ById e QueryById com QueryIteration RA
 - Modify: `oly/bridge/c_api.hpp`, `src/c_api.cpp`, `tests/c_api.cpp`, `tests/test_schema_registry.cpp`, `engine/fixture/systems.cpp`, `engine/ts/module.ts`, `engine/ts/bridge.ts`, `engine/ts/query.ts`, `engine/ts/runtime.ts`, `engine/test/wasm/fixture.ts`, `engine/bench/boundary.ts`, `engine/runtime/bridge/CMakeLists.txt`
 
 **Interfaces:**
-- Produces (C, `extern "C"`, `OLY_API` = `EMSCRIPTEN_KEEPALIVE` no Emscripten):
+- Produces (C, `extern "C"`, `OLY_API` = `EMSCRIPTEN_KEEPALIVE` in Emscripten):
   ```
-  struct OlyWorld; struct OlyQuery; struct OlyIteration;     // opacos
+  struct OlyWorld; struct OlyQuery; struct OlyIteration;     // opaque
   struct OlyEntity { uint32_t index; uint32_t generation; };
   OlyWorld* olyWorldCreate();  void olyWorldDestroy(OlyWorld*);
   int32_t olyWorldCheckInvariants(OlyWorld*, char* message, uint32_t capacity);
@@ -379,145 +379,145 @@ git commit -m "refactor: spawn, variantes ById e QueryById com QueryIteration RA
   OlyIteration* olyQueryBegin(OlyWorld*, OlyQuery*, uint32_t* outBlockCount, const uintptr_t** outDescriptors);
   void olyQueryEnd(OlyWorld*, OlyIteration*);
   ```
-  `OlyWorld` é definido só em `c_api.cpp`: o `World` e uma pilha de slots de iteração (`std::vector<std::unique_ptr<…>>` com `std::optional<QueryIteration>`; cresce até a maior profundidade e não encolhe, ponteiros estáveis). `olyQueryBegin` ocupa o próximo slot e devolve o próprio slot como `OlyIteration*`; `olyQueryEnd` exige que seja o slot do topo: `OLY_ASSERT(…, "olyQueryEnd: iteração encerrada fora de ordem")`. Os descritores valem até o `olyQueryEnd` daquela iteração.
-- Produces (C++): `namespace oly::bridge { oly::ecs::World& worldOf(OlyWorld* world) noexcept; }` em `oly/bridge/world.hpp`.
-- Produces (TS, ainda em `engine/ts/`): `OlyModule` (antes `EngineModule`) com `_olyWorldCreate` … `_olyQueryBegin(world, query, outBlockCount, outDescriptors): number`, `_olyQueryEnd(world, iteration)`; `OlyModuleFactory`. `Bridge`: `spawn(world)` (antes `create`), `queryCreate(…)` (antes `query`), `queryBegin(world, query): { iteration: number; blockCount: number; descriptors: number }`, `queryEnd(world, iteration)`. Copiar ou não os descritores em `Query.eachBlock` fica a critério (medir na Task 10 se mudar).
+  `OlyWorld` is defined only in `c_api.cpp`: the `World` and a stack of iteration slots (`std::vector<std::unique_ptr<…>>` with `std::optional<QueryIteration>`; grows to the largest depth and does not shrink, stable pointers). `olyQueryBegin` takes the next slot and returns the slot itself as `OlyIteration*`; `olyQueryEnd` requires it to be the top slot: `OLY_ASSERT(…, "olyQueryEnd: iteration ended out of order")`. The descriptors are valid until that iteration's `olyQueryEnd`.
+- Produces (C++): `namespace oly::bridge { oly::ecs::World& worldOf(OlyWorld* world) noexcept; }` in `oly/bridge/world.hpp`.
+- Produces (TS, still in `engine/ts/`): `OlyModule` (formerly `EngineModule`) with `_olyWorldCreate` … `_olyQueryBegin(world, query, outBlockCount, outDescriptors): number`, `_olyQueryEnd(world, iteration)`; `OlyModuleFactory`. `Bridge`: `spawn(world)` (formerly `create`), `queryCreate(…)` (formerly `query`), `queryBegin(world, query): { iteration: number; blockCount: number; descriptors: number }`, `queryEnd(world, iteration)`. Whether or not to copy the descriptors in `Query.eachBlock` is up to the implementer (measure in Task 10 if it changes).
 
-- [ ] **Step 1: Atualizar `tests/c_api.cpp`** para os nomes novos e acrescentar:
+- [ ] **Step 1: Update `tests/c_api.cpp`** to the new names and add:
 
 ```cpp
-TEST_CASE("olyQueryBegin aninhado preserva os descritores do externo")   // outer = olyQueryBegin(q); copia outer descritores; inner = olyQueryBegin(q) e olyQueryEnd(inner); memcmp(outer, cópia) == 0; olyQueryEnd(outer)
-TEST_CASE("worldOf dá acesso ao World do handle")                        // olyEntitySpawn + oly::bridge::worldOf(world).isAlive(entity)
-TEST_CASE("iteração repetida reaproveita o slot")                        // dois pares begin/end seguidos devolvem o mesmo OlyIteration*
+TEST_CASE("nested olyQueryBegin preserves the outer descriptors")   // outer = olyQueryBegin(q); copy outer descriptors; inner = olyQueryBegin(q) and olyQueryEnd(inner); memcmp(outer, copy) == 0; olyQueryEnd(outer)
+TEST_CASE("worldOf gives access to the handle's World")                        // olyEntitySpawn + oly::bridge::worldOf(world).isAlive(entity)
+TEST_CASE("repeated iteration reuses the slot")                        // two begin/end pairs in a row return the same OlyIteration*
 ```
-E `tests/contract_death.cpp` do bridge com o caso `query_end_out_of_order` {`olyQueryEnd`, `fora de ordem`} (begin A, begin B, end A), registrado com `oly_add_contract_death(MODULE bridge …)`.
+And the bridge's `tests/contract_death.cpp` with the case `query_end_out_of_order` {`olyQueryEnd`, `out of order`} (begin A, begin B, end A), registered with `oly_add_contract_death(MODULE bridge …)`.
 
-- [ ] **Step 2: Ver falhar**
+- [ ] **Step 2: See it fail**
 
 Run: `$DC make test T='^bridge\.'`
-Expected: falha de compilação (`olyWorldCreate` inexistente).
+Expected: compile failure (`olyWorldCreate` does not exist).
 
-- [ ] **Step 3: Implementar** a API C, `worldOf`, `systems.cpp` do fixture (`OLY_API void fixtureMove(OlyWorld* world, float deltaTime)` com `oly::bridge::worldOf(world)`), e o lado TS (`module.ts`, `bridge.ts`, `query.ts`, `runtime.ts`, `fixture.ts`, `boundary.ts`).
+- [ ] **Step 3: Implement** the C API, `worldOf`, the fixture's `systems.cpp` (`OLY_API void fixtureMove(OlyWorld* world, float deltaTime)` with `oly::bridge::worldOf(world)`), and the TS side (`module.ts`, `bridge.ts`, `query.ts`, `runtime.ts`, `fixture.ts`, `boundary.ts`).
 
-- [ ] **Step 4: Rodar tudo**
+- [ ] **Step 4: Run everything**
 
 Run: `$DC make test`, `$DC make test PRESET=release`, `$WC make test PRESET=wasm-debug`, `$WC make games-test`, `$WC sh -c 'make ts && make test PRESET=wasm-games-release T=^ts\.'`
-Expected: verdes.
+Expected: green.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor: API C oly* com OlyWorld opaco e iteração com buffer próprio"
+git commit -m "refactor: C API oly* with opaque OlyWorld and iteration with its own buffer"
 ```
 
 ---
 
-### Task 7: Workspaces npm e divisão em pacotes (`@oly/core`, `@oly/codegen`, `@oly/testing`)
+### Task 7: npm workspaces and split into packages (`@oly/core`, `@oly/codegen`, `@oly/testing`)
 
 **Files:**
-- Move (`git mv`): linhas TS da tabela.
-- Create: `package.json`, `tsconfig.base.json`, `tsconfig.json` (solução, só `references`) na raiz; `engine/packages/core/{package.json,tsconfig.json,src/internal.ts,src/platform.d.ts,tests/tsconfig.json}`; `engine/tools/codegen/{package.json,tsconfig.json,tests/tsconfig.json}`; `engine/testing/{package.json,tsconfig.json,CMakeLists.txt}`
+- Move (`git mv`): the table's TS rows.
+- Create: `package.json`, `tsconfig.base.json`, `tsconfig.json` (solution, only `references`) at the root; `engine/packages/core/{package.json,tsconfig.json,src/internal.ts,src/platform.d.ts,tests/tsconfig.json}`; `engine/tools/codegen/{package.json,tsconfig.json,tests/tsconfig.json}`; `engine/testing/{package.json,tsconfig.json,CMakeLists.txt}`
 - Delete (`git rm`): `engine/package.json`, `engine/package-lock.json`, `engine/tsconfig.json`, `engine/module-package.json`
-- Modify: `Makefile`, `engine/CMakeLists.txt`, `cmake/OlyGame.cmake`, `.gitignore`, imports de todos os `.ts` movidos
+- Modify: `Makefile`, `engine/CMakeLists.txt`, `cmake/OlyGame.cmake`, `.gitignore`, imports of every moved `.ts`
 
 **Interfaces:**
 - Produces:
-  - Raiz: `package.json` (`"private": true`, `"workspaces": ["engine/packages/*", "engine/tools/*", "engine/testing", "games/*"]`, `devDependencies` `typescript` 5.6.3 e `@types/node` 20.17.6, script `"build": "tsc -b"`); `package-lock.json` único; `tsconfig.base.json` (`strict`, `target` ES2022, `module`/`moduleResolution` NodeNext, `composite`, `declaration`, `skipLibCheck`); `tsconfig.json` de solução (`"files": []`) com `references` a `engine/packages/core`, `engine/packages/core/tests`, `engine/tools/codegen`, `engine/tools/codegen/tests`, `engine/testing` (a Task 9 acrescenta o client), para o `tsc -b` da raiz.
-  - `@oly/core` (`engine/packages/core`): `"type": "module"`, `"exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./internal": { "types": "./dist/internal.d.ts", "default": "./dist/internal.js" } }`. `tsconfig.json`: `rootDir` `src`, `outDir` `dist`, `lib: ["ES2022"]`, `types: []` (sem DOM e sem node: o compilador reprova API de ambiente). `src/platform.d.ts` declara só o mínimo de `TextDecoder` usado em `bridge.ts` (existe em node, navegador e worker). `src/internal.ts` reexporta: `Bridge`, `Heap`, `readScalar`, `writeScalar`, `makeView`, `computeLayout`, `scalarSize`, `scalarAlignment`, `fnv1a32`, `canonicalSchema`, `schemaHash`, `packEntity`, `MaxEntityGeneration`, tipo `OlyModule`. Nesta task `src/index.ts` continua `export *` (a Task 8 o restringe). Testes: `tests/tsconfig.json` (`references` ao core, `types: ["node"]`, `outDir` `../dist-tests`), importando `@oly/core` e `@oly/core/internal` pelo nome.
-  - `@oly/codegen` (`engine/tools/codegen`): `"bin": { "oly-codegen": "./dist/main.js" }`, `references` ao core, `types: ["node"]`; `emit_cpp.ts` importa tipos de `@oly/core`. Teste em `tests/generator.test.ts` → `dist-tests/`.
-  - `@oly/testing` (`engine/testing`, `"private": true`): `rootDir` `.`, `outDir` `dist`, `include` `["fixture", "tests", "bench"]`, `references` ao core, `types: ["node"]`. `fixture.ts` lê `OLY_FIXTURE_MODULE`.
-  - CMake: `oly_add_game` chama `${NODE} ${PROJECT_SOURCE_DIR}/engine/tools/codegen/dist/main.js` (erro `"rode 'make ts' antes de configurar com OLY_BUILD_GAMES=ON"` se não existir); `engine/testing/CMakeLists.txt` declara `oly_add_game(fixture_game SCHEMA_JS ${…}/engine/testing/dist/fixture/schema.js SOURCES fixture/systems.cpp DEPENDS ecs bridge)` e `ts.testing.wasm` (`node --test engine/testing/dist/tests/wasm/`, com `OLY_FIXTURE_MODULE=$<TARGET_FILE:fixture_game>`); `engine/CMakeLists.txt` registra `ts.core.unit` (`engine/packages/core/dist-tests/unit/`) e `ts.codegen.unit` (`engine/tools/codegen/dist-tests/`) com `OLY_BUILD_GAMES` e faz `add_subdirectory(testing)`.
-  - `Makefile`: `ts: ([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build` na raiz.
+  - Root: `package.json` (`"private": true`, `"workspaces": ["engine/packages/*", "engine/tools/*", "engine/testing", "games/*"]`, `devDependencies` `typescript` 5.6.3 and `@types/node` 20.17.6, script `"build": "tsc -b"`); a single `package-lock.json`; `tsconfig.base.json` (`strict`, `target` ES2022, `module`/`moduleResolution` NodeNext, `composite`, `declaration`, `skipLibCheck`); solution `tsconfig.json` (`"files": []`) with `references` to `engine/packages/core`, `engine/packages/core/tests`, `engine/tools/codegen`, `engine/tools/codegen/tests`, `engine/testing` (Task 9 adds the client), for the root `tsc -b`.
+  - `@oly/core` (`engine/packages/core`): `"type": "module"`, `"exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./internal": { "types": "./dist/internal.d.ts", "default": "./dist/internal.js" } }`. `tsconfig.json`: `rootDir` `src`, `outDir` `dist`, `lib: ["ES2022"]`, `types: []` (no DOM and no node: the compiler rejects environment APIs). `src/platform.d.ts` declares only the minimum of `TextDecoder` used in `bridge.ts` (it exists in node, browser and worker). `src/internal.ts` re-exports: `Bridge`, `Heap`, `readScalar`, `writeScalar`, `makeView`, `computeLayout`, `scalarSize`, `scalarAlignment`, `fnv1a32`, `canonicalSchema`, `schemaHash`, `packEntity`, `MaxEntityGeneration`, type `OlyModule`. In this task `src/index.ts` stays `export *` (Task 8 restricts it). Tests: `tests/tsconfig.json` (`references` to core, `types: ["node"]`, `outDir` `../dist-tests`), importing `@oly/core` and `@oly/core/internal` by name.
+  - `@oly/codegen` (`engine/tools/codegen`): `"bin": { "oly-codegen": "./dist/main.js" }`, `references` to core, `types: ["node"]`; `emit_cpp.ts` imports types from `@oly/core`. Test in `tests/generator.test.ts` → `dist-tests/`.
+  - `@oly/testing` (`engine/testing`, `"private": true`): `rootDir` `.`, `outDir` `dist`, `include` `["fixture", "tests", "bench"]`, `references` to core, `types: ["node"]`. `fixture.ts` reads `OLY_FIXTURE_MODULE`.
+  - CMake: `oly_add_game` calls `${NODE} ${PROJECT_SOURCE_DIR}/engine/tools/codegen/dist/main.js` (error `"run 'make ts' before configuring with OLY_BUILD_GAMES=ON"` if it does not exist); `engine/testing/CMakeLists.txt` declares `oly_add_game(fixture_game SCHEMA_JS ${…}/engine/testing/dist/fixture/schema.js SOURCES fixture/systems.cpp DEPENDS ecs bridge)` and `ts.testing.wasm` (`node --test engine/testing/dist/tests/wasm/`, with `OLY_FIXTURE_MODULE=$<TARGET_FILE:fixture_game>`); `engine/CMakeLists.txt` registers `ts.core.unit` (`engine/packages/core/dist-tests/unit/`) and `ts.codegen.unit` (`engine/tools/codegen/dist-tests/`) with `OLY_BUILD_GAMES` and does `add_subdirectory(testing)`.
+  - `Makefile`: `ts: ([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build` at the root.
   - `.gitignore`: `dist`, `dist-tests`, `*.tsbuildinfo`.
-  - `games/` vazio no git (sem `.gitkeep`); o glob `games/*` do workspace não casa nada até a fase 7.
+  - `games/` empty in git (no `.gitkeep`); the workspace glob `games/*` matches nothing until phase 7.
 
-- [ ] **Step 1: Mover os arquivos e criar os `package.json`/`tsconfig`.** Imports entre pacotes passam a usar o nome (`@oly/core`, `@oly/core/internal`); dentro de um pacote, caminhos relativos.
+- [ ] **Step 1: Move the files and create the `package.json`/`tsconfig`.** Imports between packages now use the name (`@oly/core`, `@oly/core/internal`); within a package, relative paths.
 
-- [ ] **Step 2: Gerar o lock e compilar**
+- [ ] **Step 2: Generate the lock and compile**
 
 Run: `$WC sh -c 'rm -rf node_modules engine/node_modules && npm install --no-audit --no-fund && npm run build'`
-Expected: `package-lock.json` novo na raiz; `engine/packages/core/dist/index.js`, `dist/internal.js`, `engine/tools/codegen/dist/main.js`, `engine/testing/dist/fixture/schema.js` existem; nenhum erro de `tsc` (em particular nenhum uso de DOM ou node em `core/src`).
+Expected: new `package-lock.json` at the root; `engine/packages/core/dist/index.js`, `dist/internal.js`, `engine/tools/codegen/dist/main.js`, `engine/testing/dist/fixture/schema.js` exist; no `tsc` error (in particular no DOM or node usage in `core/src`).
 
-- [ ] **Step 3: Conferir que o core rejeita API de ambiente** — acrescentar temporariamente `window.alert("x")` em `core/src/runtime.ts`; `npm run build` deve falhar com "Cannot find name 'window'". Desfazer.
+- [ ] **Step 3: Check that core rejects environment APIs** — temporarily add `window.alert("x")` to `core/src/runtime.ts`; `npm run build` must fail with "Cannot find name 'window'". Undo.
 
-- [ ] **Step 4: Rodar tudo**
+- [ ] **Step 4: Run everything**
 
 Run: `$WC make games-test`, `$DC make test`
-Expected: verdes, com `ts.core.unit`, `ts.codegen.unit`, `ts.testing.wasm` e `oly.lint.boundaries`.
+Expected: green, with `ts.core.unit`, `ts.codegen.unit`, `ts.testing.wasm` and `oly.lint.boundaries`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor: workspaces npm com @oly/core, @oly/codegen e @oly/testing"
+git commit -m "refactor: npm workspaces with @oly/core, @oly/codegen and @oly/testing"
 ```
 
 ---
 
-### Task 8: Superfície e nomes de `@oly/core`, regras TS do lint
+### Task 8: `@oly/core` surface and names, TS lint rules
 
 **Files:**
 - Create: `engine/packages/core/api/public-exports.txt`, `engine/packages/core/tests/unit/surface.test.ts`, `engine/testing/tests/wasm/iteration.test.ts`
-- Modify: `engine/packages/core/src/{index,internal,errors,runtime,world,query,module}.ts`, usos em `engine/testing/**`, `engine/tools/codegen/**`, `tools/check_boundaries.py`, `tools/test_check_boundaries.py`
+- Modify: `engine/packages/core/src/{index,internal,errors,runtime,world,query,module}.ts`, uses in `engine/testing/**`, `engine/tools/codegen/**`, `tools/check_boundaries.py`, `tools/test_check_boundaries.py`
 
 **Interfaces:**
 - Produces:
-  - `ContractError` (antes `EngineContractError`, `name` = `"ContractError"`), `SchemaMismatchError`.
-  - `Runtime` (antes `EngineRuntime`) com públicos só `schema` e `createWorld()`; `loadRuntime(factory: OlyModuleFactory, schema: Schema): Promise<Runtime>` (antes `loadEngine`).
-  - Em `@oly/core/internal`, além da lista da Task 7: `bridgeOf(runtime: Runtime): Bridge`, `moduleOf(runtime: Runtime): OlyModule`, `componentIdOf(runtime: Runtime, type: SchemaType): number`.
-  - Fora do `.d.ts` público: `World.iterationDepth`, `World.assertUsable`, `Block.invalidate`, `Query.writes`, `Query.positionOf`, `Runtime.bridge`, `Runtime.module`, `Runtime.componentId` (mecanismo livre: `#private`, funções de módulo não reexportadas pelo `index.ts`, ou `WeakMap`). Não use `private` do TS: ele aparece no `.d.ts` e o teste de superfície o reprova.
-  - `src/index.ts` com exports nomeados, exatamente a lista de `api/public-exports.txt` (uma por linha, ordem alfabética): `Block`, `ComponentLayout`, `ComponentType`, `ContractError`, `Entity`, `FieldLayout`, `Fields`, `NullEntity`, `OlyModuleFactory`, `Query`, `QuerySpec`, `RawField`, `ReadField`, `ReadView`, `Runtime`, `ScalarType`, `Schema`, `SchemaMismatchError`, `SchemaType`, `SpawnValues`, `TagType`, `ValueOf`, `World`, `WriteField`, `WriteView`, `component`, `defineSchema`, `entityGeneration`, `entityIndex`, `formatEntity`, `loadRuntime`, `tag`.
-  - Regras TS do `check_boundaries.py` (arquivos `.ts` fora de `node_modules/`, `dist/`, `dist-tests/`, `build/`):
-    - **R3** import de `@oly/core/internal` fora de `engine/` → `"@oly/core/internal só pode ser usado dentro de engine/"`.
-    - **R4** import de `@oly/client` em `engine/packages/core/` → `"@oly/core não pode depender de @oly/client"`.
-    - **R5** import relativo que resolve para fora do pacote do arquivo (pacote = diretório mais próximo com `package.json`) → `"import relativo atravessa pacotes; use o nome do pacote"`.
+  - `ContractError` (formerly `EngineContractError`, `name` = `"ContractError"`), `SchemaMismatchError`.
+  - `Runtime` (formerly `EngineRuntime`) with only `schema` and `createWorld()` public; `loadRuntime(factory: OlyModuleFactory, schema: Schema): Promise<Runtime>` (formerly `loadEngine`).
+  - In `@oly/core/internal`, besides the list from Task 7: `bridgeOf(runtime: Runtime): Bridge`, `moduleOf(runtime: Runtime): OlyModule`, `componentIdOf(runtime: Runtime, type: SchemaType): number`.
+  - Out of the public `.d.ts`: `World.iterationDepth`, `World.assertUsable`, `Block.invalidate`, `Query.writes`, `Query.positionOf`, `Runtime.bridge`, `Runtime.module`, `Runtime.componentId` (any mechanism: `#private`, module functions not re-exported by `index.ts`, or `WeakMap`). Do not use TS `private`: it shows up in the `.d.ts` and the surface test rejects it.
+  - `src/index.ts` with named exports, exactly the list in `api/public-exports.txt` (one per line, alphabetical order): `Block`, `ComponentLayout`, `ComponentType`, `ContractError`, `Entity`, `FieldLayout`, `Fields`, `NullEntity`, `OlyModuleFactory`, `Query`, `QuerySpec`, `RawField`, `ReadField`, `ReadView`, `Runtime`, `ScalarType`, `Schema`, `SchemaMismatchError`, `SchemaType`, `SpawnValues`, `TagType`, `ValueOf`, `World`, `WriteField`, `WriteView`, `component`, `defineSchema`, `entityGeneration`, `entityIndex`, `formatEntity`, `loadRuntime`, `tag`.
+  - TS rules in `check_boundaries.py` (`.ts` files outside `node_modules/`, `dist/`, `dist-tests/`, `build/`):
+    - **R3** import of `@oly/core/internal` outside `engine/` → `"@oly/core/internal can only be used inside engine/"`.
+    - **R4** import of `@oly/client` in `engine/packages/core/` → `"@oly/core cannot depend on @oly/client"`.
+    - **R5** relative import that resolves outside the file's package (package = closest directory with a `package.json`) → `"relative import crosses packages; use the package name"`.
 
-- [ ] **Step 1: Escrever `surface.test.ts`** com a API do compilador TypeScript (`typescript` já é dependência da raiz): cria um `Program` sobre `engine/packages/core/dist/index.d.ts`, pega `checker.getExportsOfModule` e as propriedades das classes exportadas.
-
-```ts
-test("exports públicos batem com api/public-exports.txt")   // nomes ordenados === linhas do arquivo
-test("World expõe só a API do glossário")   // propriedades === [add, checkInvariants, destroy, dispose, get, handle, has, isAlive, query, remove, set, spawn]
-test("Query expõe só eachBlock")
-test("Block expõe só count, entity, read, write")
-test("Runtime expõe só schema e createWorld")
-test("ContractError tem name ContractError")   // new ContractError("x").name === "ContractError"
-```
-
-- [ ] **Step 2: Escrever os testes WASM do Review Focus** (`engine/testing/tests/wasm/iteration.test.ts`)
+- [ ] **Step 1: Write `surface.test.ts`** with the TypeScript compiler API (`typescript` is already a root dependency): it creates a `Program` over `engine/packages/core/dist/index.d.ts`, takes `checker.getExportsOfModule` and the properties of the exported classes.
 
 ```ts
-test("exceção no callback de eachBlock encerra a iteração")   // assert.throws(() => query.eachBlock(() => { throw new Error("x") })); depois world.spawn([Position]) funciona e world.checkInvariants() === null
-test("eachBlock aninhado em outra query mantém o bloco externo")   // externo lê Position.x antes e depois de um eachBlock interno de [Velocity]; valores iguais aos gravados
-test("query criada dentro de eachBlock (memória pode crescer) não corrompe o bloco externo")   // dentro do callback: world.query com read de todos os componentes e um eachBlock; depois block.read(Position).x.get(row) ainda bate com o valor gravado para block.entity(row)
+test("public exports match api/public-exports.txt")   // sorted names === lines of the file
+test("World exposes only the glossary API")   // properties === [add, checkInvariants, destroy, dispose, get, handle, has, isAlive, query, remove, set, spawn]
+test("Query exposes only eachBlock")
+test("Block exposes only count, entity, read, write")
+test("Runtime exposes only schema and createWorld")
+test("ContractError has name ContractError")   // new ContractError("x").name === "ContractError"
 ```
 
-- [ ] **Step 3: Escrever os testes das regras TS** em `tools/test_check_boundaries.py`
+- [ ] **Step 2: Write the Review Focus WASM tests** (`engine/testing/tests/wasm/iteration.test.ts`)
+
+```ts
+test("exception in the eachBlock callback ends the iteration")   // assert.throws(() => query.eachBlock(() => { throw new Error("x") })); then world.spawn([Position]) works and world.checkInvariants() === null
+test("eachBlock nested in another query keeps the outer block")   // outer reads Position.x before and after an inner eachBlock over [Velocity]; values equal to the written ones
+test("query created inside eachBlock (memory may grow) does not corrupt the outer block")   // inside the callback: world.query reading all components and an eachBlock; then block.read(Position).x.get(row) still matches the value written for block.entity(row)
+```
+
+- [ ] **Step 3: Write the TS rule tests** in `tools/test_check_boundaries.py`
 
 ```python
-def test_internal_fora_de_engine_falha(self)       # games/x/src/a.ts importa "@oly/core/internal" → 1, motivo R3 com arquivo:linha
-def test_internal_dentro_de_engine_passa(self)     # engine/testing/tests/a.ts importa "@oly/core/internal" → 0
-def test_core_importando_client_falha(self)        # engine/packages/core/src/a.ts importa "@oly/client" → 1
-def test_relativo_entre_pacotes_falha(self)        # engine/packages/client/src/a.ts importa "../../core/src/world.js" → 1
+def test_internal_outside_engine_fails(self)       # games/x/src/a.ts imports "@oly/core/internal" → 1, reason R3 with file:line
+def test_internal_inside_engine_passes(self)     # engine/testing/tests/a.ts imports "@oly/core/internal" → 0
+def test_core_importing_client_fails(self)        # engine/packages/core/src/a.ts imports "@oly/client" → 1
+def test_relative_across_packages_fails(self)        # engine/packages/client/src/a.ts imports "../../core/src/world.js" → 1
 ```
 
-- [ ] **Step 4: Ver falhar**
+- [ ] **Step 4: See it fail**
 
 Run: `$WC make games-test`; `$DC python3 -I tools/test_check_boundaries.py`
-Expected: `ts.core.unit` falha (exports a mais, membros internos visíveis, `ContractError` inexistente); 4 testes novos do script falham.
+Expected: `ts.core.unit` fails (extra exports, internal members visible, `ContractError` does not exist); the script's 4 new tests fail.
 
-- [ ] **Step 5: Implementar** os nomes, o `index.ts` restrito, os acessores de `internal.ts`, os membros escondidos e as regras R3–R5. Atualizar `engine/testing/**` (`loadRuntime`, `moduleOf(runtime)` para os exports do fixture, `ContractError`) e `boundary.ts`.
+- [ ] **Step 5: Implement** the names, the restricted `index.ts`, the `internal.ts` accessors, the hidden members and rules R3–R5. Update `engine/testing/**` (`loadRuntime`, `moduleOf(runtime)` for the fixture exports, `ContractError`) and `boundary.ts`.
 
-- [ ] **Step 6: Rodar tudo**
+- [ ] **Step 6: Run everything**
 
 Run: `$WC make games-test`, `$WC sh -c 'make ts && make test PRESET=wasm-games-release T=^ts\.'`, `$DC make test`
-Expected: verdes.
+Expected: green.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add -A
-git commit -m "refactor: superfície pública de @oly/core e regras TS de fronteira"
+git commit -m "refactor: @oly/core public surface and TS boundary rules"
 ```
 
 ---
@@ -526,52 +526,52 @@ git commit -m "refactor: superfície pública de @oly/core e regras TS de fronte
 
 **Files:**
 - Create: `engine/packages/client/{package.json,tsconfig.json,src/index.ts,src/module_factory.ts,tests/tsconfig.json,tests/module_factory.test.ts}`
-- Modify: `tsconfig.json` (raiz, nova referência), `engine/CMakeLists.txt` (`ts.client.unit`), `package-lock.json`
+- Modify: `tsconfig.json` (root, new reference), `engine/CMakeLists.txt` (`ts.client.unit`), `package-lock.json`
 
 **Interfaces:**
-- Consumes: `OlyModuleFactory` de `@oly/core` (superfície pública; o client não importa `./internal`).
-- Produces: `moduleFactoryFromUrl(url: string | URL, importModule?: (href: string) => Promise<unknown>): OlyModuleFactory`. Resolve `url` para `href` absoluto (contra `globalThis.location?.href` quando relativa — com `lib: ["DOM"]`), importa o `.mjs` com `importModule` (padrão: `import(href)`), exige `default` função (senão lança `Error` cuja mensagem contém o `href` e `"não exporta uma fábrica Emscripten"`) e chama `default({ locateFile: (path: string) => new URL(path, href).href })`, para o `.wasm` ser buscado ao lado do `.mjs`. `tsconfig` do client: `lib: ["ES2022", "DOM"]`, `references` ao core.
+- Consumes: `OlyModuleFactory` from `@oly/core` (public surface; the client does not import `./internal`).
+- Produces: `moduleFactoryFromUrl(url: string | URL, importModule?: (href: string) => Promise<unknown>): OlyModuleFactory`. Resolves `url` to an absolute `href` (against `globalThis.location?.href` when relative — with `lib: ["DOM"]`), imports the `.mjs` with `importModule` (default: `import(href)`), requires `default` to be a function (otherwise throws an `Error` whose message contains the `href` and `"does not export an Emscripten factory"`) and calls `default({ locateFile: (path: string) => new URL(path, href).href })`, so the `.wasm` is fetched next to the `.mjs`. Client `tsconfig`: `lib: ["ES2022", "DOM"]`, `references` to core.
 
-- [ ] **Step 1: Escrever os testes** (`node:test`, com `importModule` falso)
+- [ ] **Step 1: Write the tests** (`node:test`, with a fake `importModule`)
 
 ```ts
-test("importa o .mjs pela URL absoluta")              // importModule recebe "https://x/games/demo.mjs"
-test("locateFile resolve o .wasm ao lado do .mjs")    // a fábrica falsa recebe moduleArg; moduleArg.locateFile("demo.wasm") === "https://x/games/demo.wasm"
-test("devolve o módulo criado pela fábrica")          // await factory() === objeto devolvido pelo default falso
-test("default ausente é erro com a URL")              // rejects com mensagem contendo "https://x/games/demo.mjs" e "não exporta uma fábrica Emscripten"
+test("imports the .mjs by absolute URL")              // importModule receives "https://x/games/demo.mjs"
+test("locateFile resolves the .wasm next to the .mjs")    // the fake factory receives moduleArg; moduleArg.locateFile("demo.wasm") === "https://x/games/demo.wasm"
+test("returns the module created by the factory")          // await factory() === object returned by the fake default
+test("missing default is an error with the URL")              // rejects with a message containing "https://x/games/demo.mjs" and "does not export an Emscripten factory"
 ```
 
-- [ ] **Step 2: Ver falhar**
+- [ ] **Step 2: See it fail**
 
 Run: `$WC sh -c 'npm install --no-audit --no-fund && npm run build'`
-Expected: erro de compilação (`moduleFactoryFromUrl` inexistente).
+Expected: compile error (`moduleFactoryFromUrl` does not exist).
 
-- [ ] **Step 3: Implementar** `module_factory.ts` e `index.ts` (exporta só `moduleFactoryFromUrl`).
+- [ ] **Step 3: Implement** `module_factory.ts` and `index.ts` (exports only `moduleFactoryFromUrl`).
 
-- [ ] **Step 4: Rodar**
+- [ ] **Step 4: Run**
 
 Run: `$WC make games-test`, `$DC make test T='^oly\.'`
-Expected: verdes, com `ts.client.unit`.
+Expected: green, with `ts.client.unit`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "feat: @oly/client com fábrica do módulo Emscripten por URL"
+git commit -m "feat: @oly/client with Emscripten module factory by URL"
 ```
 
 ---
 
-### Task 10: Benchmarks em `docs/benchmarks/` e reexecução das metas
+### Task 10: Benchmarks in `docs/benchmarks/` and rerun of the targets
 
 **Files:**
 - Move (`git mv`): `bench/results/README.md` → `docs/benchmarks/README.md`; `bench/results/{m*,e1_*}` → `docs/benchmarks/ecs/`; `bench/results/wasm/**` → `docs/benchmarks/wasm/**`; `bench/results/engine/**` → `docs/benchmarks/bridge/**`
 - Create: `docs/benchmarks/ecs/r1_{iterate,fragmented,flush}.json`, `docs/benchmarks/bridge/boundary_oly.json`
-- Modify: `docs/benchmarks/README.md`, `docs/benchmarks/bridge/README.md` (e o README de `wasm/`, se houver), `tools/run_ladder.sh` (`docs/benchmarks/wasm/runs/$bench`, `OLY_LADDER_EXTRA_ARGS`, nomes `ecs_bench_*`), `tools/perf_fragmented.sh` (uso com `ecs_bench_fragmented`), `tools/extract_codegen.sh` e `tools/bench_ladder.py` se citarem caminhos ou nomes antigos
+- Modify: `docs/benchmarks/README.md`, `docs/benchmarks/bridge/README.md` (and the `wasm/` README, if any), `tools/run_ladder.sh` (`docs/benchmarks/wasm/runs/$bench`, `OLY_LADDER_EXTRA_ARGS`, names `ecs_bench_*`), `tools/perf_fragmented.sh` (usage with `ecs_bench_fragmented`), `tools/extract_codegen.sh` and `tools/bench_ladder.py` if they mention old paths or names
 
-- [ ] **Step 1: Mover e atualizar caminhos e comandos** nos READMEs vivos (sem editar JSON/TXT antigos).
+- [ ] **Step 1: Move and update paths and commands** in the living READMEs (without editing old JSON/TXT).
 
-- [ ] **Step 2: Compilar e medir** (repetir até 3 vezes se uma razão sair da meta, por causa do ruído do WSL2)
+- [ ] **Step 2: Compile and measure** (repeat up to 3 times if a ratio misses the target, because of WSL2 noise)
 
 ```sh
 $DC make build PRESET=release
@@ -581,66 +581,66 @@ $DC ./build/release/bench/ecs_bench_fragmented $P --benchmark_out=docs/benchmark
 $DC ./build/release/bench/ecs_bench_flush $P --benchmark_out=docs/benchmarks/ecs/r1_flush.json
 ```
 
-- [ ] **Step 3: Conferir as metas**
+- [ ] **Step 3: Check the targets**
 
 ```sh
 $DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/r1_iterate.json --name BM_IterateSingle_ECS/1000000 --baseline BM_IterateSingle_SoA/1000000 --max 1.10
 $DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/r1_fragmented.json --name BM_IterateFragmented/64 --baseline BM_IterateSingle_SoA/1000000 --max 1.25
 $DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/r1_flush.json --name BM_FlushCoalesced/1000 --baseline BM_DirectAdds/1000 --max 0.5
 ```
-Expected: as três passam. Regressão confirmada nas repetições bloqueia a entrega: parar e investigar com `superpowers:systematic-debugging`.
+Expected: all three pass. A regression confirmed across repetitions blocks delivery: stop and investigate with `superpowers:systematic-debugging`.
 
-- [ ] **Step 4: Benchmark da fronteira**
+- [ ] **Step 4: Boundary benchmark**
 
 ```sh
 $WC sh -c 'make ts && cmake --preset wasm-games-release && cmake --build --preset wasm-games-release -j'
 $WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/boundary_oly.json --commit $(git rev-parse --short HEAD)
 ```
-Expected: JSON gravado. Registrar no `bridge/README.md` uma tabela comparando com `boundary_phase1.json` (sem meta numérica).
+Expected: JSON written. Record in `bridge/README.md` a table comparing with `boundary_phase1.json` (no numeric target).
 
-- [ ] **Step 5: Registrar** as razões `r1_*` na tabela e no texto de `docs/benchmarks/README.md` (mesmo formato da linha dos `e1_*`).
+- [ ] **Step 5: Record** the `r1_*` ratios in the table and text of `docs/benchmarks/README.md` (same format as the `e1_*` row).
 
-- [ ] **Step 6: Conferir a escada** (só a execução curta, sem registrar resultado)
+- [ ] **Step 6: Check the ladder** (short run only, without recording results)
 
 Run: `OLY_LADDER_EXTRA_ARGS=--benchmark_min_time=0.01s tools/run_ladder.sh 1 ecs_bench_iterate V0`
-Expected: grava `docs/benchmarks/wasm/runs/ecs_bench_iterate/…`; apagar o arquivo depois.
+Expected: writes `docs/benchmarks/wasm/runs/ecs_bench_iterate/…`; delete the file afterwards.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add -A
-git commit -m "bench: resultados em docs/benchmarks e reexecução r1 das metas NF-P1, NF-P2 e NF-P5"
+git commit -m "bench: results in docs/benchmarks and r1 rerun of the NF-P1, NF-P2 and NF-P5 targets"
 ```
 
 ---
 
-### Task 11: Documentação viva, varredura de nomes e verificação final
+### Task 11: Living documentation, name sweep and final verification
 
 **Files:**
 - Modify: `CLAUDE.md`, `.claude/skills/add-test-case/SKILL.md`, `.claude/skills/bench-compare/SKILL.md`, `.claude/agents/perf-reviewer.md`, `.claude/agents/spec-conformance-reviewer.md`
 
-- [ ] **Step 1: Reescrever `CLAUDE.md`** para: árvore (§3 do spec), comandos (`make test T='^ecs\.'`, `make ts`, `make games-test`, presets `wasm-games*`, executáveis `build/<preset>/tests/ecs_<suíte>` e `bench/ecs_bench_*`, `docs/benchmarks/`), módulos e `DEPENDS`, fronteiras (`oly.lint.boundaries`, `detail/`, `@oly/core/internal`), glossário (§5.2), `OLY_ASSERT`/`OLY_ENABLE_ASSERTS`, `oly_add_test`/`oly_add_contract_death`, acessores de teste, `checkInvariants(world)` livre, regras da ponte com `ContractError`/`loadRuntime`. Manter as seções de estilo e corretude.
+- [ ] **Step 1: Rewrite `CLAUDE.md`** to cover: tree (§3 of the spec), commands (`make test T='^ecs\.'`, `make ts`, `make games-test`, presets `wasm-games*`, executables `build/<preset>/tests/ecs_<suite>` and `bench/ecs_bench_*`, `docs/benchmarks/`), modules and `DEPENDS`, boundaries (`oly.lint.boundaries`, `detail/`, `@oly/core/internal`), glossary (§5.2), `OLY_ASSERT`/`OLY_ENABLE_ASSERTS`, `oly_add_test`/`oly_add_contract_death`, test accessors, free `checkInvariants(world)`, bridge rules with `ContractError`/`loadRuntime`. Keep the style and correctness sections.
 
-- [ ] **Step 2: Atualizar skills e agentes** para os caminhos, alvos (`oly_add_test`, `ecs.contract_death.<caso>`, `ecs_bench_*`) e nomes novos (`QueryById` no lugar de `raw_query`/`RawQuery`, `OLY_ASSERT`).
+- [ ] **Step 2: Update skills and agents** to the new paths, targets (`oly_add_test`, `ecs.contract_death.<case>`, `ecs_bench_*`) and names (`QueryById` instead of `raw_query`/`RawQuery`, `OLY_ASSERT`).
 
-- [ ] **Step 3: Varredura do critério 4**
+- [ ] **Step 3: Criterion 4 sweep**
 
 Run:
 ```sh
 git grep -nE 'ECS_ASSERT|ECS_ENABLE_ASSERTS|ENGINE_API|\bengine[A-Z][A-Za-z]*\(|Engine(World|Query|Entity|Module|Runtime|ContractError)|loadEngine|\b(add|remove|has|get)Raw\b|RawQuery|rawQuery|\.create\(|\bcreate\(\)|(^|[^:])\becs::|include "ecs/|include "engine/|bench/results|build/ts|engine-ts|engine-test|wasm-engine' -- . ':!docs/superpowers/specs' ':!docs/superpowers/plans' ':!docs/benchmarks/**/*.json' ':!docs/benchmarks/**/*.txt'
 ```
-Expected: nenhuma ocorrência, ou só ocorrências justificadas (ex.: `World.create` de outra API que não seja entidade, `createWorld`) anotadas no commit. Corrigir o resto.
+Expected: no occurrences, or only justified occurrences (e.g. `World.create` of some API other than entities, `createWorld`) noted in the commit. Fix the rest.
 
-- [ ] **Step 4: Matriz completa do critério 2**
+- [ ] **Step 4: Criterion 2 full matrix**
 
 Run: `$DC make test`, `$DC make test PRESET=release`, `$WC make test PRESET=wasm-debug`, `$WC make games-test`, `$WC sh -c 'make ts && make test PRESET=wasm-games-release'`, `$WC make test PRESET=native-clang`, `$WC make test PRESET=native-clang-32`, `$WC make test PRESET=native-clang-32-scalar`, `$WC make test PRESET=native-clang-avx2`, `$WC make test PRESET=wasm-scalar`, `$WC make test PRESET=wasm-simd`
-Expected: todos verdes; `debug-asan` com 12 `ecs.contract_death.*` e 1 `bridge.contract_death.*`.
+Expected: all green; `debug-asan` with 12 `ecs.contract_death.*` and 1 `bridge.contract_death.*`.
 
-- [ ] **Step 5: Revisão de conformidade** — despachar `spec-conformance-reviewer` sobre `git diff develop...HEAD` (foco: `checkInvariants` ainda cobre as caches de `QueryById`, guarda de iteração no `iterate()`). Corrigir o que for confirmado.
+- [ ] **Step 5: Conformance review** — dispatch `spec-conformance-reviewer` over `git diff develop...HEAD` (focus: `checkInvariants` still covers the `QueryById` caches, iteration guard in `iterate()`). Fix what is confirmed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add -A
-git commit -m "docs: CLAUDE.md, skills e agentes para a árvore e os nomes da Oly"
+git commit -m "docs: CLAUDE.md, skills and agents for the Oly tree and names"
 ```

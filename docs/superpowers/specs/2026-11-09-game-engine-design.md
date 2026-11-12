@@ -1,400 +1,400 @@
-# Game engine sobre o ECS — design
+# Game engine on top of the ECS — design
 
-Data: 2026-11-09. Evolui o pacote descrito em `2026-10-16-ecs-archetype-spec.md` (requisitos `R-*`, invariantes
-`I-*`, metas `NF-*` continuam valendo para o ECS) e aproveita a infraestrutura de build WASM de
+Date: 2026-11-09. Evolves the package described in `2026-10-16-ecs-archetype-spec.md` (requirements `R-*`, invariants
+`I-*` and targets `NF-*` still hold for the ECS) and reuses the WASM build infrastructure from
 `2026-11-06-wasm-cost-study-design.md`.
 
-Revisão de 2026-11-10 (antes da fase 2): a engine passa a ser completa em C++, com o TypeScript como camada fina;
-o loop sai do TS e vai para o C++ (§1, §2, §4, §4.3, §5, §7, §8). Nomes seguem a modularização
-(`2026-11-09-oly-modularization-design.md`): prefixo `oly`, `OLY_ASSERT`, módulos em `engine/runtime/<m>/`.
+Revision of 2026-11-10 (before phase 2): the engine becomes complete in C++, with TypeScript as a thin layer;
+the loop moves out of TS and into C++ (§1, §2, §4, §4.3, §5, §7, §8). Names follow the modularization
+(`2026-11-09-oly-modularization-design.md`): `oly` prefix, `OLY_ASSERT`, modules in `engine/runtime/<m>/`.
 
-Revisão de 2026-11-10 (antes da fase 3): §4.4 detalhado para os eventos — handlers recebem lotes por tipo,
-despacho tipo a tipo dentro de cada rodada da cascata, fluxo de referência da morte de um inimigo, e o jogo (não a
-engine) decide quando destruir a entidade. Medição da fase 3 no §7.
+Revision of 2026-11-10 (before phase 3): §4.4 detailed for events — handlers receive batches per type,
+dispatch type by type within each round of the cascade, reference flow for an enemy's death, and the game (not the
+engine) decides when to destroy the entity. Phase 3 measurement in §7.
 
-Revisão de 2026-11-11 (antes da fase 4): §4.5 detalhado para as ações de input — o host empurra eventos brutos,
-botões físicos são usages do USB HID, ações são declaradas no esquema, módulo `input` próprio, sem interface de
-plataforma (§4.3). Testes da fase 4 no §5 e ausência de benchmark justificada no §7.
+Revision of 2026-11-11 (before phase 4): §4.5 detailed for input actions — the host pushes raw events,
+physical buttons are USB HID usages, actions are declared in the schema, own `input` module, no platform
+interface (§4.3). Phase 4 tests in §5 and absence of a benchmark justified in §7.
 
-Revisão de 2026-11-11 (antes da fase 5): §4.6 detalhado para o schedule — o que se agenda passa a se chamar
-**tarefa** (o nome "ação" ficou com o input, §4.5), payload copiado nas tarefas C++, sem tarefa nativa por nome
-(o TS chega ao C++ por evento), descarte que avisa o TS para soltar a closure. Testes da fase 5 no §5 e ausência de
-benchmark justificada no §7.
+Revision of 2026-11-11 (before phase 5): §4.6 detailed for the schedule — what gets scheduled is now called a
+**task** (the name "action" went to input, §4.5), payload copied into C++ tasks, no native task by name
+(TS reaches C++ through an event), discard that tells TS to release the closure. Phase 5 tests in §5 and absence of a
+benchmark justified in §7.
 
-Revisão de 2026-11-12 (antes da fase 6): §4.7 detalhado para os estados — estados declarados no esquema, entrada do
-estado inicial pela regra de qualquer troca, escopo por uma tag interna no `World`, persistência pedida depois de
-criar (`persist`), spawn direto do TS passando pela engine. Uso indicativo (§4.8), testes da fase 6 no §5 e ausência
-de benchmark justificada no §7.
+Revision of 2026-11-12 (before phase 6): §4.7 detailed for states — states declared in the schema, entry into the
+initial state by the same rule as any change, scope through an internal tag in the `World`, persistence requested after
+creation (`persist`), direct spawn from TS going through the engine. Indicative usage (§4.8), phase 6 tests in §5 and absence
+of a benchmark justified in §7.
 
-Revisão de 2026-11-12 (antes da fase 7): §4.9 detalha o jogo de validação — `games/arena/`, divisão C++/TS do
-gameplay, jogo sem DOM (`installGame`) separado da casca do navegador, esbuild para servir, `single` em C++ e TS
-(prometido no §4.2), regra para faltas da engine descobertas pelo jogo e a lista da fase. Testes da fase 7 no §5 e
-ausência de benchmark justificada no §7.
+Revision of 2026-11-12 (before phase 7): §4.9 details the validation game — `games/arena/`, C++/TS split of the
+gameplay, DOM-free game (`installGame`) separate from the browser shell, esbuild for serving, `single` in C++ and TS
+(promised in §4.2), rule for engine gaps discovered by the game and the phase list. Phase 7 tests in §5 and
+absence of a benchmark justified in §7.
 
-Convenção deste documento: o que não vem marcado foi decidido pelo autor do projeto. Itens marcados
-**[decisão do design]** foram escolhas feitas ao escrever o documento, sem confirmação explícita; podem ser revistas
-no plano da fase correspondente sem voltar ao autor, desde que respeitem os objetivos e anti-objetivos.
+Convention of this document: whatever is not marked was decided by the project's author. Items marked
+**[design decision]** were choices made while writing the document, without explicit confirmation; they may be revised
+in the plan of the corresponding phase without going back to the author, as long as they respect the goals and anti-goals.
 
-## 1. Intenção
+## 1. Intent
 
-Transformar o ECS por arquétipos numa **game engine reaproveitável para jogos 2D no navegador**, com:
+Turn the archetype ECS into a **reusable game engine for 2D games in the browser**, with:
 
-- um **núcleo em C++** (o ECS atual mais a infraestrutura da engine), compilado para WASM. **O núcleo é a engine
-  inteira**: loop, fases, passo fixo, pausa, eventos, ações, schedule e estados vivem nele;
-- um **complemento em TypeScript**, que é por onde o jogo usa a engine no navegador. É uma **camada fina**: carrega o
-  WASM, repassa ao núcleo o tempo e os sinais do navegador, registra sistemas TS e dá acesso sem cópia aos
-  componentes. Não contém lógica de engine que falte ao C++.
+- a **C++ core** (the current ECS plus the engine infrastructure), compiled to WASM. **The core is the whole
+  engine**: loop, phases, fixed step, pause, events, actions, schedule and states live in it;
+- a **TypeScript complement**, which is how the game uses the engine in the browser. It is a **thin layer**: it loads the
+  WASM, forwards the browser's time and signals to the core, registers TS systems and gives copy-free access to
+  components. It contains no engine logic missing from C++.
 
-Motivo (do autor): quem quiser escrever um jogo só em C++, e no futuro rodá-lo em outro ambiente que não o navegador,
-não pode encontrar a engine incompleta porque parte dela foi escrita em TypeScript.
+Reason (from the author): someone who wants to write a game in C++ only, and in the future run it in an environment other than the browser,
+must not find the engine incomplete because part of it was written in TypeScript.
 
-Um sistema é um sistema, independente da linguagem: o jogo pode escrever cada sistema em C++ ou em TypeScript, e os
-dois tipos convivem nas mesmas fases. Isso faz da **fronteira WASM↔JS uma peça central do design**, não um detalhe:
-o acesso de sistemas TS aos componentes é feito por views sem cópia sobre a memória do WASM.
+A system is a system, regardless of language: the game can write each system in C++ or in TypeScript, and the
+two kinds coexist in the same phases. This makes the **WASM↔JS boundary a central piece of the design**, not a detail:
+TS systems access components through copy-free views over the WASM memory.
 
-O projeto continua sendo também um projeto de estudo: custos de abstração e da fronteira são medidos, no mesmo
-estilo das metas do ECS (razões contra uma linha de base da mesma execução).
+The project remains a study project too: abstraction and boundary costs are measured, in the same
+style as the ECS targets (ratios against a baseline from the same run).
 
-### 1.1 Jogo de validação
+### 1.1 Validation game
 
-Um jogo de tiro 2D com visão de cima, no navegador:
+A top-down 2D shooter, in the browser:
 
-- o jogador tem uma arma com munição infinita, mira com o mouse e pode usar **dash** (com recarga);
-- moedas aparecem pelo mapa e o jogador as coleta;
-- inimigos perseguem o jogador para atacá-lo; o jogador foge e os mata;
-- sequência de vida: menu → jogando → game over → jogar de novo.
+- the player has a weapon with infinite ammo, aims with the mouse and can **dash** (with recharge);
+- coins appear across the map and the player collects them;
+- enemies chase the player to attack them; the player flees and kills them;
+- lifecycle sequence: menu → playing → game over → play again.
 
-O jogo é **cliente de validação** da engine: se algo de que ele precisa só puder ser feito com gambiarra fora da
-engine (fora dos mecanismos de sistemas, eventos, ações, schedule e estados), a engine está incompleta. Render,
-colisão e áudio do jogo são escritos no próprio jogo (§2). O design do jogo está no §4.9.
+The game is a **validation client** of the engine: if something it needs can only be done with a hack outside the
+engine (outside the mechanisms of systems, events, actions, schedule and states), the engine is incomplete. Render,
+collision and audio for the game are written in the game itself (§2). The game design is in §4.9.
 
-## 2. Objetivos, não-objetivos, anti-objetivos
+## 2. Goals, non-goals, anti-goals
 
-**Objetivos**
-- Engine reaproveitável: nada no núcleo nem no pacote TS conhece conceitos do jogo de validação (inimigo, moeda, dash).
-- Infraestrutura completa para: sistemas em fases fixas, mudanças estruturais seguras, eventos, ações de input,
-  `schedule` de tarefas no tempo, ciclo de vida da aplicação e estados de jogo.
-- Sistemas em C++ e em TypeScript com o mesmo modelo de uso.
-- Engine completa em C++: um jogo só em C++ usa todos os mecanismos (loop, fases, pausa e, nas fases seguintes,
-  eventos, ações, schedule e estados) pela API C++, sem depender de nada escrito em TS. O que é próprio do ambiente
-  (tempo, quadro, visibilidade e, depois, input) entra no núcleo pelo **host** (§4.3), trocável.
-- Acesso TS a componentes **sem cópia**, por bloco de arquétipo.
-- O jogo de validação jogável no navegador, de ponta a ponta.
-- Custo da fronteira medido: o mesmo sistema escrito em TS (via engine) e em C++, e contra uma linha de base TS manual.
+**Goals**
+- Reusable engine: nothing in the core or in the TS package knows concepts of the validation game (enemy, coin, dash).
+- Complete infrastructure for: systems in fixed phases, safe structural changes, events, input actions,
+  `schedule` of tasks over time, application lifecycle and game states.
+- Systems in C++ and in TypeScript with the same usage model.
+- Engine complete in C++: a C++-only game uses every mechanism (loop, phases, pause and, in the following phases,
+  events, actions, schedule and states) through the C++ API, without depending on anything written in TS. What is specific to the environment
+  (time, frame, visibility and, later, input) enters the core through the **host** (§4.3), which is replaceable.
+- **Copy-free** TS access to components, per archetype block.
+- The validation game playable in the browser, end to end.
+- Boundary cost measured: the same system written in TS (via the engine) and in C++, and against a hand-written TS baseline.
 
-**Não-objetivos (por enquanto)**
-- Render, colisão/física, áudio, carregamento de assets, câmera, UI. Ficam com o jogo.
+**Non-goals (for now)**
+- Render, collision/physics, audio, asset loading, camera, UI. They stay with the game.
 - Threads, Web Workers, `SharedArrayBuffer`.
-- Rede/multiplayer, editor, hot reload, serialização/save.
-- Executar fora do navegador como produto (um build nativo existe só para testar o núcleo C++, §6). A engine fica
-  **pronta** para isso (núcleo completo e host trocável), mas nenhum host nativo de verdade (janela, input, SDL etc.)
-  é entregue agora.
-- Suporte garantido a múltiplos navegadores: o alvo de validação é um navegador baseado em Chromium.
-- Gamepad (as ações são desenhadas para aceitá-lo depois; teclado e mouse bastam agora).
+- Network/multiplayer, editor, hot reload, serialization/save.
+- Running outside the browser as a product (a native build exists only to test the C++ core, §6). The engine is
+  **ready** for it (complete core and replaceable host), but no real native host (window, input, SDL etc.)
+  is delivered now.
+- Guaranteed support for multiple browsers: the validation target is a Chromium-based browser.
+- Gamepad (actions are designed to accept it later; keyboard and mouse are enough now).
 
-**Anti-objetivos** (falha mesmo que funcione)
-- Cruzar a fronteira WASM↔JS **por entidade** em caminhos quentes (iteração de sistemas, emissão de eventos por
-  sistemas C++). A fronteira é cruzada por bloco, por lote ou por sistema.
-- O layout de um componente divergir entre C++ e TS. Existe uma única fonte (o esquema, §4.1).
-- Regredir o ECS: presets, testes, invariantes e números registrados em `docs/benchmarks/README.md` continuam valendo.
-- Conceitos do jogo de validação vazarem para a engine.
-- Lógica de engine (decidir quando rodar passos, fases, pausa, eventos, schedule, estados) escrita só em TS. O TS
-  pode ter conveniências de API, nunca comportamento que um jogo só em C++ não teria.
-- Engine que só funciona com o jogo de validação (APIs moldadas para um caso só).
+**Anti-goals** (failure even if it works)
+- Crossing the WASM↔JS boundary **per entity** on hot paths (system iteration, event emission by
+  C++ systems). The boundary is crossed per block, per batch or per system.
+- A component's layout diverging between C++ and TS. There is a single source (the schema, §4.1).
+- Regressing the ECS: presets, tests, invariants and numbers recorded in `docs/benchmarks/README.md` still hold.
+- Concepts of the validation game leaking into the engine.
+- Engine logic (deciding when to run steps, phases, pause, events, schedule, states) written only in TS. TS
+  may have API conveniences, never behaviour that a C++-only game would not have.
+- An engine that only works with the validation game (APIs shaped for a single case).
 
-## 3. Restrições
+## 3. Constraints
 
-- Toolchain só em Docker, como hoje. O caminho WASM usa a imagem Emscripten já fixada pelo estudo de custo
-  (`emscripten/emsdk:3.1.74`, node 20.18). Ferramentas JS/TS (TypeScript, bundler, test runner) também rodam no
-  container; o host não precisa de node.
-- `-Wall -Wextra -Wpedantic -Werror` em todos os alvos C++; TypeScript em modo `strict`.
-- Estilo e idioma do projeto (`CLAUDE.md`): commits, comentários e mensagens em pt-BR; nomes completos; camadas estritas.
-- Camadas: a engine fica **acima** do `world` e só usa a API pública do ECS. O ECS não passa a conhecer a engine.
-- **[decisão do design]** A API pública do ECS **pode ser estendida** com operações por `ComponentId` em tempo de
-  execução, que o TS exige (as queries TS são montadas em tempo de execução): query type-erased por listas de IDs
-  (`read`/`write`/`with`/`without`) com acesso a ponteiro de coluna e `count` por tabela, e `add`/`remove` por ID no
-  `CommandBuffer` (o `World` já tem `addRaw`/`removeRaw`). As APIs template existentes passam a delegar para essas
-  quando fizer sentido. Essa extensão é a primeira tarefa da fase 1 e vem com testes, `checkInvariants` e a
-  reexecução dos benchmarks do ECS para provar que nada regrediu.
-- Contratos de validade do ECS valem também no TS: qualquer mudança estrutural invalida ponteiros e spans;
-  só `Entity` é handle estável.
+- Toolchain only in Docker, as today. The WASM path uses the Emscripten image already pinned by the cost study
+  (`emscripten/emsdk:3.1.74`, node 20.18). JS/TS tools (TypeScript, bundler, test runner) also run in the
+  container; the host does not need node.
+- `-Wall -Wextra -Wpedantic -Werror` on every C++ target; TypeScript in `strict` mode.
+- Project style and language (`CLAUDE.md`): commits, comments and messages in English; full names; strict layers.
+- Layers: the engine sits **above** `world` and only uses the ECS's public API. The ECS does not get to know the engine.
+- **[design decision]** The ECS's public API **may be extended** with operations by `ComponentId` at
+  runtime, which TS requires (TS queries are built at runtime): type-erased query by ID lists
+  (`read`/`write`/`with`/`without`) with access to the column pointer and `count` per table, and `add`/`remove` by ID in the
+  `CommandBuffer` (the `World` already has `addRaw`/`removeRaw`). The existing template APIs start delegating to these
+  where it makes sense. This extension is the first task of phase 1 and comes with tests, `checkInvariants` and a
+  rerun of the ECS benchmarks to prove nothing regressed.
+- The ECS's validity contracts also hold in TS: any structural change invalidates pointers and spans;
+  only `Entity` is a stable handle.
 
-## 4. Arquitetura
+## 4. Architecture
 
 ```
- jogo (TS e/ou C++)
+ game (TS and/or C++)
  ─────────────────────────────────────────────────────────
- pacotes TS (camada fina)         │  núcleo C++ da engine (WASM ou nativo)
-  boot (carrega o WASM)           │   loop: frame(agora) → passos fixos + render
-  host do navegador: rAF,         │   fases, pausa, CommandBuffer por fase
-   visibilitychange, input        │   eventos, schedule, estados (fases 3–6)
-  views sobre colunas             │   API C exportada (extern "C")
-  sistemas/handlers TS            │   sistemas/handlers C++
-   (chamados de volta pelo C++)   │
+ TS packages (thin layer)         │  C++ engine core (WASM or native)
+  boot (loads the WASM)           │   loop: frame(now) → fixed steps + render
+  browser host: rAF,              │   phases, pause, CommandBuffer per phase
+   visibilitychange, input        │   events, schedule, states (phases 3–6)
+  views over columns              │   exported C API (extern "C")
+  TS systems/handlers             │   C++ systems/handlers
+   (called back by C++)           │
  ─────────────────────────────────────────────────────────
  ECS (component → entity → table → archetype → query/command_buffer → world)
 ```
 
-### 4.1 Esquema único de componentes e eventos
+### 4.1 Single schema for components and events
 
-- Componentes e eventos são declarados num **esquema** de campos escalares (`f32`, `f64`, `i32`, `u32`, `u8`, `entity`
-  etc.) e tags (componentes sem dados). Exemplo indicativo:
+- Components and events are declared in a **schema** of scalar fields (`f32`, `f64`, `i32`, `u32`, `u8`, `entity`
+  etc.) and tags (components without data). Indicative example:
   `component("Position", { x: "f32", y: "f32" })`, `tag("Enemy")`, `event("EnemyDied", { entity: "entity", x: "f32", y: "f32" })`.
-- Um gerador produz, a partir do esquema, o header C++ (structs triviais) e os descritores TS (nome, tamanho,
-  alinhamento, campos com tipo e offset). Ele também verifica, no build, que `sizeof`/`alignof`/`offsetof` do C++
-  batem com o descritor TS (ex.: `static_assert` gerados).
-- **[decisão do design]** O esquema é escrito em TypeScript (ou JSON lido por um script node); o formato exato e a
-  linguagem do gerador ficam com o construtor.
-- Consequência: o WASM é compilado **por jogo** (engine + esquema do jogo + sistemas C++ do jogo). A engine é
-  distribuída como biblioteca C++ + pacote TS + gerador, e o build do jogo os junta.
-- Componentes que não cabem no esquema (strings, objetos JS, referências a imagens) vivem num armazenamento do lado TS
-  indexado por `Entity`, fora do `World`. **[decisão do design]** Esse armazenamento é simples (mapa por tipo) e não é
-  consultável por queries; sua limpeza acompanha a destruição da entidade.
+- A generator produces, from the schema, the C++ header (trivial structs) and the TS descriptors (name, size,
+  alignment, fields with type and offset). It also checks, at build time, that the C++ `sizeof`/`alignof`/`offsetof`
+  match the TS descriptor (e.g. generated `static_assert`s).
+- **[design decision]** The schema is written in TypeScript (or JSON read by a node script); the exact format and the
+  generator's language are up to the implementer.
+- Consequence: the WASM is compiled **per game** (engine + the game's schema + the game's C++ systems). The engine is
+  distributed as a C++ library + TS package + generator, and the game's build puts them together.
+- Components that do not fit the schema (strings, JS objects, image references) live in TS-side storage
+  indexed by `Entity`, outside the `World`. **[design decision]** This storage is simple (map per type) and cannot be
+  queried by queries; its cleanup follows the entity's destruction.
 
-### 4.2 Fronteira e acesso sem cópia
+### 4.2 Boundary and copy-free access
 
-- O núcleo expõe uma **API C** (`extern "C"`, exportada pelo Emscripten); não usar embind. **[decisão do design]**
-- Um sistema TS declara uma query (`read`, `write`, `with`, `without`) e itera com `eachBlock`: um callback por
-  tabela não vazia, recebendo `count` e views tipadas sobre as colunas na memória linear do WASM. A fronteira é
-  cruzada uma vez por bloco (obter ponteiros de coluna e `count`), nunca por entidade.
-- **Layout das colunas: [decisão do design, importante]** a `Table` atual guarda cada componente como uma coluna de
-  structs (`Position` = `x0 y0 x1 y1 …`), ou seja, SoA entre componentes e AoS dentro do componente. O design
-  **mantém esse layout**. A view de um campo é um typed array sobre a coluna inteira com passo
-  (`x[row] = coluna[row * passo + offsetDoCampo]`, em elementos do tipo do campo); o código gerado esconde o passo
-  atrás de acessores. Separar os campos em colunas próprias (SoA por campo) mudaria a `Table` e a API C++ das queries,
-  e fica como estudo futuro, motivado pelos benchmarks da fronteira.
-- Alinhamento: como os structs são triviais e alinhados naturalmente, todo campo escalar tem offset múltiplo do seu
-  tamanho e o tamanho do struct é múltiplo do alinhamento, então o typed array com passo é sempre válido.
-- **Validade das views:** só dentro do callback de `eachBlock`. Crescimento da memória do WASM (`ALLOW_MEMORY_GROWTH`)
-  desanexa o `ArrayBuffer`, e mudanças estruturais movem linhas; por isso views nunca são guardadas entre chamadas.
-  Em build de debug, a engine detecta uso de view fora do callback quando for barato fazê-lo.
-- `Entity` no TS: **[decisão do design]** representado como `number` (índice + geração empacotados de forma segura
-  dentro de 53 bits, ou dois campos); a escolha fica com o construtor desde que comparar e guardar seja barato.
-- Acesso pontual (`get(entity, Component)`, `single(...)`) existe para casos como "a posição do jogador"; cruza a
-  fronteira por chamada e não deve ser usado em laço por entidade. `single` só chega na fase 7 (§4.9).
+- The core exposes a **C API** (`extern "C"`, exported by Emscripten); no embind. **[design decision]**
+- A TS system declares a query (`read`, `write`, `with`, `without`) and iterates with `eachBlock`: one callback per
+  non-empty table, receiving `count` and typed views over the columns in the WASM linear memory. The boundary is
+  crossed once per block (getting column pointers and `count`), never per entity.
+- **Column layout: [design decision, important]** the current `Table` stores each component as a column of
+  structs (`Position` = `x0 y0 x1 y1 …`), that is, SoA across components and AoS within the component. The design
+  **keeps this layout**. A field's view is a typed array over the whole column with a stride
+  (`x[row] = column[row * stride + fieldOffset]`, in elements of the field's type); generated code hides the stride
+  behind accessors. Splitting fields into their own columns (SoA per field) would change the `Table` and the C++ query API,
+  and is left as future study, motivated by the boundary benchmarks.
+- Alignment: since structs are trivial and naturally aligned, every scalar field has an offset that is a multiple of its
+  size and the struct size is a multiple of the alignment, so the strided typed array is always valid.
+- **View validity:** only inside the `eachBlock` callback. WASM memory growth (`ALLOW_MEMORY_GROWTH`)
+  detaches the `ArrayBuffer`, and structural changes move rows; that is why views are never kept across calls.
+  In a debug build, the engine detects use of a view outside the callback when it is cheap to do so.
+- `Entity` in TS: **[design decision]** represented as a `number` (index + generation packed safely
+  within 53 bits, or two fields); the choice is up to the implementer as long as comparing and storing is cheap.
+- One-off access (`get(entity, Component)`, `single(...)`) exists for cases like "the player's position"; it crosses the
+  boundary per call and must not be used in a per-entity loop. `single` only arrives in phase 7 (§4.9).
 
-### 4.3 Loop e fases
+### 4.3 Loop and phases
 
-**Quem conduz o loop.** O loop é do **núcleo C++**. Um módulo C++ novo (nome sugerido `app`, em
-`engine/runtime/app/`, acima de `ecs`; **[decisão do design]** o nome) guarda o `World`, as fases e a ordem dos
-sistemas, o relógio do jogo, o acumulador do passo fixo, o estado de pausa e o `CommandBuffer` por fase.
+**Who drives the loop.** The loop belongs to the **C++ core**. A new C++ module (suggested name `app`, in
+`engine/runtime/app/`, above `ecs`; **[design decision]** the name) holds the `World`, the phases and the order of
+systems, the game clock, the fixed-step accumulator, the pause state and the `CommandBuffer` per phase.
 
-- **O host conduz o tempo; o núcleo decide o resto.** O host é quem conhece o ambiente. Ele chama `frame(agora)` uma
-  vez por quadro (tempo em segundos, monotônico) e avisa quando o jogo fica oculto/visível (`setHidden`). O núcleo
-  acumula o tempo, roda os passos fixos que couberem e a fase `render`. Hosts:
-  - navegador: o pacote `@oly/client`, com `requestAnimationFrame` e `visibilitychange`, chamando a API C;
-  - testes: um relógio falso, tanto no C++ nativo (doctest) quanto no TS em node (pela API C do WASM);
-  - outros ambientes: ficam para depois (§2); a engine não pode depender de nada do navegador.
-  Na fase 2, `frame` e `setHidden` bastam e **não** há interface de plataforma. Na fase 4 o input também chega
-  por chamadas do host (eventos brutos empurrados, §4.5), então continua sem interface de plataforma.
-  **[decisão do design]**
-- **Sistemas C++** são funções registradas no núcleo e chamadas direto, sem fronteira. Um jogo só em C++ os registra
-  pela API C++ (`addSystem(fase, nome, função)`). Para que o TS possa colocá-los na ordem das fases, sistemas C++ do
-  jogo também podem ser registrados por **nome** com uma macro (ex.: `OLY_SYSTEM(move)`), e o TS os adiciona por esse
-  nome (`addNativeSystem`).
-- **Sistemas TS** são registrados pelo TS, que recebe um id do núcleo. Na hora de rodar, o núcleo chama o TS de volta
-  por **uma única função JS importada** pelo módulo WASM, que escolhe o sistema pelo id (sem `addFunction` nem tabela
-  de funções que cresce). **[decisão do design]** A fronteira é cruzada uma vez por sistema TS por passo, o que o
-  anti-objetivo permite (por sistema, não por entidade). O mesmo mecanismo serve, nas fases seguintes, para handlers
-  de evento, callbacks do schedule e ganchos de estado escritos em TS.
-- Contrato da chamada de volta: enquanto um sistema TS roda, o núcleo não guarda ponteiros para dentro do `World`
-  nem do heap através da chamada, porque o TS pode alocar no WASM (crescimento de memória) e mudar estrutura pelo
-  `CommandBuffer`. Exceções lançadas por um sistema TS sobem para quem chamou `frame` e deixam a engine num estado
-  definido (documentado no plano), sem corromper o `World`.
+- **The host drives time; the core decides the rest.** The host is the one that knows the environment. It calls `frame(now)` once
+  per frame (time in seconds, monotonic) and signals when the game becomes hidden/visible (`setHidden`). The core
+  accumulates time, runs the fixed steps that fit and the `render` phase. Hosts:
+  - browser: the `@oly/client` package, with `requestAnimationFrame` and `visibilitychange`, calling the C API;
+  - tests: a fake clock, both in native C++ (doctest) and in TS on node (through the WASM's C API);
+  - other environments: left for later (§2); the engine must not depend on anything from the browser.
+  In phase 2, `frame` and `setHidden` are enough and there is **no** platform interface. In phase 4 input also arrives
+  through host calls (raw events pushed, §4.5), so there is still no platform interface.
+  **[design decision]**
+- **C++ systems** are functions registered in the core and called directly, without a boundary. A C++-only game registers them
+  through the C++ API (`addSystem(phase, name, function)`). So that TS can place them in phase order, the game's C++ systems
+  can also be registered by **name** with a macro (e.g. `OLY_SYSTEM(move)`), and TS adds them by that
+  name (`addNativeSystem`).
+- **TS systems** are registered by TS, which receives an id from the core. At run time, the core calls back into TS
+  through **a single JS function imported** by the WASM module, which picks the system by id (no `addFunction` nor a growing function
+  table). **[design decision]** The boundary is crossed once per TS system per step, which the
+  anti-goal allows (per system, not per entity). The same mechanism serves, in the following phases, for event
+  handlers, schedule callbacks and state hooks written in TS.
+- Callback contract: while a TS system runs, the core does not keep pointers into the `World`
+  or the heap across the call, because TS may allocate in the WASM (memory growth) and change structure through the
+  `CommandBuffer`. Exceptions thrown by a TS system propagate to whoever called `frame` and leave the engine in a
+  defined state (documented in the plan), without corrupting the `World`.
 
-**Ciclo de vida da aplicação** (controlado pela engine, igual para qualquer jogo):
-- `boot`: no navegador, o TS carrega o WASM; o núcleo cria o `World` e registra o esquema. Um jogo só em C++ cria a
-  engine direto.
-- `run`: o host passa a chamar `frame(agora)`. Gameplay em **passo fixo** (**[decisão do design]** 60 Hz por padrão,
-  configurável), acumulando o tempo real entre chamadas, com um limite de passos por quadro para evitar espiral de
-  atraso (o excedente é descartado). Render uma vez por `frame`, recebendo o fator de interpolação entre passos.
-- `pause`/`resume`: automático quando a aba fica oculta (`visibilitychange`) e disponível ao jogo
-  (`engine.pause()`/`engine.resume()`, também pelo `context`). Pausado:
-  - o relógio do jogo e o `schedule` congelam, e os sistemas de gameplay não rodam;
-  - os passos fixos continuam acontecendo só para **capturar as ações** (§4.5) e rodar os sistemas registrados com
-    `.whilePaused()` (ex.: um sistema que lê a ação `pause` e chama `resume`, ou o menu de pausa), seguidos do
-    despacho de eventos e da transição de estado pendente;
-  - o `render` continua.
-  A pausa por aba oculta é independente da pausa do jogo: a aba volta e o jogo retoma sozinho, a menos que o jogo
-  também tenha pausado. Durante a aba oculta nenhum passo roda (o navegador para o `requestAnimationFrame`; o núcleo,
-  avisado por `setHidden`, ignora `frame`), e o tempo acumulado é descartado ao voltar. Essa regra vive no núcleo;
-  o host só repassa o sinal.
-- `shutdown`: libera o `World` e os recursos da engine.
+**Application lifecycle** (controlled by the engine, the same for any game):
+- `boot`: in the browser, TS loads the WASM; the core creates the `World` and registers the schema. A C++-only game creates the
+  engine directly.
+- `run`: the host starts calling `frame(now)`. Gameplay at a **fixed step** (**[design decision]** 60 Hz by default,
+  configurable), accumulating real time between calls, with a limit of steps per frame to avoid a spiral of
+  lag (the excess is discarded). Render once per `frame`, receiving the interpolation factor between steps.
+- `pause`/`resume`: automatic when the tab becomes hidden (`visibilitychange`) and available to the game
+  (`engine.pause()`/`engine.resume()`, also through the `context`). While paused:
+  - the game clock and the `schedule` freeze, and gameplay systems do not run;
+  - fixed steps keep happening only to **capture actions** (§4.5) and run systems registered with
+    `.whilePaused()` (e.g. a system that reads the `pause` action and calls `resume`, or the pause menu), followed by
+    event dispatch and the pending state transition;
+  - `render` continues.
+  Pause due to a hidden tab is independent from the game's pause: the tab comes back and the game resumes on its own, unless the game
+  has also paused. While the tab is hidden no step runs (the browser stops `requestAnimationFrame`; the core,
+  notified by `setHidden`, ignores `frame`), and the accumulated time is discarded on return. This rule lives in the core;
+  the host only forwards the signal.
+- `shutdown`: releases the `World` and the engine's resources.
 
-**Detalhes do loop** (**[decisão do design]**, revisáveis no plano da fase 2):
-- `pause()`/`resume()` pedidos no meio de um passo valem a partir do próximo passo fixo.
-- A fase `render` roda pausada ou não; `.whilePaused()` só se aplica às fases de gameplay.
-- Pausado, o relógio do jogo congela, mas sistemas `.whilePaused()` recebem o `fixedDeltaTime` normal.
-- Dentro de sistemas (C++ e TS), o contexto só oferece mudanças estruturais pelo `CommandBuffer` da fase; acesso
-  estrutural direto ao `World` fica fora do loop. O `CommandBuffer` também é aplicado ao fim da fase `render`.
-- O primeiro `frame`, e o primeiro depois da aba oculta, só registram o tempo: o acumulador começa em zero.
-- Dependências: `app` fica acima de `ecs`; `bridge` passa a depender de `app` para expor o loop na API C. Pode haver
-  mais de uma engine por instância do WASM; a chamada de volta única recebe qual engine chamou.
-- Exceção em sistema TS: o C++ compila sem exceções, então um erro JS atravessa o WASM sem rodar destrutores. A
-  engine marca o passo como interrompido, o `frame` seguinte se recupera, e isso tem teste.
+**Loop details** (**[design decision]**, revisable in the phase 2 plan):
+- `pause()`/`resume()` requested in the middle of a step take effect from the next fixed step.
+- The `render` phase runs paused or not; `.whilePaused()` only applies to gameplay phases.
+- While paused, the game clock freezes, but `.whilePaused()` systems receive the normal `fixedDeltaTime`.
+- Inside systems (C++ and TS), the context only offers structural changes through the phase's `CommandBuffer`; direct
+  structural access to the `World` stays outside the loop. The `CommandBuffer` is also applied at the end of the `render` phase.
+- The first `frame`, and the first one after the hidden tab, only record the time: the accumulator starts at zero.
+- Dependencies: `app` sits above `ecs`; `bridge` starts depending on `app` to expose the loop in the C API. There can be
+  more than one engine per WASM instance; the single callback receives which engine called.
+- Exception in a TS system: C++ is compiled without exceptions, so a JS error crosses the WASM without running destructors. The
+  engine marks the step as interrupted, the next `frame` recovers, and this has a test.
 
-**Fases fixas.** Cada sistema se registra em exatamente uma fase. As fases do gameplay são `updateBefore`, `update`,
-`updateAfter`. Ordem de um passo fixo (**[decisão do design]** a ordem dos itens que não são fases do gameplay):
+**Fixed phases.** Each system registers in exactly one phase. The gameplay phases are `updateBefore`, `update`,
+`updateAfter`. Order of a fixed step (**[design decision]** the order of the items that are not gameplay phases):
 
-1. captura das ações de input (§4.5)
-2. disparo das tarefas agendadas vencidas (§4.6)
+1. capture of input actions (§4.5)
+2. firing of due scheduled tasks (§4.6)
 3. `updateBefore` → `update` → `updateAfter`
-4. despacho de eventos (§4.4)
-5. transição de estado pendente, se houver (§4.7)
+4. event dispatch (§4.4)
+5. pending state transition, if any (§4.7)
 
-E, por quadro do `requestAnimationFrame`: fase `render` (uma só vez, após os passos fixos do quadro).
+And, per `requestAnimationFrame` frame: the `render` phase (only once, after the frame's fixed steps).
 
-- Não existe fase de física: colisão e física do jogo se registram em `updateAfter`. **[decisão do design]**
-- Dentro de uma fase, a ordem é a ordem de registro. **[decisão do design]** Não há grafo de dependências.
-- Sistemas C++ e TS se misturam livremente na mesma fase, na ordem de registro; o núcleo percorre a fase e chama
-  cada um (C++ direto, TS pela chamada de volta).
-- **Mudanças estruturais dentro de sistemas** (`spawn`, `destroy`, `add`, `remove`) são adiadas pelo `CommandBuffer`
-  do ECS, aplicado **ao fim de cada fase**. Sistemas C++ e TS escrevem no **mesmo** `CommandBuffer` da fase; o TS
-  chega a ele pela API C (operações por `ComponentId`). **[decisão do design]** **[decisão do design]** `spawn` devolve a `Entity` na hora (o ECS já
-  reserva o índice). Alterar valores de componentes é direto.
-- Um sistema pode ser restrito a estados (`inState(playing)`, §4.7); fora deles não roda.
-- Um sistema registrado com `.whilePaused()` roda **só** enquanto a engine está pausada pelo jogo; os demais, só
-  enquanto não está. As duas restrições (estado e pausa) se combinam.
+- There is no physics phase: the game's collision and physics register in `updateAfter`. **[design decision]**
+- Within a phase, the order is the registration order. **[design decision]** There is no dependency graph.
+- C++ and TS systems mix freely in the same phase, in registration order; the core walks the phase and calls
+  each one (C++ directly, TS through the callback).
+- **Structural changes inside systems** (`spawn`, `destroy`, `add`, `remove`) are deferred through the ECS's
+  `CommandBuffer`, applied **at the end of each phase**. C++ and TS systems write to the **same** `CommandBuffer` of the phase; TS
+  reaches it through the C API (operations by `ComponentId`). **[design decision]** **[design decision]** `spawn` returns the `Entity` immediately (the ECS already
+  reserves the index). Changing component values is direct.
+- A system can be restricted to states (`inState(playing)`, §4.7); outside them it does not run.
+- A system registered with `.whilePaused()` runs **only** while the engine is paused by the game; the others, only
+  while it is not. The two restrictions (state and pause) combine.
 
-### 4.4 Eventos
+### 4.4 Events
 
-Objetivo da fase (do autor): eventos escritos em C++ tanto quanto possível. TS entra só onde o navegador é preciso
-(ex.: áudio). Um jogo só em C++ usa eventos inteiros pela API C++.
+Phase goal (from the author): events written in C++ as much as possible. TS comes in only where the browser is needed
+(e.g. audio). A C++-only game uses events entirely through the C++ API.
 
-**Fluxo de referência** (aceito pelo autor como modelo; nomes são do jogo, não da engine):
+**Reference flow** (accepted by the author as the model; names belong to the game, not the engine):
 
-1. Um sistema C++ de dano, em `updateAfter`, reduz a vida. Quando ela chega a zero, ele emite
-   `EnemyDied { entity, x, y }` e **não** destrói a entidade.
-2. No passo 4, os handlers de `EnemyDied` rodam na ordem de registro, cada um recebendo o lote de mortes do passo:
-   `dropCoin` (C++, cria a moeda em `x, y`, pode emitir outro evento, que vira nova rodada da cascata),
-   `addScore` (C++), `playDeathSound` (TS, único em TS porque o áudio é do navegador) e `destroyDead` (C++,
-   registrado por último, destrói a entidade).
-3. Enquanto os handlers rodam, o inimigo ainda está vivo e qualquer handler pode ler componentes dele. Ao fim do
-   despacho, ele não existe mais.
+1. A C++ damage system, in `updateAfter`, reduces health. When it reaches zero, it emits
+   `EnemyDied { entity, x, y }` and does **not** destroy the entity.
+2. In step 4, the `EnemyDied` handlers run in registration order, each receiving the step's batch of deaths:
+   `dropCoin` (C++, creates the coin at `x, y`, may emit another event, which becomes a new round of the cascade),
+   `addScore` (C++), `playDeathSound` (TS, the only one in TS because audio belongs to the browser) and `destroyDead` (C++,
+   registered last, destroys the entity).
+3. While the handlers run, the enemy is still alive and any handler can read its components. At the end of the
+   dispatch, it no longer exists.
 
-Consequências para a engine:
-- **Quem destrói é o jogo.** A engine garante a ordem dos handlers; "destruir no final" é registrar o handler que
-  destrói por último. Não existe destruição automática associada a um evento.
-- **A engine não tira eventos repetidos.** Duas balas que matam o mesmo inimigo no mesmo passo geram dois
-  `EnemyDied` no mesmo lote; os handlers do jogo lidam com isso (ex.: `destroyDead` confere `isAlive`). Isso vale
-  para qualquer handler que muda estrutura: uma entidade citada num evento pode já ter sido destruída por um handler
-  anterior, de um lote anterior ou de uma rodada anterior.
+Consequences for the engine:
+- **The game is the one that destroys.** The engine guarantees handler order; "destroy at the end" means registering the handler that
+  destroys last. There is no automatic destruction associated with an event.
+- **The engine does not remove repeated events.** Two bullets that kill the same enemy in the same step generate two
+  `EnemyDied` in the same batch; the game's handlers deal with it (e.g. `destroyDead` checks `isAlive`). This holds
+  for any handler that changes structure: an entity named in an event may already have been destroyed by an earlier handler,
+  by an earlier batch or by an earlier round.
 
-Regras:
-- Tipos de evento são declarados no esquema (§4.1) com `event(nome, campos)`, os mesmos tipos escalares dos
-  componentes (inclusive `entity`); o gerador produz o struct C++ e o descritor TS, como para componentes. Eventos não
-  são componentes: têm um id próprio e não entram no `World`. Cada tipo tem uma fila.
-- **Declaração de tipos de evento na `Engine`, [decisão do design]:** o registro de tipos de evento (id denso,
-  tamanho, alinhamento e nome de cada fila) vive no `app`, não no código gerado. Um tipo precisa ser declarado na
-  `Engine` antes de ser emitido ou de receber handlers (algo como `engine.declareEvent<EnemyDied>()`; usar um tipo não
-  declarado é erro de contrato), e a **ordem de declaração é a ordem de despacho**. Um jogo só em C++ declara os
-  tipos à mão, sem esquema nem codegen; no caminho TS, o `bridge` declara os eventos do esquema na ordem do esquema.
-  Assim a ordem de despacho é determinística e controlada pelo jogo nos dois caminhos.
-- Sistemas (C++ ou TS) e handlers **emitem**; ninguém reage na hora da emissão.
-- **Handler recebe um lote:** um handler é registrado para um tipo e é chamado **uma vez por lote**, com todos os
-  eventos pendentes daquele tipo na ordem de emissão (C++: algo como `std::span<const EnemyDied>`; TS: views sobre a
-  fila, com os mesmos acessores gerados dos blocos). **[decisão do design]** O handler percorre o lote; não há uma
-  chamada por evento, nem em C++.
-- **Ordem do despacho, [decisão do design]:** cada rodada tira um retrato de todas as filas não vazias e despacha
-  **tipo a tipo**, na ordem de declaração na `Engine` (no caminho TS, a ordem do esquema); dentro de um tipo, cada handler na ordem de registro recebe o
-  lote inteiro. Eventos emitidos durante a rodada vão para a rodada seguinte (não entram no lote em andamento, nem do
-  mesmo tipo). Assim o lote que um handler está lendo nunca muda nem se move enquanto ele roda. A ordem global de
-  emissão entre tipos diferentes **não** é preservada; isso fica documentado.
-- O despacho acontece fora da iteração de queries, então **handlers fazem mudanças estruturais diretamente** (sem
-  `CommandBuffer`), em C++ e em TS. Handlers podem iniciar queries e iterá-las; dentro dessa iteração valem as regras
-  de sempre do ECS.
-- **Handlers C++** se registram pela API C++ (`engine.on<EnemyDied>(nome, função)` ou equivalente) e, para que o TS
-  possa encaixá-los na ordem, por nome com uma macro (ex.: `OLY_HANDLER(dropCoin, EnemyDied)`), que o TS adiciona
-  com `addNativeHandler`, como `OLY_SYSTEM`/`addNativeSystem`. **Handlers TS** usam a mesma chamada de volta única dos
-  sistemas TS (§4.3), uma vez por lote. Handlers C++ e TS de um mesmo tipo se misturam na ordem de registro.
-- **Pausa, [decisão do design]:** handlers rodam em todo passo fixo, pausado ou não; não existe `.whilePaused()` para
-  handlers. Pausado, só sistemas `.whilePaused()` rodam, então só eles (e seus handlers, em cascata) produzem eventos.
-- **Cascata no mesmo passo:** eventos emitidos durante o despacho são despachados em seguida, rodada após rodada,
-  até as filas esvaziarem. Existe um **limite de rodadas** (configurável no `EngineConfig`; **[decisão do design]**
-  padrão 16); ultrapassá-lo é erro de contrato (`OLY_ASSERT` no C++, `ContractError` no TS antes de chegar ao
-  assert, se o TS puder detectar; senão o assert), com mensagem que nomeia o(s) tipo(s) de evento ainda pendentes.
-- As filas vivem na memória do WASM com o layout do esquema, para que sistemas C++ emitam sem cruzar a fronteira e
-  handlers TS recebam um lote (views sobre a fila), não uma chamada por evento. **[decisão do design]**
-- **Emissão a partir do TS, [decisão do design]:** pode cruzar a fronteira uma vez por evento (`context.emit(EnemyDied,
-  {...})`); emitir de TS não é caminho quente do jogo de validação. Se o benchmark (§7) mostrar custo relevante, o
-  construtor pode acumular no TS e enviar em lote, sem mudar a API.
-- **Views de evento no TS e crescimento da memória:** um handler TS faz mudanças estruturais diretas, que podem
-  alocar no WASM e desanexar o `ArrayBuffer`. As views do lote não podem ficar inválidas em silêncio no meio do
-  handler: o construtor escolhe como (ex.: acessores que passam pela `Bridge` e se refazem após `sync()`, ou cópia
-  do lote para o JS antes de chamar o handler), e a escolha tem teste que força crescimento de memória dentro de um
-  handler. **[decisão do design]** o requisito; o mecanismo fica com o construtor.
-- Contexto do handler: o mesmo tipo de acesso do `SystemContext` (tempo, pausa, `get`/`tryGet`/`has`/`isAlive`,
-  queries, `emit`), mais mudanças estruturais **diretas** no lugar das adiadas. **[decisão do design]** Os nomes
-  (`HandlerContext` ou outro) ficam com o construtor.
-- **Exceção em handler TS:** mesma regra dos sistemas TS (§4.3): o passo é marcado como interrompido, e o `frame`
-  seguinte descarta os eventos pendentes junto com os comandos pendentes e se recupera. O que handlers anteriores já
-  fizeram fica.
-- Eventos do passo são descartados após o despacho; não sobrevivem ao passo.
-- Registro de handlers segue as regras do registro de sistemas: não pode acontecer durante `frame` (`OLY_ASSERT`).
-- **Eventos emitidos fora das fases do gameplay** (**[decisão do design]**):
-  - em tarefas agendadas (passo 2): entram na fila e são despachados no passo 4 do mesmo passo fixo;
-  - em `onExit`/`onEnter` (passo 5): depois da transição, se houver eventos pendentes, a engine roda um novo despacho
-    no mesmo passo fixo, com a mesma regra de cascata; as rodadas contam para o mesmo limite do passo;
-  - na fase `render`: ficam na fila e são despachados no passo 4 do próximo passo fixo (render não é gameplay, mas
-    perder um evento em silêncio seria pior).
-- A limpeza de escopo de uma transição (§4.7) não emite eventos; a engine não tem eventos implícitos de destruição.
+Rules:
+- Event types are declared in the schema (§4.1) with `event(name, fields)`, the same scalar types as
+  components (including `entity`); the generator produces the C++ struct and the TS descriptor, as for components. Events are not
+  components: they have their own id and do not enter the `World`. Each type has a queue.
+- **Declaration of event types in the `Engine`, [design decision]:** the registry of event types (dense id,
+  size, alignment and name of each queue) lives in `app`, not in the generated code. A type must be declared in the
+  `Engine` before being emitted or receiving handlers (something like `engine.declareEvent<EnemyDied>()`; using an undeclared
+  type is a contract error), and the **declaration order is the dispatch order**. A C++-only game declares the
+  types by hand, without schema or codegen; on the TS path, `bridge` declares the schema's events in schema order.
+  This way the dispatch order is deterministic and controlled by the game on both paths.
+- Systems (C++ or TS) and handlers **emit**; nobody reacts at emission time.
+- **A handler receives a batch:** a handler is registered for a type and is called **once per batch**, with all the
+  pending events of that type in emission order (C++: something like `std::span<const EnemyDied>`; TS: views over the
+  queue, with the same generated accessors as blocks). **[design decision]** The handler walks the batch; there is no
+  call per event, not even in C++.
+- **Dispatch order, [design decision]:** each round takes a snapshot of all non-empty queues and dispatches
+  **type by type**, in the declaration order in the `Engine` (on the TS path, schema order); within a type, each handler in registration order receives the
+  whole batch. Events emitted during the round go to the next round (they do not enter the batch in progress, even of the
+  same type). This way the batch a handler is reading never changes or moves while it runs. The global emission order
+  across different types is **not** preserved; this is documented.
+- Dispatch happens outside query iteration, so **handlers make structural changes directly** (without a
+  `CommandBuffer`), in C++ and in TS. Handlers can start queries and iterate them; inside that iteration the usual ECS rules
+  apply.
+- **C++ handlers** register through the C++ API (`engine.on<EnemyDied>(name, function)` or equivalent) and, so that TS
+  can fit them into the order, by name with a macro (e.g. `OLY_HANDLER(dropCoin, EnemyDied)`), which TS adds
+  with `addNativeHandler`, like `OLY_SYSTEM`/`addNativeSystem`. **TS handlers** use the same single callback as
+  TS systems (§4.3), once per batch. C++ and TS handlers of the same type mix in registration order.
+- **Pause, [design decision]:** handlers run on every fixed step, paused or not; there is no `.whilePaused()` for
+  handlers. While paused, only `.whilePaused()` systems run, so only they (and their handlers, in cascade) produce events.
+- **Cascade within the same step:** events emitted during dispatch are dispatched right after, round after round,
+  until the queues empty. There is a **round limit** (configurable in `EngineConfig`; **[design decision]**
+  default 16); exceeding it is a contract error (`OLY_ASSERT` in C++, `ContractError` in TS before reaching the
+  assert, if TS can detect it; otherwise the assert), with a message that names the event type(s) still pending.
+- The queues live in WASM memory with the schema's layout, so that C++ systems emit without crossing the boundary and
+  TS handlers receive a batch (views over the queue), not one call per event. **[design decision]**
+- **Emission from TS, [design decision]:** may cross the boundary once per event (`context.emit(EnemyDied,
+  {...})`); emitting from TS is not a hot path of the validation game. If the benchmark (§7) shows a relevant cost, the
+  implementer can accumulate in TS and send in a batch, without changing the API.
+- **Event views in TS and memory growth:** a TS handler makes direct structural changes, which may
+  allocate in the WASM and detach the `ArrayBuffer`. The batch's views must not become silently invalid in the middle of the
+  handler: the implementer chooses how (e.g. accessors that go through the `Bridge` and are rebuilt after `sync()`, or copying
+  the batch to JS before calling the handler), and the choice has a test that forces memory growth inside a
+  handler. **[design decision]** the requirement; the mechanism is up to the implementer.
+- Handler context: the same kind of access as `SystemContext` (time, pause, `get`/`tryGet`/`has`/`isAlive`,
+  queries, `emit`), plus **direct** structural changes in place of the deferred ones. **[design decision]** The names
+  (`HandlerContext` or another) are up to the implementer.
+- **Exception in a TS handler:** same rule as TS systems (§4.3): the step is marked as interrupted, and the next
+  `frame` discards pending events together with pending commands and recovers. What earlier handlers already
+  did stays.
+- The step's events are discarded after dispatch; they do not outlive the step.
+- Handler registration follows the rules of system registration: it cannot happen during `frame` (`OLY_ASSERT`).
+- **Events emitted outside the gameplay phases** (**[design decision]**):
+  - in scheduled tasks (step 2): they enter the queue and are dispatched in step 4 of the same fixed step;
+  - in `onExit`/`onEnter` (step 5): after the transition, if there are pending events, the engine runs a new dispatch
+    in the same fixed step, with the same cascade rule; the rounds count toward the same step limit;
+  - in the `render` phase: they stay in the queue and are dispatched in step 4 of the next fixed step (render is not gameplay, but
+    silently losing an event would be worse).
+- The scope cleanup of a transition (§4.7) does not emit events; the engine has no implicit destruction events.
 
-### 4.5 Ações de input ("comandos")
+### 4.5 Input actions ("commands")
 
-- O jogo declara **ações** e as liga a entradas: botão (`dash` → `Space`), eixo 2D (`move` → WASD), ponteiro
-  (`aim` → posição do mouse em coordenadas do canvas). A tabela de ligações pode ser trocada sem mexer em sistemas.
-- Sistemas consultam ações, nunca teclas: `pressed`, `held`, `released` para botões; vetor para eixos; posição para
-  ponteiro.
-- O estado é capturado **uma vez por passo fixo** e é o mesmo para sistemas C++ e TS (um snapshot escrito na memória
-  do WASM). Um toque mais curto que um passo não pode se perder: `pressed` de um evento entre dois passos aparece no
-  passo seguinte.
-- Converter a posição do ponteiro para coordenadas do mundo é do jogo (não há câmera na engine).
-- O `CommandBuffer` do ECS continua como mecanismo interno e não é exposto com esse nome pela engine.
+- The game declares **actions** and binds them to inputs: button (`dash` → `Space`), 2D axis (`move` → WASD), pointer
+  (`aim` → mouse position in canvas coordinates). The bindings table can be swapped without touching systems.
+- Systems query actions, never keys: `pressed`, `held`, `released` for buttons; a vector for axes; a position for
+  the pointer.
+- The state is captured **once per fixed step** and is the same for C++ and TS systems (a snapshot written in the WASM
+  memory). A press shorter than a step must not be lost: `pressed` from an event between two steps shows up in the
+  next step.
+- Converting the pointer position to world coordinates belongs to the game (there is no camera in the engine).
+- The ECS's `CommandBuffer` remains an internal mechanism and is not exposed under that name by the engine.
 
-**Módulo.** As ações vivem num módulo próprio, `input` (`engine/runtime/input/`, `DEPENDS core`, namespace
-`oly::input`), que não conhece o ECS nem a `Engine`. O `app` passa a depender de `input`. Assim as regras de borda
-são testáveis sem loop nem `World`, e o lint de fronteiras impede o input de depender do ECS. O `ActionMap` não é
-uma interface de plataforma: o núcleo nunca pergunta nada ao host.
+**Module.** Actions live in their own module, `input` (`engine/runtime/input/`, `DEPENDS core`, namespace
+`oly::input`), which knows neither the ECS nor the `Engine`. `app` starts depending on `input`. This way the edge rules
+are testable without a loop or a `World`, and the boundary lint prevents input from depending on the ECS. The `ActionMap` is not
+a platform interface: the core never asks the host anything.
 
-**Botões físicos.** Uma tecla ou um botão do mouse é um `PhysicalButton`: um `uint32_t` no formato de usage estendido
-do USB HID, `(página << 16) | usage`. Teclado é a página `0x07` (`Key::W = 0x0007'001A`, `Key::Space =
-0x0007'002C`), mouse é a página `0x09` (`MouseButton::Left = 0x0009'0001`, `Right = 0x0009'0002`, `Middle =
-0x0009'0003`). `Key` e `MouseButton` são `enum class : uint32_t` com esses valores, convertidos implicitamente em
-`PhysicalButton`. Os valores HID são os mesmos dos scancodes do SDL, então um host nativo futuro não precisa de tabela.
-A identidade é a **posição física** da tecla (o `KeyboardEvent.code` do W3C, não o `key`): WASD fica no mesmo lugar em
-qualquer layout de teclado.
+**Physical buttons.** A key or a mouse button is a `PhysicalButton`: a `uint32_t` in the USB HID extended usage
+format, `(page << 16) | usage`. Keyboard is page `0x07` (`Key::W = 0x0007'001A`, `Key::Space =
+0x0007'002C`), mouse is page `0x09` (`MouseButton::Left = 0x0009'0001`, `Right = 0x0009'0002`, `Middle =
+0x0009'0003`). `Key` and `MouseButton` are `enum class : uint32_t` with these values, implicitly converted to
+`PhysicalButton`. The HID values are the same as SDL scancodes, so a future native host needs no table.
+The identity is the key's **physical position** (the W3C `KeyboardEvent.code`, not `key`): WASD stays in the same place on
+any keyboard layout.
 
-**Entrada do host (eventos brutos empurrados).** O host chama, a qualquer hora (dentro ou fora de `frame`):
-- `buttonDown(botão)` e `buttonUp(botão)`: entram numa fila de bordas, na ordem de chegada. Um `buttonDown` de um
-  botão já pressionado (auto-repeat do teclado) é ignorado pelo núcleo; o host não filtra nada.
-- `pointerMove(x, y)`: não entra na fila; só a última posição importa. Coordenadas em pixels do canvas, com `y`
-  crescendo para baixo; a conversão das coordenadas do DOM é do host.
-- `releaseAll()`: solta todos os botões pressionados (gera as bordas de soltura). O host chama no `blur` da janela,
-  porque o `keyup` não chega quando o foco sai; a `Engine` chama em `setHidden(true)`.
-A fronteira é cruzada uma vez por evento de input (dezenas por segundo), fora do caminho quente.
-**[decisão do design]** A fila de bordas não tem limite: só cresce com eventos humanos e cada passo a esvazia.
+**Host input (raw events pushed).** The host calls, at any time (inside or outside `frame`):
+- `buttonDown(button)` and `buttonUp(button)`: they enter an edge queue, in arrival order. A `buttonDown` of an
+  already pressed button (keyboard auto-repeat) is ignored by the core; the host filters nothing.
+- `pointerMove(x, y)`: does not enter the queue; only the last position matters. Coordinates in canvas pixels, with `y`
+  growing downward; converting from DOM coordinates belongs to the host.
+- `releaseAll()`: releases all pressed buttons (generates the release edges). The host calls it on the window's `blur`,
+  because `keyup` does not arrive when focus leaves; the `Engine` calls it in `setHidden(true)`.
+The boundary is crossed once per input event (dozens per second), off the hot path.
+**[design decision]** The edge queue has no limit: it only grows with human events and every step empties it.
 
-**Captura (passo 1, em todo passo fixo, pausado ou não).** O núcleo consome a fila na ordem e monta o snapshot:
-- **Botão.** Uma ação de botão tem zero ou mais ligações (ex.: `Space` e `ShiftLeft`). `held` é verdadeiro se algum
-  botão ligado estiver pressionado no fim da captura; `pressed` é verdadeiro se a ação passou de solta a pressionada
-  em algum momento da fila; `released`, o inverso. Um toque dentro de um passo dá `pressed` e `released` verdadeiros
-  com `held` falso, e é assim que ele não se perde. Duas teclas na mesma ação: soltar uma enquanto a outra está
-  pressionada não gera `released`.
-- **As bordas valem por um passo.** Num `frame` com 3 passos, só o primeiro vê as bordas recebidas antes dele; num
-  `frame` com 0 passos, a fila espera o próximo passo.
-- **Eixo 2D.** Cada ligação tem 4 botões (`up`, `down`, `left`, `right`); pode haver várias (WASD e setas). O valor
-  vem do estado pressionado no fim da captura: `x = right − left`, `y = down − up` (**[decisão do design]** `y` cresce
-  para baixo, como no canvas, para `move` e `aim` usarem o mesmo sistema), teclas opostas se anulam e a diagonal é
-  normalizada para comprimento 1. Eixo não tem bordas.
-- **Ponteiro.** A última posição recebida e `valid`, falso até o primeiro `pointerMove`. Por enquanto o ponteiro não
-  tem ligação: a fonte é o único ponteiro do host.
-- **Ligações trocáveis a qualquer hora**, inclusive de dentro de um sistema (menu de configuração de teclas). A troca
-  vale a partir da próxima captura, e o estado da ação é recalculado a partir dos botões físicos pressionados.
+**Capture (step 1, on every fixed step, paused or not).** The core consumes the queue in order and builds the snapshot:
+- **Button.** A button action has zero or more bindings (e.g. `Space` and `ShiftLeft`). `held` is true if some
+  bound button is pressed at the end of the capture; `pressed` is true if the action went from released to pressed
+  at some point in the queue; `released`, the opposite. A press within one step gives `pressed` and `released` true
+  with `held` false, and that is how it is not lost. Two keys on the same action: releasing one while the other is
+  pressed does not generate `released`.
+- **Edges last for one step.** In a `frame` with 3 steps, only the first sees the edges received before it; in a
+  `frame` with 0 steps, the queue waits for the next step.
+- **2D axis.** Each binding has 4 buttons (`up`, `down`, `left`, `right`); there can be several (WASD and arrows). The value
+  comes from the pressed state at the end of the capture: `x = right − left`, `y = down − up` (**[design decision]** `y` grows
+  downward, as in the canvas, so that `move` and `aim` use the same system), opposite keys cancel out and the diagonal is
+  normalized to length 1. An axis has no edges.
+- **Pointer.** The last received position and `valid`, false until the first `pointerMove`. For now the pointer has no
+  binding: the source is the host's single pointer.
+- **Bindings swappable at any time**, including from inside a system (key configuration menu). The swap
+  takes effect from the next capture, and the action's state is recomputed from the pressed physical buttons.
 
-**API C++** (nomes normativos para o plano; detalhes de assinatura ficam com ele):
+**C++ API** (normative names for the plan; signature details are up to it):
 
 ```cpp
-struct ButtonAction  { ActionId id; };   // ids tipados: ler um eixo como botão não compila
+struct ButtonAction  { ActionId id; };   // typed ids: reading an axis as a button does not compile
 struct Axis2dAction  { ActionId id; };
 struct PointerAction { ActionId id; };
 
@@ -405,7 +405,7 @@ struct Axis2dBinding { PhysicalButton up, down, left, right; };
 
 class ActionMap {
  public:
-  ButtonAction  declareButton(std::string_view name);   // ActionId denso, na ordem de declaração
+  ButtonAction  declareButton(std::string_view name);   // dense ActionId, in declaration order
   Axis2dAction  declareAxis2d(std::string_view name);
   PointerAction declarePointer(std::string_view name);
 
@@ -424,30 +424,30 @@ class ActionMap {
   ButtonState  button(ButtonAction action) const;
   Vector2      axis2d(Axis2dAction action) const;
   PointerState pointer(PointerAction action) const;
-  std::span<const ActionState> snapshot() const;   // para a ponte
+  std::span<const ActionState> snapshot() const;   // for the bridge
 };
 ```
 
-- A `Engine` guarda um `ActionMap`, exposto em `engine.actions()`; o host e o jogo declaram, ligam e entregam input
-  pelo mesmo objeto. `captureActions()` (passo 1) chama `capture()`; `setHidden(true)` chama `releaseAll()`.
-  `EngineContext` ganha `actions()`, então sistemas e handlers leem e religam pelo mesmo caminho
-  (`context.actions().button(actions::dash).pressed`). **[decisão do design]** Sem leitores duplicados no contexto
-  (`context.button(...)`), para a superfície do contexto não repetir a do `ActionMap`.
-- Declarar ação durante `frame` é erro de contrato, como declarar evento. Ligar, entregar input e ler valem a qualquer
-  hora.
-- Um jogo só em C++ guarda o retorno de `declareButton` e liga com `engine.actions().bind(dash, Key::Space)`.
+- The `Engine` holds an `ActionMap`, exposed in `engine.actions()`; the host and the game declare, bind and deliver input
+  through the same object. `captureActions()` (step 1) calls `capture()`; `setHidden(true)` calls `releaseAll()`.
+  `EngineContext` gains `actions()`, so systems and handlers read and rebind through the same path
+  (`context.actions().button(actions::dash).pressed`). **[design decision]** No duplicate readers in the context
+  (`context.button(...)`), so the context's surface does not repeat that of `ActionMap`.
+- Declaring an action during `frame` is a contract error, like declaring an event. Binding, delivering input and reading are valid at any
+  time.
+- A C++-only game keeps the return value of `declareButton` and binds with `engine.actions().bind(dash, Key::Space)`.
 
-**Esquema e codegen.** Ações são declaradas no esquema, como os eventos: `action("dash", "button")`, com tipo
-`"button"`, `"axis2d"` ou `"pointer"`, vai para `schema.actions` com `schemaIndex` na ordem. O nome é único entre tipos,
-eventos e ações e precisa ser identificador C++ válido. O hash do esquema inclui as ações (nome e tipo), então um WASM
-desatualizado dá `SchemaMismatchError`. O codegen gera `namespace actions { inline constexpr
-oly::input::ButtonAction dash{0}; }` (o namespace evita colisão com nomes de componentes) e um `schemaActions()`
-como o `schemaEvents()`; `olyEngineCreate` declara as ações do esquema na ordem do esquema, então o índice no esquema
-é o `ActionId` nos dois lados e um nome errado num sistema nativo é erro de compilação. As **ligações** não entram no
-esquema: são dados de tempo de execução.
+**Schema and codegen.** Actions are declared in the schema, like events: `action("dash", "button")`, with kind
+`"button"`, `"axis2d"` or `"pointer"`, goes to `schema.actions` with `schemaIndex` in order. The name is unique across types,
+events and actions and must be a valid C++ identifier. The schema hash includes the actions (name and kind), so an
+outdated WASM gives `SchemaMismatchError`. The codegen generates `namespace actions { inline constexpr
+oly::input::ButtonAction dash{0}; }` (the namespace avoids collision with component names) and a `schemaActions()`
+like `schemaEvents()`; `olyEngineCreate` declares the schema's actions in schema order, so the index in the schema
+is the `ActionId` on both sides and a wrong name in a native system is a compile error. **Bindings** do not enter the
+schema: they are runtime data.
 
-**Snapshot e API C.** `ActionState` é `{ float x; float y; uint32_t flags; }` (12 bytes, um por ação, na ordem do
-`ActionId`), com os bits `pressed`, `held`, `released` e `valid` em `flags`; o layout é conferido por `static_assert`.
+**Snapshot and C API.** `ActionState` is `{ float x; float y; uint32_t flags; }` (12 bytes, one per action, in
+`ActionId` order), with the `pressed`, `held`, `released` and `valid` bits in `flags`; the layout is checked by `static_assert`.
 
 ```c
 void olyEngineBindButton(OlyEngine*, uint32_t action, uint32_t button);
@@ -458,83 +458,83 @@ void olyEngineButtonDown(OlyEngine*, uint32_t button);
 void olyEngineButtonUp(OlyEngine*, uint32_t button);
 void olyEnginePointerMove(OlyEngine*, float x, float y);
 void olyEngineReleaseAll(OlyEngine*);
-const OlyActionState* olyEngineActionSnapshot(OlyEngine*);   // estável até olyEngineDestroy
+const OlyActionState* olyEngineActionSnapshot(OlyEngine*);   // stable until olyEngineDestroy
 ```
 
-O TS lê o snapshot por views da `Bridge` (refeitas após `sync()`), então ler uma ação não cruza a fronteira.
+TS reads the snapshot through `Bridge` views (rebuilt after `sync()`), so reading an action does not cross the boundary.
 
 **`@oly/core`.**
-- `action(name, kind)` devolve um handle tipado pelo tipo (`ButtonAction`, `Axis2dAction`, `PointerAction`):
-  `context.actions.axis2d(dash)` é erro de tipo.
-- Leitura em sistemas e handlers, com a forma do C++: `context.actions.button(dash)` → `{ pressed, held, released }`,
-  `axis2d(move)` → `{ x, y }`, `pointer(aim)` → `{ x, y, valid }`. Cada leitura cria um objeto pequeno; são poucas
-  por passo.
-- Ligações: `engine.actions.bind(dash, "Space")`, `bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right:
-  "KeyD" })`, `clearBindings(action)`. Os nomes são os do `KeyboardEvent.code` do W3C, mais `"MouseLeft"`,
-  `"MouseRight"` e `"MouseMiddle"`, tipados como união literal (nome errado é erro de compilação). A tabela nome W3C →
-  usage HID fica no `@oly/core` (só dados, sem DOM).
-- Lado do host: `engine.actions.buttonDown(nome)`, `buttonUp(nome)`, `pointerMove(x, y)`, `releaseAll()`.
+- `action(name, kind)` returns a handle typed by kind (`ButtonAction`, `Axis2dAction`, `PointerAction`):
+  `context.actions.axis2d(dash)` is a type error.
+- Reading in systems and handlers, with the C++ shape: `context.actions.button(dash)` → `{ pressed, held, released }`,
+  `axis2d(move)` → `{ x, y }`, `pointer(aim)` → `{ x, y, valid }`. Each read creates a small object; there are few
+  per step.
+- Bindings: `engine.actions.bind(dash, "Space")`, `bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right:
+  "KeyD" })`, `clearBindings(action)`. The names are those of the W3C `KeyboardEvent.code`, plus `"MouseLeft"`,
+  `"MouseRight"` and `"MouseMiddle"`, typed as a literal union (a wrong name is a compile error). The W3C name →
+  HID usage table lives in `@oly/core` (data only, no DOM).
+- Host side: `engine.actions.buttonDown(name)`, `buttonUp(name)`, `pointerMove(x, y)`, `releaseAll()`.
 
-**`@oly/client`.** `attachBrowserInput(engine, canvas, environment?)` → `{ detach() }`, separado de `runInBrowser`
-(loop e input mudam por motivos diferentes):
-- teclado e `blur` na `window` (`blur` → `releaseAll`); `pointerdown` no canvas (clique fora dele não atira);
-  `pointerup` e `pointermove` na `window` (soltar fora do canvas também chega);
-- posição convertida para pixels do canvas com `getBoundingClientRect` e a razão `canvas.width / rect.width` (idem
-  para a altura);
-- códigos fora da tabela são ignorados;
-- `preventDefault` só para botões ligados a alguma ação (`olyEngineIsBound`): `Space` não rola a página e o botão
-  direito não abre o menu, mas `F5` e os atalhos do navegador continuam funcionando.
+**`@oly/client`.** `attachBrowserInput(engine, canvas, environment?)` → `{ detach() }`, separate from `runInBrowser`
+(loop and input change for different reasons):
+- keyboard and `blur` on the `window` (`blur` → `releaseAll`); `pointerdown` on the canvas (a click outside it does not shoot);
+  `pointerup` and `pointermove` on the `window` (releasing outside the canvas also arrives);
+- position converted to canvas pixels with `getBoundingClientRect` and the ratio `canvas.width / rect.width` (likewise
+  for the height);
+- codes outside the table are ignored;
+- `preventDefault` only for buttons bound to some action (`olyEngineIsBound`): `Space` does not scroll the page and the right
+  button does not open the menu, but `F5` and the browser shortcuts keep working.
 
-**Erros de contrato** (`OLY_ASSERT` no C++; no TS, `ContractError` antes de chegar ao assert): declarar ação durante
-`frame` ou com nome repetido; `ActionId` fora do intervalo ou do tipo errado na API C (no C++ tipado, não compila);
-botão com usage `0`; no TS, nome de botão fora da tabela e handle de ação de outro esquema.
+**Contract errors** (`OLY_ASSERT` in C++; in TS, `ContractError` before reaching the assert): declaring an action during
+`frame` or with a repeated name; `ActionId` out of range or of the wrong kind in the C API (in typed C++, it does not compile);
+button with usage `0`; in TS, a button name outside the table and an action handle from another schema.
 
-**Tabela HID nos dois lados.** O enum C++ e a tabela TS copiam o mesmo padrão; um teste de cada lado confere as mesmas
-amostras (letras, dígitos, setas, `Space`, modificadores, mouse) contra os valores do padrão.
+**HID table on both sides.** The C++ enum and the TS table copy the same standard; a test on each side checks the same
+samples (letters, digits, arrows, `Space`, modifiers, mouse) against the standard's values.
 
 ### 4.6 Schedule
 
-- Agendamento de **tarefas** no **relógio do jogo** (o `time()` da `Engine`, soma dos passos fixos não pausados):
-  `after(segundos, callback)` e `every(segundos, callback)`, com handle para cancelar. O nome "ação" é do input
-  (§4.5); o que se agenda é uma tarefa.
-- Callbacks rodam no passo 2 do loop, fora de iteração, e podem fazer mudanças estruturais diretamente e emitir eventos.
-- Callbacks em TS e em C++. O TS agenda só closures TS e o C++ só funções C++: não existe tarefa nativa por nome
-  (como `OLY_SYSTEM`), porque o TS teria de escrever o payload C++. Uma tarefa TS que precisa de código C++ emite um
-  evento com handler C++, despachado no passo 4 do mesmo passo fixo.
-- Exemplos do jogo: onda de inimigos a cada 5 s; dash disponível de novo após 0,8 s; moeda nova a cada 2 s.
+- Scheduling of **tasks** on the **game clock** (the `Engine`'s `time()`, sum of the non-paused fixed steps):
+  `after(seconds, callback)` and `every(seconds, callback)`, with a handle to cancel. The name "action" belongs to input
+  (§4.5); what gets scheduled is a task.
+- Callbacks run in step 2 of the loop, outside iteration, and can make structural changes directly and emit events.
+- Callbacks in TS and in C++. TS schedules only TS closures and C++ only C++ functions: there is no native task by name
+  (like `OLY_SYSTEM`), because TS would have to write the C++ payload. A TS task that needs C++ code emits an
+  event with a C++ handler, dispatched in step 4 of the same fixed step.
+- Examples from the game: enemy wave every 5 s; dash available again after 0.8 s; new coin every 2 s.
 
-**Regras de tempo**
-- Uma tarefa guarda vencimento (segundos, `double`), intervalo (0 para `after`), sequência de criação, callback,
-  payload e geração.
-- **Vencimento = `time()` + atraso**, calculado ao agendar. Dentro de um passo, `time()` é o início do passo; fora de
-  `frame`, o início do próximo passo. O atraso precisa ser finito e ≥ 0; o intervalo de `every`, finito e > 0.
-- **Disparo no passo 2**, só em passo não pausado: rodam todas as tarefas com vencimento ≤ `time()` (com a mesma
-  tolerância do acumulador do passo fixo), na ordem de vencimento e, em empate, de criação.
-- **Tarefas criadas durante o passo 2 só rodam a partir do passo seguinte**, mesmo já vencidas: um `after(0)` dentro
-  de uma tarefa não vira laço. Um `after(0)` agendado fora de `frame` roda no passo 2 do próximo passo; agendado por
-  um sistema, no passo seguinte ao dele.
-- **`every`:** o primeiro disparo é em agora + intervalo. Depois de cada disparo, o próximo vencimento é
-  vencimento + intervalo (sem deriva); se ainda for ≤ agora, pula para o primeiro múltiplo > agora. Assim cada tarefa
-  dispara no máximo uma vez por passo, e um intervalo menor que o passo fixo vira "uma vez por passo".
-- **A tarefa é reagendada (`every`) ou retirada da fila (`after`) antes do callback.** Uma exceção no callback deixa a
-  fila consistente, e uma `every` pode cancelar a si mesma dentro do callback.
-- **Cancelar:** o handle carrega a geração. Cancelar tarefa já terminada ou já cancelada não faz nada e devolve
-  `false` (inclusive um `after` cancelando a si mesmo no callback, que já saiu da fila). Uma tarefa cancelada no mesmo
-  passo, antes de rodar, não roda.
-- **Pausa e aba oculta:** o relógio para, então nada vence. Passos descartados pelo limite por quadro não avançam o
-  relógio, então não geram atraso acumulado.
-- **Recuperação de exceção (§4.3):** as tarefas sobrevivem, como o `World`; comandos e eventos pendentes continuam
-  descartados.
+**Time rules**
+- A task stores due time (seconds, `double`), interval (0 for `after`), creation sequence, callback,
+  payload and generation.
+- **Due time = `time()` + delay**, computed when scheduling. Inside a step, `time()` is the start of the step; outside
+  `frame`, the start of the next step. The delay must be finite and ≥ 0; the `every` interval, finite and > 0.
+- **Firing in step 2**, only in a non-paused step: all tasks with due time ≤ `time()` run (with the same
+  tolerance as the fixed-step accumulator), in due-time order and, on a tie, creation order.
+- **Tasks created during step 2 only run from the next step on**, even if already due: an `after(0)` inside
+  a task does not become a loop. An `after(0)` scheduled outside `frame` runs in step 2 of the next step; scheduled by
+  a system, in the step after that system's.
+- **`every`:** the first firing is at now + interval. After each firing, the next due time is
+  due time + interval (no drift); if it is still ≤ now, it jumps to the first multiple > now. This way each task
+  fires at most once per step, and an interval shorter than the fixed step becomes "once per step".
+- **The task is rescheduled (`every`) or removed from the queue (`after`) before the callback.** An exception in the callback leaves the
+  queue consistent, and an `every` can cancel itself inside the callback.
+- **Cancel:** the handle carries the generation. Cancelling a task already finished or already cancelled does nothing and returns
+  `false` (including an `after` cancelling itself in the callback, which has already left the queue). A task cancelled in the same
+  step, before running, does not run.
+- **Pause and hidden tab:** the clock stops, so nothing becomes due. Steps discarded by the per-frame limit do not advance the
+  clock, so they do not generate accumulated delay.
+- **Exception recovery (§4.3):** tasks survive, like the `World`; pending commands and events are still
+  discarded.
 
-**Estrutura, [decisão do design]:** a fila fica em `engine/runtime/app/detail/` (como as filas de eventos), sem
-módulo novo. É um min-heap ordenado por (vencimento, sequência) sobre slots com geração, com cancelamento preguiçoso
-(a tarefa cancelada é marcada e sai quando chega ao topo). Com dezenas de tarefas, heap e varredura linear custam
-pouco (hipótese não medida); o heap entrega a ordem pronta. Alternativas rejeitadas: módulo próprio como o `input` (a
-parte pura é só uma fila de prioridade; contexto, mudanças diretas e ponte são do `app`) e tarefas como entidades do
-ECS (apareceriam nas queries do jogo e a engine usaria o `World` para estado interno, embora a limpeza por escopo da
-fase 6 viesse de graça).
+**Structure, [design decision]:** the queue lives in `engine/runtime/app/detail/` (like the event queues), with no
+new module. It is a min-heap ordered by (due time, sequence) over slots with a generation, with lazy cancellation
+(the cancelled task is marked and leaves when it reaches the top). With dozens of tasks, a heap and a linear scan cost
+little (unmeasured hypothesis); the heap delivers the order ready-made. Rejected alternatives: a module of its own like `input` (the
+pure part is just a priority queue; context, direct changes and bridge belong to `app`) and tasks as ECS
+entities (they would show up in the game's queries and the engine would use the `World` for internal state, even though scope cleanup in
+phase 6 would come for free).
 
-**API C++** (nomes normativos para o plano; detalhes de assinatura ficam com ele):
+**C++ API** (normative names for the plan; signature details are up to it):
 
 ```cpp
 struct TaskHandle { uint32_t slot = InvalidTaskSlot; uint32_t generation = 0; };
@@ -558,27 +558,27 @@ class Scheduler {
 class TaskContext : public DirectContext {
  public:
   TaskHandle handle() const;
-  bool lastRun() const;   // true no disparo de um after: a tarefa não roda mais
+  bool lastRun() const;   // true on the firing of an after: the task does not run again
   template <class P>
   const P& payload() const;
 };
 ```
 
-- **Payload:** copiado para dentro da tarefa; precisa ser trivially copyable, com até 32 bytes e alinhamento até 8
-  (`static_assert`, **[decisão do design]** os limites). A tarefa guarda o tipo; `payload<P>()` com outro tipo é erro
-  de contrato, como `events<T>()`. Um ponteiro também é payload, então o modelo "função + `userData`" de sistemas e
-  handlers cabe nele.
-- **Onde se agenda:** `engine.schedule()`, dentro e fora de `frame`, e `context.schedule()` em sistemas, handlers e
-  tarefas; é o mesmo `Scheduler`, como `actions()`. Agendar não é mudança estrutural, então vale direto também dentro
-  de sistemas e na fase `render`.
-- **`DirectContext`, [decisão do design]:** as mudanças estruturais diretas saem do `HandlerContext` para uma base
-  entre o `EngineContext` e os dois contextos que as usam (`HandlerContext` e `TaskContext`), em vez de repetidas.
-- **Descarte:** `TaskDiscardFunction` (opcional) roda **uma única vez** quando a tarefa sai da fila **sem** a última
-  execução: cancelamento, auto-cancelamento de uma `every`, fim de escopo (fase 6) e destruição da `Engine`. Recebe
-  só o payload. No disparo de um `after`, o próprio callback é a última chamada (`lastRun()`), e é ele quem libera o
-  que estiver no payload. O descarte não roda depois do último callback porque uma exceção JS desenrola o WASM sem
-  executar o que vem depois, e a closure TS ficaria presa.
-- Uso:
+- **Payload:** copied into the task; it must be trivially copyable, up to 32 bytes and with alignment up to 8
+  (`static_assert`, **[design decision]** the limits). The task stores the type; `payload<P>()` with another type is a contract
+  error, like `events<T>()`. A pointer is also a payload, so the "function + `userData`" model of systems and
+  handlers fits in it.
+- **Where to schedule:** `engine.schedule()`, inside and outside `frame`, and `context.schedule()` in systems, handlers and
+  tasks; it is the same `Scheduler`, like `actions()`. Scheduling is not a structural change, so it applies directly also inside
+  systems and in the `render` phase.
+- **`DirectContext`, [design decision]:** direct structural changes move out of `HandlerContext` into a base
+  between `EngineContext` and the two contexts that use them (`HandlerContext` and `TaskContext`), instead of being repeated.
+- **Discard:** `TaskDiscardFunction` (optional) runs **exactly once** when the task leaves the queue **without** its last
+  execution: cancellation, self-cancellation of an `every`, end of scope (phase 6) and destruction of the `Engine`. It receives
+  only the payload. On the firing of an `after`, the callback itself is the last call (`lastRun()`), and it is the one that releases
+  whatever is in the payload. The discard does not run after the last callback because a JS exception unwinds the WASM without
+  executing what comes after, and the TS closure would be stuck.
+- Usage:
 
 ```cpp
 struct DashTarget {
@@ -595,9 +595,9 @@ void dashReady(TaskContext& context) {
 context.schedule().after(0.8, dashReady, DashTarget{player});
 ```
 
-**Ponte e API C.** Uma tarefa TS é uma tarefa C++ comum, registrada pelo `bridge`: a função chama
-`olyHostInvokeScript` com um `kind` novo, o payload guarda o id do script e o descarte avisa o TS. O `app` continua sem
-conhecer TS.
+**Bridge and C API.** A TS task is an ordinary C++ task, registered by `bridge`: the function calls
+`olyHostInvokeScript` with a new `kind`, the payload holds the script id and the discard notifies TS. `app` still does not
+know TS.
 
 ```c
 #define OLY_SCRIPT_TASK 2u           // olyHostInvokeScript(engine, kind, scriptId, NULL, lastRun)
@@ -608,14 +608,14 @@ typedef struct OlyTaskHandle {
   uint32_t generation;
 } OlyTaskHandle;
 
-// intervalSeconds == 0 agenda um after; > 0, um every. Vale dentro e fora de olyEngineFrame.
+// intervalSeconds == 0 schedules an after; > 0, an every. Valid inside and outside olyEngineFrame.
 OLY_API void olyEngineScheduleScriptTask(OlyEngine* engine, double delaySeconds, double intervalSeconds, uint32_t scriptId, OlyTaskHandle* out);
 OLY_API int32_t olyEngineCancelTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
 OLY_API int32_t olyEngineIsTaskPending(OlyEngine* engine, uint32_t slot, uint32_t generation);
 ```
 
-- O TS escolhe o `scriptId` (contador próprio); o núcleo o devolve nas chamadas de volta. A fronteira é cruzada uma
-  vez por disparo e uma vez por descarte, fora de caminho quente.
+- TS picks the `scriptId` (its own counter); the core returns it in the callbacks. The boundary is crossed once
+  per firing and once per discard, off the hot path.
 
 **`@oly/core`.**
 
@@ -630,133 +630,133 @@ context.schedule.cancel(handle);
 context.schedule.isPending(handle);
 ```
 
-- `schedule` existe na `Engine` e em `SystemContext`, `HandlerContext` e `TaskContext`; é o mesmo objeto.
-- `TaskContext` tem o acesso do `HandlerContext` sem o lote (mudanças estruturais diretas, `emit`, `schedule`), mais
-  `handle` e `lastRun`. Só vale durante a chamada; fora dela, `ContractError`.
-- `TaskHandle` é um valor opaco e barato de comparar; a representação fica com o construtor, como a do `Entity`.
-  `cancel` devolve `false` para tarefa já terminada.
-- **Vida da closure:** o TS guarda `scriptId → closure` e apaga a entrada no `finally` da última execução ou ao
-  receber `OLY_SCRIPT_TASK_DISCARD`. O mapa termina vazio em todos os caminhos (disparo, cancelamento,
-  auto-cancelamento, exceção, `dispose`), e isso tem teste.
+- `schedule` exists on the `Engine` and on `SystemContext`, `HandlerContext` and `TaskContext`; it is the same object.
+- `TaskContext` has the access of `HandlerContext` without the batch (direct structural changes, `emit`, `schedule`), plus
+  `handle` and `lastRun`. It is only valid during the call; outside it, `ContractError`.
+- `TaskHandle` is an opaque value that is cheap to compare; the representation is up to the implementer, like that of `Entity`.
+  `cancel` returns `false` for an already finished task.
+- **Closure lifetime:** TS keeps `scriptId → closure` and deletes the entry in the `finally` of the last execution or on
+  receiving `OLY_SCRIPT_TASK_DISCARD`. The map ends empty on every path (firing, cancellation,
+  self-cancellation, exception, `dispose`), and this has a test.
 
-**Erros de contrato** (`OLY_ASSERT` no C++; no TS, `ContractError` antes de chegar ao assert): atraso negativo ou não
-finito; intervalo ≤ 0 ou não finito; função nula; `payload<P>()` com tipo diferente do agendado; handle com `slot`
-fora do intervalo (não veio deste `Scheduler`; geração antiga não é erro, `cancel` devolve `false`); no TS, callback
-que não é função, `TaskContext` usado fora da chamada e handle de outra `Engine`. Agendar e cancelar valem a qualquer
-hora, inclusive durante `frame`.
+**Contract errors** (`OLY_ASSERT` in C++; in TS, `ContractError` before reaching the assert): negative or non-finite
+delay; interval ≤ 0 or non-finite; null function; `payload<P>()` with a type different from the scheduled one; handle with `slot`
+out of range (it did not come from this `Scheduler`; an old generation is not an error, `cancel` returns `false`); in TS, a callback
+that is not a function, `TaskContext` used outside the call and a handle from another `Engine`. Scheduling and cancelling are valid at any
+time, including during `frame`.
 
-**Preparação para a fase 6.** A fase 5 entrega o cancelamento pelo núcleo e o descarte que avisa o TS, que o
-cancelamento por escopo vai usar. O campo de escopo na tarefa e o "cancelar tudo do escopo" entram na fase 6, quando
-os estados existirem.
+**Preparation for phase 6.** Phase 5 delivers cancellation by the core and the discard that notifies TS, which
+cancellation by scope will use. The scope field in the task and "cancel everything in the scope" come in phase 6, when
+states exist.
 
-### 4.7 Estados de jogo
+### 4.7 Game states
 
-- O jogo declara um conjunto plano de estados (ex.: `menu`, `playing`, `gameOver`). Não há estados aninhados nem
-  pilha. **[decisão do design]**
-- Ganchos `onEnter(estado)` e `onExit(estado)`; podem fazer mudanças estruturais e usar o `schedule`.
-- Pedir transição (`context.requestState(gameOver)`) não troca na hora: a troca acontece no passo 5 do loop
-  (`onExit` do antigo, limpeza de escopo, `onEnter` do novo). Dois pedidos no mesmo passo: vale o último.
-  **[decisão do design]**
-- **Escopo:** entidades e tarefas agendadas criadas enquanto um estado está ativo (inclusive no `onEnter`) pertencem a
-  ele por padrão e são destruídas/canceladas ao sair dele. Criar algo persistente exige pedir explicitamente.
-  **[decisão do design]** Assim "jogar de novo" (`gameOver → playing`) começa limpo sem código de limpeza no jogo.
-- Sistemas e handlers podem ser restritos a estados.
+- The game declares a flat set of states (e.g. `menu`, `playing`, `gameOver`). There are no nested states nor a
+  stack. **[design decision]**
+- Hooks `onEnter(state)` and `onExit(state)`; they can make structural changes and use the `schedule`.
+- Requesting a transition (`context.requestState(gameOver)`) does not switch immediately: the switch happens in step 5 of the loop
+  (`onExit` of the old one, scope cleanup, `onEnter` of the new one). Two requests in the same step: the last one wins.
+  **[design decision]**
+- **Scope:** entities and scheduled tasks created while a state is active (including in `onEnter`) belong to
+  it by default and are destroyed/cancelled when leaving it. Creating something persistent requires asking explicitly.
+  **[design decision]** This way "play again" (`gameOver → playing`) starts clean with no cleanup code in the game.
+- Systems and handlers can be restricted to states.
 
-**Declaração**
-- `StateId` é um `uint32_t` denso, na ordem de declaração; `NoState = 0xFFFFFFFF`. A engine começa em `NoState`.
-- Um jogo só em C++ declara com `engine.declareState(name)`. No caminho TS, os estados são declarados no esquema
-  (`state("menu")`), e `olyEngineCreate` os declara na ordem do esquema, depois dos eventos e das ações; o índice no
-  esquema é o `StateId` nos dois lados.
-- Declarar durante `frame` ou com nome repetido é erro de contrato. **[decisão do design]** No máximo 32 estados,
-  para que a restrição `inState` seja uma máscara `uint32_t`.
+**Declaration**
+- `StateId` is a dense `uint32_t`, in declaration order; `NoState = 0xFFFFFFFF`. The engine starts in `NoState`.
+- A C++-only game declares with `engine.declareState(name)`. On the TS path, states are declared in the schema
+  (`state("menu")`), and `olyEngineCreate` declares them in schema order, after events and actions; the index in the
+  schema is the `StateId` on both sides.
+- Declaring during `frame` or with a repeated name is a contract error. **[design decision]** At most 32 states,
+  so that the `inState` restriction is a `uint32_t` mask.
 
-**Pedido e estado atual**
-- `requestState(state)` existe na `Engine` e em todos os contextos (sistema, handler, tarefa, gancho). Vale dentro e
-  fora de `frame`; vale o último pedido feito antes do passo 5.
-- `state()` devolve o estado atual, que só muda no passo 5.
-- **Estado inicial, [decisão do design]:** não existe conceito próprio. O jogo pede o primeiro estado antes de rodar
-  (`engine.requestState(menu)`), e a entrada acontece no passo 5 do primeiro passo fixo, pela regra de qualquer troca.
-  Nesse primeiro passo só rodam os sistemas sem `inState`. Alternativa rejeitada: entrar no início do primeiro passo,
-  que criaria uma segunda regra só para poupar um passo.
-- **Reentrada, [decisão do design]:** pedir o estado atual roda `onExit`, a limpeza e `onEnter` dele, o que serve
-  para reiniciar a fase.
-- **[decisão do design]** A troca não mexe na pausa. O jogo que quiser sair da pausa ao entrar num estado chama
-  `resume()` no `onEnter`.
+**Request and current state**
+- `requestState(state)` exists on the `Engine` and in every context (system, handler, task, hook). It is valid inside and
+  outside `frame`; the last request made before step 5 wins.
+- `state()` returns the current state, which only changes in step 5.
+- **Initial state, [design decision]:** there is no dedicated concept. The game requests the first state before running
+  (`engine.requestState(menu)`), and the entry happens in step 5 of the first fixed step, by the same rule as any change.
+  In that first step only the systems without `inState` run. Rejected alternative: entering at the start of the first step,
+  which would create a second rule just to save one step.
+- **Reentry, [design decision]:** requesting the current state runs its `onExit`, cleanup and `onEnter`, which serves
+  to restart the level.
+- **[design decision]** The switch does not touch the pause. A game that wants to leave the pause when entering a state calls
+  `resume()` in `onEnter`.
 
-**Transição (passo 5, em todo passo fixo, pausado ou não)**
-1. Consome o pedido pendente. Sem pedido, o passo 5 não faz nada.
-2. Roda os `onExit` do estado atual, na ordem de registro. O estado ainda está ativo, então o que esses ganchos criam
-   tem escopo e é limpo no item seguinte.
-3. Limpa o escopo (abaixo).
-4. O estado atual passa a ser o novo.
-5. Roda os `onEnter` do novo estado, na ordem de registro; o que eles criam tem o escopo do novo estado. No primeiro
-   `onEnter`, o estado de origem é `NoState`.
-6. Se houver eventos pendentes, roda um novo despacho (§4.4), que conta para o mesmo limite de rodadas do passo.
+**Transition (step 5, on every fixed step, paused or not)**
+1. Consumes the pending request. Without a request, step 5 does nothing.
+2. Runs the `onExit` hooks of the current state, in registration order. The state is still active, so what these hooks create
+   has scope and is cleaned in the next item.
+3. Cleans the scope (below).
+4. The current state becomes the new one.
+5. Runs the `onEnter` hooks of the new state, in registration order; what they create has the new state's scope. On the first
+   `onEnter`, the origin state is `NoState`.
+6. If there are pending events, runs a new dispatch (§4.4), which counts toward the same round limit of the step.
 
-**[decisão do design]** Um pedido feito num gancho ou no despacho do item 6 vale no passo 5 do próximo passo fixo:
-não há laço de trocas dentro de um passo.
+**[design decision]** A request made in a hook or in the dispatch of item 6 takes effect in step 5 of the next fixed step:
+there is no loop of switches within a step.
 
-**Ganchos**
-- C++: `engine.onEnter(state, name, function, userData)` e `engine.onExit(...)`, com
-  `StateHookFunction = void (*)(StateContext&)`. Por nome, com a macro `OLY_STATE_HOOK(name)`, que o TS adiciona com
-  `addNativeOnEnter(state, name)` e `addNativeOnExit(state, name)`, como `OLY_SYSTEM`/`addNativeSystem`.
-- Ganchos TS usam a chamada de volta única (§4.3) com um `kind` novo, uma vez por gancho. Ganchos C++ e TS do mesmo
-  estado e do mesmo momento (entrada ou saída) se misturam na ordem de registro.
-- Registrar gancho durante `frame` é erro de contrato.
-- **`StateContext`, [decisão do design]:** derivado do `DirectContext` (§4.6): mudanças estruturais diretas, `emit`,
-  `schedule` e `requestState`, mais `fromState()` e `toState()`. Só vale durante a chamada.
+**Hooks**
+- C++: `engine.onEnter(state, name, function, userData)` and `engine.onExit(...)`, with
+  `StateHookFunction = void (*)(StateContext&)`. By name, with the macro `OLY_STATE_HOOK(name)`, which TS adds with
+  `addNativeOnEnter(state, name)` and `addNativeOnExit(state, name)`, like `OLY_SYSTEM`/`addNativeSystem`.
+- TS hooks use the single callback (§4.3) with a new `kind`, once per hook. C++ and TS hooks of the same
+  state and the same moment (entry or exit) mix in registration order.
+- Registering a hook during `frame` is a contract error.
+- **`StateContext`, [design decision]:** derived from `DirectContext` (§4.6): direct structural changes, `emit`,
+  `schedule` and `requestState`, plus `fromState()` and `toState()`. Only valid during the call.
 
-**Escopo**
-- **Mecanismo, [decisão do design]:** uma tag interna, `StateScoped` (em `engine/runtime/app/detail/`, sem dados nem
-  coluna). Como só um estado fica ativo por vez, toda entidade com a tag pertence ao estado atual, e uma tag basta.
-  Nenhum jogo precisa citá-la; ela só aparece em queries que filtram por ela. Custo aceito: arquétipos gêmeos (com e
-  sem a tag) quando o jogo cria a mesma combinação com e sem escopo. Alternativa rejeitada: uma lista de entidades na
-  `Engine`, que cresce com cada spawn (cada bala), precisa de compactação e faria `persist` buscar na lista ou manter
-  um conjunto extra.
-- **Entidades com escopo:** as criadas por `spawn` de qualquer contexto enquanto `state() != NoState`. No
-  `SystemContext`, o spawn e o `add` da tag entram no `CommandBuffer` e viram uma transição só no flush; no
-  `DirectContext`, a tag entra no próprio `world.spawn(componentes..., StateScoped{})`. Sem estado ativo, e portanto
-  num jogo que não usa estados, nenhuma entidade recebe a tag.
-- **Spawn direto no `World`** (fora de qualquer contexto, ex.: `engine.world().spawn()` no setup) é sempre
-  persistente: o `World` está abaixo da engine, que não vê esse spawn.
-- **Spawn direto no TS:** o `DirectContext` do `@oly/core` criava entidades pelo `World` (`olyEntitySpawn`), sem
-  passar pela engine. Ele passa a usar `olyDirectSpawn`, e quem decide a tag é o C++. `add`, `remove` e `destroy`
-  diretos continuam pelo `World`.
-- **Tarefas com escopo:** as agendadas pelo `Scheduler` (na `Engine` ou num contexto) enquanto `state() != NoState`.
-  O slot da fila de tarefas (§4.6) ganha o campo de escopo.
-- **Persistir, depois de criar:** `context.persist(entity)` remove a tag. Num sistema, entra no `CommandBuffer`, e o
-  `add` e o `remove` da tag do mesmo spawn se anulam no flush (R-CB-4); num contexto direto, é um `remove` direto.
-  Entidade sem a tag: não faz nada (o `remove` do ECS é no-op para componente ausente). Entidade morta: erro de
-  contrato, o mesmo do `remove`. Para tarefas, `schedule().persist(handle)` devolve `false` se a tarefa não está
-  pendente, como `cancel`. Não existe o inverso (dar escopo a algo persistente), por falta de caso de uso.
-- **Limpeza (item 3), [decisão do design]:** destrói as entidades com a tag por uma `QueryById` com
-  `with: [StateScoped]`, criada uma vez; as entidades são juntadas num vetor reaproveitado e destruídas depois da
-  iteração, em O(entidades com escopo). Depois cancela as tarefas com escopo, e o descarte de cada uma roda uma vez (o
-  TS solta a closure). Uma tarefa agendada por um descarte durante a limpeza ainda vê o estado antigo, então tem escopo
-  e também é cancelada: a limpeza repete até não sobrar nenhuma, como a destruição da `Engine`. A limpeza não emite
-  eventos (§4.4).
+**Scope**
+- **Mechanism, [design decision]:** an internal tag, `StateScoped` (in `engine/runtime/app/detail/`, with no data nor
+  column). Since only one state is active at a time, every entity with the tag belongs to the current state, and one tag is enough.
+  No game needs to mention it; it only shows up in queries that filter by it. Accepted cost: twin archetypes (with and
+  without the tag) when the game creates the same combination with and without scope. Rejected alternative: a list of entities in the
+  `Engine`, which grows with every spawn (every bullet), needs compaction and would make `persist` search the list or keep
+  an extra set.
+- **Scoped entities:** those created by `spawn` from any context while `state() != NoState`. In
+  `SystemContext`, the spawn and the tag's `add` enter the `CommandBuffer` and become a single transition at flush; in
+  `DirectContext`, the tag goes into `world.spawn(components..., StateScoped{})` itself. With no active state, and therefore
+  in a game that does not use states, no entity receives the tag.
+- **Direct spawn in the `World`** (outside any context, e.g. `engine.world().spawn()` in setup) is always
+  persistent: the `World` sits below the engine, which does not see that spawn.
+- **Direct spawn in TS:** the `DirectContext` of `@oly/core` used to create entities through the `World` (`olyEntitySpawn`), without
+  going through the engine. It now uses `olyDirectSpawn`, and C++ is the one that decides the tag. Direct `add`, `remove` and `destroy`
+  still go through the `World`.
+- **Scoped tasks:** those scheduled by the `Scheduler` (on the `Engine` or in a context) while `state() != NoState`.
+  The task queue's slot (§4.6) gains the scope field.
+- **Persist, after creating:** `context.persist(entity)` removes the tag. In a system, it enters the `CommandBuffer`, and the
+  `add` and `remove` of the tag for the same spawn cancel out at flush (R-CB-4); in a direct context, it is a direct `remove`.
+  Entity without the tag: does nothing (the ECS's `remove` is a no-op for an absent component). Dead entity: contract
+  error, the same as `remove`. For tasks, `schedule().persist(handle)` returns `false` if the task is not
+  pending, like `cancel`. There is no inverse (giving scope to something persistent), for lack of a use case.
+- **Cleanup (item 3), [design decision]:** destroys the entities with the tag through a `QueryById` with
+  `with: [StateScoped]`, created once; the entities are gathered in a reused vector and destroyed after the
+  iteration, in O(scoped entities). Then it cancels the scoped tasks, and the discard of each one runs once (the
+  TS releases the closure). A task scheduled by a discard during cleanup still sees the old state, so it has scope
+  and is also cancelled: cleanup repeats until none is left, like the destruction of the `Engine`. Cleanup does not emit
+  events (§4.4).
 
 **`inState`**
-- Sistemas e handlers podem ser restritos a um ou mais estados. Sem restrição, rodam em qualquer estado, inclusive
-  `NoState`. A restrição combina com `.whilePaused()` (§4.3).
-- O handler confere o estado atual em cada rodada; no despacho do item 6, vale o novo estado.
-- C++: `engine.setSystemStates(system, {states...})` e `engine.setHandlerStates(handler, {states...})`; a lista vazia
-  tira a restrição. TS: `.inState(...states)` em `SystemRegistration` e `HandlerRegistration`. Durante `frame`, erro
-  de contrato.
+- Systems and handlers can be restricted to one or more states. Without a restriction, they run in any state, including
+  `NoState`. The restriction combines with `.whilePaused()` (§4.3).
+- The handler checks the current state in each round; in the dispatch of item 6, the new state applies.
+- C++: `engine.setSystemStates(system, {states...})` and `engine.setHandlerStates(handler, {states...})`; the empty list
+  removes the restriction. TS: `.inState(...states)` on `SystemRegistration` and `HandlerRegistration`. During `frame`, a contract
+  error.
 
-**Exceção e destruição, [decisão do design]**
-- A recuperação (§4.3) descarta o pedido pendente, junto com os comandos e os eventos pendentes.
-- Uma exceção num gancho TS para a troca onde ela estava: num `onExit`, o estado não muda e a limpeza não roda; num
-  `onEnter`, o estado já é o novo e os ganchos seguintes não rodam. O que já foi feito fica.
-- Destruir a `Engine` descarta as tarefas (§4.6). As entidades ficam no `World`, que não pertence à `Engine`.
+**Exception and destruction, [design decision]**
+- Recovery (§4.3) discards the pending request, together with the pending commands and events.
+- An exception in a TS hook stops the switch where it was: in an `onExit`, the state does not change and cleanup does not run; in an
+  `onEnter`, the state is already the new one and the following hooks do not run. What was already done stays.
+- Destroying the `Engine` discards the tasks (§4.6). The entities stay in the `World`, which does not belong to the `Engine`.
 
-**Esquema e codegen.** `state("menu")` vai para `schema.states`, com `schemaIndex` na ordem. O nome é único entre
-tipos, eventos, ações e estados e precisa ser identificador C++ válido. O hash do esquema inclui os estados, então um
-WASM desatualizado dá `SchemaMismatchError`. O codegen gera `namespace states { inline constexpr oly::app::StateId
-menu{0}; }` e um `schemaStates()`, como o `schemaActions()`; um nome errado num sistema nativo é erro de compilação.
-Mais de 32 estados é erro do gerador.
+**Schema and codegen.** `state("menu")` goes to `schema.states`, with `schemaIndex` in order. The name is unique across
+types, events, actions and states and must be a valid C++ identifier. The schema hash includes the states, so an
+outdated WASM gives `SchemaMismatchError`. The codegen generates `namespace states { inline constexpr oly::app::StateId
+menu{0}; }` and a `schemaStates()`, like `schemaActions()`; a wrong name in a native system is a compile error.
+More than 32 states is a generator error.
 
-**API C**
+**C API**
 
 ```c
 #define OLY_NO_STATE 0xFFFFFFFFu
@@ -767,41 +767,41 @@ Mais de 32 estados é erro do gerador.
 
 OLY_API void olyEngineRequestState(OlyEngine* engine, uint32_t state);
 OLY_API uint32_t olyEngineState(OlyEngine* engine);
-// stateMask 0 tira a restrição.
+// stateMask 0 removes the restriction.
 OLY_API void olyEngineSetSystemStates(OlyEngine* engine, uint32_t systemId, uint32_t stateMask);
 OLY_API void olyEngineSetHandlerStates(OlyEngine* engine, uint32_t handlerId, uint32_t stateMask);
-// `when` é OLY_STATE_ENTER ou OLY_STATE_EXIT. OLY_INVALID_STATE_HOOK se não há gancho nativo com esse nome.
+// `when` is OLY_STATE_ENTER or OLY_STATE_EXIT. OLY_INVALID_STATE_HOOK if there is no native hook with that name.
 OLY_API uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name);
 OLY_API uint32_t olyEngineAddScriptStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name);
-// Só dentro de um handler, tarefa ou gancho TS; aplica o escopo do estado atual.
+// Only inside a TS handler, task or hook; applies the current state's scope.
 OLY_API void olyDirectSpawn(OlyEngine* engine, OlyEntity* out);
-// Dentro de um sistema TS, adiado; num contexto direto TS, direto. A ponte escolhe pelo contexto atual.
+// Inside a TS system, deferred; in a TS direct context, direct. The bridge picks by the current context.
 OLY_API void olyContextPersist(OlyEngine* engine, uint32_t index, uint32_t generation);
 OLY_API int32_t olyEnginePersistTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
 ```
 
 **`@oly/core`.**
-- `state(name)` no esquema devolve um handle `State`.
-- `engine.requestState(state)` e `engine.state` (`State | null`, `null` para `NoState`); `context.requestState`,
-  `context.state` e `context.persist(entity)` em todos os contextos; `schedule.persist(handle)`.
-- `engine.onEnter(state, name, hook)`, `engine.onExit(...)`, `addNativeOnEnter(state, name)` e
+- `state(name)` in the schema returns a `State` handle.
+- `engine.requestState(state)` and `engine.state` (`State | null`, `null` for `NoState`); `context.requestState`,
+  `context.state` and `context.persist(entity)` in every context; `schedule.persist(handle)`.
+- `engine.onEnter(state, name, hook)`, `engine.onExit(...)`, `addNativeOnEnter(state, name)` and
   `addNativeOnExit(state, name)`.
-- `StateContext` com `fromState` e `toState` (`null` para `NoState`). Só vale durante a chamada; fora dela,
+- `StateContext` with `fromState` and `toState` (`null` for `NoState`). Only valid during the call; outside it,
   `ContractError`.
 
-**Erros de contrato** (`OLY_ASSERT` no C++; no TS, `ContractError` antes de chegar ao assert): declarar estado durante
-`frame`, com nome repetido ou além de 32; `StateId` fora do intervalo (pedido, gancho, `inState`); registrar gancho ou
-`inState` durante `frame`; `persist` de entidade morta; `olyDirectSpawn` fora de um contexto direto; no TS, handle de
-estado de outro esquema e `StateContext` usado fora da chamada.
+**Contract errors** (`OLY_ASSERT` in C++; in TS, `ContractError` before reaching the assert): declaring a state during
+`frame`, with a repeated name or beyond 32; `StateId` out of range (request, hook, `inState`); registering a hook or
+`inState` during `frame`; `persist` of a dead entity; `olyDirectSpawn` outside a direct context; in TS, a state
+handle from another schema and `StateContext` used outside the call.
 
-### 4.8 Uso indicativo
+### 4.8 Indicative usage
 
-Esboço aceito como base de uso (nomes indicativos, não normativos):
+Sketch accepted as a usage baseline (indicative names, not normative):
 
 ```ts
 const engine = await Engine.boot({ wasm: "game.wasm", fixedHz: 60 });
-// menu, playing e gameOver vêm do esquema: state("menu"), ...
-// move, aim, shoot e dash vêm do esquema: action("move", "axis2d"), action("aim", "pointer"), ...
+// menu, playing and gameOver come from the schema: state("menu"), ...
+// move, aim, shoot and dash come from the schema: action("move", "axis2d"), action("aim", "pointer"), ...
 engine.actions.bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" });
 engine.actions.bind(shoot, "MouseLeft");
 engine.actions.bind(dash, "Space");
@@ -821,7 +821,7 @@ function chasePlayerSystem(context: SystemContext) {
     const position = block.read(Position);
     const velocity = block.write(Velocity);
     for (let row = 0; row < block.count; row++) {
-      // acessores gerados escondem o passo da coluna (§4.2)
+      // generated accessors hide the column stride (§4.2)
     }
   });
 }
@@ -837,196 +837,196 @@ OLY_SYSTEM(move) {
 }
 ```
 
-### 4.9 Jogo de validação (fase 7)
+### 4.9 Validation game (phase 7)
 
-Objetivo da fase (do autor): o jogo do §1.1 jogável no navegador, usando as duas linguagens nas mesmas fases. Quando
-o jogo precisa de algo genérico que a engine não tem, a falta é corrigida na engine durante a fase, não contornada.
+Phase goal (from the author): the game from §1.1 playable in the browser, using both languages in the same phases. When
+the game needs something generic that the engine lacks, the gap is fixed in the engine during the phase, not worked around.
 
-**Decisões do autor**
-- **Jogo misto:** o C++ faz o gameplay por entidade (controle, tiro, perseguição, movimento, colisão); o TS faz render,
-  HUD, ligações de teclas, ganchos de estado e as ondas. Assim a fronteira é usada como o §2 manda: por sistema, por
-  bloco e por lote, nunca por entidade.
-- **Faltas genéricas da engine são corrigidas na fase** (regra abaixo).
-- **esbuild** junta o TS do jogo para o navegador e o serve.
-- **Arena fixa do tamanho do canvas**, sem câmera: coordenadas do mundo = pixels do canvas, que é o que
-  `attachBrowserInput` já entrega para o ponteiro.
-- **Jogo sem DOM separado da casca do navegador**, com teste de fumaça em node contra o WASM real.
+**Author's decisions**
+- **Mixed game:** C++ does the per-entity gameplay (control, shooting, chasing, movement, collision); TS does render,
+  HUD, key bindings, state hooks and the waves. This way the boundary is used as §2 prescribes: per system, per
+  block and per batch, never per entity.
+- **Generic engine gaps are fixed during the phase** (rule below).
+- **esbuild** bundles the game's TS for the browser and serves it.
+- **Fixed arena the size of the canvas**, no camera: world coordinates = canvas pixels, which is what
+  `attachBrowserInput` already delivers for the pointer.
+- **DOM-free game separate from the browser shell**, with a smoke test on node against the real WASM.
 
-**Estrutura**
+**Structure**
 
 ```
 games/arena/
   CMakeLists.txt        oly_add_game(arena_game SCHEMA_JS … SOURCES native/*.cpp DEPENDS ecs app bridge) + ts.arena.smoke
-  package.json          pacote privado "arena", depende de @oly/core e @oly/client
-  tsconfig.json         project reference, como os pacotes da engine
-  schema.ts             componentes, tags, eventos, ações e estados
-  native/               sistemas e handlers C++ (OLY_SYSTEM, OLY_HANDLER)
-  src/game.ts           installGame(engine, options): registra tudo, sem DOM
-  src/render.ts         sistema de render que desenha por um Drawer
-  src/main.ts           casca do navegador: canvas, Drawer sobre Canvas 2D, runInBrowser, attachBrowserInput
-  tests/smoke.test.ts   roteiro em node contra o WASM (ts.arena.smoke)
+  package.json          private package "arena", depends on @oly/core and @oly/client
+  tsconfig.json         project reference, like the engine packages
+  schema.ts             components, tags, events, actions and states
+  native/               C++ systems and handlers (OLY_SYSTEM, OLY_HANDLER)
+  src/game.ts           installGame(engine, options): registers everything, no DOM
+  src/render.ts         render system that draws through a Drawer
+  src/main.ts           browser shell: canvas, Drawer over Canvas 2D, runInBrowser, attachBrowserInput
+  tests/smoke.test.ts   script on node against the WASM (ts.arena.smoke)
   web/index.html
-  README.md             como rodar, checklist manual e a lista da fase
+  README.md             how to run, manual checklist and the phase list
 ```
 
-- `games/CMakeLists.txt` entra no build sob `OLY_BUILD_GAMES`, ao lado de `engine/testing`. O WASM sai em
-  `build/<preset>/games/arena_game.mjs` + `.wasm`, nos presets `wasm-games` e `wasm-games-release`.
-- `installGame(engine, { drawer, random })` devolve um objeto só de leitura com o placar (`kills`, `coins`, `score`),
-  que o HUD e o teste usam. `Drawer` é a interface mínima de desenho (limpar, círculo, retângulo, texto): o
-  `main.ts` passa uma sobre `CanvasRenderingContext2D`, o teste passa uma que não desenha. `random: () => number` é
-  `Math.random` no navegador e uma sequência fixa no teste.
+- `games/CMakeLists.txt` enters the build under `OLY_BUILD_GAMES`, next to `engine/testing`. The WASM comes out in
+  `build/<preset>/games/arena_game.mjs` + `.wasm`, in the `wasm-games` and `wasm-games-release` presets.
+- `installGame(engine, { drawer, random })` returns a read-only object with the score (`kills`, `coins`, `score`),
+  which the HUD and the test use. `Drawer` is the minimal drawing interface (clear, circle, rectangle, text): the
+  `main.ts` passes one over `CanvasRenderingContext2D`, the test passes one that does not draw. `random: () => number` is
+  `Math.random` in the browser and a fixed sequence in the test.
 
-**Servir no navegador, [decisão do design] os nomes:**
-- `esbuild` entra como `devDependency` da raiz, com versão exata. Ele junta `games/arena/dist/src/main.js` (saída do
-  `tsc -b`, que já conferiu os tipos) num único `main.js`. O `.mjs` do Emscripten não entra no bundle: é carregado em
-  tempo de execução por `moduleFactoryFromUrl("./arena_game.mjs")`.
-- `make game G=arena PRESET=wasm-games-release` monta `build/<preset>/web/arena/` com `index.html`, `main.js`,
-  `arena_game.mjs` e `arena_game.wasm`. A pasta é estática e pode ser publicada como está.
-- `make serve G=arena` roda o servidor do esbuild nessa pasta. Serviço `web` no `docker-compose.yaml` (imagem do
-  `Dockerfile.wasm`, porta `8000:8000`): `docker compose run --rm --service-ports web make serve G=arena`.
+**Serving in the browser, [design decision] the names:**
+- `esbuild` comes in as a root `devDependency`, with an exact version. It bundles `games/arena/dist/src/main.js` (output of
+  `tsc -b`, which has already checked the types) into a single `main.js`. Emscripten's `.mjs` does not enter the bundle: it is loaded at
+  runtime by `moduleFactoryFromUrl("./arena_game.mjs")`.
+- `make game G=arena PRESET=wasm-games-release` assembles `build/<preset>/web/arena/` with `index.html`, `main.js`,
+  `arena_game.mjs` and `arena_game.wasm`. The folder is static and can be published as is.
+- `make serve G=arena` runs the esbuild server on that folder. `web` service in `docker-compose.yaml` (image from
+  `Dockerfile.wasm`, port `8000:8000`): `docker compose run --rm --service-ports web make serve G=arena`.
 
-**Esquema** (nomes do jogo, só em `games/arena/`)
-- Componentes: `Position {x, y}`, `Velocity {x, y}`, `Collider {radius}`, `Health {value: i32}`, `Chaser {speed}`,
+**Schema** (game names, only in `games/arena/`)
+- Components: `Position {x, y}`, `Velocity {x, y}`, `Collider {radius}`, `Health {value: i32}`, `Chaser {speed}`,
   `Weapon {interval, cooldown}`, `Dash {speed, duration, recharge, ready: u8, active: u8}`.
 - Tags: `Player`, `Enemy`, `Bullet`, `Coin`, `Invulnerable`.
-- Eventos: `EnemyDied {entity, x, y}`, `CoinCollected {coin: entity}`, `PlayerDied {entity}`.
-- Ações: `move` (axis2d, WASD), `aim` (pointer), `shoot` (MouseLeft), `dash` (Space), `pause` (Escape), `confirm`
-  (Enter e MouseLeft).
-- Estados: `menu`, `playing`, `gameOver`.
+- Events: `EnemyDied {entity, x, y}`, `CoinCollected {coin: entity}`, `PlayerDied {entity}`.
+- Actions: `move` (axis2d, WASD), `aim` (pointer), `shoot` (MouseLeft), `dash` (Space), `pause` (Escape), `confirm`
+  (Enter and MouseLeft).
+- States: `menu`, `playing`, `gameOver`.
 
-**Passo fixo** (C = C++ registrado por nome, T = TS; ordem de registro = ordem da tabela):
+**Fixed step** (C = C++ registered by name, T = TS; registration order = table order):
 
-| Fase | Sistema | Estados | O que faz |
+| Phase | System | States | What it does |
 |---|---|---|---|
 | updateBefore | T `startOnConfirm` | menu, gameOver | `confirm` → `requestState(playing)` |
-| updateBefore | T `pauseOnPress`; T `resumeOnPress` (`whilePaused`) | playing | `pause` alterna a pausa |
-| updateBefore | C `steerPlayer` | playing | `move` → velocidade; `dash` pronto → impulso, e agenda em C++ (payload `Entity`) o fim do dash e a recarga |
-| update | C `fireWeapon` | playing | `shoot` segurado + recarga da arma → bala na direção de `aim` |
-| update | C `chasePlayer` | playing | inimigos apontam a velocidade para o jogador |
-| update | C `integrate` | playing | posição += velocidade × passo |
-| update | C `confine` | playing | prende o jogador na arena e destrói balas fora dela. **[decisão do design]** Fica em `update`, não em `updateAfter`: os destroys são aplicados no fim da fase, então o `collide` só vê balas dentro da arena e o jogador já preso. Bala que sai da arena não acerta nada, nem inimigo na borda, e só um sistema decide destruí-la por esse motivo (dois `destroy` da mesma entidade no mesmo `CommandBuffer` são erro de contrato, R-CB-4) |
-| updateAfter | C `collide` | playing | bala×inimigo: dano, bala destruída, `EnemyDied` com vida ≤ 0. Inimigo×jogador: sem `Invulnerable`, dano, tag e tarefa C++ que a tira depois de 1 s; vida ≤ 0 → `PlayerDied`. Jogador×moeda: `CoinCollected` |
+| updateBefore | T `pauseOnPress`; T `resumeOnPress` (`whilePaused`) | playing | `pause` toggles the pause |
+| updateBefore | C `steerPlayer` | playing | `move` → velocity; `dash` ready → impulse, and schedules in C++ (`Entity` payload) the end of the dash and the recharge |
+| update | C `fireWeapon` | playing | `shoot` held + weapon cooldown → bullet in the direction of `aim` |
+| update | C `chasePlayer` | playing | enemies point their velocity at the player |
+| update | C `integrate` | playing | position += velocity × step |
+| update | C `confine` | playing | keeps the player inside the arena and destroys bullets outside it. **[design decision]** It stays in `update`, not in `updateAfter`: destroys are applied at the end of the phase, so `collide` only sees bullets inside the arena and the player already confined. A bullet that leaves the arena hits nothing, not even an enemy on the edge, and only one system decides to destroy it for that reason (two `destroy` of the same entity in the same `CommandBuffer` are a contract error, R-CB-4) |
+| updateAfter | C `collide` | playing | bullet×enemy: damage, bullet destroyed, `EnemyDied` with health ≤ 0. Enemy×player: without `Invulnerable`, damage, tag and a C++ task that removes it after 1 s; health ≤ 0 → `PlayerDied`. Player×coin: `CoinCollected` |
 
-**Handlers** (passo 4), no fluxo de referência do §4.4:
-- `EnemyDied`: C `dropCoin` (chance de moeda em `x, y`) → T `countKill` (placar) → C `destroyDead` (por último,
-  confere `isAlive`: duas balas no mesmo passo geram duas mortes).
-- `CoinCollected`: T `collectCoin` (placar e `destroy` direto pelo TS, conferindo `isAlive`).
-- `PlayerDied`: T `endRound` (guarda o placar final e pede `gameOver`).
+**Handlers** (step 4), following the reference flow of §4.4:
+- `EnemyDied`: C `dropCoin` (chance of a coin at `x, y`) → T `countKill` (score) → C `destroyDead` (last,
+  checks `isAlive`: two bullets in the same step generate two deaths).
+- `CoinCollected`: T `collectCoin` (score and direct `destroy` from TS, checking `isAlive`).
+- `PlayerDied`: T `endRound` (stores the final score and requests `gameOver`).
 
-**Ganchos e tarefas**
-- O jogo pede `menu` antes de rodar (§4.7, estado inicial).
-- `onEnter(playing)` (T): zera o placar, cria o jogador e agenda `every` das ondas (inimigos nas bordas, mais a cada
-  onda) e das moedas soltas pela arena. Tudo tem escopo de `playing`: a troca para `gameOver` limpa entidades e tarefas
-  sem código de limpeza, e "jogar de novo" começa limpo.
-- `onExit(playing)` (T): `resume()`. A pausa vale para a engine inteira e só o `resumeOnPress` (restrito a `playing`)
-  a tira; sem o gancho, qualquer saída de `playing` pausado (Esc no passo da morte, `requestState` do host) travaria o
-  estado seguinte.
+**Hooks and tasks**
+- The game requests `menu` before running (§4.7, initial state).
+- `onEnter(playing)` (T): resets the score, creates the player and schedules `every` for the waves (enemies at the edges, more each
+  wave) and for coins scattered across the arena. Everything has `playing` scope: the switch to `gameOver` cleans entities and tasks
+  with no cleanup code, and "play again" starts clean.
+- `onExit(playing)` (T): `resume()`. The pause applies to the whole engine and only `resumeOnPress` (restricted to `playing`)
+  lifts it; without the hook, any exit from a paused `playing` (Esc on the step of death, `requestState` from the host) would lock the
+  next state.
 
-**Render** (fase `render`, T): jogador, inimigos, balas e moedas por `eachBlock` (uma query por tag), HUD (placar,
-vida, dash pronto) e o texto de menu, pausa e game over. **[decisão do design]** Sem interpolação: desenha a posição
-do último passo.
+**Render** (`render` phase, T): player, enemies, bullets and coins via `eachBlock` (one query per tag), HUD (score,
+health, dash ready) and the menu, pause and game over text. **[design decision]** No interpolation: draws the position
+from the last step.
 
-**Feito no jogo por ser do jogo:** render, colisão (pares por força bruta, porque são dezenas a poucas centenas de
-entidades), placar, ondas e aleatoriedade (o C++ usa um gerador local com semente fixa). **[decisão do design]** Os
-números do jogo (velocidades, raios, intervalos, vida 3) são valores iniciais sem medição, ajustados jogando.
+**Done in the game because it belongs to the game:** render, collision (brute-force pairs, because there are dozens to a few hundred
+entities), score, waves and randomness (C++ uses a local generator with a fixed seed). **[design decision]** The
+game's numbers (speeds, radii, intervals, health 3) are unmeasured initial values, tuned by playing.
 
-**`single` (falta já conhecida), [decisão do design] os nomes e a forma do retorno ficam com o plano:**
-- O §4.2 promete `single`, que não existe. O jogo precisa dele em `chasePlayer` e `fireWeapon` (posição do jogador, em
-  C++) e no HUD (vida e dash do jogador, em TS).
-- C++: `Query<Ts...>::single()` devolve a `Entity` e os componentes da única linha; zero ou mais de uma linha é erro
-  de contrato (`OLY_ASSERT`, com caso em `contract_death`). `trySingle()` devolve vazio quando não há linha, porque
-  entre `gameOver` e o próximo `playing` o jogador não existe; mais de uma linha continua erro.
-- TS: `query.single()` e `query.trySingle()` com a mesma regra (`ContractError` antes do assert). Cruzam a fronteira
-  um número constante de vezes por chamada (`olyQueryBegin`/`End`), não por entidade.
-- O glossário do `CLAUDE.md` ganha a linha `single`.
+**`single` (already known gap), [design decision] the names and the shape of the return value are up to the plan:**
+- §4.2 promises `single`, which does not exist. The game needs it in `chasePlayer` and `fireWeapon` (player position, in
+  C++) and in the HUD (player health and dash, in TS).
+- C++: `Query<Ts...>::single()` returns the `Entity` and the components of the only row; zero or more than one row is a contract
+  error (`OLY_ASSERT`, with a case in `contract_death`). `trySingle()` returns empty when there is no row, because
+  between `gameOver` and the next `playing` the player does not exist; more than one row is still an error.
+- TS: `query.single()` and `query.trySingle()` with the same rule (`ContractError` before the assert). They cross the boundary
+  a constant number of times per call (`olyQueryBegin`/`End`), not per entity.
+- The `CLAUDE.md` glossary gains the `single` row.
 
-**Regra para faltas descobertas durante a fase**
-1. A peça é genérica se outro jogo também a usaria. Se é do jogo (render, colisão, números), fica no jogo.
-2. Peça genérica vira tarefa da engine na mesma fase: C++ primeiro (um jogo só em C++ precisa tê-la), depois API C e
-   TS, com testes no módulo, casos de morte para contratos novos e `CLAUDE.md`/spec atualizados.
-3. Toda falta entra na lista da fase.
+**Rule for gaps discovered during the phase**
+1. The piece is generic if another game would also use it. If it belongs to the game (render, collision, numbers), it stays in the game.
+2. A generic piece becomes an engine task in the same phase: C++ first (a C++-only game must have it), then C API and
+   TS, with tests in the module, death cases for new contracts and `CLAUDE.md`/spec updated.
+3. Every gap goes into the phase list.
 
-**A lista da fase** fica em `games/arena/README.md`, em três grupos: **faltava na engine (adicionado)** — a peça, por
-que o jogo precisou e o commit; **feito no jogo por ser do jogo** — confirma os não-objetivos do §2; **contornado** —
-algo feito fora da engine sem corrigi-la. A meta é o último grupo vazio; cada item que ficar nele diz por que a correção
-ficou para depois.
+**The phase list** lives in `games/arena/README.md`, in three groups: **missing from the engine (added)** — the piece, why
+the game needed it and the commit; **done in the game because it belongs to the game** — confirms the non-goals of §2; **worked around** —
+something done outside the engine without fixing it. The goal is an empty last group; each item that stays in it says why the fix
+was left for later.
 
-**Lint de fronteiras nos jogos, [decisão do design]:** o `oly.lint.boundaries` só é registrado fora do Emscripten, e os
-jogos só são configurados nos presets `wasm-games*`; por isso o `DEPENDS` de um jogo (inclusive o do fixture) nunca é
-conferido. O lint passa a ser registrado também nos presets `wasm-games*` (a imagem tem Python). O plano confere antes
-por que ele ficou de fora do Emscripten.
+**Boundary lint in games, [design decision]:** `oly.lint.boundaries` is only registered outside Emscripten, and
+games are only configured in the `wasm-games*` presets; that is why a game's `DEPENDS` (including the fixture's) is never
+checked. The lint is now also registered in the `wasm-games*` presets (the image has Python). The plan first checks
+why it was left out of Emscripten.
 
-## 5. Fases de implementação
+## 5. Implementation phases
 
-Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. Cada fase termina com testes passando
-(nativo e WASM onde se aplica) e não regride as anteriores nem o ECS.
+Each phase gets its own plan in `docs/superpowers/plans/` when it starts. Each phase ends with tests passing
+(native and WASM where applicable) and does not regress the earlier ones nor the ECS.
 
-| # | Fase | Entrega | Pronto quando |
+| # | Phase | Delivers | Done when |
 |---|------|---------|---------------|
-| 1 | **Ponte** | build WASM da engine com API C; pacote TS; esquema + gerador; spawn/destroy/get/set e `eachBlock` com views a partir do TS | um teste TS em node cria entidades, itera com views e o resultado bate com o lado C++; benchmark da fronteira (§7) registrado |
-| 2 | **Loop e fases** | módulo C++ com o loop (`frame`, `setHidden`, passo fixo, render, pausa), registro de sistemas C++ (por função e por nome) e TS (chamada de volta) nas fases, `CommandBuffer` por fase compartilhado pelas duas linguagens; host do navegador em `@oly/client` (rAF + `visibilitychange`); passos 1, 2, 4 e 5 do loop como lugares vazios | um teste C++ nativo roda o loop inteiro sem TS, com relógio falso; sistemas das duas linguagens rodam na ordem esperada (teste TS em node contra o WASM); pausa, aba oculta e `.whilePaused()` testados; medições do §7 registradas |
-| 3 | **Eventos** | `event` no esquema e no gerador; filas tipadas na memória do WASM; emissão nos dois lados; handlers C++ (por função e por nome) e TS por lote; despacho tipo a tipo com cascata e limite | teste C++ nativo do fluxo de referência (§4.4) sem TS, terminando com `checkInvariants` e o inimigo destruído; testes de ordem (tipo, registro, rodadas), cascata, estouro do limite (caso de morte no C++), evento duplicado, emissão na fase `render`, handlers C++ e TS misturados (teste TS em node contra o WASM), crescimento de memória dentro de handler TS e recuperação de exceção; medição do §7 registrada |
-| 4 | **Ações de input** | módulo `input` (`ActionMap`, botões físicos HID, fila de bordas, captura no passo 1); `action` no esquema e no gerador; API C de ligações, entrada do host e snapshot; leitura pelos contextos em C++ e TS; `attachBrowserInput` em `@oly/client` | `input.unit` sem `Engine` cobrindo bordas, toque mais curto que um passo, várias ligações, auto-repeat, `releaseAll`, eixo (anulação e diagonal) e religação; no `app`, uma captura por passo (inclusive pausado), bordas só no primeiro passo do frame e sair da pausa por uma ação num sistema `.whilePaused()`; casos de morte novos; teste TS em node contra o WASM com sistema TS lendo ações, toque curto e saída da pausa; amostras da tabela HID iguais nos dois lados; `attachBrowserInput` testado com ambiente falso |
-| 5 | **Schedule** | fila de tarefas no `app` (`Scheduler`, `TaskContext`, `DirectContext`); `after`/`every`/cancelar no relógio do jogo, congelando na pausa; payload e descarte; API C de tarefas TS; `schedule` na `Engine` e nos contextos do `@oly/core` | no `app`, C++ nativo com relógio falso e sem TS: passo do disparo (atraso fora do passo, `after(0)` dentro e fora de `frame`), ordem por vencimento e criação, `every` sem deriva e com intervalo menor que o passo, tarefa criada no passo 2 esperando o seguinte, cancelar antes/durante/depois, pausa, aba oculta, passos descartados, descarte uma única vez e nunca depois de `lastRun`, payload, mudanças diretas com `checkInvariants`, `emit` em tarefa despachado no mesmo passo, tarefas sobrevivendo à recuperação; casos de morte novos; `bridge.c_api`; teste TS em node contra o WASM com tarefas C++ e TS intercaladas, exceção e recuperação, crescimento de memória dentro de tarefa TS e mapa de closures vazio em todos os caminhos |
-| 6 | **Estados** | `declareState`, pedido e transição no passo 5, `onEnter`/`onExit` (por função e por nome) com `StateContext`, `inState` em sistemas e handlers, escopo por tag `StateScoped` e nas tarefas, `persist`; `state` no esquema e no gerador; API C de estados, `olyDirectSpawn` e `olyContextPersist`; estados nos contextos do `@oly/core` | no `app`, C++ nativo com relógio falso e sem TS: entrada do estado inicial, ordem `onExit` → limpeza → `onEnter`, último pedido vence, reentrada, pedido em gancho valendo no passo seguinte, troca em passo pausado, `inState` com `whilePaused`, escopo de entidades (sistema, handler, tarefa, gancho; spawn direto no `World` persistente) e de tarefas com descarte uma única vez, `persist` dos dois, descarte que agenda durante a limpeza, evento emitido em gancho despachado no mesmo passo, recuperação (pedido descartado, exceção em `onExit` e em `onEnter`) e `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`); casos de morte novos; `ts.codegen.unit`; `bridge.c_api`; teste TS em node contra o WASM com ganchos C++ e TS intercalados, `inState` pelo TS, spawn direto do TS com escopo, `persist`, mapa de closures vazio depois da troca, exceção em gancho TS e crescimento de memória dentro de gancho TS |
-| 7 | **Jogo de validação** | o jogo de tiro em `games/arena/` (§4.9), com render em canvas e colisão simples feitos no jogo; `single` em C++ e TS e as demais faltas genéricas que o jogo revelar; esbuild, `make game`/`make serve` e o serviço `web`; lint de fronteiras nos presets `wasm-games*` | `ts.arena.smoke` em node contra o WASM, com relógio e input falsos e `checkInvariants` a cada etapa: entrada em `menu`, `confirm` → `playing` com um jogador, inimigo morto por tiro sem sobra (mortes duplicadas no mesmo passo), moeda coletada, dash com fim e recarga, pausa congelando o mundo, morte → `gameOver` sem entidades com escopo, e jogar de novo com placar zerado; testes e casos de morte de `single` nos dois lados; checklist manual no Chromium cumprido; lista da fase em `games/arena/README.md` com o grupo "contornado" vazio ou justificado; `$DC make test`, `$WC make games-test` e os `ts.*` em `wasm-games-release` verdes |
+| 1 | **Bridge** | WASM build of the engine with C API; TS package; schema + generator; spawn/destroy/get/set and `eachBlock` with views from TS | a TS test on node creates entities, iterates with views and the result matches the C++ side; boundary benchmark (§7) recorded |
+| 2 | **Loop and phases** | C++ module with the loop (`frame`, `setHidden`, fixed step, render, pause), registration of C++ systems (by function and by name) and TS systems (callback) in the phases, `CommandBuffer` per phase shared by both languages; browser host in `@oly/client` (rAF + `visibilitychange`); loop steps 1, 2, 4 and 5 as empty slots | a native C++ test runs the whole loop without TS, with a fake clock; systems from both languages run in the expected order (TS test on node against the WASM); pause, hidden tab and `.whilePaused()` tested; §7 measurements recorded |
+| 3 | **Events** | `event` in the schema and the generator; typed queues in WASM memory; emission on both sides; C++ handlers (by function and by name) and TS handlers per batch; type-by-type dispatch with cascade and limit | native C++ test of the reference flow (§4.4) without TS, ending with `checkInvariants` and the enemy destroyed; tests of order (type, registration, rounds), cascade, limit overflow (death case in C++), duplicate event, emission in the `render` phase, mixed C++ and TS handlers (TS test on node against the WASM), memory growth inside a TS handler and exception recovery; §7 measurement recorded |
+| 4 | **Input actions** | `input` module (`ActionMap`, HID physical buttons, edge queue, capture in step 1); `action` in the schema and the generator; C API for bindings, host input and snapshot; reading through the contexts in C++ and TS; `attachBrowserInput` in `@oly/client` | `input.unit` without `Engine` covering edges, a press shorter than a step, multiple bindings, auto-repeat, `releaseAll`, axis (cancellation and diagonal) and rebinding; in `app`, one capture per step (including paused), edges only on the frame's first step and leaving the pause through an action in a `.whilePaused()` system; new death cases; TS test on node against the WASM with a TS system reading actions, short press and leaving the pause; HID table samples equal on both sides; `attachBrowserInput` tested with a fake environment |
+| 5 | **Schedule** | task queue in `app` (`Scheduler`, `TaskContext`, `DirectContext`); `after`/`every`/cancel on the game clock, freezing on pause; payload and discard; C API for TS tasks; `schedule` on the `Engine` and in the `@oly/core` contexts | in `app`, native C++ with a fake clock and without TS: firing step (delay outside the step, `after(0)` inside and outside `frame`), order by due time and creation, `every` without drift and with an interval shorter than the step, task created in step 2 waiting for the next one, cancel before/during/after, pause, hidden tab, discarded steps, discard exactly once and never after `lastRun`, payload, direct changes with `checkInvariants`, `emit` in a task dispatched in the same step, tasks surviving recovery; new death cases; `bridge.c_api`; TS test on node against the WASM with interleaved C++ and TS tasks, exception and recovery, memory growth inside a TS task and an empty closure map on every path |
+| 6 | **States** | `declareState`, request and transition in step 5, `onEnter`/`onExit` (by function and by name) with `StateContext`, `inState` on systems and handlers, scope through the `StateScoped` tag and on tasks, `persist`; `state` in the schema and the generator; C API for states, `olyDirectSpawn` and `olyContextPersist`; states in the `@oly/core` contexts | in `app`, native C++ with a fake clock and without TS: entry into the initial state, order `onExit` → cleanup → `onEnter`, last request wins, reentry, request in a hook taking effect in the next step, switch in a paused step, `inState` with `whilePaused`, scope of entities (system, handler, task, hook; direct spawn in the `World` persistent) and of tasks with discard exactly once, `persist` of both, discard that schedules during cleanup, event emitted in a hook dispatched in the same step, recovery (request discarded, exception in `onExit` and in `onEnter`) and `playing → gameOver → playing` with no leftovers in the `World` (`checkInvariants`); new death cases; `ts.codegen.unit`; `bridge.c_api`; TS test on node against the WASM with interleaved C++ and TS hooks, `inState` from TS, scoped direct spawn from TS, `persist`, empty closure map after the switch, exception in a TS hook and memory growth inside a TS hook |
+| 7 | **Validation game** | the shooter in `games/arena/` (§4.9), with canvas render and simple collision done in the game; `single` in C++ and TS and the other generic gaps the game reveals; esbuild, `make game`/`make serve` and the `web` service; boundary lint in the `wasm-games*` presets | `ts.arena.smoke` on node against the WASM, with fake clock and input and `checkInvariants` at each stage: entry into `menu`, `confirm` → `playing` with one player, enemy killed by a shot with no leftover (duplicate deaths in the same step), coin collected, dash with end and recharge, pause freezing the world, death → `gameOver` with no scoped entities, and play again with the score reset; `single` tests and death cases on both sides; manual checklist in Chromium done; phase list in `games/arena/README.md` with the "worked around" group empty or justified; `$DC make test`, `$WC make games-test` and the `ts.*` in `wasm-games-release` green |
 
-Estados (6) depende do schedule (5) por causa do escopo das tarefas agendadas. Eventos, ações e schedule (3–5) dependem
-só de 2 entre si; a ordem acima é a recomendada.
+States (6) depends on the schedule (5) because of the scope of scheduled tasks. Events, actions and schedule (3–5) depend
+only on 2 among themselves; the order above is the recommended one.
 
-## 6. Testes e corretude
+## 6. Tests and correctness
 
-- Núcleo C++ da engine: testes doctest no estilo atual, rodando no preset nativo (`debug-asan`) e em WASM via node.
-  Erros de contrato novos (cascata estourada, mudança estrutural direta durante iteração etc.) ganham casos em
+- C++ engine core: doctest tests in the current style, running on the native preset (`debug-asan`) and in WASM via node.
+  New contract errors (cascade overflow, direct structural change during iteration etc.) get cases in
   `contract_death`.
-- `World::checkInvariants` continua sendo chamado nos testes após operações da engine que mudam estrutura.
-- Pacote TS: testes em node no container (test runner a critério do construtor), contra o WASM real, não um mock.
-- Loop, schedule e estados são testáveis sem navegador: relógio e fonte de input injetáveis.
-- O jogo de validação é verificado manualmente no navegador; não se exige teste automatizado de navegador.
+- `World::checkInvariants` is still called in tests after engine operations that change structure.
+- TS package: tests on node in the container (test runner at the implementer's discretion), against the real WASM, not a mock.
+- Loop, schedule and states are testable without a browser: injectable clock and input source.
+- The validation game is verified manually in the browser; no automated browser test is required.
 
-## 7. Medição
+## 7. Measurement
 
-- Benchmark da fronteira (fase 1, repetido quando o loop existir): um sistema de movimento sobre N entidades em três
-  versões, na mesma execução:
-  1. C++ (sistema nativo);
-  2. TS via engine (`eachBlock` + views com passo);
-  3. TS manual (typed arrays próprios, sem engine) como linha de base.
-  Reportar as razões (2)/(3) e (2)/(1) por tamanho, separando os que cabem em cache. **[decisão do design]** Sem meta
-  numérica nesta etapa: os números são registrados e orientam a decisão sobre SoA por campo (§4.2).
-- Custo do loop (fase 2), com K sistemas vazios e 0 entidades, na mesma execução:
-  1. custo fixo de um passo com K sistemas C++ (linha de base) e com K sistemas TS: mede a chamada de volta C++→JS;
-  2. K/2 sistemas C++ e K/2 TS **alternados** (`C,T,C,T…`) contra **agrupados** (`C…C,T…T`) na mesma fase: mede se
-     intercalar linguagens custa mais que o número de chamadas de volta explica;
-  3. o benchmark da fronteira (acima) repetido com os sistemas rodando dentro do loop.
-  Sem meta numérica: os números dizem quanto custa ter o loop no C++ e orientam se vale agrupar sistemas TS.
-- Custo dos eventos (fase 3, **[decisão do design]**), na mesma execução, para N eventos de um tipo por passo:
-  1. um handler C++ contra um handler TS (custo da chamada de volta por lote e da leitura pelas views);
-  2. emissão de N eventos por um sistema C++ contra por um sistema TS (custo da emissão pela fronteira).
-  Sem meta numérica: os números dizem se vale emitir em lote a partir do TS.
-- Ações de input (fase 4, **[decisão do design]**): sem benchmark. O input está fora do caminho quente: a fronteira é
-  cruzada por evento de input (dezenas por segundo), a captura roda uma vez por passo sobre poucas ações e a leitura no
-  TS é feita por views, sem cruzar a fronteira. Medir só faria sentido se um jogo tivesse centenas de ações.
-- Schedule (fase 5, **[decisão do design]**): sem benchmark. Um jogo tem dezenas de tarefas, a fronteira é cruzada uma
-  vez por disparo ou descarte de tarefa TS e nada é feito por entidade. A escolha heap vs varredura linear (§4.6) só
-  seria medida se um jogo chegasse a milhares de tarefas.
-- Estados (fase 6, **[decisão do design]**): sem benchmark. A troca de estado é rara (troca de tela), o custo por
-  passo é um teste de máscara por sistema e por handler, e os arquétipos gêmeos da tag `StateScoped` só aparecem
-  quando o jogo cria a mesma combinação com e sem escopo. Medir só faria sentido se um jogo mostrasse fragmentação
-  relevante (`stats()` do ECS).
-- Jogo de validação (fase 7, **[decisão do design]**): sem benchmark. O jogo tem dezenas a poucas centenas de
-  entidades, e os custos da fronteira, do loop e dos eventos já foram medidos nas fases 1–3. Se o jogo travar no
-  navegador, a investigação usa o profiler do Chromium e o achado entra na lista da fase (§4.9).
-- Ambiente ruidoso (WSL2/Docker): só razões da mesma execução, como no ECS.
-- Resultados versionados em `docs/benchmarks/` com registro no `README.md` correspondente.
+- Boundary benchmark (phase 1, repeated when the loop exists): a movement system over N entities in three
+  versions, in the same run:
+  1. C++ (native system);
+  2. TS via the engine (`eachBlock` + strided views);
+  3. hand-written TS (its own typed arrays, no engine) as the baseline.
+  Report the ratios (2)/(3) and (2)/(1) per size, separating those that fit in cache. **[design decision]** No numeric
+  target at this stage: the numbers are recorded and guide the decision on SoA per field (§4.2).
+- Loop cost (phase 2), with K empty systems and 0 entities, in the same run:
+  1. fixed cost of a step with K C++ systems (baseline) and with K TS systems: measures the C++→JS callback;
+  2. K/2 C++ and K/2 TS systems **alternated** (`C,T,C,T…`) versus **grouped** (`C…C,T…T`) in the same phase: measures whether
+     interleaving languages costs more than the number of callbacks explains;
+  3. the boundary benchmark (above) repeated with the systems running inside the loop.
+  No numeric target: the numbers say how much having the loop in C++ costs and guide whether grouping TS systems is worth it.
+- Event cost (phase 3, **[design decision]**), in the same run, for N events of one type per step:
+  1. a C++ handler versus a TS handler (cost of the callback per batch and of reading through the views);
+  2. emission of N events by a C++ system versus by a TS system (cost of emission across the boundary).
+  No numeric target: the numbers say whether emitting in batches from TS is worth it.
+- Input actions (phase 4, **[design decision]**): no benchmark. Input is off the hot path: the boundary is
+  crossed per input event (dozens per second), capture runs once per step over few actions and reading in
+  TS is done through views, without crossing the boundary. Measuring would only make sense if a game had hundreds of actions.
+- Schedule (phase 5, **[design decision]**): no benchmark. A game has dozens of tasks, the boundary is crossed once
+  per firing or discard of a TS task and nothing is done per entity. The heap vs linear scan choice (§4.6) would only
+  be measured if a game reached thousands of tasks.
+- States (phase 6, **[design decision]**): no benchmark. A state switch is rare (screen change), the cost per
+  step is one mask test per system and per handler, and the twin archetypes of the `StateScoped` tag only show up
+  when the game creates the same combination with and without scope. Measuring would only make sense if a game showed relevant
+  fragmentation (the ECS's `stats()`).
+- Validation game (phase 7, **[design decision]**): no benchmark. The game has dozens to a few hundred
+  entities, and the costs of the boundary, the loop and events were already measured in phases 1–3. If the game stutters in the
+  browser, the investigation uses the Chromium profiler and the finding goes into the phase list (§4.9).
+- Noisy environment (WSL2/Docker): only ratios from the same run, as in the ECS.
+- Results versioned in `docs/benchmarks/` with an entry in the corresponding `README.md`.
 
-## 8. O que fica a critério do construtor
+## 8. What is left to the implementer
 
-- Estrutura de diretórios do núcleo C++ da engine, do pacote TS e do exemplo; nome do pacote.
-- Ferramentas TS (bundler, dev server, test runner) e a imagem/serviço Docker que as roda.
-- Formato do esquema e linguagem do gerador (§4.1).
-- Forma da função JS importada para a chamada de volta (`--js-library`, `EM_JS` ou equivalente) e da API C++ de
-  registro de sistemas, desde que o loop fique no núcleo (§4.3).
-- Representação de `Entity` no TS (§4.2).
-- Detalhes da API C exportada e da API TS, desde que o uso fique próximo do esboço (§4.8).
-- Ordem global vs por tipo no despacho de eventos (§4.4).
-- Render e colisão do jogo de validação (canvas 2D é o suficiente).
+- Directory structure of the C++ engine core, of the TS package and of the example; package name.
+- TS tools (bundler, dev server, test runner) and the Docker image/service that runs them.
+- Schema format and generator language (§4.1).
+- Shape of the imported JS function for the callback (`--js-library`, `EM_JS` or equivalent) and of the C++ system
+  registration API, as long as the loop stays in the core (§4.3).
+- Representation of `Entity` in TS (§4.2).
+- Details of the exported C API and of the TS API, as long as usage stays close to the sketch (§4.8).
+- Global vs per-type order in event dispatch (§4.4).
+- Render and collision of the validation game (2D canvas is enough).
