@@ -4,13 +4,16 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "oly/core/assert.hpp"
 #include "oly/core/small_map.hpp"
+#include "oly/core/type_name.hpp"
 #include "oly/ecs/component.hpp"
 #include "oly/ecs/detail/archetype.hpp"
 #include "oly/ecs/detail/query_cache.hpp"
@@ -85,7 +88,51 @@ namespace oly::ecs {
       }
     }
 
+    // A única linha da query, como (Entity, Ts&...). Sem iteração: não chama código do usuário, então
+    // as referências valem até a próxima mudança estrutural. Com 0 linhas o comportamento é indefinido.
+    std::tuple<Entity, Ts&...> single() {
+      const RowSummary summary = summarizeRows();
+      OLY_ASSERT(summary.rowCount == 1, "single: %.*s com %u linhas; esperava 1", static_cast<int>(core::typeName<Query<Ts...>>().size()), core::typeName<Query<Ts...>>().data(), summary.rowCount);
+
+      return firstRow(*summary.firstTable, std::index_sequence_for<Ts...>{});
+    }
+
+    std::optional<std::tuple<Entity, Ts&...>> trySingle() {
+      const RowSummary summary = summarizeRows();
+      OLY_ASSERT(summary.rowCount <= 1, "trySingle: %.*s com %u linhas; esperava 0 ou 1", static_cast<int>(core::typeName<Query<Ts...>>().size()), core::typeName<Query<Ts...>>().data(), summary.rowCount);
+      if (summary.rowCount == 0) {
+        return std::nullopt;
+      }
+
+      return firstRow(*summary.firstTable, std::index_sequence_for<Ts...>{});
+    }
+
    private:
+    struct RowSummary {
+      const detail::MatchedTable<Ts...>* firstTable = nullptr;
+      uint32_t rowCount = 0;
+    };
+
+    RowSummary summarizeRows() const {
+      RowSummary summary;
+      for (const detail::MatchedTable<Ts...>& matched : matched_) {
+        const uint32_t tableRows = matched.archetype->table.count();
+        if (tableRows != 0 && summary.firstTable == nullptr) {
+          summary.firstTable = &matched;
+        }
+
+        summary.rowCount += tableRows;
+      }
+
+      return summary;
+    }
+
+    template <size_t... Is>
+    static std::tuple<Entity, Ts&...> firstRow(const detail::MatchedTable<Ts...>& matched, std::index_sequence<Is...>) {
+      detail::Table& table = matched.archetype->table;
+      return std::tuple<Entity, Ts&...>(table.entities()[0], reinterpret_cast<Ts*>(table.column(matched.columns[Is]).data)[0]...);
+    }
+
     // Com `smallest`, percorre só os arquétipos do menor componentIndex (R-QY-3).
     void initialize(const std::vector<std::unique_ptr<detail::Archetype>>& all, const core::SmallMap<detail::ArchetypeId, uint16_t>* smallest) {
       if (smallest) {

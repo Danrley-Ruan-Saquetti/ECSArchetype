@@ -114,6 +114,25 @@ namespace {
     world.query<A>().each([&](A&) { world.spawn(); });
   }
 
+  void singleEmpty() {
+    oly::ecs::World world;
+    world.query<A>().single();
+  }
+
+  void singleMany() {
+    oly::ecs::World world;
+    world.spawn(A{1});
+    world.spawn(A{2});
+    world.query<A>().single();
+  }
+
+  void trySingleMany() {
+    oly::ecs::World world;
+    world.spawn(A{1});
+    world.spawn(A{2});
+    world.query<A>().trySingle();
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -135,6 +154,9 @@ int main(int argumentCount, char** arguments) {
     {"add_during_query_by_id_iteration", addDuringQueryByIdIteration, {"add"}},
     {"get_by_id_missing", getByIdMissing, {"getById", "e="}},
     {"spawn_during_each", spawnDuringEach, {"spawn", "iteração"}},
+    {"single_empty", singleEmpty, {"single:", "0 linhas"}},
+    {"single_many", singleMany, {"single:", "2 linhas"}},
+    {"try_single_many", trySingleMany, {"trySingle:", "2 linhas"}},
   };
 
   if (argumentCount != 2) {

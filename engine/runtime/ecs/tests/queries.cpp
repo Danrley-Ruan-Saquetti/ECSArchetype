@@ -141,3 +141,43 @@ TEST_CASE("isIterating aninha e volta a zero, inclusive com exceção") {
   world.spawn(A{2});
   CHECK_INVARIANTS(world);
 }
+
+TEST_CASE("single devolve a entidade e referências da única linha") {
+  oly::ecs::World world;
+  auto expected = world.spawn(A{1}, B{2, 3});
+  world.spawn(B{4, 5});
+
+  auto [entity, componentA, componentB] = world.query<A, const B>().single();
+  componentA.value = 7;
+
+  CHECK(entity == expected);
+  CHECK(componentB.second == 3);
+  CHECK(world.get<A>(expected).value == 7);
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("single acha a linha em qualquer tabela casada e respeita With/Without") {
+  oly::ecs::World world;
+  auto emptied = world.spawn(A{1});
+  auto excluded = world.spawn(A{2}, Tag{});
+  auto expected = world.spawn(A{3}, B{0, 0});
+  auto& query = world.query<A>(oly::ecs::Without<Tag>{});
+  world.destroy(emptied);
+
+  CHECK(std::get<0>(query.single()) == expected);
+  CHECK(world.isAlive(excluded));
+  CHECK_INVARIANTS(world);
+}
+
+TEST_CASE("trySingle: vazio sem linhas e a linha com uma") {
+  oly::ecs::World world;
+  CHECK(!world.query<A>().trySingle());
+
+  auto entity = world.spawn(A{1});
+  auto row = world.query<A>().trySingle();
+
+  REQUIRE(row.has_value());
+  CHECK(std::get<0>(*row) == entity);
+  CHECK(std::get<1>(*row).value == 1);
+  CHECK_INVARIANTS(world);
+}
