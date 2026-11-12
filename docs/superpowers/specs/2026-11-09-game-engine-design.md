@@ -26,6 +26,11 @@ estado inicial pela regra de qualquer troca, escopo por uma tag interna no `Worl
 criar (`persist`), spawn direto do TS passando pela engine. Uso indicativo (§4.8), testes da fase 6 no §5 e ausência
 de benchmark justificada no §7.
 
+Revisão de 2026-11-12 (antes da fase 7): §4.9 detalha o jogo de validação — `games/arena/`, divisão C++/TS do
+gameplay, jogo sem DOM (`installGame`) separado da casca do navegador, esbuild para servir, `single` em C++ e TS
+(prometido no §4.2), regra para faltas da engine descobertas pelo jogo e a lista da fase. Testes da fase 7 no §5 e
+ausência de benchmark justificada no §7.
+
 Convenção deste documento: o que não vem marcado foi decidido pelo autor do projeto. Itens marcados
 **[decisão do design]** foram escolhas feitas ao escrever o documento, sem confirmação explícita; podem ser revistas
 no plano da fase correspondente sem voltar ao autor, desde que respeitem os objetivos e anti-objetivos.
@@ -61,7 +66,7 @@ Um jogo de tiro 2D com visão de cima, no navegador:
 
 O jogo é **cliente de validação** da engine: se algo de que ele precisa só puder ser feito com gambiarra fora da
 engine (fora dos mecanismos de sistemas, eventos, ações, schedule e estados), a engine está incompleta. Render,
-colisão e áudio do jogo são escritos no próprio jogo (§2).
+colisão e áudio do jogo são escritos no próprio jogo (§2). O design do jogo está no §4.9.
 
 ## 2. Objetivos, não-objetivos, anti-objetivos
 
@@ -166,7 +171,7 @@ colisão e áudio do jogo são escritos no próprio jogo (§2).
 - `Entity` no TS: **[decisão do design]** representado como `number` (índice + geração empacotados de forma segura
   dentro de 53 bits, ou dois campos); a escolha fica com o construtor desde que comparar e guardar seja barato.
 - Acesso pontual (`get(entity, Component)`, `single(...)`) existe para casos como "a posição do jogador"; cruza a
-  fronteira por chamada e não deve ser usado em laço por entidade.
+  fronteira por chamada e não deve ser usado em laço por entidade. `single` só chega na fase 7 (§4.9).
 
 ### 4.3 Loop e fases
 
@@ -832,6 +837,122 @@ OLY_SYSTEM(move) {
 }
 ```
 
+### 4.9 Jogo de validação (fase 7)
+
+Objetivo da fase (do autor): o jogo do §1.1 jogável no navegador, usando as duas linguagens nas mesmas fases. Quando
+o jogo precisa de algo genérico que a engine não tem, a falta é corrigida na engine durante a fase, não contornada.
+
+**Decisões do autor**
+- **Jogo misto:** o C++ faz o gameplay por entidade (controle, tiro, perseguição, movimento, colisão); o TS faz render,
+  HUD, ligações de teclas, ganchos de estado e as ondas. Assim a fronteira é usada como o §2 manda: por sistema, por
+  bloco e por lote, nunca por entidade.
+- **Faltas genéricas da engine são corrigidas na fase** (regra abaixo).
+- **esbuild** junta o TS do jogo para o navegador e o serve.
+- **Arena fixa do tamanho do canvas**, sem câmera: coordenadas do mundo = pixels do canvas, que é o que
+  `attachBrowserInput` já entrega para o ponteiro.
+- **Jogo sem DOM separado da casca do navegador**, com teste de fumaça em node contra o WASM real.
+
+**Estrutura**
+
+```
+games/arena/
+  CMakeLists.txt        oly_add_game(arena_game SCHEMA_JS … SOURCES native/*.cpp DEPENDS ecs app bridge) + ts.arena.smoke
+  package.json          pacote privado "arena", depende de @oly/core e @oly/client
+  tsconfig.json         project reference, como os pacotes da engine
+  schema.ts             componentes, tags, eventos, ações e estados
+  native/               sistemas e handlers C++ (OLY_SYSTEM, OLY_HANDLER)
+  src/game.ts           installGame(engine, options): registra tudo, sem DOM
+  src/render.ts         sistema de render que desenha por um Drawer
+  src/main.ts           casca do navegador: canvas, Drawer sobre Canvas 2D, runInBrowser, attachBrowserInput
+  tests/smoke.test.ts   roteiro em node contra o WASM (ts.arena.smoke)
+  web/index.html
+  README.md             como rodar, checklist manual e a lista da fase
+```
+
+- `games/CMakeLists.txt` entra no build sob `OLY_BUILD_GAMES`, ao lado de `engine/testing`. O WASM sai em
+  `build/<preset>/games/arena_game.mjs` + `.wasm`, nos presets `wasm-games` e `wasm-games-release`.
+- `installGame(engine, { drawer, random })` devolve um objeto só de leitura com o placar (`kills`, `coins`, `score`),
+  que o HUD e o teste usam. `Drawer` é a interface mínima de desenho (limpar, círculo, retângulo, texto): o
+  `main.ts` passa uma sobre `CanvasRenderingContext2D`, o teste passa uma que não desenha. `random: () => number` é
+  `Math.random` no navegador e uma sequência fixa no teste.
+
+**Servir no navegador, [decisão do design] os nomes:**
+- `esbuild` entra como `devDependency` da raiz, com versão exata. Ele junta `games/arena/dist/main.js` (saída do
+  `tsc -b`, que já conferiu os tipos) num único `main.js`. O `.mjs` do Emscripten não entra no bundle: é carregado em
+  tempo de execução por `moduleFactoryFromUrl("./arena_game.mjs")`.
+- `make game G=arena PRESET=wasm-games-release` monta `build/<preset>/web/arena/` com `index.html`, `main.js`,
+  `arena_game.mjs` e `arena_game.wasm`. A pasta é estática e pode ser publicada como está.
+- `make serve G=arena` roda o servidor do esbuild nessa pasta. Serviço `web` no `docker-compose.yaml` (imagem do
+  `Dockerfile.wasm`, porta `8000:8000`): `docker compose run --rm --service-ports web make serve G=arena`.
+
+**Esquema** (nomes do jogo, só em `games/arena/`)
+- Componentes: `Position {x, y}`, `Velocity {x, y}`, `Collider {radius}`, `Health {value: i32}`, `Chaser {speed}`,
+  `Weapon {interval, cooldown}`, `Dash {speed, duration, recharge, ready: u8, active: u8}`.
+- Tags: `Player`, `Enemy`, `Bullet`, `Coin`, `Invulnerable`.
+- Eventos: `EnemyDied {entity, x, y}`, `CoinCollected {coin: entity}`, `PlayerDied {entity}`.
+- Ações: `move` (axis2d, WASD), `aim` (pointer), `shoot` (MouseLeft), `dash` (Space), `pause` (Escape), `confirm`
+  (Enter e MouseLeft).
+- Estados: `menu`, `playing`, `gameOver`.
+
+**Passo fixo** (C = C++ registrado por nome, T = TS; ordem de registro = ordem da tabela):
+
+| Fase | Sistema | Estados | O que faz |
+|---|---|---|---|
+| updateBefore | T `startOnConfirm` | menu, gameOver | `confirm` → `requestState(playing)` |
+| updateBefore | T `pauseOnPress`; T `resumeOnPress` (`whilePaused`) | playing | `pause` alterna a pausa |
+| updateBefore | C `steerPlayer` | playing | `move` → velocidade; `dash` pronto → impulso, e agenda em C++ (payload `Entity`) o fim do dash e a recarga |
+| update | C `fireWeapon` | playing | `shoot` segurado + recarga da arma → bala na direção de `aim` |
+| update | C `chasePlayer` | playing | inimigos apontam a velocidade para o jogador |
+| update | C `integrate` | playing | posição += velocidade × passo |
+| updateAfter | C `collide` | playing | bala×inimigo: dano, bala destruída, `EnemyDied` com vida ≤ 0. Inimigo×jogador: sem `Invulnerable`, dano, tag e tarefa C++ que a tira depois de 1 s; vida ≤ 0 → `PlayerDied`. Jogador×moeda: `CoinCollected` |
+| updateAfter | C `confine` | playing | prende o jogador na arena e destrói balas fora dela |
+
+**Handlers** (passo 4), no fluxo de referência do §4.4:
+- `EnemyDied`: C `dropCoin` (chance de moeda em `x, y`) → T `countKill` (placar) → C `destroyDead` (por último,
+  confere `isAlive`: duas balas no mesmo passo geram duas mortes).
+- `CoinCollected`: T `collectCoin` (placar e `destroy` direto pelo TS, conferindo `isAlive`).
+- `PlayerDied`: T `endRound` (guarda o placar final e pede `gameOver`).
+
+**Ganchos e tarefas**
+- O jogo pede `menu` antes de rodar (§4.7, estado inicial).
+- `onEnter(playing)` (T): zera o placar, cria o jogador e agenda `every` das ondas (inimigos nas bordas, mais a cada
+  onda) e das moedas soltas pela arena. Tudo tem escopo de `playing`: a troca para `gameOver` limpa entidades e tarefas
+  sem `onExit`, e "jogar de novo" começa limpo.
+
+**Render** (fase `render`, T): jogador, inimigos, balas e moedas por `eachBlock` (uma query por tag), HUD (placar,
+vida, dash pronto) e o texto de menu, pausa e game over. **[decisão do design]** Sem interpolação: desenha a posição
+do último passo.
+
+**Feito no jogo por ser do jogo:** render, colisão (pares por força bruta, porque são dezenas a poucas centenas de
+entidades), placar, ondas e aleatoriedade (o C++ usa um gerador local com semente fixa). **[decisão do design]** Os
+números do jogo (velocidades, raios, intervalos, vida 3) são valores iniciais sem medição, ajustados jogando.
+
+**`single` (falta já conhecida), [decisão do design] os nomes e a forma do retorno ficam com o plano:**
+- O §4.2 promete `single`, que não existe. O jogo precisa dele em `chasePlayer` e `fireWeapon` (posição do jogador, em
+  C++) e no HUD (vida e dash do jogador, em TS).
+- C++: `Query<Ts...>::single()` devolve a `Entity` e os componentes da única linha; zero ou mais de uma linha é erro
+  de contrato (`OLY_ASSERT`, com caso em `contract_death`). `trySingle()` devolve vazio quando não há linha, porque
+  entre `gameOver` e o próximo `playing` o jogador não existe; mais de uma linha continua erro.
+- TS: `query.single()` e `query.trySingle()` com a mesma regra (`ContractError` antes do assert). Cruzam a fronteira
+  uma vez por chamada, como o `get`.
+- O glossário do `CLAUDE.md` ganha a linha `single`.
+
+**Regra para faltas descobertas durante a fase**
+1. A peça é genérica se outro jogo também a usaria. Se é do jogo (render, colisão, números), fica no jogo.
+2. Peça genérica vira tarefa da engine na mesma fase: C++ primeiro (um jogo só em C++ precisa tê-la), depois API C e
+   TS, com testes no módulo, casos de morte para contratos novos e `CLAUDE.md`/spec atualizados.
+3. Toda falta entra na lista da fase.
+
+**A lista da fase** fica em `games/arena/README.md`, em três grupos: **faltava na engine (adicionado)** — a peça, por
+que o jogo precisou e o commit; **feito no jogo por ser do jogo** — confirma os não-objetivos do §2; **contornado** —
+algo feito fora da engine sem corrigi-la. A meta é o último grupo vazio; cada item que ficar nele diz por que a correção
+ficou para depois.
+
+**Lint de fronteiras nos jogos, [decisão do design]:** o `oly.lint.boundaries` só é registrado fora do Emscripten, e os
+jogos só são configurados nos presets `wasm-games*`; por isso o `DEPENDS` de um jogo (inclusive o do fixture) nunca é
+conferido. O lint passa a ser registrado também nos presets `wasm-games*` (a imagem tem Python). O plano confere antes
+por que ele ficou de fora do Emscripten.
+
 ## 5. Fases de implementação
 
 Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. Cada fase termina com testes passando
@@ -845,7 +966,7 @@ Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. 
 | 4 | **Ações de input** | módulo `input` (`ActionMap`, botões físicos HID, fila de bordas, captura no passo 1); `action` no esquema e no gerador; API C de ligações, entrada do host e snapshot; leitura pelos contextos em C++ e TS; `attachBrowserInput` em `@oly/client` | `input.unit` sem `Engine` cobrindo bordas, toque mais curto que um passo, várias ligações, auto-repeat, `releaseAll`, eixo (anulação e diagonal) e religação; no `app`, uma captura por passo (inclusive pausado), bordas só no primeiro passo do frame e sair da pausa por uma ação num sistema `.whilePaused()`; casos de morte novos; teste TS em node contra o WASM com sistema TS lendo ações, toque curto e saída da pausa; amostras da tabela HID iguais nos dois lados; `attachBrowserInput` testado com ambiente falso |
 | 5 | **Schedule** | fila de tarefas no `app` (`Scheduler`, `TaskContext`, `DirectContext`); `after`/`every`/cancelar no relógio do jogo, congelando na pausa; payload e descarte; API C de tarefas TS; `schedule` na `Engine` e nos contextos do `@oly/core` | no `app`, C++ nativo com relógio falso e sem TS: passo do disparo (atraso fora do passo, `after(0)` dentro e fora de `frame`), ordem por vencimento e criação, `every` sem deriva e com intervalo menor que o passo, tarefa criada no passo 2 esperando o seguinte, cancelar antes/durante/depois, pausa, aba oculta, passos descartados, descarte uma única vez e nunca depois de `lastRun`, payload, mudanças diretas com `checkInvariants`, `emit` em tarefa despachado no mesmo passo, tarefas sobrevivendo à recuperação; casos de morte novos; `bridge.c_api`; teste TS em node contra o WASM com tarefas C++ e TS intercaladas, exceção e recuperação, crescimento de memória dentro de tarefa TS e mapa de closures vazio em todos os caminhos |
 | 6 | **Estados** | `declareState`, pedido e transição no passo 5, `onEnter`/`onExit` (por função e por nome) com `StateContext`, `inState` em sistemas e handlers, escopo por tag `StateScoped` e nas tarefas, `persist`; `state` no esquema e no gerador; API C de estados, `olyDirectSpawn` e `olyContextPersist`; estados nos contextos do `@oly/core` | no `app`, C++ nativo com relógio falso e sem TS: entrada do estado inicial, ordem `onExit` → limpeza → `onEnter`, último pedido vence, reentrada, pedido em gancho valendo no passo seguinte, troca em passo pausado, `inState` com `whilePaused`, escopo de entidades (sistema, handler, tarefa, gancho; spawn direto no `World` persistente) e de tarefas com descarte uma única vez, `persist` dos dois, descarte que agenda durante a limpeza, evento emitido em gancho despachado no mesmo passo, recuperação (pedido descartado, exceção em `onExit` e em `onEnter`) e `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`); casos de morte novos; `ts.codegen.unit`; `bridge.c_api`; teste TS em node contra o WASM com ganchos C++ e TS intercalados, `inState` pelo TS, spawn direto do TS com escopo, `persist`, mapa de closures vazio depois da troca, exceção em gancho TS e crescimento de memória dentro de gancho TS |
-| 7 | **Jogo de validação** | o jogo de tiro em `examples/` (ou equivalente), com render em canvas e colisão simples feitos no jogo | jogável no navegador de ponta a ponta; lista do que precisou ser feito fora da engine, se algo |
+| 7 | **Jogo de validação** | o jogo de tiro em `games/arena/` (§4.9), com render em canvas e colisão simples feitos no jogo; `single` em C++ e TS e as demais faltas genéricas que o jogo revelar; esbuild, `make game`/`make serve` e o serviço `web`; lint de fronteiras nos presets `wasm-games*` | `ts.arena.smoke` em node contra o WASM, com relógio e input falsos e `checkInvariants` a cada etapa: entrada em `menu`, `confirm` → `playing` com um jogador, inimigo morto por tiro sem sobra (mortes duplicadas no mesmo passo), moeda coletada, dash com fim e recarga, pausa congelando o mundo, morte → `gameOver` sem entidades com escopo, e jogar de novo com placar zerado; testes e casos de morte de `single` nos dois lados; checklist manual no Chromium cumprido; lista da fase em `games/arena/README.md` com o grupo "contornado" vazio ou justificado; `$DC make test`, `$WC make games-test` e os `ts.*` em `wasm-games-release` verdes |
 
 Estados (6) depende do schedule (5) por causa do escopo das tarefas agendadas. Eventos, ações e schedule (3–5) dependem
 só de 2 entre si; a ordem acima é a recomendada.
@@ -889,6 +1010,9 @@ só de 2 entre si; a ordem acima é a recomendada.
   passo é um teste de máscara por sistema e por handler, e os arquétipos gêmeos da tag `StateScoped` só aparecem
   quando o jogo cria a mesma combinação com e sem escopo. Medir só faria sentido se um jogo mostrasse fragmentação
   relevante (`stats()` do ECS).
+- Jogo de validação (fase 7, **[decisão do design]**): sem benchmark. O jogo tem dezenas a poucas centenas de
+  entidades, e os custos da fronteira, do loop e dos eventos já foram medidos nas fases 1–3. Se o jogo travar no
+  navegador, a investigação usa o profiler do Chromium e o achado entra na lista da fase (§4.9).
 - Ambiente ruidoso (WSL2/Docker): só razões da mesma execução, como no ECS.
 - Resultados versionados em `docs/benchmarks/` com registro no `README.md` correspondente.
 
