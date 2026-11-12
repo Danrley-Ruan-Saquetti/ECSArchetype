@@ -1,61 +1,61 @@
-# Linhas em Branco: Filosofia e Princípios (documento completo)
+# Blank Lines: Philosophy and Principles (full document)
 
-Documento-fonte da skill. Consulte quando precisar de exemplos em uma linguagem específica, da tabela de níveis de agrupamento, das convenções de cada ecossistema ou do que formatadores conseguem automatizar.
+Source document of the skill. Consult it when you need examples in a specific language, the table of grouping levels, each ecosystem's conventions or what formatters can automate.
 
-## Sumário
+## Contents
 
-- Premissa
-- Princípios fundamentais
-- Níveis de agrupamento
-- Categorias recorrentes (dependências, constantes, membros, corpo de função, guardas, controle, testes)
-- Convenções por linguagem
-- Anti-padrões
-- Linhas em branco e refatoração
-- Automação: o que as ferramentas resolvem
-- Checklist de revisão
+- Premise
+- Fundamental principles
+- Grouping levels
+- Recurring categories (dependencies, constants, members, function body, guards, control, tests)
+- Conventions by language
+- Anti-patterns
+- Blank lines and refactoring
+- Automation: what the tools solve
+- Review checklist
 
-## Premissa
+## Premise
 
-Uma linha em branco é pontuação: ela separa **ideias**, não linhas. Funciona como a quebra de parágrafo num texto. Linhas que só fazem sentido juntas ficam coladas, e uma mudança de intenção ganha uma linha em branco.
+A blank line is punctuation: it separates **ideas**, not lines. It works like a paragraph break in a text. Lines that only make sense together stay together, and a change of intent gets a blank line.
 
-Código é lido muito mais vezes do que é escrito. O leitor não lê linha a linha: primeiro varre a forma visual da função para entender sua estrutura, e só depois lê o detalhe do trecho que interessa. As linhas em branco são o que dá forma a essa primeira leitura.
+Code is read far more often than it is written. The reader does not read line by line: they first scan the visual shape of the function to understand its structure, and only then read the detail of the part that matters. Blank lines are what give shape to that first reading.
 
-O espaço vertical é, portanto, informação. Cada linha em branco afirma algo: "aqui termina um passo". Quando ela aparece onde não há mudança de passo, a afirmação é falsa e o leitor é enganado. Quando falta, o leitor precisa descobrir sozinho onde os passos começam e terminam.
+Vertical space is therefore information. Each blank line states something: "a step ends here". When it appears where there is no change of step, the statement is false and the reader is misled. When it is missing, the reader has to find out alone where the steps start and end.
 
-Esses princípios valem para qualquer linguagem com sintaxe imperativa: C, C++, Java, C#, PHP, TypeScript, Python, Go, Rust. Os exemplos alternam entre linguagens de propósito, porque a ideia é a mesma em todas.
+These principles hold for any language with imperative syntax: C, C++, Java, C#, PHP, TypeScript, Python, Go, Rust. The examples alternate between languages on purpose, because the idea is the same in all of them.
 
-## Princípios fundamentais
+## Fundamental principles
 
-Seis princípios cobrem quase todas as decisões. Os demais casos derivam deles.
+Six principles cover almost every decision. The remaining cases derive from them.
 
-1. **Coesão define o bloco.** Linhas que trabalham juntas para um único objetivo formam um bloco, e um bloco nunca é partido ao meio. Uma linha em branco aparece só onde o objetivo muda.
-2. **O teste do título mental.** Se você consegue dar um nome curto a cada bloco ("valida a entrada", "monta a consulta", "grava o resultado"), o agrupamento está correto. Se um bloco precisa de dois nomes, ele é dois blocos. Se dois blocos levam o mesmo nome, eles são um só.
-3. **Uma única intensidade.** Dentro de um arquivo, use no máximo uma linha em branco seguida. Duas linhas não comunicam "separação maior" de forma confiável, porque cada autor as usa de um jeito. A hierarquia maior é expressa pela estrutura da linguagem (funções, classes, módulos), não por mais espaço. A exceção é uma convenção formal da linguagem, como as duas linhas do PEP 8 entre definições de nível superior.
-4. **Proximidade entre declaração e uso.** Uma variável fica colada às linhas que a consomem, e não num bloco de "declarações" afastado. Assim cada bloco carrega tudo de que precisa para ser lido sozinho.
-5. **Delimitadores já separam.** Chaves, `begin/end` e a indentação já marcam o começo e o fim de um escopo. Uma linha em branco logo depois de abrir um bloco, ou logo antes de fechá-lo, repete essa informação e só gasta espaço.
-6. **Coesão vence simetria.** O espaço não existe para deixar o código "arejado" ou visualmente equilibrado. Ele existe para comunicar estrutura. Um código denso e bem agrupado é melhor do que um código espaçado de forma uniforme.
+1. **Cohesion defines the block.** Lines that work together toward a single goal form a block, and a block is never split in half. A blank line appears only where the goal changes.
+2. **The mental title test.** If you can give a short name to each block ("validates the input", "builds the query", "writes the result"), the grouping is correct. If a block needs two names, it is two blocks. If two blocks take the same name, they are one.
+3. **A single intensity.** Within a file, use at most one blank line in a row. Two lines do not reliably communicate "bigger separation", because each author uses them differently. Larger hierarchy is expressed by the language's structure (functions, classes, modules), not by more space. The exception is a formal language convention, such as PEP 8's two lines between top-level definitions.
+4. **Proximity between declaration and use.** A variable stays next to the lines that consume it, and not in a distant "declarations" block. That way each block carries everything it needs to be read on its own.
+5. **Delimiters already separate.** Braces, `begin/end` and indentation already mark the start and end of a scope. A blank line right after opening a block, or right before closing it, repeats that information and only wastes space.
+6. **Cohesion beats symmetry.** Space does not exist to make the code "airy" or visually balanced. It exists to communicate structure. Dense, well-grouped code is better than uniformly spaced code.
 
-## Níveis de agrupamento
+## Grouping levels
 
-A mesma regra se repete em escalas diferentes. Em cada nível, a linha em branco separa as unidades daquele nível, e a estrutura da linguagem cuida do nível acima.
+The same rule repeats at different scales. At each level, the blank line separates the units of that level, and the language's structure takes care of the level above.
 
-| Nível | Unidade separada | O que a linha em branco comunica |
+| Level | Unit separated | What the blank line communicates |
 | --- | --- | --- |
-| Arquivo | Cabeçalho, imports, constantes, tipos, implementação | Mudança de seção do módulo |
-| Tipo (classe, struct) | Grupos de campos, construtores, métodos | Mudança de papel do membro |
-| Função | Fases: guarda, preparação, processamento, resultado | Mudança de passo do algoritmo |
-| Bloco interno | Sub-passos dentro de um laço ou condição | Mudança de sub-passo (raro; costuma indicar extração) |
-| Expressão longa | Grupos de chaves num literal ou argumentos | Mudança de grupo semântico |
+| File | Header, imports, constants, types, implementation | Change of module section |
+| Type (class, struct) | Groups of fields, constructors, methods | Change of member role |
+| Function | Phases: guard, preparation, processing, result | Change of algorithm step |
+| Inner block | Sub-steps inside a loop or condition | Change of sub-step (rare; usually signals extraction) |
+| Long expression | Groups of keys in a literal or arguments | Change of semantic group |
 
-Quanto mais fundo o nível, mais rara deve ser a linha em branco. Um corpo de laço que precisa de três blocos internos está pedindo para virar uma função.
+The deeper the level, the rarer the blank line should be. A loop body that needs three inner blocks is asking to become a function.
 
-## Categorias recorrentes
+## Recurring categories
 
-As mesmas formas aparecem em todas as linguagens. Cada exemplo abaixo usa uma linguagem diferente, mas o padrão se transfere sem mudanças.
+The same shapes appear in every language. Each example below uses a different language, but the pattern transfers unchanged.
 
-### Dependências: um grupo por origem
+### Dependencies: one group per origin
 
-A ordem é: biblioteca padrão, depois dependências externas, depois o próprio projeto. A linha em branco diz ao leitor de onde vem cada coisa e quanto ele controla dela.
+The order is: standard library, then external dependencies, then the project itself. The blank line tells the reader where each thing comes from and how much of it they control.
 
 ```cpp
 #include <cstdint>
@@ -68,7 +68,7 @@ A ordem é: biblioteca padrão, depois dependências externas, depois o próprio
 #include "physics/body.hpp"
 ```
 
-### Constantes e configuração: um grupo por domínio
+### Constants and configuration: one group per domain
 
 ```python
 MAX_ENTITIES = 100_000
@@ -78,9 +78,9 @@ GRAVITY = -9.81
 FIXED_DT = 1 / 60
 ```
 
-### Membros de um tipo: um grupo por papel
+### Members of a type: one group per role
 
-Campos de dados, estado de controle, construção e operações formam grupos distintos. Membros paralelos, como os arrays de um layout SoA, ficam colados porque representam uma única ideia.
+Data fields, control state, construction and operations form distinct groups. Parallel members, such as the arrays of an SoA layout, stay together because they represent a single idea.
 
 ```php
 final class Inventory
@@ -95,7 +95,7 @@ final class Inventory
     public function add(int $itemId, int $qty): void
     {
         if ($this->count >= $this->capacity) {
-            throw new OverflowException('Inventário cheio');
+            throw new OverflowException('Inventory full');
         }
 
         $i = $this->count++;
@@ -105,13 +105,13 @@ final class Inventory
 }
 ```
 
-### Corpo de função: guarda, preparação, processamento, resultado
+### Function body: guard, preparation, processing, result
 
-A maioria das funções segue essa sequência de fases, e cada fase ocupa um bloco.
+Most functions follow this sequence of phases, and each phase takes one block.
 
 ```ts
 async function importLevel(path: string): Promise<Level> {
-  if (!path.endsWith(".json")) throw new Error(`Formato inválido: ${path}`);
+  if (!path.endsWith(".json")) throw new Error(`Invalid format: ${path}`);
 
   const raw = await readFile(path, "utf8");
   const data = LevelSchema.parse(JSON.parse(raw));
@@ -123,9 +123,9 @@ async function importLevel(path: string): Promise<Level> {
 }
 ```
 
-### Cláusulas de guarda: um bloco único
+### Guard clauses: a single block
 
-Várias guardas seguidas formam um só passo ("rejeitar casos inválidos") e por isso ficam coladas.
+Several guards in a row form a single step ("reject invalid cases") and so they stay together.
 
 ```python
 def can_attack(attacker, target):
@@ -139,32 +139,32 @@ def can_attack(attacker, target):
     return distance(attacker, target) <= attacker.range
 ```
 
-### Estruturas de controle: espaço antes e depois
+### Control structures: space before and after
 
-Um laço ou condição com várias linhas marca uma mudança no fluxo, então ganha uma linha em branco antes e depois. Uma variável que existe só para aquele laço fica colada a ele.
+A multi-line loop or condition marks a change in flow, so it gets a blank line before and after. A variable that exists only for that loop stays next to it.
 
-O "antes" vale para o passo, não para a palavra-chave: o passo começa onde começam os seus preparativos. Declarações que existem só para alimentar a condição ou o laço — o valor esperado que o `if` compara, o acumulador que o `for` preenche, a variável não inicializada que uma cadeia `if/else` atribui, o `clear()` antes de reconstruir um vetor — fazem parte dele, e a linha em branco vai antes delas. Aplicar a regra mecanicamente, com uma linha antes de todo `if`/`for`, produz simetria visual e parte cada passo entre o preparativo e o uso. Pares inseparáveis (destruir uma linha e tapar o buraco, abrir e verificar) também vencem esta regra.
+The "before" applies to the step, not to the keyword: the step starts where its preparations start. Declarations that exist only to feed the condition or the loop — the expected value the `if` compares, the accumulator the `for` fills, the uninitialized variable an `if/else` chain assigns, the `clear()` before rebuilding a vector — are part of it, and the blank line goes before them. Applying the rule mechanically, with a line before every `if`/`for`, produces visual symmetry and splits each step between the preparation and the use. Inseparable pairs (destroying a row and filling the hole, opening and checking) also beat this rule.
 
 ```cpp
-// Errado: o preparativo ficou separado da comparação que é a sua razão de existir
+// Wrong: the preparation was separated from the comparison that is its reason to exist
 const int16_t expected = column == NoColumn ? -1 : column;
 
 if (mapping[i] != expected) {
     return false;
 }
 
-// Correto: calcular o esperado e comparar é um passo só
+// Correct: computing the expected value and comparing is a single step
 const int16_t expected = column == NoColumn ? -1 : column;
 if (mapping[i] != expected) {
     return false;
 }
 ```
 
-Já uma declaração compartilhada por vários passos seguintes (um rótulo usado por várias guardas, um ponteiro lido por todo o resto da função) é uma etapa de preparação própria e pode ficar separada.
+On the other hand, a declaration shared by several following steps (a label used by several guards, a pointer read by the whole rest of the function) is a preparation step of its own and can stay separate.
 
-### Resultado: o `return` como etapa
+### Result: the `return` as a step
 
-O `return` final forma um bloco próprio quando o título do último passo não o inclui, ou seja, quando ele entrega o produto de passos anteriores. Fica colado quando é a conclusão do próprio passo: `return` dentro de uma guarda, função de um passo só, ou valor criado na linha anterior só para ser devolvido.
+The final `return` forms a block of its own when the title of the last step does not include it, that is, when it delivers the product of earlier steps. It stays attached when it is the conclusion of its own step: `return` inside a guard, a single-step function, or a value created on the previous line only to be returned.
 
 ```cpp
 Entity World::place(Archetype& archetype) {
@@ -178,7 +178,7 @@ Entity World::place(Archetype& archetype) {
 }
 ```
 
-Três etapas: obter identidade e slot, posicionar no arquétipo, entregar. O `record` fica com a alocação porque é uma consulta derivada direta da linha anterior; uma declaração que faz ponte entre dois passos fica no passo que a produz quando é uma consulta derivada, e no que a consome quando é montada para ele.
+Three steps: get identity and slot, place in the archetype, deliver. The `record` stays with the allocation because it is a lookup derived directly from the previous line; a declaration that bridges two steps stays in the step that produces it when it is a derived lookup, and in the one that consumes it when it is built for that step.
 
 ```cpp
 void integrate(Motion& m, float dt) {
@@ -195,9 +195,9 @@ void integrate(Motion& m, float dt) {
 }
 ```
 
-### Testes: Arrange, Act, Assert
+### Tests: Arrange, Act, Assert
 
-Em testes, os blocos têm significado formal: são exatamente três. Se o bloco de ação tem mais de uma linha, o teste provavelmente verifica mais de um comportamento.
+In tests, the blocks have a formal meaning: there are exactly three. If the act block has more than one line, the test probably checks more than one behaviour.
 
 ```php
 public function testRemoveKeepsArrayDense(): void
@@ -213,57 +213,57 @@ public function testRemoveKeepsArrayDense(): void
 }
 ```
 
-## Convenções por linguagem
+## Conventions by language
 
-A filosofia é universal, mas cada ecossistema fixa alguns números. Quando existe um guia oficial ou um formatador padrão, ele prevalece sobre preferências pessoais, porque consistência dentro do ecossistema vale mais do que qualquer escolha individual.
+The philosophy is universal, but each ecosystem fixes a few numbers. When there is an official guide or a standard formatter, it prevails over personal preferences, because consistency within the ecosystem is worth more than any individual choice.
 
-| Linguagem | Referência | Regras de espaço vertical |
+| Language | Reference | Vertical spacing rules |
 | --- | --- | --- |
-| Python | PEP 8, Black, Ruff | 2 linhas entre definições de nível superior; 1 entre métodos; uso parcimonioso dentro de funções |
-| PHP | PSR-12, PHP-CS-Fixer | 1 linha após `namespace` e após o bloco de `use`; `use` agrupados por tipo (classes, funções, constantes); nada de linha em branco logo após a chave de abertura |
-| C++ | Google Style, clang-format | Minimizar espaço vertical; não iniciar nem terminar blocos com linha em branco; `MaxEmptyLinesToKeep: 1` |
-| TypeScript / JS | Prettier, ESLint | Prettier reduz sequências a 1 linha; ESLint `padding-line-between-statements` e `lines-between-class-members` para regras finas |
-| Go | gofmt | Reduz sequências a 1 linha; grupos de `import` separados por linha em branco |
-| Rust | rustfmt | `blank_lines_upper_bound` padrão de 1 |
+| Python | PEP 8, Black, Ruff | 2 lines between top-level definitions; 1 between methods; sparing use inside functions |
+| PHP | PSR-12, PHP-CS-Fixer | 1 line after `namespace` and after the `use` block; `use` grouped by kind (classes, functions, constants); no blank line right after the opening brace |
+| C++ | Google Style, clang-format | Minimize vertical space; do not start or end blocks with a blank line; `MaxEmptyLinesToKeep: 1` |
+| TypeScript / JS | Prettier, ESLint | Prettier reduces runs to 1 line; ESLint `padding-line-between-statements` and `lines-between-class-members` for fine-grained rules |
+| Go | gofmt | Reduces runs to 1 line; `import` groups separated by a blank line |
+| Rust | rustfmt | `blank_lines_upper_bound` default of 1 |
 
-O Python é a principal exceção à regra da intensidade única: as duas linhas entre definições de nível superior são uma convenção formal, e não uma preferência do autor. Elas compensam a ausência de chaves, que nas outras linguagens já delimitam visualmente cada definição.
+Python is the main exception to the single-intensity rule: the two lines between top-level definitions are a formal convention, not an author preference. They make up for the absence of braces, which in the other languages already visually delimit each definition.
 
-Valores conforme a documentação conhecida até 2026; confira o guia da versão que o seu projeto usa.
+Values according to the documentation known up to 2026; check the guide for the version your project uses.
 
-## Anti-padrões
+## Anti-patterns
 
-Cada anti-padrão é uma linha em branco que afirma algo falso, ou a falta de uma que deveria estar lá.
+Each anti-pattern is a blank line that states something false, or the absence of one that should be there.
 
-- **Paredão.** Validação, I/O e cálculo seguidos, sem nenhuma separação. O leitor precisa reconstruir sozinho onde cada passo começa e termina.
-- **Espaçamento uniforme.** Uma linha em branco entre todas as instruções. Se tudo está separado, nada está agrupado, e o espaço deixa de comunicar.
-- **Moldura vazia.** Uma linha em branco logo após abrir um bloco ou antes de fechá-lo, o que duplica a informação da chave ou da indentação.
-- **Bloco partido.** Um par que só faz sentido junto, separado por uma linha em branco: um `lock` e seu `unlock`, uma declaração e sua única utilização, uma abertura de arquivo e sua verificação de erro.
-- **Espaço por sintaxe.** Uma linha em branco antes de todo `if`, `for` ou `return` porque "fica mais organizado", separando-o da declaração que o alimenta. É simetria, não estrutura: o critério deve ser a mudança de passo, não o tipo da instrução seguinte.
-- **Hierarquia por quantidade.** Duas ou três linhas em branco para indicar uma "seção mais importante", fora de uma convenção formal da linguagem.
-- **Comentários-título dentro de funções.** Linhas como `// --- Validação ---` dividindo um corpo longo. A necessidade de títulos indica que cada seção deveria ser uma função com esse nome.
-- **Diff de espaço.** Alterar linhas em branco de código que você não está modificando. Isso polui o histórico e dificulta a revisão.
+- **Wall.** Validation, I/O and computation in a row, with no separation at all. The reader has to rebuild alone where each step starts and ends.
+- **Uniform spacing.** A blank line between every statement. If everything is separated, nothing is grouped, and the space stops communicating.
+- **Empty frame.** A blank line right after opening a block or before closing it, which duplicates the information of the brace or the indentation.
+- **Split block.** A pair that only makes sense together, separated by a blank line: a `lock` and its `unlock`, a declaration and its single use, a file open and its error check.
+- **Space by syntax.** A blank line before every `if`, `for` or `return` because "it looks more organized", separating it from the declaration that feeds it. It is symmetry, not structure: the criterion must be the change of step, not the kind of the next statement.
+- **Hierarchy by quantity.** Two or three blank lines to signal a "more important section", outside a formal language convention.
+- **Title comments inside functions.** Lines like `// --- Validation ---` dividing a long body. The need for titles indicates that each section should be a function with that name.
+- **Whitespace diff.** Changing blank lines in code you are not modifying. It pollutes the history and makes review harder.
 
 ```python
-# Bloco partido: abertura e verificação separadas
+# Split block: opening and check separated
 handle = open_device(path)
 
 if handle is None:
     raise DeviceError(path)
 
-# Correto: as duas linhas formam um único passo
+# Correct: the two lines form a single step
 handle = open_device(path)
 if handle is None:
     raise DeviceError(path)
 ```
 
-## Linhas em branco e refatoração
+## Blank lines and refactoring
 
-Um bloco bem delimitado é uma função que ainda não foi extraída. A linha em branco marca o ponto de corte, e o título mental do bloco já é o nome da nova função.
+A well-delimited block is a function that has not been extracted yet. The blank line marks the cut point, and the block's mental title is already the name of the new function.
 
-Isso cria um ciclo útil. Primeiro, agrupe o código em blocos coesos. Depois, quando uma função acumula muitos blocos (como regra prática, mais de 3 ou 4), extraia cada um. A função original vira uma sequência de chamadas nomeadas, e as linhas em branco dentro dela quase desaparecem, porque cada linha já é um passo inteiro.
+This creates a useful cycle. First, group the code into cohesive blocks. Then, when a function accumulates many blocks (as a rule of thumb, more than 3 or 4), extract each one. The original function becomes a sequence of named calls, and the blank lines inside it almost disappear, because each line is already a whole step.
 
 ```ts
-// Antes: três blocos com títulos implícitos
+// Before: three blocks with implicit titles
 function processOrder(order: Order): Receipt {
   if (!order.items.length) throw new EmptyOrderError();
   if (!order.customer.verified) throw new UnverifiedError();
@@ -277,7 +277,7 @@ function processOrder(order: Order): Receipt {
   return receipt;
 }
 
-// Depois: cada bloco virou uma função com o nome do seu título
+// After: each block became a function named after its title
 function processOrder(order: Order): Receipt {
   validate(order);
   const total = calculateTotal(order.items);
@@ -285,36 +285,36 @@ function processOrder(order: Order): Receipt {
 }
 ```
 
-O caminho inverso também serve de diagnóstico. Se você não consegue decidir onde colocar as linhas em branco de uma função, provavelmente as responsabilidades dela estão misturadas. O problema não é de formatação, e sim de design.
+The reverse path also works as a diagnosis. If you cannot decide where to put a function's blank lines, its responsibilities are probably mixed. The problem is not formatting, but design.
 
-## Automação: o que as ferramentas resolvem
+## Automation: what the tools solve
 
-Formatadores resolvem a parte **mecânica**, mas a parte **semântica** continua sendo uma decisão humana. Eles impõem limites (no máximo 1 linha seguida, nenhuma linha no início de um bloco, 2 linhas entre definições em Python). Não sabem, porém, onde termina um passo do algoritmo, porque isso depende do significado do código.
+Formatters solve the **mechanical** part, but the **semantic** part remains a human decision. They enforce limits (at most 1 line in a row, no line at the start of a block, 2 lines between definitions in Python). They do not know, however, where a step of the algorithm ends, because that depends on the meaning of the code.
 
-| Aspecto | Automatizável | Ferramentas |
+| Aspect | Automatable | Tools |
 | --- | --- | --- |
-| Limite de linhas seguidas | Sim | Prettier, Black, gofmt, rustfmt, clang-format |
-| Linhas no início e no fim de blocos | Sim | clang-format, PHP-CS-Fixer, ESLint |
-| Espaço entre definições e membros | Sim | PEP 8 via Black/Ruff, ESLint `lines-between-class-members` |
-| Grupos de imports | Sim | isort, ESLint `import/order`, clang-format `IncludeBlocks` |
-| Linha antes de `return` ou depois de declarações | Parcialmente | ESLint `padding-line-between-statements` |
-| Onde termina um passo lógico | Não | Revisão humana |
+| Limit of lines in a row | Yes | Prettier, Black, gofmt, rustfmt, clang-format |
+| Lines at the start and end of blocks | Yes | clang-format, PHP-CS-Fixer, ESLint |
+| Space between definitions and members | Yes | PEP 8 via Black/Ruff, ESLint `lines-between-class-members` |
+| Import groups | Yes | isort, ESLint `import/order`, clang-format `IncludeBlocks` |
+| Line before `return` or after declarations | Partially | ESLint `padding-line-between-statements` |
+| Where a logical step ends | No | Human review |
 
-Regras do tipo "sempre uma linha em branco antes de `return`" devem ser adotadas com cuidado. Em funções de 2 ou 3 linhas elas fragmentam o código sem nenhum ganho, e funcionam melhor como heurística do que como regra obrigatória.
+Rules like "always a blank line before `return`" should be adopted with care. In 2- or 3-line functions they fragment the code with no gain, and they work better as a heuristic than as a mandatory rule.
 
-Configure o formatador no projeto e rode-o no CI. Assim as discussões de revisão ficam restritas ao que a ferramenta não consegue decidir.
+Configure the formatter in the project and run it in CI. That way review discussions are limited to what the tool cannot decide.
 
-## Checklist de revisão
+## Review checklist
 
-- [ ] Cada bloco tem um título mental único e curto
-- [ ] Nenhum bloco precisa de dois títulos, e nenhum par de blocos vizinhos compartilha o mesmo título
-- [ ] No máximo 1 linha em branco seguida (exceto onde a convenção da linguagem define outro valor)
-- [ ] Nenhuma linha em branco logo após abrir um bloco ou antes de fechá-lo
-- [ ] Variáveis declaradas junto do bloco que as consome
-- [ ] Pares inseparáveis (abrir/verificar, lock/unlock, declarar/usar) ficam colados
-- [ ] Laços e condições de várias linhas têm espaço antes (dos seus preparativos) e depois
-- [ ] O `return` final é separado só quando entrega o produto de passos anteriores
-- [ ] Guardas consecutivas formam um único bloco
-- [ ] Testes seguem exatamente três blocos: Arrange, Act, Assert
-- [ ] Funções com mais de 3 ou 4 blocos foram avaliadas para extração
-- [ ] O diff não altera linhas em branco de código não relacionado
+- [ ] Each block has a single, short mental title
+- [ ] No block needs two titles, and no pair of neighbouring blocks shares the same title
+- [ ] At most 1 blank line in a row (except where the language convention defines another value)
+- [ ] No blank line right after opening a block or before closing it
+- [ ] Variables declared next to the block that consumes them
+- [ ] Inseparable pairs (open/check, lock/unlock, declare/use) stay together
+- [ ] Multi-line loops and conditions have space before (their preparations) and after
+- [ ] The final `return` is separated only when it delivers the product of earlier steps
+- [ ] Consecutive guards form a single block
+- [ ] Tests follow exactly three blocks: Arrange, Act, Assert
+- [ ] Functions with more than 3 or 4 blocks were considered for extraction
+- [ ] The diff does not change blank lines in unrelated code

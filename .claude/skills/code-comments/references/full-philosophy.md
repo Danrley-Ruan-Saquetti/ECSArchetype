@@ -1,204 +1,204 @@
-# Comentários em Código: Princípios e Critérios
+# Code Comments: Principles and Criteria
 
-## O princípio central
+## The central principle
 
-O código expressa o que acontece; o comentário existe apenas para o que não cabe na sintaxe. Essa é a linha divisória, e ela não é uma questão de estilo ou de gosto — é uma questão do que a linguagem é capaz de representar.
+Code expresses what happens; the comment exists only for what does not fit in the syntax. That is the dividing line, and it is not a matter of style or taste — it is a matter of what the language is able to represent.
 
-Nome, tipo, assinatura, estrutura e teste são formas de expressar comportamento. Todas são verificadas por alguma ferramenta: compilador, interpretador, type checker, linter, suíte de testes. Quando a informação cabe em uma dessas formas, colocá-la em um comentário é uma escolha pior, porque troca uma declaração verificada por uma frase que ninguém checa.
+Name, type, signature, structure and test are ways of expressing behaviour. All of them are checked by some tool: compiler, interpreter, type checker, linter, test suite. When the information fits in one of these forms, putting it in a comment is a worse choice, because it trades a checked declaration for a sentence nobody checks.
 
-O problema é que existe uma classe inteira de informação que nenhuma linguagem consegue representar:
+The problem is that there is a whole class of information that no language can represent:
 
-- **Por que esta solução e não a alternativa óbvia.** O código registra o caminho escolhido; ele é estruturalmente incapaz de registrar os caminhos rejeitados.
-- **De onde veio um número.** Um limite medido, um valor calibrado, uma constante derivada de hardware ou de um sistema externo.
-- **O que amarra este trecho a algo distante.** Invariantes entre partes do sistema que nenhum tipo local consegue expressar.
-- **O que é deliberado e parece erro.** Violações de convenção feitas de propósito, workarounds de bugs de terceiros.
+- **Why this solution and not the obvious alternative.** The code records the path chosen; it is structurally unable to record the rejected paths.
+- **Where a number came from.** A measured limit, a calibrated value, a constant derived from hardware or from an external system.
+- **What ties this part to something distant.** Invariants between parts of the system that no local type can express.
+- **What is deliberate and looks like a mistake.** Convention violations made on purpose, workarounds for third-party bugs.
 
-Nenhum renomeamento resolve esses casos, porque não há o que renomear. A informação simplesmente não existe no arquivo até alguém escrevê-la.
+No renaming solves these cases, because there is nothing to rename. The information simply does not exist in the file until someone writes it.
 
-Daí o enunciado operacional do princípio: **todo comentário é ou uma falha de expressão do código, ou uma informação que a linguagem não tem como carregar.** O primeiro caso se corrige refatorando. O segundo se resolve comentando. Confundir os dois é o que produz tanto o código poluído quanto o código mudo.
+Hence the operational statement of the principle: **every comment is either a failure of the code to express itself, or information the language has no way to carry.** The first case is fixed by refactoring. The second is solved by commenting. Confusing the two is what produces both polluted code and mute code.
 
-## A assimetria da verificação
+## The verification asymmetry
 
-O comentário é o único artefato do repositório sem checagem mecânica, e é isso que o torna perigoso. Tudo o mais quebra quando diverge da realidade: um tipo errado não compila, um teste desatualizado falha, uma chamada com aridade errada explode. O comentário não quebra. Ele mente em silêncio, indefinidamente, com a mesma aparência de autoridade que tinha no dia em que era verdade.
+The comment is the only artifact in the repository with no mechanical check, and that is what makes it dangerous. Everything else breaks when it diverges from reality: a wrong type does not compile, an outdated test fails, a call with the wrong arity blows up. The comment does not break. It lies silently, indefinitely, with the same look of authority it had on the day it was true.
 
-Isso cria uma assimetria prática de custo. Um comentário correto economiza alguns minutos de quem lê. Um comentário desatualizado custa horas, porque o leitor confia nele, parte de uma premissa falsa e só descobre o erro depois de depurar o sintoma errado. O valor esperado de um comentário, portanto, depende fortemente da probabilidade de ele continuar verdadeiro.
+This creates a practical cost asymmetry. A correct comment saves the reader a few minutes. An outdated comment costs hours, because the reader trusts it, starts from a false premise and only finds the mistake after debugging the wrong symptom. The expected value of a comment therefore depends heavily on the probability that it stays true.
 
-E essa probabilidade varia muito conforme o tipo de comentário:
+And that probability varies a lot with the kind of comment:
 
-| Tipo de informação | Acopla-se a quê | Risco de apodrecer |
+| Kind of information | Coupled to what | Risk of rotting |
 | --- | --- | --- |
-| Paráfrase da linha de código | A cada caractere do código | Altíssimo |
-| Descrição de assinatura | À assinatura | Alto |
-| Invariante local | À implementação próxima | Médio |
-| Razão da escolha, trade-off | À decisão, não ao código | Baixo |
-| Restrição externa (hardware, protocolo, sistema vizinho) | Ao mundo fora do repositório | Baixo |
-| Número medido com data e contexto | A uma medição datada | Baixo, se datado |
+| Paraphrase of the code line | Every character of the code | Very high |
+| Signature description | The signature | High |
+| Local invariant | The nearby implementation | Medium |
+| Reason for the choice, trade-off | The decision, not the code | Low |
+| External constraint (hardware, protocol, neighbouring system) | The world outside the repository | Low |
+| Measured number with date and context | A dated measurement | Low, if dated |
 
-O padrão é claro: **quanto mais próximo o comentário está do que o código já diz, mais rápido ele apodrece.** A paráfrase quebra a cada edição. A razão da escolha sobrevive a refatorações inteiras, porque descreve algo que continua verdadeiro mesmo quando cada linha ao redor mudou.
+The pattern is clear: **the closer the comment is to what the code already says, the faster it rots.** A paraphrase breaks at every edit. The reason for a choice survives whole refactorings, because it describes something that stays true even when every line around it has changed.
 
-Disso saem duas consequências que orientam todo o resto deste documento:
+Two consequences follow that guide the rest of this document:
 
-1. **Comentário é último recurso, nunca primeira opção.** Antes de escrever um, esgote as formas verificáveis de expressar a mesma coisa.
-2. **Comentário que sobrevive é comentário que não depende dos detalhes do código.** Escreva no nível da decisão, não no nível da instrução.
+1. **A comment is a last resort, never a first option.** Before writing one, exhaust the verifiable ways of expressing the same thing.
+2. **A comment that survives is a comment that does not depend on the details of the code.** Write at the level of the decision, not at the level of the instruction.
 
-## Comentários que devem ser deletados
+## Comments that must be deleted
 
-Todo comentário que descreve o que o código faz é duplicação não verificada e deve sair. Abaixo, os padrões recorrentes, em qualquer linguagem.
+Every comment that describes what the code does is unchecked duplication and must go. Below are the recurring patterns, in any language.
 
-**Paráfrase da linha.** O comentário repete a instrução em português.
+**Paraphrase of the line.** The comment repeats the instruction in English.
 
 ```
-// incrementa o contador
+// increments the counter
 ++count;
 ```
 
-Não há informação nova. Delete.
+There is no new information. Delete it.
 
-**Paráfrase da função.** O comentário descreve o comportamento que o nome deveria descrever.
+**Paraphrase of the function.** The comment describes the behaviour the name should describe.
 
 ```
-// retorna true se o usuário é maior de idade
+// returns true if the user is of legal age
 bool check(int a) { return a >= 18; }
 ```
 
-Isso não pede comentário, pede `is_adult(age)`. Comentários dessa família são sintoma de que uma extração de função, uma constante nomeada, um enum ou um tipo não foi feito. O comentário está compensando um nome ruim — corrija o nome.
+This does not call for a comment, it calls for `is_adult(age)`. Comments in this family are a symptom that a function extraction, a named constant, an enum or a type was not done. The comment is compensating for a bad name — fix the name.
 
-**Redundância de assinatura.** Blocos de documentação que repetem o que o sistema de tipos já declara (`@param int $x` acima de um parâmetro já tipado como `int`, `@returns {string}` acima de um retorno já tipado) são duplicação pura em qualquer linguagem com tipos na assinatura. O verificador checa a assinatura e ignora o comentário; quando os dois divergem, o comentário é que está errado, e ninguém avisa.
+**Signature redundancy.** Documentation blocks that repeat what the type system already declares (`@param int $x` above a parameter already typed as `int`, `@returns {string}` above an already typed return) are pure duplication in any language with types in the signature. The checker checks the signature and ignores the comment; when the two diverge, it is the comment that is wrong, and nobody warns you.
 
-**Código comentado.** O histórico de versões existe exatamente para isso. Código comentado não compila, não é testado, não é refatorado junto com o resto e envelhece até ninguém mais saber se ainda faz sentido. Delete sempre.
+**Commented-out code.** Version history exists exactly for that. Commented-out code does not compile, is not tested, is not refactored along with the rest and ages until nobody knows whether it still makes sense. Always delete it.
 
-**Ruído cerimonial.** Cabeçalhos com nome do autor e data de criação (o histórico sabe), divisórias de ASCII separando seções de um arquivo (se o arquivo precisa de divisórias, ele precisa ser dividido em arquivos), `// fim do if`, `// construtor`, changelog inline no topo do arquivo.
+**Ceremonial noise.** Headers with the author's name and creation date (the history knows), ASCII dividers separating sections of a file (if the file needs dividers, it needs to be split into files), `// end of if`, `// constructor`, inline changelog at the top of the file.
 
-**Marcadores vazios.** `// NOTE:`, `// IMPORTANTE:` ou `// TODO` sem conteúdo acionável — sem o que fazer, sem por quê, sem referência a um ticket. Um TODO que ninguém consegue executar é só uma confissão de dúvida.
+**Empty markers.** `// NOTE:`, `// IMPORTANT:` or `// TODO` with no actionable content — no what to do, no why, no reference to a ticket. A TODO nobody can carry out is just a confession of doubt.
 
-**O teste comum a todos:** se apagar o comentário não remove nenhuma informação do repositório, ele não era informação — era eco.
+**The test common to all of them:** if deleting the comment removes no information from the repository, it was not information — it was echo.
 
-## Comentários que devem existir
+## Comments that must exist
 
-São os que registram informação que não existe em nenhum outro lugar do arquivo. Apagá-los é perda de informação, não limpeza.
+These are the ones that record information that exists nowhere else in the file. Deleting them is loss of information, not cleanup.
 
-**Razão da escolha.** O código mostra a solução adotada e esconde as rejeitadas. Quando a alternativa óbvia foi descartada por um motivo não óbvio, esse motivo precisa estar ali — senão a próxima pessoa reintroduz a alternativa achando que está melhorando o código.
-
-```
-// Processamento sequencial de propósito: a versão paralela foi testada e
-// perdeu, porque o custo de sincronização domina para lotes < 10k itens.
-```
-
-**Número medido.** Toda constante calibrada empiricamente carrega uma medição que o valor sozinho não comunica. Registre o número, a condição em que foi medido e quando — um número sem data é um número sem validade.
+**Reason for the choice.** The code shows the adopted solution and hides the rejected ones. When the obvious alternative was discarded for a non-obvious reason, that reason needs to be there — otherwise the next person reintroduces the alternative thinking they are improving the code.
 
 ```
-// 64 = ponto de saturação medido em 2026-03; acima disso a contenção de lock
-// anula o ganho. Refazer a medição se o pool de workers mudar.
+// Sequential processing on purpose: the parallel version was tested and
+// lost, because the synchronization cost dominates for batches < 10k items.
 ```
 
-**Código que parece pior do que a alternativa ingênua.** Otimização costuma ser deliberadamente menos legível: uma estrutura decomposta em arrays paralelos, um laço desenrolado, padding para alinhamento, uma busca linear onde caberia um mapa. Sem o registro da medição, alguém "limpa" a estrutura, volta para a forma legível e causa uma regressão de desempenho que nenhum teste pega — perda de desempenho é justamente a classe de regressão que a integração contínua não detecta.
-
-**Restrição externa.** Limites de hardware, errata de processador, comportamento de um protocolo, um teto imposto por um serviço vizinho, uma exigência regulatória. São fatos que vivem fora do repositório e que nenhum artefato local pode expressar.
-
-**Invariante não local.** Uma propriedade que precisa valer entre partes distantes do sistema e que nenhum tipo local captura: a ordem exigida de um vetor porque outro módulo faz busca binária nele, o pareamento entre uma escrita e uma leitura em código concorrente, a ordem obrigatória de duas chamadas. Quando possível, transforme a invariante em asserção executável; quando não for possível, comente.
-
-**Workaround.** Um desvio causado por bug de terceiro, versão específica de dependência ou comportamento divergente entre plataformas. Inclua a referência ao bug e a condição de remoção — um workaround sem critério de saída vira permanente por omissão.
+**Measured number.** Every empirically calibrated constant carries a measurement the value alone does not communicate. Record the number, the condition under which it was measured and when — a number without a date is a number without validity.
 
 ```
-// Workaround para o bug #4821 da lib X (quebra em 2.1.0, corrigido em 2.3.0).
-// Remover quando o piso de versão subir para 2.3.
+// 64 = saturation point measured in 2026-03; above it lock contention
+// cancels the gain. Redo the measurement if the worker pool changes.
 ```
 
-**Violação deliberada de convenção.** Quando o código quebra de propósito um padrão do projeto, o comentário é o que separa "decisão" de "descuido". Sem ele, o leitor precisa escolher entre consertar algo que não está quebrado e deixar passar algo que está.
+**Code that looks worse than the naive alternative.** Optimization is often deliberately less readable: a structure decomposed into parallel arrays, an unrolled loop, alignment padding, a linear search where a map would fit. Without a record of the measurement, someone "cleans up" the structure, goes back to the readable form and causes a performance regression no test catches — performance loss is precisely the class of regression continuous integration does not detect.
 
-## O teste de decisão
+**External constraint.** Hardware limits, processor errata, the behaviour of a protocol, a ceiling imposed by a neighbouring service, a regulatory requirement. These are facts that live outside the repository and that no local artifact can express.
 
-Antes de escrever um comentário, pergunte se a informação pode ser movida para dentro do código. Se puder, mova — você troca uma frase não verificada por uma declaração que alguma ferramenta checa. Se não puder, o comentário é o único lugar onde essa informação existe.
+**Non-local invariant.** A property that must hold between distant parts of the system and that no local type captures: the required order of a vector because another module does binary search on it, the pairing between a write and a read in concurrent code, the mandatory order of two calls. When possible, turn the invariant into an executable assertion; when not possible, comment.
 
-
-
-As formas de internalizar, na ordem em que valem a pena tentar:
-
-1. **Renomear.** O caso mais comum. Um nome preciso dispensa a frase que o explicava.
-2. **Extrair função ou método.** Um bloco que precisava de um comentário introdutório vira uma função com nome, e o comentário vira a assinatura.
-3. **Nomear a constante.** `86400` com um comentário ao lado vira `SEGUNDOS_POR_DIA`.
-4. **Fortalecer o tipo.** Trocar primitivos por tipos específicos elimina comentários sobre unidade, faixa e significado — um tipo próprio para milissegundos torna impossível passar segundos por engano.
-5. **Usar enum em vez de valores mágicos.** Os estados possíveis passam a ser enumeráveis pelo compilador, não listados num comentário.
-6. **Escrever uma asserção.** Uma invariante verificada em execução vale mais que a mesma invariante escrita em prosa.
-7. **Escrever um teste.** Um teste com nome descritivo documenta comportamento e falha quando o comportamento muda.
-
-Quando nenhuma dessas formas serve, não é falha sua: é um limite da linguagem. Aí o comentário deixa de ser poluição e passa a ser o único veículo possível.
-
-## API pública é outra categoria
-
-Documentação de interface pública não é comentário de implementação — é contrato, e as regras acima não se aplicam a ela. A diferença é o leitor: o comentário de implementação é lido por quem abre o arquivo; a documentação de API é lida por quem **nunca vai abrir o arquivo**.
-
-Isso muda tudo. Quem chama sua função vê a documentação no editor, na página gerada, no autocompletar, no `help()` do interpretador. Para essa pessoa, a documentação não é um acréscimo ao código — ela é a única superfície visível. Ser contra isso não é ser contra poluição, é ser contra documentar a API.
-
-O que pertence a esse contrato e não cabe na assinatura:
-
-- **Semântica de erro.** O que a função lança, em que condições, e o que o chamador deve fazer a respeito.
-- **Contrato de nulidade e vazio.** O que significa um retorno vazio: ausência, erro silencioso, resultado legítimo.
-- **Efeitos colaterais.** Escrita em disco, chamada de rede, mutação de argumento, uso de estado global.
-- **Pré-condições e pós-condições.** O que precisa valer antes e o que passa a valer depois.
-- **Garantias de desempenho e concorrência.** Complexidade assintótica quando ela faz parte do contrato, segurança para uso concorrente, reentrância.
-- **Propriedade de recursos.** Quem libera o quê — crítico em linguagens com gerenciamento manual de memória.
-- **Exemplo de uso**, quando a forma correta de chamar não é óbvia pela assinatura.
-
-Duas restrições de bom senso continuam valendo. Primeiro, documente a **interface pública**, não cada função privada: documentar tudo produz o mesmo ruído que documentar nada, e esconde o que importa. Segundo, não repita a assinatura — se o tipo já diz, a documentação deve dizer o que o tipo não diz.
-
-## Arquivos de configuração
-
-Configuração é o terreno onde a tese do "código autoexplicativo" falha de forma mais evidente, porque ali não há código. Não há função para extrair, não há tipo para fortalecer, não há teste que explique a escolha. Há apenas pares de chave e valor, e o valor é arbitrário até alguém dizer de onde veio.
-
-A chave `max_connections` já tem o melhor nome possível. Ainda assim, `64` não se explica: o número veio de uma medição, de um limite de infraestrutura, de um acordo com um sistema vizinho ou de um chute que ninguém revisitou — e a diferença entre esses quatro casos é exatamente o que decide se alguém pode mexer nele.
-
-Configurações concentram justamente a informação de menor densidade sintática e maior risco: números calibrados, tetos impostos por terceiros, acoplamentos invisíveis entre serviços, valores que só fazem sentido em um ambiente específico.
-
-**A resposta correta tem duas partes, e só uma delas é comentário.**
-
-Primeiro, mova a *descrição do campo* para um schema validado na carga — JSON Schema com descrições, um validador de esquema tipado, um tipo de configuração com valores padrão explícitos. Isso é internalizar no sentido da seção anterior: transforma documentação em algo verificável, que falha na inicialização em vez de falhar em produção. Ganhos diretos: tipo, faixa válida, obrigatoriedade e valor padrão deixam de ser prosa.
-
-Segundo, aceite que o schema cobre *o que o campo é* e não cobre *por que este valor*. Essa parte continua sendo comentário, e deve registrar origem e condição de mudança:
+**Workaround.** A detour caused by a third-party bug, a specific dependency version or divergent behaviour between platforms. Include the reference to the bug and the removal condition — a workaround without an exit criterion becomes permanent by omission.
 
 ```
-# 64 = teto do pool do serviço de banco em produção. Aumentar aqui sem
-# aumentar lá faz a aplicação enfileirar em vez de falhar rápido.
+// Workaround for bug #4821 in lib X (breaks in 2.1.0, fixed in 2.3.0).
+// Remove when the minimum version goes up to 2.3.
+```
+
+**Deliberate violation of a convention.** When the code breaks a project pattern on purpose, the comment is what separates "decision" from "carelessness". Without it, the reader has to choose between fixing something that is not broken and letting through something that is.
+
+## The decision test
+
+Before writing a comment, ask whether the information can be moved into the code. If it can, move it — you trade an unchecked sentence for a declaration some tool checks. If it cannot, the comment is the only place where that information exists.
+
+
+
+The ways to internalize, in the order worth trying:
+
+1. **Rename.** The most common case. A precise name makes the sentence that explained it unnecessary.
+2. **Extract a function or method.** A block that needed an introductory comment becomes a named function, and the comment becomes the signature.
+3. **Name the constant.** `86400` with a comment next to it becomes `SECONDS_PER_DAY`.
+4. **Strengthen the type.** Replacing primitives with specific types eliminates comments about unit, range and meaning — a dedicated type for milliseconds makes it impossible to pass seconds by mistake.
+5. **Use an enum instead of magic values.** The possible states become enumerable by the compiler, not listed in a comment.
+6. **Write an assertion.** An invariant checked at run time is worth more than the same invariant written in prose.
+7. **Write a test.** A test with a descriptive name documents behaviour and fails when the behaviour changes.
+
+When none of these forms works, it is not your failure: it is a limit of the language. Then the comment stops being pollution and becomes the only possible vehicle.
+
+## Public API is another category
+
+Public interface documentation is not an implementation comment — it is a contract, and the rules above do not apply to it. The difference is the reader: the implementation comment is read by whoever opens the file; API documentation is read by whoever **will never open the file**.
+
+That changes everything. Whoever calls your function sees the documentation in the editor, on the generated page, in autocomplete, in the interpreter's `help()`. For that person, the documentation is not an addition to the code — it is the only visible surface. Being against it is not being against pollution, it is being against documenting the API.
+
+What belongs to that contract and does not fit in the signature:
+
+- **Error semantics.** What the function throws, under which conditions, and what the caller should do about it.
+- **Null and empty contract.** What an empty return means: absence, silent error, legitimate result.
+- **Side effects.** Writing to disk, network calls, argument mutation, use of global state.
+- **Preconditions and postconditions.** What must hold before and what holds after.
+- **Performance and concurrency guarantees.** Asymptotic complexity when it is part of the contract, safety for concurrent use, reentrancy.
+- **Resource ownership.** Who frees what — critical in languages with manual memory management.
+- **Usage example**, when the correct way to call is not obvious from the signature.
+
+Two common-sense restrictions still hold. First, document the **public interface**, not every private function: documenting everything produces the same noise as documenting nothing, and hides what matters. Second, do not repeat the signature — if the type already says it, the documentation should say what the type does not say.
+
+## Configuration files
+
+Configuration is the ground where the "self-explanatory code" thesis fails most visibly, because there is no code there. There is no function to extract, no type to strengthen, no test that explains the choice. There are only key-value pairs, and the value is arbitrary until someone says where it came from.
+
+The key `max_connections` already has the best possible name. Still, `64` does not explain itself: the number came from a measurement, an infrastructure limit, an agreement with a neighbouring system or a guess nobody revisited — and the difference between those four cases is exactly what decides whether someone may touch it.
+
+Configurations concentrate precisely the information with the lowest syntactic density and the highest risk: calibrated numbers, ceilings imposed by third parties, invisible couplings between services, values that only make sense in a specific environment.
+
+**The correct answer has two parts, and only one of them is a comment.**
+
+First, move the *field description* into a schema validated at load — JSON Schema with descriptions, a typed schema validator, a configuration type with explicit default values. That is internalizing in the sense of the previous section: it turns documentation into something verifiable, which fails at startup instead of failing in production. Direct gains: type, valid range, whether required and default value stop being prose.
+
+Second, accept that the schema covers *what the field is* and does not cover *why this value*. That part remains a comment, and it should record origin and change condition:
+
+```
+# 64 = ceiling of the database service pool in production. Raising it here without
+# raising it there makes the application queue instead of failing fast.
 max_connections = 64
 ```
 
-Duas notas práticas. JSON puro não aceita comentário algum — é uma das razões pelas quais ecossistemas migraram para formatos que aceitam (TOML, YAML, variantes comentáveis de JSON) em configuração destinada a humanos; quando o formato é JSON estrito, a razão precisa ir para um arquivo vizinho de documentação ou para o schema. E valores que mudam por ambiente pedem a razão no arquivo de origem, não replicada em cada ambiente.
+Two practical notes. Plain JSON accepts no comments at all — that is one of the reasons ecosystems migrated to formats that do (TOML, YAML, commentable JSON variants) for configuration meant for humans; when the format is strict JSON, the reason has to go into a neighbouring documentation file or into the schema. And values that change per environment call for the reason in the source file, not replicated in each environment.
 
-## Objeções comuns
+## Common objections
 
-**"Isso está no histórico de versões."** Está, e mesmo assim não chega a quem precisa. O histórico degrada: reformatação em massa, renomeação de arquivo, movimentação de função entre módulos e mudanças de estilo apagam a trilha. Mais importante que a degradação técnica é a comportamental — quase ninguém investiga o histórico antes de deletar três linhas que parecem feias. A proximidade física é o que faz a informação chegar no momento da decisão. O histórico é um arquivo morto consultável; o comentário é um aviso no local do risco.
+**"That is in the version history."** It is, and still it does not reach whoever needs it. History degrades: mass reformatting, file renames, moving functions between modules and style changes erase the trail. More important than the technical degradation is the behavioural one — almost nobody investigates the history before deleting three lines that look ugly. Physical proximity is what makes the information arrive at the moment of the decision. History is a searchable dead archive; the comment is a warning at the point of risk.
 
-**"Está documentado na decisão de arquitetura."** Documentos de decisão servem para escolhas estruturais: qual banco, qual protocolo, qual fronteira entre serviços. Eles não servem, e não escalam, para explicar por que esta linha tem um ajuste de um ou por que esta constante vale 64. Granularidade errada. Quando existe um documento relevante, a prática certa é um comentário curto que aponta para ele, não a ausência de comentário.
+**"It is documented in the architecture decision."** Decision documents serve structural choices: which database, which protocol, which boundary between services. They do not serve, and do not scale, to explain why this line has an off-by-one adjustment or why this constant is 64. Wrong granularity. When a relevant document exists, the right practice is a short comment that points to it, not the absence of a comment.
 
-**"Código bom não precisa de comentário."** Verdadeiro para o que o código consegue dizer, falso para o resto. Essa objeção trata "o que o código faz" como se fosse toda a informação relevante, quando a informação cara é tipicamente a outra: a razão, a medição, a restrição. Nenhuma qualidade de código faz aparecer no arquivo uma alternativa que foi testada e descartada.
+**"Good code does not need comments."** True for what the code can say, false for the rest. This objection treats "what the code does" as if it were all the relevant information, when the expensive information is typically the other kind: the reason, the measurement, the constraint. No code quality makes an alternative that was tested and discarded appear in the file.
 
-**"Comentário é desculpa para código ruim."** Frequentemente é, e essa é a parte legítima da objeção. A resposta correta é a disciplina do teste de decisão: se dá para internalizar, internalize — o comentário nunca deve ser o caminho mais fácil para evitar uma refatoração. Mas a existência do abuso não invalida o uso.
+**"A comment is an excuse for bad code."** It often is, and that is the legitimate part of the objection. The correct answer is the discipline of the decision test: if it can be internalized, internalize it — the comment must never be the easier path to avoid a refactoring. But the existence of abuse does not invalidate the use.
 
-**"Comentários ficam desatualizados, então é melhor não ter."** O argumento prova demais. Testes também ficam desatualizados, e a conclusão não é abandonar testes. A conclusão correta é escrever comentários que apodrecem devagar (razão, não paráfrase) e tratá-los como parte do código na hora de alterar e de revisar.
+**"Comments become outdated, so it is better not to have them."** The argument proves too much. Tests also become outdated, and the conclusion is not to abandon tests. The correct conclusion is to write comments that rot slowly (reason, not paraphrase) and to treat them as part of the code when changing and reviewing.
 
-**"A pessoa pode perguntar para quem escreveu."** Não pode. Em dois anos, quem escreveu ou não está mais no projeto ou não lembra. Código é lido muito mais vezes do que é escrito, e quase sempre por alguém sem acesso ao contexto original — inclusive você mesmo.
+**"People can ask whoever wrote it."** They cannot. In two years, whoever wrote it is either no longer on the project or does not remember. Code is read far more often than it is written, and almost always by someone without access to the original context — including yourself.
 
-## Manutenção e revisão
+## Maintenance and review
 
-Um comentário é parte do código que ele acompanha: alterar um sem alterar o outro é deixar o arquivo em estado inconsistente. Essa é a única regra de manutenção que importa, e ela precisa valer na revisão, não na boa vontade.
+A comment is part of the code it accompanies: changing one without changing the other leaves the file in an inconsistent state. That is the only maintenance rule that matters, and it needs to hold in review, not in goodwill.
 
-**Como escrever para durar**
+**How to write so it lasts**
 
-- Escreva no nível da decisão, não da instrução. "Sequencial porque a sincronização domina abaixo de 10k itens" sobrevive a refatorações; "itera sobre a lista" não sobrevive à próxima edição.
-- Date o que é medição. Um número sem data não tem como ser auditado nem invalidado.
-- Dê critério de saída ao que é temporário. Workaround sem condição de remoção vira permanente por omissão.
-- Prefira apontar a duplicar. Referencie o ticket, o documento ou o relatório de bug em vez de copiar o conteúdo deles.
-- Posicione no ponto de risco. O comentário protege o trecho que alguém vai querer "limpar" — ele precisa estar lá, não no topo do arquivo.
+- Write at the level of the decision, not of the instruction. "Sequential because synchronization dominates below 10k items" survives refactorings; "iterates over the list" does not survive the next edit.
+- Date what is a measurement. A number without a date cannot be audited or invalidated.
+- Give an exit criterion to what is temporary. A workaround without a removal condition becomes permanent by omission.
+- Prefer pointing to duplicating. Reference the ticket, the document or the bug report instead of copying their content.
+- Place it at the point of risk. The comment protects the part someone will want to "clean up" — it needs to be there, not at the top of the file.
 
-**Na revisão de código**
+**In code review**
 
-- [ ] Todo comentário que descreve o que o código faz foi removido ou convertido em nome, tipo, constante ou teste?
-- [ ] Todo comentário restante sobreviveria a uma reescrita da implementação?
-- [ ] Os comentários tocados por esta alteração continuam verdadeiros?
-- [ ] Código otimizado, estrutura não óbvia ou violação deliberada de convenção estão justificados?
-- [ ] Números calibrados trazem origem e data?
-- [ ] Workarounds trazem referência e condição de remoção?
-- [ ] A interface pública nova ou alterada documenta erros, efeitos colaterais e pré-condições?
-- [ ] Sobrou código comentado, divisória, cabeçalho de autoria ou marcador vazio?
+- [ ] Was every comment that describes what the code does removed or converted into a name, type, constant or test?
+- [ ] Would every remaining comment survive a rewrite of the implementation?
+- [ ] Do the comments touched by this change remain true?
+- [ ] Are optimized code, non-obvious structure or deliberate convention violations justified?
+- [ ] Do calibrated numbers carry origin and date?
+- [ ] Do workarounds carry a reference and a removal condition?
+- [ ] Does the new or changed public interface document errors, side effects and preconditions?
+- [ ] Is there leftover commented-out code, divider, authorship header or empty marker?
 
-**Regra de bolso para quem vai deletar um comentário:** se você não consegue dizer onde mais aquela informação está registrada, você não está limpando o arquivo — está apagando a única cópia.
+**Rule of thumb for whoever is about to delete a comment:** if you cannot say where else that information is recorded, you are not cleaning up the file — you are deleting the only copy.

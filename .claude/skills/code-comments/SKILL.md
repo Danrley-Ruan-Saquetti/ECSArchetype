@@ -1,198 +1,198 @@
 ---
 name: code-comments
-description: 'Carregue ANTES da primeira linha de código de qualquer tarefa que escreva, altere, planeje ou revise código, de qualquer tamanho: uma linha, um rename, um literal virando constante, um bugfix, um teste, um script, uma migração, uma feature inteira. Vale igualmente para elaborar plano, spec ou design de implementação (mesmo antes de existir código), executar task de plano, refatorar, responder com trecho de código, revisar diff ou PR e delegar código a subagente. Toda edição decide comentários mesmo sem ninguém pedir: escreve um novo, deixa um antigo virar mentira ou copia o eco do plano. Traz os critérios de que comentário entra, fica, vira código (nome, tipo, constante) ou sai, em código, docstrings, API pública e configs. Soma às skills de linguagem, projeto ou fluxo (brainstorm, plano, implementação, revisão); ter carregado uma delas não dispensa esta. Use também para comentar, documentar ou limpar comentários. Dispensável só quando nenhuma linha de código é escrita, planejada ou revisada.'
+description: 'Load BEFORE the first line of code of any task that writes, changes, plans or reviews code, of any size: one line, a rename, a literal becoming a constant, a bugfix, a test, a script, a migration, a whole feature. Applies equally to drafting an implementation plan, spec or design (even before any code exists), executing a plan task, refactoring, answering with a code snippet, reviewing a diff or PR and delegating code to a subagent. Every edit decides comments even when nobody asks: it writes a new one, lets an old one become a lie or copies the echo from the plan. Brings the criteria for which comment goes in, stays, becomes code (name, type, constant) or goes out, in code, docstrings, public API and configs. Adds to language, project or workflow skills (brainstorm, plan, implementation, review); having loaded one of them does not exempt this one. Also use to comment, document or clean up comments. Skippable only when no line of code is written, planned or reviewed.'
 
 ---
 
-# Comentários em código
+# Code comments
 
-O código expressa **o que** acontece; o comentário existe só para o que não cabe na sintaxe. Nome, tipo, assinatura, estrutura, asserção e teste são verificados por alguma ferramenta. O comentário é o único artefato do repositório que ninguém checa: quando diverge da realidade, ele não quebra — mente em silêncio, com a mesma autoridade de quando era verdade.
+Code expresses **what** happens; the comment exists only for what does not fit in the syntax. Name, type, signature, structure, assertion and test are checked by some tool. The comment is the only artifact in the repository that nobody checks: when it diverges from reality, it does not break — it lies silently, with the same authority it had when it was true.
 
-Por isso todo comentário é uma de duas coisas:
+So every comment is one of two things:
 
-1. **Falha de expressão do código** → corrija o código (renomeie, extraia, tipe) e apague o comentário.
-2. **Informação que a linguagem não consegue carregar** → o comentário é o único lugar onde ela existe; escreva-o bem e preserve-o.
+1. **A failure of the code to express itself** → fix the code (rename, extract, type) and delete the comment.
+2. **Information the language cannot carry** → the comment is the only place where it exists; write it well and preserve it.
 
-Confundir os dois produz tanto código poluído quanto código mudo. O objetivo não é "poucos comentários" nem "muitos": é zero comentários do tipo 1 e todos os do tipo 2.
+Confusing the two produces both polluted code and mute code. The goal is not "few comments" nor "many": it is zero comments of type 1 and all of type 2.
 
-Para a argumentação completa (assimetria de verificação, respostas a objeções), leia `references/full-philosophy.md` quando precisar justificar uma decisão ao usuário ou resolver um caso que esta página não cobre.
+For the full argument (verification asymmetry, answers to objections), read `references/full-philosophy.md` when you need to justify a decision to the user or settle a case this page does not cover.
 
-## Fronteira
+## Boundary
 
-**Território** — decide se um comentário deve existir, ser convertido em código ou ser apagado, e o que a documentação de API pública e os arquivos de configuração precisam registrar.
+**Territory** — decides whether a comment should exist, be converted into code or be deleted, and what public API documentation and configuration files need to record.
 
-**Fora da fronteira** — como o código é formatado e espaçado, o formato das mensagens de commit, como os comandos são executados no repositório, e o conteúdo técnico das decisões que o comentário registra (isso vem do usuário ou da medição).
+**Outside the boundary** — how code is formatted and spaced, the format of commit messages, how commands are run in the repository, and the technical content of the decisions the comment records (that comes from the user or from measurement).
 
-**Contrato de borda** — recebo código, diff, plano ou config em qualquer linguagem; entrego o mesmo material com os comentários decididos, ou critérios em texto curto para quem vai escrever o código.
+**Edge contract** — I receive code, diff, plan or config in any language; I deliver the same material with the comments decided, or criteria in short text for whoever will write the code.
 
-## O teste de decisão
+## The decision test
 
-Antes de escrever um comentário, faça duas perguntas, nesta ordem:
+Before writing a comment, ask two questions, in this order:
 
-**1. Essa informação pode ser movida para dentro do código?** Tente, nesta ordem:
+**1. Can this information be moved into the code?** Try, in this order:
 
-| Forma | Elimina comentários sobre |
+| Form | Eliminates comments about |
 | --- | --- |
-| Renomear | o que a variável/função é ou faz |
-| Extrair função | o que um bloco faz (o comentário vira o nome) |
-| Nomear constante | o significado de um literal (`86400` → `SECONDS_PER_DAY`) |
-| Fortalecer o tipo | unidade, faixa, significado (`Milliseconds` em vez de `int`) |
-| Enum | os valores possíveis de um campo |
-| Asserção | invariantes que devem valer em execução |
-| Teste com nome descritivo | comportamento esperado |
+| Rename | what the variable/function is or does |
+| Extract function | what a block does (the comment becomes the name) |
+| Name a constant | the meaning of a literal (`86400` → `SECONDS_PER_DAY`) |
+| Strengthen the type | unit, range, meaning (`Milliseconds` instead of `int`) |
+| Enum | the possible values of a field |
+| Assertion | invariants that must hold at run time |
+| Test with a descriptive name | expected behaviour |
 
-Se alguma serve, aplique e não comente.
+If any of them works, apply it and do not comment.
 
-**2. Se não pode, a informação existe em algum outro lugar do arquivo?** Se não existe, comente. Se já existe (está no código, no nome, no tipo), o comentário é eco — não escreva.
+**2. If it cannot, does the information exist somewhere else in the file?** If it does not, comment. If it already does (it is in the code, the name, the type), the comment is echo — do not write it.
 
-Quando nada da tabela serve, isso não é falha de quem escreve: é limite da linguagem.
+When nothing in the table works, that is not a failure of whoever writes: it is a limit of the language.
 
-## O que apagar (ou nunca escrever)
+## What to delete (or never write)
 
-O teste comum: **se apagar o comentário não remove nenhuma informação do repositório, ele era eco.**
+The common test: **if deleting the comment removes no information from the repository, it was echo.**
 
-- **Paráfrase da linha** — `// incrementa o contador` acima de `++count`.
-- **Paráfrase da função** — `// retorna true se é maior de idade` acima de `check(a)`. Isso pede `is_adult(age)`, não um comentário.
-- **Redundância de assinatura** — `@param int x`, `@returns {string}` quando o tipo já está declarado.
-- **Código comentado** — o controle de versão existe para isso.
-- **Ruído cerimonial** — cabeçalho de autor/data, divisórias ASCII, `// fim do if`, `// construtor`, changelog inline.
-- **Marcadores vazios** — `TODO`, `NOTE`, `IMPORTANTE` sem ação concreta, motivo ou ticket.
+- **Paraphrase of the line** — `// increments the counter` above `++count`.
+- **Paraphrase of the function** — `// returns true if of legal age` above `check(a)`. That calls for `is_adult(age)`, not a comment.
+- **Signature redundancy** — `@param int x`, `@returns {string}` when the type is already declared.
+- **Commented-out code** — version control exists for that.
+- **Ceremonial noise** — author/date header, ASCII dividers, `// end of if`, `// constructor`, inline changelog.
+- **Empty markers** — `TODO`, `NOTE`, `IMPORTANT` with no concrete action, reason or ticket.
 
-### Armadilhas específicas de agentes
+### Agent-specific traps
 
-Agentes tendem a produzir uma classe própria de comentários-eco. Não escreva:
+Agents tend to produce their own class of echo comments. Do not write:
 
-- **Narração da edição** — `// alterado para usar o novo cache`, `// corrigido o bug`, `// adicionado tratamento de erro`. Isso descreve a mudança, não o código; pertence à mensagem de commit ou à resposta ao usuário, e fica falso no instante seguinte.
-- **Comentários dirigidos ao usuário da conversa** — `// aqui você pode ajustar o valor`, `// conforme solicitado`. O leitor do arquivo não é o usuário desta sessão.
-- **Passo a passo de tutorial** — `// Passo 1: ler o arquivo`, `// Passo 2: processar`. Se o fluxo precisa de rótulos, extraia funções com esses nomes.
-- **Docstring em toda função privada** só porque o estilo "parece completo". Documentar tudo esconde o que importa.
-- **Placeholders** — `// implementar lógica aqui`, `// ...resto do código`. Ou implemente, ou diga ao usuário o que falta.
+- **Narration of the edit** — `// changed to use the new cache`, `// fixed the bug`, `// added error handling`. That describes the change, not the code; it belongs in the commit message or in the answer to the user, and it becomes false the very next moment.
+- **Comments addressed to the user of the conversation** — `// here you can adjust the value`, `// as requested`. The reader of the file is not the user of this session.
+- **Tutorial step by step** — `// Step 1: read the file`, `// Step 2: process`. If the flow needs labels, extract functions with those names.
+- **Docstring on every private function** just because the style "looks complete". Documenting everything hides what matters.
+- **Placeholders** — `// implement logic here`, `// ...rest of the code`. Either implement it, or tell the user what is missing.
 
-## O que deve existir
+## What must exist
 
-Informação que não está em nenhum outro lugar do arquivo. Apagá-la é perda, não limpeza.
+Information that is nowhere else in the file. Deleting it is loss, not cleanup.
 
-- **Razão da escolha** — por que esta solução e não a alternativa óbvia. Sem isso, alguém reintroduz a alternativa achando que melhorou o código.
+- **Reason for the choice** — why this solution and not the obvious alternative. Without it, someone reintroduces the alternative thinking they improved the code.
   ```
-  // Sequencial de propósito: a versão paralela perdeu nos testes porque o
-  // custo de sincronização domina para lotes < 10k itens.
+  // Sequential on purpose: the parallel version lost in the tests because the
+  // synchronization cost dominates for batches < 10k items.
   ```
-- **Número medido** — origem, condição e data. Número sem data não pode ser auditado nem invalidado.
+- **Measured number** — origin, condition and date. A number without a date cannot be audited or invalidated.
   ```
-  // 64 = ponto de saturação medido em 2026-03; acima disso a contenção de lock
-  // anula o ganho. Refazer a medição se o pool de workers mudar.
+  // 64 = saturation point measured in 2026-03; above it lock contention
+  // cancels the gain. Redo the measurement if the worker pool changes.
   ```
-- **Código deliberadamente menos legível** — SoA em vez de AoS, laço desenrolado, padding de alinhamento, busca linear onde caberia um mapa. Registre a medição que justifica: regressão de desempenho é a classe de bug que a CI não pega, e a forma "limpa" é exatamente o que um refatorador vai querer restaurar.
-- **Restrição externa** — hardware, errata, protocolo, teto de serviço vizinho, regulação.
-- **Invariante não local** — ordem exigida porque outro módulo faz busca binária, pareamento escrita/leitura em código concorrente, ordem obrigatória de chamadas. Prefira asserção; comente quando não der.
-- **Workaround** — referência ao bug e condição de remoção. Sem critério de saída, vira permanente por omissão.
+- **Deliberately less readable code** — SoA instead of AoS, unrolled loop, alignment padding, linear search where a map would fit. Record the measurement that justifies it: a performance regression is the class of bug CI does not catch, and the "clean" form is exactly what a refactorer will want to restore.
+- **External constraint** — hardware, erratum, protocol, ceiling of a neighbouring service, regulation.
+- **Non-local invariant** — order required because another module does binary search, write/read pairing in concurrent code, mandatory call order. Prefer an assertion; comment when that is not possible.
+- **Workaround** — reference to the bug and removal condition. Without an exit criterion, it becomes permanent by omission.
   ```
-  // Workaround para o bug #4821 da lib X (quebra em 2.1.0, corrigido em 2.3.0).
-  // Remover quando o piso de versão subir para 2.3.
+  // Workaround for bug #4821 in lib X (breaks in 2.1.0, fixed in 2.3.0).
+  // Remove when the minimum version goes up to 2.3.
   ```
-- **Violação deliberada de convenção** — o comentário é o que separa decisão de descuido.
+- **Deliberate violation of a convention** — the comment is what separates decision from carelessness.
 
-### Como escrever para durar
+### How to write so it lasts
 
-Quanto mais perto o comentário está do que o código já diz, mais rápido apodrece. Paráfrase quebra na próxima edição; razão sobrevive a reescritas inteiras.
+The closer the comment is to what the code already says, the faster it rots. A paraphrase breaks at the next edit; a reason survives whole rewrites.
 
-- Escreva no nível da **decisão**, não da instrução.
-- **Date** medições.
-- Dê **critério de saída** ao que é temporário.
-- **Aponte** para ticket/ADR/issue em vez de copiar o conteúdo.
-- **Posicione no ponto de risco** — junto ao trecho que alguém vai querer "limpar", não no topo do arquivo.
+- Write at the level of the **decision**, not of the instruction.
+- **Date** measurements.
+- Give an **exit criterion** to what is temporary.
+- **Point** to the ticket/ADR/issue instead of copying its content.
+- **Place it at the point of risk** — next to the part someone will want to "clean up", not at the top of the file.
 
-## API pública é outra categoria
+## Public API is another category
 
-Documentação de interface pública é **contrato**, lida por quem nunca abrirá o arquivo (editor, autocompletar, docs geradas, `help()`). As regras de "apagar eco" não se aplicam do mesmo jeito: ali a documentação é a única superfície visível.
+Public interface documentation is a **contract**, read by people who will never open the file (editor, autocomplete, generated docs, `help()`). The "delete echo" rules do not apply the same way: there the documentation is the only visible surface.
 
-Documente o que a assinatura não diz:
+Document what the signature does not say:
 
-- semântica de erro (o que lança, quando, o que o chamador deve fazer);
-- contrato de nulo/vazio (ausência, erro, resultado legítimo?);
-- efeitos colaterais (disco, rede, mutação de argumento, estado global);
-- pré e pós-condições;
-- garantias de desempenho/concorrência quando fazem parte do contrato (complexidade, thread-safety, reentrância);
-- propriedade de recursos (quem libera o quê — crítico em C/C++);
-- exemplo, quando o uso correto não é óbvio.
+- error semantics (what it throws, when, what the caller should do);
+- null/empty contract (absence, error, legitimate result?);
+- side effects (disk, network, argument mutation, global state);
+- pre- and postconditions;
+- performance/concurrency guarantees when they are part of the contract (complexity, thread-safety, reentrancy);
+- resource ownership (who frees what — critical in C/C++);
+- example, when correct usage is not obvious.
 
-Dois limites: documente a interface **pública**, não cada função privada; e não repita o que o tipo já diz.
+Two limits: document the **public** interface, not every private function; and do not repeat what the type already says.
 
-## Arquivos de configuração
+## Configuration files
 
-Configuração não tem código para refatorar — só chave e valor. `max_connections` já tem o melhor nome possível, e ainda assim `64` não se explica: pode ser medição, limite de infra, acordo com outro sistema ou chute antigo, e é essa diferença que decide se alguém pode mexer.
+Configuration has no code to refactor — only key and value. `max_connections` already has the best possible name, and still `64` does not explain itself: it may be a measurement, an infrastructure limit, an agreement with another system or an old guess, and that difference is what decides whether someone may touch it.
 
-Duas camadas:
+Two layers:
 
-1. **O que o campo é** (tipo, faixa, obrigatoriedade, default) → schema validado na carga (JSON Schema, tipo de config com validação). Isso é internalizar: falha na inicialização, não em produção.
-2. **Por que este valor** → comentário com origem e condição de mudança.
+1. **What the field is** (type, range, whether required, default) → schema validated at load (JSON Schema, config type with validation). That is internalizing: it fails at startup, not in production.
+2. **Why this value** → comment with origin and change condition.
    ```
-   # 64 = teto do pool do banco em produção. Aumentar aqui sem aumentar lá
-   # faz a aplicação enfileirar em vez de falhar rápido.
+   # 64 = ceiling of the database pool in production. Raising it here without raising it there
+   # makes the application queue instead of failing fast.
    max_connections = 64
    ```
 
-JSON estrito não aceita comentários: a razão vai para o schema (`description`) ou para um arquivo de documentação vizinho. Valores por ambiente: a razão fica na fonte, não replicada em cada ambiente.
+Strict JSON does not accept comments: the reason goes into the schema (`description`) or into a neighbouring documentation file. Per-environment values: the reason stays at the source, not replicated in each environment.
 
-## Como agir em cada situação
+## How to act in each situation
 
-**Escrevendo código novo.** Comece pelos nomes, tipos e estrutura. Só escreva comentário para o que sobrar depois do teste de decisão. Se você fez uma escolha não óbvia (algoritmo, estrutura de dados, layout de memória, constante), registre a razão no código — você é a única pessoa que sabe dela agora.
+**Writing new code.** Start with names, types and structure. Only write a comment for what is left after the decision test. If you made a non-obvious choice (algorithm, data structure, memory layout, constant), record the reason in the code — you are the only person who knows it right now.
 
-**Nunca invente a origem de um número ou a razão de uma escolha.** Um comentário com medição fabricada é pior que nenhum: tem toda a autoridade de um registro e nenhuma verdade. Se você não sabe de onde veio um valor que encontrou, não escreva uma justificativa plausível — pergunte ao usuário ou deixe um TODO acionável (`// TODO: origem de 64 desconhecida; medir saturação do pool antes de alterar`). Se você mesmo escolheu o valor sem medir, diga isso no comentário (`// valor inicial não medido; calibrar com benchmark de X`).
+**Never invent the origin of a number or the reason for a choice.** A comment with a fabricated measurement is worse than none: it has all the authority of a record and none of the truth. If you do not know where a value you found came from, do not write a plausible justification — ask the user or leave an actionable TODO (`// TODO: origin of 64 unknown; measure pool saturation before changing`). If you chose the value yourself without measuring, say so in the comment (`// initial value, not measured; calibrate with benchmark X`).
 
-**Editando código existente.**
-- Comentários tocados pela sua alteração precisam continuar verdadeiros. Atualize ou remova os que ficaram falsos; alterar código sem alterar o comentário deixa o arquivo inconsistente.
-- Não faça uma limpeza ampla de comentários fora do escopo pedido. Se notar muitos comentários-eco, mencione ao usuário em vez de reescrever o arquivo inteiro sem ser pedido.
+**Editing existing code.**
+- Comments touched by your change must remain true. Update or remove the ones that became false; changing code without changing the comment leaves the file inconsistent.
+- Do not do a broad comment cleanup outside the requested scope. If you notice many echo comments, mention it to the user instead of rewriting the whole file unasked.
 
-**Apagando ou "limpando" comentários.** Antes de apagar, pergunte: *onde mais essa informação está registrada?* Se você não consegue responder, não está limpando — está apagando a única cópia. Na dúvida sobre um comentário que parece explicar uma razão, medição ou restrição, preserve-o. Converter em código (nome, constante, tipo, asserção) é sempre melhor que apenas apagar.
+**Deleting or "cleaning up" comments.** Before deleting, ask: *where else is this information recorded?* If you cannot answer, you are not cleaning up — you are deleting the only copy. When in doubt about a comment that seems to explain a reason, measurement or constraint, preserve it. Converting into code (name, constant, type, assertion) is always better than just deleting.
 
-**Revisando código (diff/PR).** Use o checklist:
+**Reviewing code (diff/PR).** Use the checklist:
 
-- [ ] Comentários que descrevem o que o código faz foram removidos ou convertidos em nome, tipo, constante ou teste?
-- [ ] Cada comentário restante sobreviveria a uma reescrita da implementação?
-- [ ] Os comentários tocados pelo diff continuam verdadeiros?
-- [ ] Código otimizado, estrutura não óbvia ou violação de convenção estão justificados?
-- [ ] Números calibrados trazem origem e data?
-- [ ] Workarounds trazem referência e condição de remoção?
-- [ ] API pública nova/alterada documenta erros, efeitos colaterais e pré-condições?
-- [ ] Sobrou código comentado, divisória, cabeçalho de autoria ou marcador vazio?
+- [ ] Were comments that describe what the code does removed or converted into a name, type, constant or test?
+- [ ] Would each remaining comment survive a rewrite of the implementation?
+- [ ] Do the comments touched by the diff remain true?
+- [ ] Are optimized code, non-obvious structure or convention violations justified?
+- [ ] Do calibrated numbers carry origin and date?
+- [ ] Do workarounds carry a reference and a removal condition?
+- [ ] Does new/changed public API document errors, side effects and preconditions?
+- [ ] Is there leftover commented-out code, divider, authorship header or empty marker?
 
-Ao apontar um problema, proponha a forma internalizada concreta (o novo nome, a constante, o tipo), não só "remova este comentário".
+When pointing out a problem, propose the concrete internalized form (the new name, the constant, the type), not just "remove this comment".
 
-**Quando o usuário pede "comente este código".** Não adicione paráfrases linha a linha — isso produz exatamente o ruído descrito acima. Aplique o teste de decisão: melhore nomes onde o código não se explica, comente razões, medições, restrições e invariantes, e documente a API pública. Se o pedido for claramente didático (o usuário quer entender o código, não mantê-lo), explique na resposta da conversa em vez de poluir o arquivo — ou pergunte qual dos dois ele quer.
+**When the user asks "comment this code".** Do not add line-by-line paraphrases — that produces exactly the noise described above. Apply the decision test: improve names where the code does not explain itself, comment reasons, measurements, constraints and invariants, and document the public API. If the request is clearly didactic (the user wants to understand the code, not maintain it), explain in the conversation reply instead of polluting the file — or ask which of the two they want.
 
-## Planos, specs e tarefas delegadas
+## Plans, specs and delegated tasks
 
-O código que aparece num plano ou numa spec é código de verdade: quem executa o plano costuma copiar o bloco literalmente. Um comentário-eco no plano vira comentário-eco no arquivo. E quem executa uma tarefa delegada trabalha em contexto isolado: ele não leu esta skill, então só segue o que estiver escrito na tarefa.
+The code that appears in a plan or a spec is real code: whoever executes the plan usually copies the block literally. An echo comment in the plan becomes an echo comment in the file. And whoever executes a delegated task works in an isolated context: they have not read this skill, so they only follow what is written in the task.
 
-**Redigindo o plano.**
-- Aplique o teste de decisão a cada bloco de código. Os nomes, tipos e constantes do bloco já saem na forma final.
-- Mantenha os passos ("Passo 1", "agora crie X") na prosa, fora do bloco. Dentro do bloco só entra o que ficaria no arquivo.
-- Quando o plano escolhe algo não óbvio (algoritmo, estrutura, layout, constante), escreva a razão na tarefa, junto do bloco. Assim o implementador a registra no código em vez de perdê-la.
-- Se o plano pede uma documentação de API pública, diga o que ela precisa cobrir (erros, efeitos colaterais, pré-condições).
+**Drafting the plan.**
+- Apply the decision test to each code block. The block's names, types and constants already come out in their final form.
+- Keep the steps ("Step 1", "now create X") in the prose, outside the block. Only what would stay in the file goes inside the block.
+- When the plan chooses something non-obvious (algorithm, structure, layout, constant), write the reason in the task, next to the block. That way the implementer records it in the code instead of losing it.
+- If the plan asks for public API documentation, say what it needs to cover (errors, side effects, preconditions).
 
-**Delegando a escrita de código.** Inclua este critério no texto da tarefa, em poucas linhas: comentário só para razão, medição, restrição externa ou invariante não local; o que o código consegue dizer vai para nome, tipo ou constante; sem narração da edição, sem passo a passo, sem placeholders; comentário tocado pela mudança continua verdadeiro. Sem isso, o agente que recebe a tarefa usa o próprio padrão, que tende ao eco.
+**Delegating code writing.** Include this criterion in the task text, in a few lines: comments only for reason, measurement, external constraint or non-local invariant; what the code can say goes into a name, type or constant; no narration of the edit, no step by step, no placeholders; a comment touched by the change remains true. Without this, the agent receiving the task uses its own default, which tends toward echo.
 
-**Executando uma tarefa do plano.** O plano manda no comportamento, não no estilo dos comentários. Se o bloco do plano traz um comentário-eco ou de tutorial, não copie; aplique o teste de decisão.
+**Executing a plan task.** The plan rules the behaviour, not the comment style. If the plan's block carries an echo or tutorial comment, do not copy it; apply the decision test.
 
-## Exemplo de conversão
+## Conversion example
 
-Antes:
+Before:
 ```cpp
-// verifica se o buffer está cheio
-// 4096 = tamanho máximo
+// checks whether the buffer is full
+// 4096 = maximum size
 bool check(const Buf& b) { return b.n >= 4096; }
 
 for (...) {
-    // processar entidades
+    // process entities
     ...
 }
 ```
 
-Depois:
+After:
 ```cpp
-// 4096 = tamanho de página do alvo; buffers maiores cruzam páginas e o
-// flush perde ~30% de throughput (medido em 2026-05, x86-64, Linux 6.x).
+// 4096 = target page size; larger buffers cross pages and the
+// flush loses ~30% of throughput (measured in 2026-05, x86-64, Linux 6.x).
 constexpr std::size_t kMaxBufferBytes = 4096;
 
 bool is_full(const Buffer& buffer) { return buffer.size >= kMaxBufferBytes; }
@@ -200,4 +200,4 @@ bool is_full(const Buffer& buffer) { return buffer.size >= kMaxBufferBytes; }
 process_entities(world);
 ```
 
-A paráfrase de `check` virou nome; o literal virou constante nomeada; o rótulo do laço virou função. O único comentário restante carrega o que nenhum nome expressa: de onde veio 4096 e quando revalidar.
+The paraphrase of `check` became a name; the literal became a named constant; the loop label became a function. The only remaining comment carries what no name expresses: where 4096 came from and when to revalidate.
