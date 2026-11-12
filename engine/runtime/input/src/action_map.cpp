@@ -27,11 +27,11 @@ namespace oly::input {
   }
 
   ActionId ActionMap::declare(ActionKind kind, std::string_view name) {
-    OLY_ASSERT(!declarationsLocked_, "declare: ação '%.*s' declarada durante frame", static_cast<int>(name.size()),
+    OLY_ASSERT(!declarationsLocked_, "declare: action '%.*s' declared during frame", static_cast<int>(name.size()),
                name.data());
 
     for ([[maybe_unused]] const Declaration& declaration : declarations_) {
-      OLY_ASSERT(declaration.name != name, "declare: ação '%.*s' já declarada", static_cast<int>(name.size()),
+      OLY_ASSERT(declaration.name != name, "declare: action '%.*s' already declared", static_cast<int>(name.size()),
                  name.data());
     }
 
@@ -55,7 +55,7 @@ namespace oly::input {
 
   void ActionMap::bind(ButtonAction action, PhysicalButton button) {
     checkKind("bind", action.id, ActionKind::Button);
-    OLY_ASSERT(button.usage != 0, "bind: usage 0 inválido (ação '%s')", declarations_[action.id].name.c_str());
+    OLY_ASSERT(button.usage != 0, "bind: invalid usage 0 (action '%s')", declarations_[action.id].name.c_str());
 
     std::vector<PhysicalButton>& buttons = declarations_[action.id].buttons;
     if (!contains(buttons, button)) {
@@ -66,7 +66,7 @@ namespace oly::input {
   void ActionMap::bind(Axis2dAction action, const Axis2dBinding& binding) {
     checkKind("bind", action.id, ActionKind::Axis2d);
     OLY_ASSERT(binding.up.usage != 0 && binding.down.usage != 0 && binding.left.usage != 0 && binding.right.usage != 0,
-               "bind: usage 0 inválido (ação '%s')", declarations_[action.id].name.c_str());
+               "bind: invalid usage 0 (action '%s')", declarations_[action.id].name.c_str());
 
     std::vector<Axis2dBinding>& axes = declarations_[action.id].axes;
     if (std::find(axes.begin(), axes.end(), binding) == axes.end()) {
@@ -98,7 +98,7 @@ namespace oly::input {
   }
 
   void ActionMap::buttonDown(PhysicalButton button) {
-    OLY_ASSERT(button.usage != 0, "buttonDown: usage 0 inválido");
+    OLY_ASSERT(button.usage != 0, "buttonDown: invalid usage 0");
     if (contains(hostPressed_, button)) {
       return;
     }
@@ -108,7 +108,7 @@ namespace oly::input {
   }
 
   void ActionMap::buttonUp(PhysicalButton button) {
-    OLY_ASSERT(button.usage != 0, "buttonUp: usage 0 inválido");
+    OLY_ASSERT(button.usage != 0, "buttonUp: invalid usage 0");
     if (!contains(hostPressed_, button)) {
       return;
     }
@@ -118,7 +118,7 @@ namespace oly::input {
   }
 
   void ActionMap::pointerMove(float x, float y) {
-    OLY_ASSERT(std::isfinite(x) && std::isfinite(y), "pointerMove: valor não finito (x=%f, y=%f)", x, y);
+    OLY_ASSERT(std::isfinite(x) && std::isfinite(y), "pointerMove: non-finite value (x=%f, y=%f)", x, y);
 
     pointerX_ = x;
     pointerY_ = y;
@@ -247,13 +247,13 @@ namespace oly::input {
   }
 
   void ActionMap::checkAction([[maybe_unused]] const char* operation, [[maybe_unused]] ActionId action) const {
-    OLY_ASSERT(action < declarations_.size(), "%s: ação %u fora do intervalo (%zu declaradas)", operation, action,
+    OLY_ASSERT(action < declarations_.size(), "%s: action %u out of range (%zu declared)", operation, action,
                declarations_.size());
   }
 
   void ActionMap::checkKind(const char* operation, ActionId action, [[maybe_unused]] ActionKind expected) const {
     checkAction(operation, action);
-    OLY_ASSERT(declarations_[action].kind == expected, "%s: ação '%s' tem tipo %u, esperado %u", operation,
+    OLY_ASSERT(declarations_[action].kind == expected, "%s: action '%s' has kind %u, expected %u", operation,
                declarations_[action].name.c_str(), static_cast<unsigned>(declarations_[action].kind),
                static_cast<unsigned>(expected));
   }

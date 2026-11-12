@@ -7,7 +7,7 @@ struct BridgeTestEvent {
   float amount;
 };
 
-// Fora do registro de teste: serve para provar que um handler de outro tipo é recusado.
+// Not in the test registry: used to prove that a handler of another type is rejected.
 struct BridgeOtherEvent {
   uint32_t value;
 };

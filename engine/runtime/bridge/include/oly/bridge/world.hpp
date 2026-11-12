@@ -4,6 +4,6 @@
 #include "oly/ecs/world.hpp"
 
 namespace oly::bridge {
-  // Acesso ao World por trás do handle opaco da API C, para jogos escritos em C++.
+  // Access to the World behind the C API's opaque handle, for games written in C++.
   oly::ecs::World& worldOf(OlyWorld* world) noexcept;
 }

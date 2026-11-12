@@ -16,7 +16,7 @@
 #include "oly/ecs/query_by_id.hpp"
 
 static_assert(sizeof(OlyEntity) == sizeof(oly::ecs::Entity) && alignof(OlyEntity) == alignof(oly::ecs::Entity),
-              "OlyEntity deve ter o mesmo layout de oly::ecs::Entity");
+              "OlyEntity must have the same layout as oly::ecs::Entity");
 
 namespace oly::bridge {
   namespace {
@@ -88,7 +88,7 @@ uint32_t olySchemaEventAlignment(uint32_t eventIndex) {
 }
 
 static_assert(OLY_ACTION_BUTTON == static_cast<uint32_t>(oly::input::ActionKind::Button) && OLY_ACTION_AXIS2D == static_cast<uint32_t>(oly::input::ActionKind::Axis2d) && OLY_ACTION_POINTER == static_cast<uint32_t>(oly::input::ActionKind::Pointer),
-              "OLY_ACTION_* devem bater com oly::input::ActionKind");
+              "OLY_ACTION_* must match oly::input::ActionKind");
 
 uint32_t olySchemaActionCount() {
   return static_cast<uint32_t>(oly::bridge::schemaActions().size());
@@ -162,7 +162,7 @@ OlyIteration* olyQueryBegin(OlyWorld* world, OlyQuery* query, uint32_t* outBlock
 
 void olyQueryEnd(OlyWorld* world, OlyIteration* iteration) {
   OLY_ASSERT(world->activeIterations > 0 && world->iterationSlots[world->activeIterations - 1].get() == iteration,
-             "olyQueryEnd: iteração encerrada fora de ordem");
+             "olyQueryEnd: iteration ended out of order");
 
   iteration->iteration.reset();
   --world->activeIterations;

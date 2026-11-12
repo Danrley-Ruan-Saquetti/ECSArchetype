@@ -17,13 +17,13 @@ struct OlyIteration {
 
 struct OlyWorld {
   oly::ecs::World world;
-  // Pilha de slots: cresce até a maior profundidade vista e não encolhe; os ponteiros são estáveis.
+  // Slot stack: grows to the largest depth seen and never shrinks; the pointers are stable.
   std::vector<std::unique_ptr<OlyIteration>> iterationSlots;
   uint32_t activeIterations = 0;
 };
 
 struct OlyEngine {
-  OlyWorld world; // antes de `engine`: ela guarda uma referência a world.world
+  OlyWorld world; // before `engine`: it keeps a reference to world.world
   oly::app::Engine engine;
   oly::app::SystemContext* currentContext = nullptr;
   oly::app::DirectContext* directContext = nullptr;

@@ -8,7 +8,7 @@
 #include "oly/core/assert.hpp"
 
 namespace oly::core {
-  // Mapa como vetor ordenado por chave: bom para poucos elementos e percursos em ordem.
+  // Map as a vector sorted by key: good for few elements and in-order traversal.
   template <class K, class V>
   class SmallMap {
    public:
@@ -27,10 +27,10 @@ namespace oly::core {
       return (it != items_.end() && it->first == key) ? &it->second : nullptr;
     }
 
-    // Pode invalidar referências anteriores.
+    // May invalidate earlier references.
     V& insert(K key, V value) {
       auto it = lowerBound(key);
-      OLY_ASSERT(it == items_.end() || it->first != key, "SmallMap::insert chave repetida");
+      OLY_ASSERT(it == items_.end() || it->first != key, "SmallMap::insert duplicate key");
 
       it = items_.insert(it, value_type(key, std::move(value)));
       return it->second;

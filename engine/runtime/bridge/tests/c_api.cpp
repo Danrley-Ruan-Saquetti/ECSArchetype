@@ -10,7 +10,7 @@
 #include "test_events.hpp"
 
 namespace {
-  // 2 + readCount + writeCount para a query read A, write B: [count, entidades, coluna A, coluna B].
+  // 2 + readCount + writeCount for the query read A, write B: [count, entities, column A, column B].
   constexpr uint32_t DescriptorStrideReadAWriteB = 4;
 
   struct WorldFixture {
@@ -39,7 +39,7 @@ namespace {
   };
 }
 
-TEST_CASE("schema exposto pela API C") {
+TEST_CASE("schema exposed by the C API") {
   CHECK(olySchemaHash() == 0x1234u);
   CHECK(olySchemaComponentCount() == 3);
   CHECK(olySchemaComponentId(1) == oly::ecs::componentId<B>());
@@ -48,7 +48,7 @@ TEST_CASE("schema exposto pela API C") {
   CHECK(olyComponentSize(oly::ecs::componentId<Tag>()) == 0);
 }
 
-TEST_CASE("olyComponentAdd por ID e olyComponentGet devolve o valor") {
+TEST_CASE("olyComponentAdd by ID and olyComponentGet returns the value") {
   WorldFixture fixture;
   const OlyEntity entity = fixture.spawn();
   const uint32_t idA = oly::ecs::componentId<A>();
@@ -61,7 +61,7 @@ TEST_CASE("olyComponentAdd por ID e olyComponentGet devolve o valor") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyComponentRemove por ID tira o componente") {
+TEST_CASE("olyComponentRemove by ID removes the component") {
   WorldFixture fixture;
   const OlyEntity entity = fixture.spawn();
   const uint32_t idA = oly::ecs::componentId<A>();
@@ -75,7 +75,7 @@ TEST_CASE("olyComponentRemove por ID tira o componente") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("tag adicionada por ID existe mas não tem dados") {
+TEST_CASE("tag added by ID exists but has no data") {
   WorldFixture fixture;
   const OlyEntity entity = fixture.spawn();
   const uint32_t idTag = oly::ecs::componentId<Tag>();
@@ -87,7 +87,7 @@ TEST_CASE("tag adicionada por ID existe mas não tem dados") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyEntityDestroy mata a entidade e seus componentes deixam de ser acessíveis") {
+TEST_CASE("olyEntityDestroy kills the entity and its components stop being accessible") {
   WorldFixture fixture;
   const OlyEntity entity = fixture.spawn();
   const uint32_t idA = oly::ecs::componentId<A>();
@@ -101,7 +101,7 @@ TEST_CASE("olyEntityDestroy mata a entidade e seus componentes deixam de ser ace
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyQueryBegin entrega descritores por bloco") {
+TEST_CASE("olyQueryBegin delivers descriptors per block") {
   WorldFixture fixture;
   for (uint64_t value = 1; value <= 3; ++value) {
     fixture.ecs().spawn(A{value}, B{0, 0});
@@ -136,7 +136,7 @@ TEST_CASE("olyQueryBegin entrega descritores por bloco") {
   olyQueryEnd(fixture.world, iteration);
 }
 
-TEST_CASE("olyQueryEnd encerra a iteração") {
+TEST_CASE("olyQueryEnd ends the iteration") {
   WorldFixture fixture;
   fixture.ecs().spawn(A{1}, B{0, 0});
   const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
@@ -151,7 +151,7 @@ TEST_CASE("olyQueryEnd encerra a iteração") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyQueryCreate é cacheada") {
+TEST_CASE("olyQueryCreate is cached") {
   WorldFixture fixture;
   const uint32_t ids[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>()};
   const uint32_t withTag[] = {oly::ecs::componentId<A>(), oly::ecs::componentId<B>(), oly::ecs::componentId<Tag>()};
@@ -160,7 +160,7 @@ TEST_CASE("olyQueryCreate é cacheada") {
   CHECK(olyQueryCreate(fixture.world, withTag, 1, 1, 1, 0) != olyQueryCreate(fixture.world, ids, 1, 1, 0, 0));
 }
 
-TEST_CASE("olyQueryBegin aninhado preserva os descritores do externo") {
+TEST_CASE("nested olyQueryBegin preserves the outer descriptors") {
   WorldFixture fixture;
   for (uint64_t value = 0; value < 4; ++value) {
     fixture.ecs().spawn(A{value}, B{0, 0});
@@ -187,14 +187,14 @@ TEST_CASE("olyQueryBegin aninhado preserva os descritores do externo") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("worldOf dá acesso ao World do handle") {
+TEST_CASE("worldOf gives access to the handle's World") {
   WorldFixture fixture;
   OlyEntity handle = fixture.spawn();
 
   CHECK(oly::bridge::worldOf(fixture.world).isAlive(oly::ecs::Entity{handle.index, handle.generation}));
 }
 
-TEST_CASE("iteração repetida reaproveita o slot") {
+TEST_CASE("repeated iteration reuses the slot") {
   WorldFixture fixture;
   fixture.ecs().spawn(A{1});
   const uint32_t ids[] = {oly::ecs::componentId<A>()};
@@ -210,19 +210,19 @@ TEST_CASE("iteração repetida reaproveita o slot") {
   CHECK(first == second);
 }
 
-TEST_CASE("eventos do esquema expostos pela API C") {
+TEST_CASE("schema events exposed by the C API") {
   CHECK(olySchemaEventCount() == 1);
   CHECK(olySchemaEventSize(0) == sizeof(BridgeTestEvent));
   CHECK(olySchemaEventAlignment(0) == alignof(BridgeTestEvent));
 }
 
-TEST_CASE("ações do esquema expostas pela API C") {
+TEST_CASE("schema actions exposed by the C API") {
   CHECK(olySchemaActionCount() == 3);
   CHECK(olySchemaActionKind(0) == OLY_ACTION_BUTTON);
   CHECK(olySchemaActionKind(1) == OLY_ACTION_AXIS2D);
   CHECK(olySchemaActionKind(2) == OLY_ACTION_POINTER);
 }
 
-TEST_CASE("estados do esquema expostos pela API C") {
+TEST_CASE("schema states exposed by the C API") {
   CHECK(olySchemaStateCount() == 2);
 }

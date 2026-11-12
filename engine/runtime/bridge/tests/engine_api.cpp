@@ -84,7 +84,7 @@ namespace {
       olyEngineFrame(engine, 1.0 / 60);
     }
 
-    // Um passo por chamada, em sequência (step só serve a testes de um passo).
+    // One step per call, in sequence (step only suits single-step tests).
     void next() {
       if (!primed) {
         olyEngineFrame(engine, 0.0);
@@ -119,7 +119,7 @@ namespace {
     emitValue(engine, 5);
   }
 
-  // Varre só os primeiros índices e gerações: bastam para os poucos spawns destes testes.
+  // Scans only the first indices and generations: enough for the few spawns in these tests.
   std::vector<OlyEntity> aliveEntities(OlyWorld* world) {
     std::vector<OlyEntity> alive;
     for (uint32_t index = 0; index < 4; ++index) {
@@ -147,7 +147,7 @@ OLY_HANDLER(bridgeTestNativeHandler, BridgeTestEvent) {
 
 OLY_HANDLER(bridgeTestOtherHandler, BridgeOtherEvent) {}
 
-TEST_CASE("sistema de script é chamado pelo invocador, na ordem com os nativos") {
+TEST_CASE("script system is called by the invoker, in order with the native ones") {
   EngineFixture fixture;
   const uint32_t first = olyEngineAddScriptSystem(fixture.engine, 1, "s1");
   const uint32_t native = olyEngineAddNativeSystem(fixture.engine, 1, "bridgeTestNative");
@@ -164,13 +164,13 @@ TEST_CASE("sistema de script é chamado pelo invocador, na ordem com os nativos"
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("nome nativo desconhecido devolve OLY_INVALID_SYSTEM") {
+TEST_CASE("unknown native name returns OLY_INVALID_SYSTEM") {
   EngineFixture fixture;
 
-  CHECK(olyEngineAddNativeSystem(fixture.engine, 1, "naoExiste") == OLY_INVALID_SYSTEM);
+  CHECK(olyEngineAddNativeSystem(fixture.engine, 1, "doesNotExist") == OLY_INVALID_SYSTEM);
 }
 
-TEST_CASE("olySystemSpawn e olySystemAdd dentro do script são aplicados ao fim da fase") {
+TEST_CASE("olySystemSpawn and olySystemAdd inside the script are applied at the end of the phase") {
   EngineFixture fixture;
   olyEngineAddScriptSystem(fixture.engine, 1, "spawner");
   g_action = spawnWithA;
@@ -186,7 +186,7 @@ TEST_CASE("olySystemSpawn e olySystemAdd dentro do script são aplicados ao fim 
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("duas engines no mesmo processo: o invocador recebe a engine certa") {
+TEST_CASE("two engines in the same process: the invoker receives the right engine") {
   EngineFixture fixture;
   EngineFixture other;
   olyEngineAddScriptSystem(fixture.engine, 1, "first");
@@ -200,7 +200,7 @@ TEST_CASE("duas engines no mesmo processo: o invocador recebe a engine certa") {
   }
 }
 
-TEST_CASE("olyEngineWorld serve à API de World existente") {
+TEST_CASE("olyEngineWorld works with the existing World API") {
   EngineFixture fixture;
   OlyWorld* world = olyEngineWorld(fixture.engine);
   OlyEntity entity{};
@@ -210,14 +210,14 @@ TEST_CASE("olyEngineWorld serve à API de World existente") {
   CHECK(olyEntityIsAlive(world, entity.index, entity.generation) == 1);
 }
 
-TEST_CASE("eventos do esquema são declarados na criação, na ordem") {
+TEST_CASE("schema events are declared at creation, in order") {
   EngineFixture fixture;
 
   CHECK(oly::bridge::engineOf(fixture.engine).eventTypeOf(oly::app::eventKey<BridgeTestEvent>()) == 0);
   CHECK(oly::bridge::engineOf(fixture.engine).eventTypeCount() == 1);
 }
 
-TEST_CASE("handler de script recebe kind, id e o lote") {
+TEST_CASE("script handler receives kind, id and the batch") {
   EngineFixture fixture;
   const uint32_t handler = olyEngineAddScriptHandler(fixture.engine, 0, "h");
   emitValue(fixture.engine, 1);
@@ -233,7 +233,7 @@ TEST_CASE("handler de script recebe kind, id e o lote") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("handlers de script e nativo por nome na ordem de registro") {
+TEST_CASE("script handlers and a native one by name in registration order") {
   EngineFixture fixture;
   olyEngineAddScriptHandler(fixture.engine, 0, "s1");
   const uint32_t native = olyEngineAddNativeHandler(fixture.engine, 0, "bridgeTestNativeHandler");
@@ -247,7 +247,7 @@ TEST_CASE("handlers de script e nativo por nome na ordem de registro") {
   CHECK(g_order == std::vector<std::string>{"s", "n", "s"});
 }
 
-TEST_CASE("sistema de script continua recebendo OLY_SCRIPT_SYSTEM") {
+TEST_CASE("script system still receives OLY_SCRIPT_SYSTEM") {
   EngineFixture fixture;
   olyEngineAddScriptSystem(fixture.engine, 1, "s");
 
@@ -258,14 +258,14 @@ TEST_CASE("sistema de script continua recebendo OLY_SCRIPT_SYSTEM") {
   CHECK(g_eventCounts[0] == 0);
 }
 
-TEST_CASE("nome de handler desconhecido e handler de outro tipo") {
+TEST_CASE("unknown handler name and handler of another type") {
   EngineFixture fixture;
 
-  CHECK(olyEngineAddNativeHandler(fixture.engine, 0, "naoExiste") == OLY_INVALID_HANDLER);
+  CHECK(olyEngineAddNativeHandler(fixture.engine, 0, "doesNotExist") == OLY_INVALID_HANDLER);
   CHECK(olyEngineAddNativeHandler(fixture.engine, 0, "bridgeTestOtherHandler") == OLY_HANDLER_TYPE_MISMATCH);
 }
 
-TEST_CASE("olyEngineEmit dentro de um sistema de script é despachado no mesmo passo") {
+TEST_CASE("olyEngineEmit inside a script system is dispatched in the same step") {
   EngineFixture fixture;
   olyEngineAddScriptSystem(fixture.engine, 1, "emitter");
   olyEngineAddNativeHandler(fixture.engine, 0, "bridgeTestNativeHandler");
@@ -339,7 +339,7 @@ OLY_SYSTEM(bridgeTestReadJump) {
   g_sawJumpPressed = context.actions().button(oly::input::ButtonAction{0}).pressed;
 }
 
-TEST_CASE("ações do esquema são declaradas na criação, na ordem") {
+TEST_CASE("schema actions are declared at creation, in order") {
   EngineFixture fixture;
   const oly::input::ActionMap& actions = oly::bridge::engineOf(fixture.engine).actions();
 
@@ -348,13 +348,13 @@ TEST_CASE("ações do esquema são declaradas na criação, na ordem") {
   CHECK(actions.kind(2) == oly::input::ActionKind::Pointer);
 }
 
-TEST_CASE("olyEngineCreate declara os estados do esquema na ordem") {
+TEST_CASE("olyEngineCreate declares the schema states in order") {
   EngineFixture fixture;
 
   CHECK(oly::bridge::engineOf(fixture.engine).stateCount() == 2);
 }
 
-TEST_CASE("ligar, apertar e ler pelo snapshot") {
+TEST_CASE("bind, press and read through the snapshot") {
   ActionFixture fixture;
   g_sawJumpPressed = false;
   olyEngineAddNativeSystem(fixture.engine, 1, "bridgeTestReadJump");
@@ -367,7 +367,7 @@ TEST_CASE("ligar, apertar e ler pelo snapshot") {
   CHECK(g_sawJumpPressed);
 }
 
-TEST_CASE("eixo e ponteiro pela API C") {
+TEST_CASE("axis and pointer through the C API") {
   ActionFixture fixture;
 
   olyEngineBindAxis2d(fixture.engine, 1, KeyWUsage, KeySUsage, KeyAUsage, KeyDUsage);
@@ -383,7 +383,7 @@ TEST_CASE("eixo e ponteiro pela API C") {
   CHECK(snapshot[2].flags == OLY_ACTION_VALID);
 }
 
-TEST_CASE("isBound, clearBindings e releaseAll") {
+TEST_CASE("isBound, clearBindings and releaseAll") {
   ActionFixture fixture;
 
   olyEngineBindButton(fixture.engine, 0, SpaceUsage);
@@ -401,7 +401,7 @@ TEST_CASE("isBound, clearBindings e releaseAll") {
   CHECK((olyEngineActionSnapshot(fixture.engine)[0].flags & OLY_ACTION_RELEASED) != 0);
 }
 
-TEST_CASE("o endereço do snapshot não muda entre frames") {
+TEST_CASE("the snapshot address does not change between frames") {
   ActionFixture fixture;
   const OlyActionState* before = olyEngineActionSnapshot(fixture.engine);
 
@@ -415,7 +415,7 @@ TEST_CASE("o endereço do snapshot não muda entre frames") {
   CHECK(olyEngineActionSnapshot(fixture.engine) == before);
 }
 
-TEST_CASE("tarefa de script after: OLY_SCRIPT_TASK com lastRun 1, sem descarte") {
+TEST_CASE("after script task: OLY_SCRIPT_TASK with lastRun 1, no discard") {
   EngineFixture fixture;
   OlyTaskHandle task{};
   olyEngineScheduleScriptTask(fixture.engine, 0.0, 0.0, 42, &task);
@@ -431,7 +431,7 @@ TEST_CASE("tarefa de script after: OLY_SCRIPT_TASK com lastRun 1, sem descarte")
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("tarefa de script every: lastRun 0 e cancelar descarta uma vez") {
+TEST_CASE("every script task: lastRun 0 and cancel discards once") {
   EngineFixture fixture;
   OlyTaskHandle task{};
   olyEngineScheduleScriptTask(fixture.engine, 1.0 / 60, 1.0 / 60, 7, &task);
@@ -448,7 +448,7 @@ TEST_CASE("tarefa de script every: lastRun 0 e cancelar descarta uma vez") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyEngineDestroy descarta as tarefas de script pendentes") {
+TEST_CASE("olyEngineDestroy discards the pending script tasks") {
   EngineFixture fixture;
   OlyTaskHandle first{};
   OlyTaskHandle second{};
@@ -463,7 +463,7 @@ TEST_CASE("olyEngineDestroy descarta as tarefas de script pendentes") {
   CHECK(g_kinds.size() == 2);
 }
 
-TEST_CASE("tarefas de script e nativas na ordem de vencimento") {
+TEST_CASE("script and native tasks in due order") {
   EngineFixture fixture;
   OlyTaskHandle task{};
   olyEngineScheduleScriptTask(fixture.engine, 0.0, 0.0, 1, &task);
@@ -482,7 +482,7 @@ OLY_STATE_HOOK(bridgeNamedEnter) {
   g_order.push_back("ne");
 }
 
-TEST_CASE("olyEngineState começa em OLY_NO_STATE e muda no passo 5") {
+TEST_CASE("olyEngineState starts at OLY_NO_STATE and changes in step 5") {
   EngineFixture fixture;
   CHECK(olyEngineState(fixture.engine) == OLY_NO_STATE);
 
@@ -496,7 +496,7 @@ TEST_CASE("olyEngineState começa em OLY_NO_STATE e muda no passo 5") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("gancho de script: OLY_SCRIPT_STATE_HOOK com o hookId e o outro estado") {
+TEST_CASE("script hook: OLY_SCRIPT_STATE_HOOK with the hookId and the other state") {
   EngineFixture fixture;
   const uint32_t enterPlaying = olyEngineAddScriptStateHook(fixture.engine, OLY_STATE_ENTER, PlayingState, "enterPlaying");
   const uint32_t exitMenu = olyEngineAddScriptStateHook(fixture.engine, OLY_STATE_EXIT, MenuState, "exitMenu");
@@ -518,10 +518,10 @@ TEST_CASE("gancho de script: OLY_SCRIPT_STATE_HOOK com o hookId e o outro estado
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("gancho nativo por nome e OLY_INVALID_STATE_HOOK para nome desconhecido") {
+TEST_CASE("native hook by name and OLY_INVALID_STATE_HOOK for an unknown name") {
   EngineFixture fixture;
   const uint32_t named = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "bridgeNamedEnter");
-  const uint32_t unknown = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "naoExiste");
+  const uint32_t unknown = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "doesNotExist");
   olyEngineRequestState(fixture.engine, MenuState);
 
   fixture.next();
@@ -533,7 +533,7 @@ TEST_CASE("gancho nativo por nome e OLY_INVALID_STATE_HOOK para nome desconhecid
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("máscara de estados em sistema e handler; 0 tira a restrição") {
+TEST_CASE("state mask on system and handler; 0 removes the restriction") {
   EngineFixture fixture;
   const uint32_t system = olyEngineAddScriptSystem(fixture.engine, 1, "restricted");
   const uint32_t handler = olyEngineAddScriptHandler(fixture.engine, 0, "restricted");
@@ -563,7 +563,7 @@ TEST_CASE("máscara de estados em sistema e handler; 0 tira a restrição") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyDirectSpawn num handler de script tem escopo e some na troca") {
+TEST_CASE("olyDirectSpawn in a script handler is scoped and disappears on the switch") {
   EngineFixture fixture;
   olyEngineAddScriptHandler(fixture.engine, 0, "spawner");
   g_action = spawnWithScopeOnce;
@@ -584,7 +584,7 @@ TEST_CASE("olyDirectSpawn num handler de script tem escopo e some na troca") {
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyContextPersist em sistema de script (adiado) e em handler de script (direto)") {
+TEST_CASE("olyContextPersist in a script system (deferred) and in a script handler (direct)") {
   EngineFixture fixture;
   olyEngineAddScriptSystem(fixture.engine, 1, "persister");
   olyEngineAddScriptHandler(fixture.engine, 0, "persister");
@@ -608,7 +608,7 @@ TEST_CASE("olyContextPersist em sistema de script (adiado) e em handler de scrip
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("olyEnginePersistTask mantém a tarefa de script na troca e devolve 0 para tarefa não pendente") {
+TEST_CASE("olyEnginePersistTask keeps the script task across the switch and returns 0 for a non-pending task") {
   EngineFixture fixture;
   olyEngineRequestState(fixture.engine, MenuState);
   fixture.next();

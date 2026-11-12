@@ -3,7 +3,7 @@
 #include <string_view>
 
 namespace oly::core {
-  // Nome legível de T extraído do nome da função (GCC/Clang: "T = X", MSVC: "typeName<X>").
+  // Readable name of T extracted from the function name (GCC/Clang: "T = X", MSVC: "typeName<X>").
   template <class T>
   constexpr std::string_view typeName() {
 #if defined(_MSC_VER)

@@ -28,13 +28,13 @@ namespace oly::bridge {
     std::string_view name;
   };
 
-  // Definidas pelo código gerado do jogo (ou, nos testes, por um registro escrito à mão).
+  // Defined by the game's generated code (or, in tests, by a hand-written registry).
   uint32_t schemaHash() noexcept;
   std::span<const oly::ecs::ComponentId> schemaComponentIds();
-  // Na ordem do esquema, que é a ordem de declaração (e de despacho) dos eventos na Engine.
+  // In schema order, which is the declaration (and dispatch) order of the events in the Engine.
   std::span<const SchemaEvent> schemaEvents();
-  // Na ordem do esquema; o índice é o ActionId na ActionMap da Engine.
+  // In schema order; the index is the ActionId in the Engine's ActionMap.
   std::span<const SchemaAction> schemaActions();
-  // Na ordem do esquema; o índice é o StateId na Engine.
+  // In schema order; the index is the StateId in the Engine.
   std::span<const SchemaState> schemaStates();
 }

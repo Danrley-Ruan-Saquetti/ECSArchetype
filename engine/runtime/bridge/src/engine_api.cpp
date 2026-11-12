@@ -14,12 +14,12 @@
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 
-// Module.olyInvokeScript é instalado pelo Runtime de @oly/core (runtime.ts) antes de qualquer frame.
+// Module.olyInvokeScript is installed by the @oly/core Runtime (runtime.ts) before any frame.
 EM_JS(void, olyHostInvokeScript, (OlyEngine * engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount), { Module["olyInvokeScript"](engine, kind, id, events, eventCount); });
 #endif
 
-static_assert(sizeof(OlyActionState) == sizeof(oly::input::ActionState) && offsetof(OlyActionState, x) == offsetof(oly::input::ActionState, x) && offsetof(OlyActionState, y) == offsetof(oly::input::ActionState, y) && offsetof(OlyActionState, flags) == offsetof(oly::input::ActionState, flags), "OlyActionState deve ter o layout de oly::input::ActionState");
-static_assert(OLY_ACTION_PRESSED == oly::input::ActionPressed && OLY_ACTION_HELD == oly::input::ActionHeld && OLY_ACTION_RELEASED == oly::input::ActionReleased && OLY_ACTION_VALID == oly::input::ActionValid, "OLY_ACTION_* devem bater com oly::input::Action*");
+static_assert(sizeof(OlyActionState) == sizeof(oly::input::ActionState) && offsetof(OlyActionState, x) == offsetof(oly::input::ActionState, x) && offsetof(OlyActionState, y) == offsetof(oly::input::ActionState, y) && offsetof(OlyActionState, flags) == offsetof(oly::input::ActionState, flags), "OlyActionState must have the layout of oly::input::ActionState");
+static_assert(OLY_ACTION_PRESSED == oly::input::ActionPressed && OLY_ACTION_HELD == oly::input::ActionHeld && OLY_ACTION_RELEASED == oly::input::ActionReleased && OLY_ACTION_VALID == oly::input::ActionValid, "OLY_ACTION_* must match oly::input::Action*");
 
 namespace oly::bridge {
   namespace {
@@ -27,7 +27,7 @@ namespace oly::bridge {
 #if defined(__EMSCRIPTEN__)
       olyHostInvokeScript(engine, kind, id, events, eventCount);
 #else
-      OLY_ASSERT(false, "script chamado sem invocador instalado (setScriptInvoker) kind=%u id=%u", kind, id);
+      OLY_ASSERT(false, "script called with no invoker installed (setScriptInvoker) kind=%u id=%u", kind, id);
 #endif
     }
 
@@ -41,7 +41,7 @@ namespace oly::bridge {
       engine->currentContext = nullptr;
     }
 
-    // Guarda o contexto direto atual para olyDirectSpawn e olyContextPersist e restaura o anterior ao sair.
+    // Holds the current direct context for olyDirectSpawn and olyContextPersist and restores the previous one on exit.
     class DirectContextScope {
      private:
       OlyEngine* engine_;
@@ -94,27 +94,27 @@ namespace oly::bridge {
     }
 
     uint32_t checkedEventType([[maybe_unused]] OlyEngine* engine, uint32_t eventType, [[maybe_unused]] const char* operation) {
-      OLY_ASSERT(eventType < engine->engine.eventTypeCount(), "%s: eventType=%u fora do intervalo (0..%u)", operation, eventType, engine->engine.eventTypeCount() - 1);
+      OLY_ASSERT(eventType < engine->engine.eventTypeCount(), "%s: eventType=%u out of range (0..%u)", operation, eventType, engine->engine.eventTypeCount() - 1);
       return eventType;
     }
 
     oly::app::SystemContext& currentContext(OlyEngine* engine, [[maybe_unused]] const char* operation) {
-      OLY_ASSERT(engine->currentContext != nullptr, "%s: chamado fora de sistema", operation);
+      OLY_ASSERT(engine->currentContext != nullptr, "%s: called outside a system", operation);
       return *engine->currentContext;
     }
 
     void checkedAction([[maybe_unused]] const oly::input::ActionMap& actions, [[maybe_unused]] uint32_t action, [[maybe_unused]] oly::input::ActionKind expected, [[maybe_unused]] const char* operation) {
-      OLY_ASSERT(action < actions.actionCount(), "%s: action=%u fora do intervalo (%u declaradas)", operation, action, actions.actionCount());
-      OLY_ASSERT(actions.kind(action) == expected, "%s: action=%u (%.*s) tem tipo diferente do esperado (%u)", operation, action, static_cast<int>(actions.name(action).size()), actions.name(action).data(), static_cast<unsigned>(expected));
+      OLY_ASSERT(action < actions.actionCount(), "%s: action=%u out of range (%u declared)", operation, action, actions.actionCount());
+      OLY_ASSERT(actions.kind(action) == expected, "%s: action=%u (%.*s) has a kind other than the expected one (%u)", operation, action, static_cast<int>(actions.name(action).size()), actions.name(action).data(), static_cast<unsigned>(expected));
     }
 
     oly::app::Phase phaseOf(uint32_t phase, [[maybe_unused]] const char* operation) {
-      OLY_ASSERT(phase < oly::app::PhaseCount, "%s: phase=%u fora do intervalo (0..%u)", operation, phase, oly::app::PhaseCount - 1);
+      OLY_ASSERT(phase < oly::app::PhaseCount, "%s: phase=%u out of range (0..%u)", operation, phase, oly::app::PhaseCount - 1);
       return static_cast<oly::app::Phase>(phase);
     }
 
     uint32_t checkedWhen([[maybe_unused]] uint32_t when, [[maybe_unused]] const char* operation) {
-      OLY_ASSERT(when == OLY_STATE_ENTER || when == OLY_STATE_EXIT, "%s: when=%u inválido", operation, when);
+      OLY_ASSERT(when == OLY_STATE_ENTER || when == OLY_STATE_EXIT, "%s: invalid when=%u", operation, when);
       return when;
     }
 
@@ -144,12 +144,12 @@ OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame, uint32_t m
 
   for (const oly::bridge::SchemaAction& schemaAction : oly::bridge::schemaActions()) {
     [[maybe_unused]] const oly::input::ActionId id = engine->engine.actions().declare(schemaAction.kind, schemaAction.name);
-    OLY_ASSERT(id == engine->engine.actions().actionCount() - 1, "olyEngineCreate: ação \"%.*s\" fora de ordem", static_cast<int>(schemaAction.name.size()), schemaAction.name.data());
+    OLY_ASSERT(id == engine->engine.actions().actionCount() - 1, "olyEngineCreate: action \"%.*s\" out of order", static_cast<int>(schemaAction.name.size()), schemaAction.name.data());
   }
 
   for (const oly::bridge::SchemaState& schemaState : oly::bridge::schemaStates()) {
     [[maybe_unused]] const oly::app::StateId id = engine->engine.declareState(schemaState.name);
-    OLY_ASSERT(id == engine->engine.stateCount() - 1, "olyEngineCreate: estado \"%.*s\" fora de ordem", static_cast<int>(schemaState.name.size()), schemaState.name.data());
+    OLY_ASSERT(id == engine->engine.stateCount() - 1, "olyEngineCreate: state \"%.*s\" out of order", static_cast<int>(schemaState.name.size()), schemaState.name.data());
   }
 
   return engine;
@@ -164,7 +164,7 @@ OlyWorld* olyEngineWorld(OlyEngine* engine) {
 }
 
 void olyEngineFrame(OlyEngine* engine, double nowSeconds) {
-  // Depois de uma exceção JS o ponteiro ficou apontando para uma pilha que já não existe.
+  // After a JS exception the pointer was left pointing to a stack that no longer exists.
   engine->currentContext = nullptr;
   engine->directContext = nullptr;
   engine->engine.frame(nowSeconds);
@@ -307,7 +307,7 @@ void olyEngineBindAxis2d(OlyEngine* engine, uint32_t action, uint32_t up, uint32
 
 void olyEngineClearBindings(OlyEngine* engine, uint32_t action) {
   oly::input::ActionMap& actions = engine->engine.actions();
-  OLY_ASSERT(action < actions.actionCount(), "olyEngineClearBindings: action=%u fora do intervalo (%u declaradas)", action, actions.actionCount());
+  OLY_ASSERT(action < actions.actionCount(), "olyEngineClearBindings: action=%u out of range (%u declared)", action, actions.actionCount());
 
   actions.clearBindings(action);
 }
@@ -355,7 +355,7 @@ void olySystemRemove(OlyEngine* engine, uint32_t index, uint32_t generation, uin
 }
 
 void olyDirectSpawn(OlyEngine* engine, OlyEntity* out) {
-  OLY_ASSERT(engine->directContext != nullptr, "olyDirectSpawn: chamado fora de handler, tarefa ou gancho");
+  OLY_ASSERT(engine->directContext != nullptr, "olyDirectSpawn: called outside a handler, task or hook");
 
   const oly::ecs::Entity entity = engine->directContext->spawn();
   out->index = entity.index;
@@ -363,7 +363,7 @@ void olyDirectSpawn(OlyEngine* engine, OlyEntity* out) {
 }
 
 void olyContextPersist(OlyEngine* engine, uint32_t index, uint32_t generation) {
-  OLY_ASSERT(engine->directContext != nullptr || engine->currentContext != nullptr, "olyContextPersist: chamado fora de sistema, handler, tarefa ou gancho");
+  OLY_ASSERT(engine->directContext != nullptr || engine->currentContext != nullptr, "olyContextPersist: called outside a system, handler, task or hook");
 
   const oly::ecs::Entity entity = oly::bridge::entityOf(index, generation);
   if (engine->directContext != nullptr) {

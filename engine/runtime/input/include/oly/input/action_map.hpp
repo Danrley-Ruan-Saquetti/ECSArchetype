@@ -61,7 +61,7 @@ namespace oly::input {
   constexpr uint32_t ActionReleased = 1u << 2;
   constexpr uint32_t ActionValid = 1u << 3;
 
-  // Layout lido pelo TS direto do heap do WASM: 12 B por ação, sem passar pela fronteira.
+  // Layout read by TS straight from the WASM heap: 12 B per action, without crossing the boundary.
   struct ActionState {
     float x;
     float y;
@@ -90,9 +90,9 @@ namespace oly::input {
     std::vector<Declaration> declarations_;
     std::vector<ActionState> snapshot_;
     std::vector<Edge> edges_;
-    // Estado do host: muda na hora da chamada e decide o que entra na fila.
+    // Host state: changes at call time and decides what enters the queue.
     std::vector<PhysicalButton> hostPressed_;
-    // Estado reproduzido pela captura; no fim de toda captura é igual ao do host.
+    // State replayed by the capture; at the end of every capture it equals the host state.
     std::vector<PhysicalButton> capturedPressed_;
     float pointerX_ = 0.0f;
     float pointerY_ = 0.0f;

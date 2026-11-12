@@ -1,5 +1,5 @@
-// Cada caso viola um contrato da API C e precisa disparar OLY_ASSERT com as substrings exigidas; só é compilado
-// com asserts ligados. Mesmo protocolo do contract_death do ecs.
+// Each case violates a C API contract and must trigger OLY_ASSERT with the required substrings; only compiled
+// with asserts enabled. Same protocol as the ecs contract_death.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -51,7 +51,7 @@ namespace {
     if (g_required) {
       for (const char* needle : *g_required) {
         if (!std::strstr(message, needle)) {
-          std::fprintf(stderr, "mensagem sem a substring exigida: \"%s\"\n", needle);
+          std::fprintf(stderr, "message missing the required substring: \"%s\"\n", needle);
           std::fflush(stderr);
           std::_Exit(2);
         }
@@ -145,21 +145,21 @@ namespace {
 
 int main(int argumentCount, char** arguments) {
   static const std::vector<Case> cases = {
-    {"query_end_out_of_order", queryEndOutOfOrder, {"olyQueryEnd", "fora de ordem"}},
-    {"direct_spawn_outside_context", directSpawnOutsideContext, {"olyDirectSpawn", "fora"}},
-    {"context_persist_outside_context", contextPersistOutsideContext, {"olyContextPersist", "fora"}},
-    {"state_hook_invalid_when", stateHookInvalidWhen, {"when", "inválido"}},
-    {"request_state_out_of_range_c", requestStateOutOfRangeC, {"requestState", "fora do intervalo"}},
-    {"system_spawn_outside_system", systemSpawnOutsideSystem, {"olySystemSpawn", "fora de sistema"}},
+    {"query_end_out_of_order", queryEndOutOfOrder, {"olyQueryEnd", "out of order"}},
+    {"direct_spawn_outside_context", directSpawnOutsideContext, {"olyDirectSpawn", "outside"}},
+    {"context_persist_outside_context", contextPersistOutsideContext, {"olyContextPersist", "outside"}},
+    {"state_hook_invalid_when", stateHookInvalidWhen, {"when", "invalid"}},
+    {"request_state_out_of_range_c", requestStateOutOfRangeC, {"requestState", "out of range"}},
+    {"system_spawn_outside_system", systemSpawnOutsideSystem, {"olySystemSpawn", "outside a system"}},
     {"engine_phase_out_of_range", enginePhaseOutOfRange, {"phase"}},
-    {"bind_button_wrong_kind", bindButtonWrongKind, {"olyEngineBindButton", "tipo"}},
-    {"action_out_of_range", actionOutOfRange, {"olyEngineClearBindings", "fora do intervalo"}},
+    {"bind_button_wrong_kind", bindButtonWrongKind, {"olyEngineBindButton", "kind"}},
+    {"action_out_of_range", actionOutOfRange, {"olyEngineClearBindings", "out of range"}},
     {"engine_emit_out_of_range", engineEmitOutOfRange, {"olyEngineEmit", "eventType"}},
-    {"schedule_script_task_negative_interval", scheduleScriptTaskNegativeInterval, {"schedule", "intervalo"}},
+    {"schedule_script_task_negative_interval", scheduleScriptTaskNegativeInterval, {"schedule", "interval"}},
   };
 
   if (argumentCount != 2) {
-    std::fprintf(stderr, "uso: bridge_contract_death <caso>\n");
+    std::fprintf(stderr, "usage: bridge_contract_death <case>\n");
     return 64;
   }
 
@@ -171,10 +171,10 @@ int main(int argumentCount, char** arguments) {
     g_required = &testCase.required;
     oly::core::setAssertHandler(&handler);
     testCase.run();
-    std::fprintf(stderr, "assert não disparou\n");
+    std::fprintf(stderr, "assert did not fire\n");
     return 1;
   }
 
-  std::fprintf(stderr, "caso desconhecido: %s\n", arguments[1]);
+  std::fprintf(stderr, "unknown case: %s\n", arguments[1]);
   return 64;
 }

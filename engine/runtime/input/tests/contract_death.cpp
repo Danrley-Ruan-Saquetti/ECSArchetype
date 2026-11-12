@@ -1,5 +1,5 @@
-// Cada caso viola um contrato do input e precisa disparar OLY_ASSERT com as substrings exigidas; só é compilado com
-// asserts ligados. Mesmo protocolo do contract_death do app.
+// Each case violates an input contract and must trigger OLY_ASSERT with the required substrings; only compiled with
+// asserts enabled. Same protocol as the app contract_death.
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -20,7 +20,7 @@ namespace {
     if (g_required) {
       for (const char* needle : *g_required) {
         if (!std::strstr(message, needle)) {
-          std::fprintf(stderr, "mensagem sem a substring exigida: \"%s\"\n", needle);
+          std::fprintf(stderr, "message missing the required substring: \"%s\"\n", needle);
           std::fflush(stderr);
           std::_Exit(2);
         }
@@ -74,16 +74,16 @@ namespace {
 
 int main(int argumentCount, char** arguments) {
   static const std::vector<Case> cases = {
-    {"declare_duplicate_name", declareDuplicateName, {"declare", "jump", "já declarada"}},
-    {"declare_while_locked", declareWhileLocked, {"declare", "durante frame"}},
-    {"bind_wrong_kind", bindWrongKind, {"bind", "tipo"}},
-    {"action_out_of_range", actionOutOfRange, {"clearBindings", "fora do intervalo"}},
+    {"declare_duplicate_name", declareDuplicateName, {"declare", "jump", "already declared"}},
+    {"declare_while_locked", declareWhileLocked, {"declare", "during frame"}},
+    {"bind_wrong_kind", bindWrongKind, {"bind", "kind"}},
+    {"action_out_of_range", actionOutOfRange, {"clearBindings", "out of range"}},
     {"button_usage_zero", buttonUsageZero, {"buttonDown", "usage 0"}},
-    {"pointer_not_finite", pointerNotFinite, {"pointerMove", "não finito"}},
+    {"pointer_not_finite", pointerNotFinite, {"pointerMove", "non-finite"}},
   };
 
   if (argumentCount != 2) {
-    std::fprintf(stderr, "uso: input_contract_death <caso>\n");
+    std::fprintf(stderr, "usage: input_contract_death <case>\n");
     return 64;
   }
 
@@ -95,10 +95,10 @@ int main(int argumentCount, char** arguments) {
     g_required = &testCase.required;
     oly::core::setAssertHandler(&handler);
     testCase.run();
-    std::fprintf(stderr, "assert não disparou\n");
+    std::fprintf(stderr, "assert did not fire\n");
     return 1;
   }
 
-  std::fprintf(stderr, "caso desconhecido: %s\n", arguments[1]);
+  std::fprintf(stderr, "unknown case: %s\n", arguments[1]);
   return 64;
 }

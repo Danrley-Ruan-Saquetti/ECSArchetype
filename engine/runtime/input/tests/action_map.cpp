@@ -20,7 +20,7 @@ namespace {
   constexpr ButtonState idle{false, false, false};
 }
 
-TEST_CASE("pressed no passo da borda, held enquanto pressionado, released ao soltar") {
+TEST_CASE("pressed on the edge step, held while pressed, released on release") {
   Fixture f;
   f.map.bind(f.jump, Key::Space);
 
@@ -39,7 +39,7 @@ TEST_CASE("pressed no passo da borda, held enquanto pressionado, released ao sol
   CHECK(f.state(f.jump) == idle);
 }
 
-TEST_CASE("toque mais curto que um passo não se perde") {
+TEST_CASE("a tap shorter than a step is not lost") {
   Fixture f;
   f.map.bind(f.jump, Key::Space);
 
@@ -52,7 +52,7 @@ TEST_CASE("toque mais curto que um passo não se perde") {
   CHECK(f.state(f.jump) == idle);
 }
 
-TEST_CASE("fila vazia mantém o estado") {
+TEST_CASE("empty queue keeps the state") {
   Fixture f;
   f.map.bind(f.jump, Key::Space);
 
@@ -65,7 +65,7 @@ TEST_CASE("fila vazia mantém o estado") {
   CHECK_FALSE(f.state(f.jump).pressed);
 }
 
-TEST_CASE("auto-repeat é ignorado") {
+TEST_CASE("auto-repeat is ignored") {
   Fixture f;
   f.map.bind(f.jump, Key::Space);
 
@@ -81,7 +81,7 @@ TEST_CASE("auto-repeat é ignorado") {
   CHECK_FALSE(f.state(f.jump).held);
 }
 
-TEST_CASE("duas teclas na mesma ação: soltar uma não gera released") {
+TEST_CASE("two keys on the same action: releasing one does not produce released") {
   Fixture f;
   f.map.bind(f.jump, Key::Space);
   f.map.bind(f.jump, Key::ShiftLeft);
@@ -101,7 +101,7 @@ TEST_CASE("duas teclas na mesma ação: soltar uma não gera released") {
   CHECK(f.state(f.jump).released);
 }
 
-TEST_CASE("mesmo botão em duas ações: as duas reagem") {
+TEST_CASE("same button on two actions: both react") {
   Fixture f;
   const ButtonAction confirm = f.map.declareButton("confirm");
   f.map.bind(f.jump, Key::Space);
@@ -114,7 +114,7 @@ TEST_CASE("mesmo botão em duas ações: as duas reagem") {
   CHECK(f.state(confirm).pressed);
 }
 
-TEST_CASE("ligação repetida não duplica") {
+TEST_CASE("repeated binding does not duplicate") {
   Fixture f;
   f.map.bind(f.jump, Key::Space);
   f.map.bind(f.jump, Key::Space);
@@ -126,7 +126,7 @@ TEST_CASE("ligação repetida não duplica") {
   CHECK(f.state(f.jump) == ButtonState{true, false, true});
 }
 
-TEST_CASE("releaseAll solta tudo e o keyup atrasado é ignorado") {
+TEST_CASE("releaseAll releases everything and the late keyup is ignored") {
   Fixture f;
   f.map.bind(f.jump, Key::W);
 
@@ -142,7 +142,7 @@ TEST_CASE("releaseAll solta tudo e o keyup atrasado é ignorado") {
   CHECK_FALSE(f.state(f.jump).held);
 }
 
-TEST_CASE("eixo: WASD, anulação e diagonal normalizada") {
+TEST_CASE("axis: WASD, cancellation and normalized diagonal") {
   ActionMap map;
   const Axis2dAction move = map.declareAxis2d("move");
   map.bind(move, Axis2dBinding{Key::W, Key::S, Key::A, Key::D});
@@ -163,7 +163,7 @@ TEST_CASE("eixo: WASD, anulação e diagonal normalizada") {
   CHECK(map.axis2d(move).y == doctest::Approx(-0.70710677f));
 }
 
-TEST_CASE("eixo com duas ligações: cada direção é OU") {
+TEST_CASE("axis with two bindings: each direction is OR") {
   ActionMap map;
   const Axis2dAction move = map.declareAxis2d("move");
   map.bind(move, Axis2dBinding{Key::W, Key::S, Key::A, Key::D});
@@ -184,7 +184,7 @@ TEST_CASE("eixo com duas ligações: cada direção é OU") {
   CHECK(map.axis2d(move).y == doctest::Approx(-1.0f));
 }
 
-TEST_CASE("ponteiro: inválido até o primeiro pointerMove, depois a última posição") {
+TEST_CASE("pointer: invalid until the first pointerMove, then the last position") {
   ActionMap map;
   const PointerAction aim = map.declarePointer("aim");
 
@@ -199,7 +199,7 @@ TEST_CASE("ponteiro: inválido até o primeiro pointerMove, depois a última pos
   CHECK(map.pointer(aim).valid);
 }
 
-TEST_CASE("religar com o botão pressionado não gera bordas") {
+TEST_CASE("rebinding with the button pressed produces no edges") {
   Fixture f;
 
   f.map.buttonDown(Key::Space);
@@ -214,7 +214,7 @@ TEST_CASE("religar com o botão pressionado não gera bordas") {
   CHECK(f.state(f.jump) == idle);
 }
 
-TEST_CASE("religação vale só a partir da próxima captura") {
+TEST_CASE("rebinding only takes effect from the next capture") {
   Fixture f;
   f.map.bind(f.jump, Key::Space);
   f.map.buttonDown(Key::Space);
@@ -222,7 +222,7 @@ TEST_CASE("religação vale só a partir da próxima captura") {
   CHECK_FALSE(f.state(f.jump).pressed);
 }
 
-TEST_CASE("isBound vale para botão e eixo") {
+TEST_CASE("isBound works for button and axis") {
   ActionMap map;
   const ButtonAction jump = map.declareButton("jump");
   const Axis2dAction move = map.declareAxis2d("move");
@@ -237,7 +237,7 @@ TEST_CASE("isBound vale para botão e eixo") {
   CHECK_FALSE(map.isBound(Key::Space));
 }
 
-TEST_CASE("snapshot: um ActionState por ação na ordem de declaração com os bits") {
+TEST_CASE("snapshot: one ActionState per action in declaration order with the bits") {
   ActionMap map;
   const ButtonAction jump = map.declareButton("jump");
   const Axis2dAction move = map.declareAxis2d("move");

@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace oly::input {
-  // Usages HID: página (16 bits altos) e usage (16 bits baixos). Teclado é a página 0x07.
+  // HID usages: page (high 16 bits) and usage (low 16 bits). Keyboard is page 0x07.
   enum class Key : uint32_t {
     A = 0x0007'0004,
     B,
@@ -112,7 +112,7 @@ namespace oly::input {
     MetaRight,
   };
 
-  // Botões do mouse são a página 0x09.
+  // Mouse buttons are page 0x09.
   enum class MouseButton : uint32_t {
     Left = 0x0009'0001,
     Right,

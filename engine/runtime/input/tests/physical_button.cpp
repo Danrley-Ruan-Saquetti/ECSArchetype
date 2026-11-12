@@ -13,7 +13,7 @@ namespace {
   };
 }
 
-TEST_CASE("amostras da tabela HID") {
+TEST_CASE("HID table samples") {
   const Sample samples[] = {
     {Key::A, 0x0007'0004u},
     {Key::W, 0x0007'001Au},
@@ -45,7 +45,7 @@ TEST_CASE("amostras da tabela HID") {
   CHECK(PhysicalButton(MouseButton::Middle).usage == 0x0009'0003u);
 }
 
-TEST_CASE("igualdade compara o usage") {
+TEST_CASE("equality compares the usage") {
   CHECK(PhysicalButton(Key::Space) == PhysicalButton(0x0007'002Cu));
   CHECK_FALSE(PhysicalButton(Key::Space) == PhysicalButton(Key::Enter));
 }
