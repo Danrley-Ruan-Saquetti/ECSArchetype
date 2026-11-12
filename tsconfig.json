@@ -9,6 +9,7 @@
     { "path": "engine/tools/codegen/tests" },
     { "path": "engine/testing" },
     { "path": "games/arena" },
-    { "path": "games/arena/tests" }
+    { "path": "games/arena/tests" },
+    { "path": "games/arena/tsconfig.browser.json" }
   ]
 }

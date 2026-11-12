@@ -38,3 +38,14 @@ services:
       - .:/app
       - ./build:/app/build
     command: bash
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.wasm
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./build:/app/build
+    command: bash
