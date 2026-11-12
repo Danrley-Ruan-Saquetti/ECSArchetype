@@ -877,7 +877,7 @@ games/arena/
   `Math.random` no navegador e uma sequência fixa no teste.
 
 **Servir no navegador, [decisão do design] os nomes:**
-- `esbuild` entra como `devDependency` da raiz, com versão exata. Ele junta `games/arena/dist/main.js` (saída do
+- `esbuild` entra como `devDependency` da raiz, com versão exata. Ele junta `games/arena/dist/src/main.js` (saída do
   `tsc -b`, que já conferiu os tipos) num único `main.js`. O `.mjs` do Emscripten não entra no bundle: é carregado em
   tempo de execução por `moduleFactoryFromUrl("./arena_game.mjs")`.
 - `make game G=arena PRESET=wasm-games-release` monta `build/<preset>/web/arena/` com `index.html`, `main.js`,

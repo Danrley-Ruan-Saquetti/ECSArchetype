@@ -17,7 +17,7 @@ engine/runtime/   C++, um módulo por pasta: <m>/{include/oly/<m>, src, tests, b
 engine/packages/  TS, um pacote npm por pasta: core (@oly/core), client (@oly/client)
 engine/tools/     codegen (@oly/codegen: esquema TS -> C++)
 engine/testing/   @oly/testing (privado): fixture (único lugar com nomes de jogo), tests/wasm, bench/{boundary,loop,events}.ts
-games/            ainda não existe (fase 7); já é workspace npm (`games/*`). `oly_add_game` hoje só gera build/<preset>/games/fixture_game.mjs
+games/arena/     jogo de validação (fase 7): native/ (C++: OLY_SYSTEM/OLY_HANDLER), src/ (TS: game.ts sem DOM, render.ts, main.ts da casca), tests/ (fumaça em node), web/, schema.ts. `oly_add_game` gera build/<preset>/games/<jogo>_game.{mjs,wasm}
 tools/            scripts de medição e de lint (bench_ratio.py, bench_ladder.py, run_ladder.sh, check_boundaries.py, ...)
 docs/benchmarks/  resultados registrados: ecs/, bridge/, wasm/
 ```
@@ -38,7 +38,7 @@ $DC ./build/debug-asan/tests/ecs_unit_world -tc="nome do caso"   # um TEST_CASE 
 
 - Presets (`CMakePresets.json`): `debug-asan` (padrão), `release` (testes + bench, `OLY_ENABLE_ASSERTS=0`), `relwithdebinfo` (só bench, para `perf`), as variantes do estudo de custo WASM (`native-clang*`, `wasm-scalar`, `wasm-simd`), `wasm-debug`, `wasm-games` e `wasm-games-release`. Build em `build/<preset>/`; executáveis de teste em `build/<preset>/tests/<módulo>_<suíte>`, de benchmark em `build/<preset>/bench/ecs_bench_*`.
 - Opções: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR`, `OLY_VEC_REPORT`, `OLY_ENABLE_ASSERTS`, `OLY_BUILD_GAMES`.
-- Nomes no ctest levam o prefixo do módulo: `core.*`, `input.*`, `ecs.*`, `app.*`, `bridge.*`, `ts.<pacote>.<suíte>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`), `<módulo>.contract_death.<caso>` e `oly.lint.boundaries` / `oly.lint.boundaries_selftest` (os dois lints só existem fora do Emscripten e com Python no ambiente).
+- Nomes no ctest levam o prefixo do módulo: `core.*`, `input.*`, `ecs.*`, `app.*`, `bridge.*`, `ts.<pacote>.<suíte>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`, `ts.arena.smoke`), `<módulo>.contract_death.<caso>` e `oly.lint.boundaries` / `oly.lint.boundaries_selftest` (os dois lints existem fora do Emscripten e nos presets `wasm-games*`, com Python no ambiente).
 - Um hook `PostToolUse` (`.claude/hooks/clang-format.sh`) roda `clang-format -i` no container `dev` após cada Edit/Write em `.cpp`/`.hpp`. Não formate à mão; se o Docker estiver parado, o hook falha.
 - `-Wall -Wextra -Wpedantic -Werror` estão ligados em todos os nossos alvos (`oly_warnings`); aviso quebra o build.
 - Cada suíte é um executável separado registrado com `oly_add_test(MODULE <m> NAME <suíte> SOURCES ... [SUPPORT <dirs>])` no `tests/CMakeLists.txt` do módulo; arquivo novo precisa ser adicionado lá. Fontes de `src/*.cpp` entram por glob.
@@ -147,6 +147,8 @@ Estados planos, sem aninhamento nem pilha. `declareState` dá o `StateId` na ord
 WC="docker compose run --rm wasm"
 $WC make ts                 # npm ci (se preciso) + tsc -b em todos os workspaces
 $WC make games-test         # ts + ctest no preset wasm-games (ECS em WASM, bridge.c_api, testes TS)
+$WC make game G=arena       # monta build/wasm-games-release/web/arena/ (index.html, main.js do esbuild, arena_game.mjs/.wasm); PRESET só se wasm-games*
+# servidor: docker compose run --rm --service-ports web make serve G=arena   # http://localhost:8000 (serviço `web`, porta 8000; precisa de stdin aberto)
 $WC sh -c 'make ts && make test PRESET=wasm-games-release T=^ts\.'   # Release: só as validações TS seguram os erros
 $WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/<arquivo>.json --commit $(git rev-parse --short HEAD)
 ```

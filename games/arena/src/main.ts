@@ -47,6 +47,8 @@ async function boot(): Promise<void> {
   const runtime = await loadRuntime(moduleFactoryFromUrl("./arena_game.mjs"), schema);
   const engine = runtime.createEngine({ fixedHz: 60 });
   installGame(engine, { drawer: createCanvasDrawer(context), random: Math.random });
+  // O attachBrowserInput só impede o menu do clique direito quando MouseRight está ligado a uma ação; o jogo não usa esse botão.
+  canvas.addEventListener("contextmenu", (event) => event.preventDefault());
   attachBrowserInput(engine, canvas);
   runInBrowser(engine);
 }
