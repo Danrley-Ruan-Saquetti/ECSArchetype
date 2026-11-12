@@ -9,6 +9,7 @@
 #include "components.hpp"
 #include "oly/app/handler.hpp"
 #include "oly/app/system.hpp"
+#include "oly/app/task_context.hpp"
 #include "oly/bridge/c_api.hpp"
 #include "oly/bridge/engine.hpp"
 #include "test_events.hpp"
@@ -27,12 +28,27 @@ namespace {
     g_kinds.push_back(kind);
     g_eventCounts.push_back(eventCount);
     const auto* batch = static_cast<const BridgeTestEvent*>(events);
-    for (uint32_t index = 0; index < eventCount; ++index) {
+    for (uint32_t index = 0; batch != nullptr && index < eventCount; ++index) {
       g_values.push_back(batch[index].value);
     }
     if (g_action && kind == OLY_SCRIPT_SYSTEM) {
       g_action(engine, id);
     }
+  }
+
+  void nativeTask(oly::app::TaskContext&) {
+    g_order.push_back("n");
+  }
+
+  uint32_t discardsOf(uint32_t scriptId) {
+    uint32_t count = 0;
+    for (size_t index = 0; index < g_kinds.size(); ++index) {
+      if (g_kinds[index] == OLY_SCRIPT_TASK_DISCARD && g_invocations[index].second == scriptId) {
+        ++count;
+      }
+    }
+
+    return count;
   }
 
   struct EngineFixture {
@@ -334,4 +350,67 @@ TEST_CASE("o endereço do snapshot não muda entre frames") {
   }
 
   CHECK(olyEngineActionSnapshot(fixture.engine) == before);
+}
+
+TEST_CASE("tarefa de script after: OLY_SCRIPT_TASK com lastRun 1, sem descarte") {
+  EngineFixture fixture;
+  OlyTaskHandle task{};
+  olyEngineScheduleScriptTask(fixture.engine, 0.0, 0.0, 42, &task);
+
+  olyEngineFrame(fixture.engine, 0.0);
+  olyEngineFrame(fixture.engine, 1.0 / 60);
+
+  CHECK(g_kinds == std::vector<uint32_t>{OLY_SCRIPT_TASK});
+  REQUIRE(g_invocations.size() == 1);
+  CHECK(g_invocations[0] == std::pair<OlyEngine*, uint32_t>{fixture.engine, 42});
+  CHECK(g_eventCounts == std::vector<uint32_t>{1});
+  CHECK(olyEngineIsTaskPending(fixture.engine, task.slot, task.generation) == 0);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("tarefa de script every: lastRun 0 e cancelar descarta uma vez") {
+  EngineFixture fixture;
+  OlyTaskHandle task{};
+  olyEngineScheduleScriptTask(fixture.engine, 1.0 / 60, 1.0 / 60, 7, &task);
+
+  for (int step = 0; step <= 3; ++step) {
+    olyEngineFrame(fixture.engine, static_cast<double>(step) / 60);
+  }
+
+  CHECK(g_eventCounts == std::vector<uint32_t>{0, 0});
+  CHECK(olyEngineIsTaskPending(fixture.engine, task.slot, task.generation) == 1);
+  CHECK(olyEngineCancelTask(fixture.engine, task.slot, task.generation) == 1);
+  CHECK(olyEngineCancelTask(fixture.engine, task.slot, task.generation) == 0);
+  CHECK(discardsOf(7) == 1);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("olyEngineDestroy descarta as tarefas de script pendentes") {
+  EngineFixture fixture;
+  OlyTaskHandle first{};
+  OlyTaskHandle second{};
+  olyEngineScheduleScriptTask(fixture.engine, 10.0, 0.0, 1, &first);
+  olyEngineScheduleScriptTask(fixture.engine, 1.0, 1.0, 2, &second);
+
+  olyEngineDestroy(fixture.engine);
+  fixture.engine = nullptr;
+
+  CHECK(discardsOf(1) == 1);
+  CHECK(discardsOf(2) == 1);
+  CHECK(g_kinds.size() == 2);
+}
+
+TEST_CASE("tarefas de script e nativas na ordem de vencimento") {
+  EngineFixture fixture;
+  OlyTaskHandle task{};
+  olyEngineScheduleScriptTask(fixture.engine, 0.0, 0.0, 1, &task);
+  oly::bridge::engineOf(fixture.engine).schedule().after(1.0 / 60, nativeTask);
+  olyEngineScheduleScriptTask(fixture.engine, 2.0 / 60, 0.0, 2, &task);
+
+  for (int step = 0; step <= 3; ++step) {
+    olyEngineFrame(fixture.engine, static_cast<double>(step) / 60);
+  }
+
+  CHECK(g_order == std::vector<std::string>{"s", "n", "s"});
+  CHECK(fixture.invariantsHold());
 }

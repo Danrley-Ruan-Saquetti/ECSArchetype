@@ -13,6 +13,13 @@ struct OlyEngine;
 // `kind` da chamada de volta única para o JS (olyHostInvokeScript).
 #define OLY_SCRIPT_SYSTEM 0u
 #define OLY_SCRIPT_HANDLER 1u
+#define OLY_SCRIPT_TASK 2u
+#define OLY_SCRIPT_TASK_DISCARD 3u
+
+struct OlyTaskHandle {
+  uint32_t slot;
+  uint32_t generation;
+};
 
 // Espelho de oly::input::ActionState (12 B por ação): o JS lê o snapshot direto do heap.
 struct OlyActionState {
@@ -59,6 +66,15 @@ OLY_API void olyEngineEmit(OlyEngine* engine, uint32_t eventType, const void* va
 OLY_API uint32_t olyEngineAddNativeHandler(OlyEngine* engine, uint32_t eventType, const char* name);
 // O handler é chamado pelo invocador de scripts uma vez por lote, com o id devolvido aqui.
 OLY_API uint32_t olyEngineAddScriptHandler(OlyEngine* engine, uint32_t eventType, const char* name);
+
+// Tarefa de script no relógio do jogo. intervalSeconds 0 agenda um after; maior que 0, um every com o primeiro
+// disparo em delaySeconds. Vale dentro e fora de olyEngineFrame. O invocador recebe OLY_SCRIPT_TASK a cada disparo
+// (eventCount é 1 na última execução de um after) e OLY_SCRIPT_TASK_DISCARD, uma vez, quando a tarefa sai da fila sem
+// a última execução (cancelamento ou olyEngineDestroy). Os asserts do Scheduler valem (atraso e intervalo inválidos).
+OLY_API void olyEngineScheduleScriptTask(OlyEngine* engine, double delaySeconds, double intervalSeconds, uint32_t scriptId, OlyTaskHandle* out);
+// 1 se a tarefa estava pendente; 0 se já terminou, foi cancelada ou o handle é de uma tarefa antiga do slot.
+OLY_API int32_t olyEngineCancelTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
+OLY_API int32_t olyEngineIsTaskPending(OlyEngine* engine, uint32_t slot, uint32_t generation);
 
 // Ações: olyEngineCreate declara, depois dos eventos, todas as de oly::bridge::schemaActions(); o índice da ação no
 // esquema é o seu ActionId (action). `button` é um usage HID (página nos 16 bits altos). Ligar confere o intervalo

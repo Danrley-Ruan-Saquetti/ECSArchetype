@@ -5,6 +5,7 @@
 #include "handles.hpp"
 #include "oly/app/handler.hpp"
 #include "oly/app/system.hpp"
+#include "oly/app/task_context.hpp"
 #include "oly/bridge/engine.hpp"
 #include "oly/bridge/schema_registry.hpp"
 #include "oly/core/assert.hpp"
@@ -43,6 +44,23 @@ namespace oly::bridge {
       OlyEngine* engine = static_cast<OlyEngine*>(context.userData());
 
       g_invoker(engine, OLY_SCRIPT_HANDLER, context.handlerId(), context.eventData(), context.eventCount());
+    }
+
+    struct ScriptTaskPayload {
+      OlyEngine* engine;
+      uint32_t scriptId;
+    };
+
+    void runScriptTask(oly::app::TaskContext& context) {
+      const ScriptTaskPayload& payload = context.payload<ScriptTaskPayload>();
+
+      g_invoker(payload.engine, OLY_SCRIPT_TASK, payload.scriptId, nullptr, context.lastRun() ? 1 : 0);
+    }
+
+    void discardScriptTask(void* payload) {
+      const ScriptTaskPayload& task = *static_cast<ScriptTaskPayload*>(payload);
+
+      g_invoker(task.engine, OLY_SCRIPT_TASK_DISCARD, task.scriptId, nullptr, 0);
     }
 
     uint32_t checkedEventType([[maybe_unused]] OlyEngine* engine, uint32_t eventType, [[maybe_unused]] const char* operation) {
@@ -179,6 +197,21 @@ uint32_t olyEngineAddScriptHandler(OlyEngine* engine, uint32_t eventType, const 
   const uint32_t checkedType = oly::bridge::checkedEventType(engine, eventType, "olyEngineAddScriptHandler");
 
   return engine->engine.onById(checkedType, name, &oly::bridge::runScriptHandler, engine);
+}
+
+void olyEngineScheduleScriptTask(OlyEngine* engine, double delaySeconds, double intervalSeconds, uint32_t scriptId, OlyTaskHandle* out) {
+  const oly::app::TaskHandle task = engine->engine.schedule().schedule(delaySeconds, intervalSeconds, &oly::bridge::runScriptTask, oly::app::TaskPayload::of(oly::bridge::ScriptTaskPayload{engine, scriptId}), &oly::bridge::discardScriptTask);
+
+  out->slot = task.slot;
+  out->generation = task.generation;
+}
+
+int32_t olyEngineCancelTask(OlyEngine* engine, uint32_t slot, uint32_t generation) {
+  return engine->engine.schedule().cancel(oly::app::TaskHandle{slot, generation}) ? 1 : 0;
+}
+
+int32_t olyEngineIsTaskPending(OlyEngine* engine, uint32_t slot, uint32_t generation) {
+  return engine->engine.schedule().isPending(oly::app::TaskHandle{slot, generation}) ? 1 : 0;
 }
 
 void olyEngineBindButton(OlyEngine* engine, uint32_t action, uint32_t button) {

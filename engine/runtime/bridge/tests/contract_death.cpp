@@ -90,6 +90,13 @@ namespace {
     olyEngineEmit(engine, 5, &value);
   }
 
+  void scheduleScriptTaskNegativeInterval() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+    OlyTaskHandle task{};
+
+    olyEngineScheduleScriptTask(engine, 0.0, -1.0, 1, &task);
+  }
+
   void bindButtonWrongKind() {
     OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
     olyEngineBindButton(engine, 1, 0x0007002Cu);
@@ -115,6 +122,7 @@ int main(int argumentCount, char** arguments) {
     {"bind_button_wrong_kind", bindButtonWrongKind, {"olyEngineBindButton", "tipo"}},
     {"action_out_of_range", actionOutOfRange, {"olyEngineClearBindings", "fora do intervalo"}},
     {"engine_emit_out_of_range", engineEmitOutOfRange, {"olyEngineEmit", "eventType"}},
+    {"schedule_script_task_negative_interval", scheduleScriptTaskNegativeInterval, {"schedule", "intervalo"}},
   };
 
   if (argumentCount != 2) {
