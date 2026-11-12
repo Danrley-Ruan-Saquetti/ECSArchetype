@@ -273,6 +273,18 @@ TEST_CASE("every com intervalo menor que o passo vira uma vez por passo") {
   CHECK_INVARIANTS(fixture.world);
 }
 
+TEST_CASE("every com o intervalo do passo não perde disparo em jogo longo") {
+  Fixture fixture;
+  int runs = 0;
+  int discards = 0;
+  fixture.engine.frame(0.0);
+  fixture.engine.schedule().every(fixture.engine.fixedDeltaTime(), countRun, Counters{&runs, &discards});
+
+  fixture.steps(20000);
+
+  CHECK(runs == 19999);
+}
+
 TEST_CASE("cancelar antes, durante e depois") {
   Fixture fixture;
   fixture.engine.frame(0.0);

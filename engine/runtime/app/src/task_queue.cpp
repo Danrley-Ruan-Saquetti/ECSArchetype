@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "oly/core/assert.hpp"
 
@@ -34,6 +35,8 @@ namespace oly::app::detail {
     slot.function = function;
     slot.discard = discard;
     slot.payload = payload;
+    slot.anchor = due;
+    slot.periods = 0.0;
     slot.interval = interval;
     slot.live = true;
     ++pendingCount_;
@@ -95,7 +98,7 @@ namespace oly::app::detail {
       if (due.lastRun) {
         release(top.slot);
       } else {
-        heap_.push_back(HeapEntry{nextDue(top.due, slot.interval, limit), top.sequence, top.slot, top.generation});
+        heap_.push_back(HeapEntry{advance(slot, limit), top.sequence, top.slot, top.generation});
         std::push_heap(heap_.begin(), heap_.end(), later<HeapEntry, HeapEntry>);
       }
 
@@ -153,14 +156,18 @@ namespace oly::app::detail {
     --pendingCount_;
   }
 
-  double TaskQueue::nextDue(double due, double interval, double limit) const {
-    double next = due + interval;
+  double TaskQueue::advance(Slot& slot, double limit) const {
+    slot.periods += 1.0;
+    double next = slot.anchor + slot.periods * slot.interval;
     if (next <= limit) {
-      next = due + (std::floor((limit - due) / interval) + 1.0) * interval;
+      slot.periods = std::floor((limit - slot.anchor) / slot.interval) + 1.0;
+      next = slot.anchor + slot.periods * slot.interval;
     }
 
-    if (next <= limit) {
-      next = limit + interval;
+    // Intervalo menor que um ulp do limite (ou denormal) não sai do lugar; sem isto a tarefa repetiria na mesma
+    // rodada ou travaria em infinito.
+    if (!(next > limit) || !std::isfinite(next)) {
+      next = std::nextafter(limit, std::numeric_limits<double>::infinity());
     }
 
     return next;

@@ -22,6 +22,10 @@ namespace oly::app::detail {
       TaskFunction function = nullptr;
       TaskDiscardFunction discard = nullptr;
       TaskPayload payload;
+      // O vencimento do every é anchor + periods * interval, não uma soma repetida: o erro de arredondamento da
+      // soma cresce e, depois de alguns minutos, o disparo deixaria de alcançar o limite do passo.
+      double anchor = 0.0;
+      double periods = 0.0;
       double interval = 0.0;
       uint32_t generation = 0;
       bool live = false;
@@ -73,7 +77,7 @@ namespace oly::app::detail {
    private:
     bool matches(TaskHandle task, const char* operation) const;
     void release(uint32_t slot);
-    double nextDue(double due, double interval, double limit) const;
+    double advance(Slot& slot, double limit) const;
     void flushDeferred();
   };
 }

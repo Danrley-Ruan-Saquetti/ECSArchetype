@@ -130,6 +130,25 @@ TEST_CASE("every com intervalo minúsculo dispara uma vez por chamada de popDue"
   CHECK(fixture.queue.popDue(limit + 1e-8).has_value());
 }
 
+TEST_CASE("every com intervalo abaixo de um ulp do limite não repete na mesma rodada") {
+  Fixture fixture;
+  const double limit = 3000.0;
+  fixture.push(limit, taskA, 1e-13);
+
+  CHECK(fixture.queue.popDue(limit).has_value());
+  CHECK(!fixture.queue.popDue(limit).has_value());
+  CHECK(fixture.queue.popDue(limit + 1.0).has_value());
+}
+
+TEST_CASE("every com intervalo denormal não trava a tarefa") {
+  Fixture fixture;
+  fixture.push(1.0, taskA, 5e-324);
+
+  CHECK(fixture.queue.popDue(1.0).has_value());
+  CHECK(!fixture.queue.popDue(1.0).has_value());
+  CHECK(fixture.queue.popDue(2.0).has_value());
+}
+
 TEST_CASE("cancelada não sai em popDue e cancelar de novo devolve false") {
   Fixture fixture;
   const TaskHandle handle = fixture.push(1.0, taskA);
