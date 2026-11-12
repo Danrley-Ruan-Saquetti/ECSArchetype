@@ -14,6 +14,7 @@ Start with `docs/architecture/README.md`. It has the overview and the index of a
 - Use the glossary names. No aliases or compatibility `using` with old names. Game concepts never in `engine/`; game names only in `engine/testing/fixture/` and `games/`.
 - When changing `table`, `archetype`, `query*`, `command_buffer` or `world`: keep `checkInvariants` covering the change and run the `spec-conformance-reviewer` and `perf-reviewer` agents.
 - New test: use the `add-test-case` skill.
+- Any change that adds, changes or removes public API (the surfaces listed in `docs/development/guide-style.md`) updates the user guide `docs/guide/` in the same change, following that style.
 
 ## Code style
 
