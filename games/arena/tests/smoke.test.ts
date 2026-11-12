@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { Bullet, Chaser, Coin, Collider, Dash, Enemy, Health, Invulnerable, Player, Position, Velocity } from "../schema.js";
-import { ArenaWidth, PlayerRadius } from "../src/arena.js";
+import { ArenaHeight, ArenaWidth, PlayerRadius } from "../src/arena.js";
 import { loadArena, withArena } from "./harness.js";
 import type { ArenaTest } from "./harness.js";
 
@@ -223,5 +223,117 @@ test("dano dá 1 s de invulnerabilidade; vida 0 leva a gameOver sem jogador", ()
     assert.equal(arena.engine.state?.name, "gameOver");
     assert.equal(arena.count(Player), 0);
     assert.equal(arena.score.finalScore, arena.score.score);
+  });
+});
+
+test("Esc pausa: relógio, posições e dash congelam; Esc de novo retoma e o dash acaba no tempo restante", () => {
+  withArena(runtime, (arena) => {
+    startPlaying(arena);
+    const player = arena.player();
+    arena.hold("KeyD");
+    arena.step();
+    arena.tap("Space");
+
+    arena.tap("Escape");
+    const frozenTime = arena.engine.time;
+    const frozenPosition = arena.engine.world.get(player, Position);
+    arena.step(60);
+
+    assert.equal(arena.engine.paused, true);
+    assert.equal(arena.engine.time, frozenTime);
+    assert.deepEqual(arena.engine.world.get(player, Position), frozenPosition);
+    assert.equal(arena.engine.world.get(player, Dash).active, 1);
+
+    arena.tap("Escape");
+    arena.step(3);
+    assert.equal(arena.engine.paused, false);
+    assert.equal(arena.engine.world.get(player, Dash).active, 1);
+
+    arena.step(10);
+    assert.equal(arena.engine.world.get(player, Dash).active, 0);
+  });
+});
+
+function isOnBorder(x: number, y: number): boolean {
+  const margin = 2;
+
+  return x <= margin || x >= ArenaWidth - margin || y <= margin || y >= ArenaHeight - margin;
+}
+
+test("ondas a cada 5 s com 2 + n inimigos nas bordas; uma moeda solta a cada 2 s dentro da arena", () => {
+  withArena(runtime, (arena) => {
+    startPlaying(arena);
+    arena.engine.world.set(arena.player(), Health, { value: 1000 });
+
+    arena.stepSeconds(4.9);
+    assert.equal(arena.count(Enemy), 0);
+    assert.equal(arena.count(Coin), 2);
+    arena.engine.world.query({ read: [Position], with: [Coin] }).eachBlock((block) => {
+      const position = block.read(Position);
+      for (let row = 0; row < block.count; ++row) {
+        assert.ok(position.x.get(row) >= 8 && position.x.get(row) <= ArenaWidth - 8);
+        assert.ok(position.y.get(row) >= 8 && position.y.get(row) <= ArenaHeight - 8);
+      }
+    });
+
+    for (let guard = 0; arena.count(Enemy) === 0 && guard < 60; ++guard) {
+      arena.step();
+    }
+    assert.equal(arena.count(Enemy), 3);
+    arena.engine.world.query({ read: [Position], with: [Enemy] }).eachBlock((block) => {
+      const position = block.read(Position);
+      for (let row = 0; row < block.count; ++row) {
+        assert.ok(isOnBorder(position.x.get(row), position.y.get(row)), `inimigo longe da borda: ${position.x.get(row)}, ${position.y.get(row)}`);
+      }
+    });
+
+    arena.stepSeconds(5);
+    assert.equal(arena.count(Enemy), 7);
+  });
+});
+
+test("render: menu sem jogador, HUD em playing, pausa e fim de jogo", () => {
+  withArena(runtime, (arena) => {
+    arena.step();
+    assert.ok(arena.drawer.texts().includes("OLY ARENA"));
+    assert.ok(arena.drawer.texts().includes("Enter ou clique para jogar"));
+    assert.equal(arena.drawer.circles().length, 0);
+
+    arena.tap("Enter");
+    arena.step();
+    assert.ok(arena.drawer.texts().includes("Vida 3"));
+    assert.ok(arena.drawer.texts().includes("Pontos 0"));
+    assert.ok(arena.drawer.texts().includes("Dash pronto"));
+    assert.equal(arena.drawer.circles().length, arena.count(Collider));
+
+    arena.tap("Escape");
+    assert.ok(arena.drawer.texts().includes("Pausado — Esc para continuar"));
+  });
+});
+
+test("roteiro: menu → playing → onda → morte → gameOver com o mundo vazio → jogar de novo do zero", () => {
+  withArena(runtime, (arena) => {
+    startPlaying(arena);
+    arena.engine.world.set(arena.player(), Health, { value: 1 });
+
+    for (let guard = 0; arena.engine.state?.name !== "gameOver" && guard < 60 * 30; ++guard) {
+      arena.step();
+    }
+
+    assert.equal(arena.engine.state?.name, "gameOver");
+    assert.equal(arena.count(), 0);
+    assert.notEqual(arena.score.finalScore, null);
+    assert.ok(arena.drawer.texts().includes(`Fim de jogo — ${arena.score.finalScore} pontos`));
+    assert.ok(arena.drawer.texts().includes("Enter ou clique para jogar de novo"));
+
+    arena.tap("Enter");
+    arena.step();
+    assert.equal(arena.engine.state?.name, "playing");
+    assert.deepEqual(arena.score, { kills: 0, coins: 0, score: 0, finalScore: null });
+    assert.equal(arena.count(Player), 1);
+    assert.equal(arena.count(Enemy), 0);
+
+    arena.stepSeconds(2.05);
+    assert.equal(arena.count(Coin), 1);
   });
 });

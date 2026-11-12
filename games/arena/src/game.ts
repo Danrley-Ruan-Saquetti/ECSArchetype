@@ -1,8 +1,9 @@
 import { Phase } from "@oly/core";
-import type { ActionMap, Engine, EventBatch, HandlerContext, StateContext, SystemContext } from "@oly/core";
+import type { ActionMap, Engine, EventBatch, HandlerContext, StateContext, SystemContext, TaskContext } from "@oly/core";
 
-import { CoinCollected, Collider, Dash, EnemyDied, Health, Player, PlayerDied, Position, Velocity, Weapon, confirm, dash, gameOver, menu, move, pause, playing, shoot } from "../schema.js";
-import { ArenaHeight, ArenaWidth, CoinPoints, DashDuration, DashRecharge, DashSpeed, KillPoints, PlayerHealth, PlayerRadius, WeaponInterval } from "./arena.js";
+import { Chaser, Coin, CoinCollected, Collider, Dash, Enemy, EnemyDied, Health, Player, PlayerDied, Position, Velocity, Weapon, confirm, dash, gameOver, menu, move, pause, playing, shoot } from "../schema.js";
+import { ArenaHeight, ArenaWidth, CoinInterval, CoinPoints, CoinRadius, DashDuration, DashRecharge, DashSpeed, EnemyHealth, EnemyRadius, EnemySpeed, KillPoints, PlayerHealth, PlayerRadius, WaveBaseEnemies, WaveInterval, WeaponInterval } from "./arena.js";
+import { createRenderSystem } from "./render.js";
 import type { Drawer } from "./render.js";
 
 export interface GameOptions {
@@ -50,11 +51,25 @@ function startOnConfirm(context: SystemContext): void {
   }
 }
 
+function pauseOnPress(context: SystemContext): void {
+  if (context.actions.button(pause).pressed) {
+    context.pause();
+  }
+}
+
+function resumeOnPress(context: SystemContext): void {
+  if (context.actions.button(pause).pressed) {
+    context.resume();
+  }
+}
+
 export function installGame(engine: Engine, options: GameOptions): ArenaScore {
   const score = createScore();
 
   bindActions(engine.actions);
   engine.addSystem(Phase.UpdateBefore, "startOnConfirm", startOnConfirm).inState(menu, gameOver);
+  engine.addSystem(Phase.UpdateBefore, "pauseOnPress", pauseOnPress).inState(playing);
+  engine.addSystem(Phase.UpdateBefore, "resumeOnPress", resumeOnPress).whilePaused().inState(playing);
   engine.addNativeSystem(Phase.UpdateBefore, "steerPlayer").inState(playing);
   engine.addNativeSystem(Phase.Update, "fireWeapon").inState(playing);
   engine.addNativeSystem(Phase.Update, "chasePlayer").inState(playing);
@@ -68,13 +83,15 @@ export function installGame(engine: Engine, options: GameOptions): ArenaScore {
   engine.on(CoinCollected, "collectCoin", (context, batch) => collectCoin(context, score, batch));
   engine.on(PlayerDied, "endRound", (context) => endRound(context, score));
 
-  engine.onEnter(playing, "startRound", (context) => startRound(context, score));
+  engine.addSystem(Phase.Render, "render", createRenderSystem(options.drawer, score));
+
+  engine.onEnter(playing, "startRound", (context) => startRound(context, score, options.random));
   engine.requestState(menu);
 
   return score;
 }
 
-function startRound(context: StateContext, score: MutableScore): void {
+function startRound(context: StateContext, score: MutableScore, random: () => number): void {
   score.kills = 0;
   score.coins = 0;
   score.finalScore = null;
@@ -85,6 +102,37 @@ function startRound(context: StateContext, score: MutableScore): void {
     Health: { value: PlayerHealth },
     Weapon: { interval: WeaponInterval, cooldown: 0 },
     Dash: { speed: DashSpeed, duration: DashDuration, recharge: DashRecharge, ready: 1, active: 0 },
+  });
+
+  let wave = 0;
+  context.schedule.every(WaveInterval, (task) => {
+    wave += 1;
+    spawnWave(task, random, wave);
+  });
+  context.schedule.every(CoinInterval, (task) => spawnLooseCoin(task, random));
+}
+
+function spawnWave(context: TaskContext, random: () => number, wave: number): void {
+  for (let index = 0; index < WaveBaseEnemies + wave; ++index) {
+    const side = Math.floor(random() * 4);
+    const along = random();
+    const horizontal = side === 0 || side === 2;
+    const x = horizontal ? along * ArenaWidth : side === 1 ? ArenaWidth : 0;
+    const y = horizontal ? (side === 0 ? 0 : ArenaHeight) : along * ArenaHeight;
+
+    context.spawn([Enemy, Position, Velocity, Collider, Health, Chaser], {
+      Position: { x, y },
+      Collider: { radius: EnemyRadius },
+      Health: { value: EnemyHealth },
+      Chaser: { speed: EnemySpeed },
+    });
+  }
+}
+
+function spawnLooseCoin(context: TaskContext, random: () => number): void {
+  context.spawn([Coin, Position, Collider], {
+    Position: { x: CoinRadius + random() * (ArenaWidth - 2 * CoinRadius), y: CoinRadius + random() * (ArenaHeight - 2 * CoinRadius) },
+    Collider: { radius: CoinRadius },
   });
 }
 
