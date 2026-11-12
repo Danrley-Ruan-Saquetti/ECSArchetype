@@ -6,7 +6,7 @@
 #include "components.hpp"
 #include "oly/ecs/component.hpp"
 
-TEST_CASE("componentId é estável, denso e ignora cvref") {
+TEST_CASE("componentId is stable, dense and ignores cvref") {
   auto idA = oly::ecs::componentId<A>();
   auto idB = oly::ecs::componentId<B>();
 
@@ -16,7 +16,7 @@ TEST_CASE("componentId é estável, denso e ignora cvref") {
   CHECK(std::max(idA, idB) < oly::ecs::registeredTypeCount());
 }
 
-TEST_CASE("TypeInfo de trivial, não trivial e tag") {
+TEST_CASE("TypeInfo of trivial, non-trivial and tag") {
   auto& infoA = oly::ecs::typeInfo(oly::ecs::componentId<A>());
   CHECK(infoA.size == sizeof(A));
   CHECK(infoA.trivial);

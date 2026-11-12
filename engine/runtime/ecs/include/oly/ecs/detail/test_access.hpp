@@ -8,7 +8,7 @@
 #include "oly/ecs/world.hpp"
 
 namespace oly::ecs::detail {
-  // Ganchos só para testes e benchmarks do módulo; o código de produção não os usa.
+  // Hooks only for the module's tests and benchmarks; production code does not use them.
   struct WorldTestAccess {
     static void flushSequential(World& world, CommandBuffer& commandBuffer) {
       world.flushSequential(commandBuffer);

@@ -57,7 +57,7 @@ namespace oly::ecs {
     friend uint32_t archetypeCount(const World& world);
 
     struct QueryKey {
-      std::vector<uint64_t> components; // (componentId << 1) | somenteLeitura, na ordem de Ts (ou read seguido de write)
+      std::vector<uint64_t> components; // (componentId << 1) | readOnly, in the order of Ts (or read followed by write)
       detail::Signature with, without;
 
       auto operator<=>(const QueryKey&) const = default;
@@ -66,13 +66,13 @@ namespace oly::ecs {
     detail::EntityStore store_;
     std::vector<std::unique_ptr<detail::Archetype>> archetypes_;
     std::unordered_map<detail::Signature, detail::Archetype*, detail::SignatureHash> bySignature_;
-    std::vector<core::SmallMap<detail::ArchetypeId, uint16_t>> componentIndex_; // [componentId]: arquétipo → coluna (NoColumn p/ tag)
+    std::vector<core::SmallMap<detail::ArchetypeId, uint16_t>> componentIndex_; // [componentId]: archetype → column (NoColumn for tags)
 
     uint32_t iterating_ = 0;
     mutable uint64_t signatureLookups_ = 0;
 
     std::map<QueryKey, std::unique_ptr<detail::QueryCacheBase>> queryCache_;
-    std::map<QueryKey, std::unique_ptr<QueryById>> queryByIdCache_; // separado: o static_cast de queryCache_ confundiria os tipos
+    std::map<QueryKey, std::unique_ptr<QueryById>> queryByIdCache_; // separate: the static_cast of queryCache_ would mix up the types
     std::vector<detail::QueryCacheBase*> queries_;
 
     std::unordered_map<uint64_t, detail::Edge> jumpEdges_; // (source.id << 32) | destination.id
@@ -83,11 +83,11 @@ namespace oly::ecs {
     World(const World&) = delete;
     World& operator=(const World&) = delete;
 
-    // Mudanças estruturais (spawn, destroy, add, remove, as variantes ById e flush) são erro de contrato
-    // durante uma iteração e, exceto spawn e flush, com entidade morta (OLY_ASSERT). Cada uma invalida
-    // ponteiros e spans de qualquer entidade (R-API-1); só Entity é handle estável.
+    // Structural changes (spawn, destroy, add, remove, the ById variants and flush) are a contract error
+    // during an iteration and, except for spawn and flush, on a dead entity (OLY_ASSERT). Each one invalidates
+    // pointers and spans of any entity (R-API-1); only Entity is a stable handle.
     Entity spawn();
-    // Nasce direto no arquétipo final. Lvalues são copiados.
+    // Born directly in the final archetype. Lvalues are copied.
     template <class... Ts>
     Entity spawn(Ts&&... components);
     void destroy(Entity entity);
@@ -99,35 +99,35 @@ namespace oly::ecs {
     }
 
     template <class T>
-    void add(Entity entity, T&& value); // ou atribui, se já tiver T
+    void add(Entity entity, T&& value); // or assigns, if it already has T
     template <class T>
-    void remove(Entity entity); // sem efeito se a entidade não tiver T
+    void remove(Entity entity); // no effect if the entity does not have T
     template <class T>
     bool has(Entity entity) const noexcept;
     template <class T>
-    T& get(Entity entity); // OLY_ASSERT se a entidade estiver morta ou não tiver T
+    T& get(Entity entity); // OLY_ASSERT if the entity is dead or does not have T
     template <class T>
-    T* tryGet(Entity entity) noexcept; // nullptr se a entidade estiver morta ou não tiver T
+    T* tryGet(Entity entity) noexcept; // nullptr if the entity is dead or does not have T
 
-    void addById(Entity entity, ComponentId componentId, void* value); // move de `value` (quem chamou segue dono do moved-from); ignorado para tags
+    void addById(Entity entity, ComponentId componentId, void* value); // moves from `value` (the caller still owns the moved-from object); ignored for tags
     void removeById(Entity entity, ComponentId componentId);
 
-    // O buffer só pode ser aplicado neste World (OLY_ASSERT no flush) e não pode sobreviver a ele.
+    // The buffer can only be applied to this World (OLY_ASSERT on flush) and must not outlive it.
     CommandBuffer commands() {
       return CommandBuffer(store_);
     }
-    // Duas passadas (R-CB-3): agrupa por entidade e faz uma única transição para o arquétipo final.
-    // Comandos de handles obsoletos são ignorados; o buffer termina vazio.
+    // Two passes (R-CB-3): groups by entity and makes a single transition to the final archetype.
+    // Commands for stale handles are ignored; the buffer ends up empty.
     void flush(CommandBuffer& commandBuffer);
 
-    // Cacheada por (Ts..., filtros): mesma instância para a mesma combinação, válida enquanto o World existir.
+    // Cached by (Ts..., filters): same instance for the same combination, valid while the World exists.
     template <class... Ts, class... Filters>
     Query<Ts...>& query(Filters... filters);
 
-    // Query por ComponentId, cacheada pela spec (read/write mantêm a ordem dada), válida enquanto o World existir.
+    // Query by ComponentId, cached by spec (read/write keep the given order), valid while the World exists.
     QueryById& queryById(const QueryByIdSpec& spec);
 
-    // Assert se a entidade está morta ou o componente ausente (tag também é erro).
+    // Asserts if the entity is dead or the component is absent (a tag is also an error).
     void* getById(Entity entity, ComponentId componentId);
 
     void* tryGetById(Entity entity, ComponentId componentId) noexcept {
@@ -156,7 +156,7 @@ namespace oly::ecs {
     }
 
    private:
-    // Oráculo sem coalescing: aplica cada comando na ordem de gravação e limpa o buffer.
+    // Oracle without coalescing: applies each command in recording order and clears the buffer.
     void flushSequential(CommandBuffer& commandBuffer);
 
     detail::Archetype* findOrCreate(detail::Signature signature);
@@ -165,16 +165,16 @@ namespace oly::ecs {
     detail::QueryCacheBase* registerQuery(QueryKey key, std::unique_ptr<detail::QueryCacheBase> query);
     const core::SmallMap<detail::ArchetypeId, uint16_t>* smallestIndex(const detail::Signature& with) const;
 
-    // Ao remover, `componentId` precisa estar em source.signature (quem chama confere).
+    // When removing, `componentId` must be in source.signature (the caller checks).
     const detail::Edge& edgeFor(detail::Archetype& source, ComponentId componentId, bool adding);
     const detail::Edge& jumpEdge(detail::Archetype& source, detail::Archetype& destination);
 
     void materialize(Entity reserved);
-    void destroyOrRelease(Entity entity, bool alive); // reservada (não viva) só devolve o índice
-    // A linha nasce morta se a entidade estava reservada. `edge` nullptr: reservada ou já em `destination`.
+    void destroyOrRelease(Entity entity, bool alive); // a reserved (not alive) entity only returns the index
+    // The row is born dead if the entity was reserved. `edge` nullptr: reserved or already in `destination`.
     uint32_t transitionTo(Entity entity, detail::EntityRecord& record, detail::Archetype& destination, const detail::Edge* edge);
 
-    Entity place(detail::Archetype& archetype); // a linha nasce morta: o chamador constrói as colunas
+    Entity place(detail::Archetype& archetype); // the row is born dead: the caller constructs the columns
     detail::Archetype& root() noexcept {
       return *archetypes_[0];
     }
@@ -191,8 +191,8 @@ namespace oly::ecs {
 
   template <class... Ts>
   Entity World::spawn(Ts&&... components) {
-    static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "spawn<Ts...>: tipos repetidos");
-    OLY_ASSERT(iterating_ == 0, "spawn durante iteração=%u", iterating_);
+    static_assert(detail::distinctTypes<std::remove_cvref_t<Ts>...>, "spawn<Ts...>: repeated types");
+    OLY_ASSERT(iterating_ == 0, "spawn during iteration=%u", iterating_);
 
     detail::Signature signature{componentId<Ts>()...};
     std::sort(signature.begin(), signature.end());
@@ -223,8 +223,8 @@ namespace oly::ecs {
     if constexpr (std::is_empty_v<U>) {
       addById(entity, componentId, nullptr);
     } else {
-      // Temporário construído ANTES de qualquer mudança estrutural: `value` pode apontar
-      // para dentro do próprio World (ex.: get<B>(outra)).
+      // Temporary built BEFORE any structural change: `value` may point
+      // into the World itself (e.g. get<B>(another)).
       U temporary(std::forward<T>(value));
       addById(entity, componentId, &temporary);
     }
@@ -247,7 +247,7 @@ namespace oly::ecs {
   template <class T>
   T& World::get(Entity entity) {
     using U = std::remove_cvref_t<T>;
-    static_assert(!std::is_empty_v<U>, "get<Tag> não é permitido");
+    static_assert(!std::is_empty_v<U>, "get<Tag> is not allowed");
     const ComponentId componentId = oly::ecs::componentId<U>();
     OLY_ASSERT(isAlive(entity) && hasById(entity, componentId), "get e=%u:%u type=%.*s", entity.index, entity.generation,
                int(typeInfo(componentId).name.size()), typeInfo(componentId).name.data());
@@ -258,7 +258,7 @@ namespace oly::ecs {
   template <class T>
   T* World::tryGet(Entity entity) noexcept {
     using U = std::remove_cvref_t<T>;
-    static_assert(!std::is_empty_v<U>, "tryGet<Tag> não é permitido");
+    static_assert(!std::is_empty_v<U>, "tryGet<Tag> is not allowed");
     return static_cast<U*>(tryGetById(entity, componentId<U>()));
   }
 

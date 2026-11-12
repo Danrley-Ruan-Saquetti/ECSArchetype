@@ -7,7 +7,7 @@
 #include "components.hpp"
 #include "oly/ecs/world.hpp"
 
-TEST_CASE("mesma instância para a mesma combinação; filtros mudam a chave") {
+TEST_CASE("same instance for the same combination; filters change the key") {
   oly::ecs::World world;
 
   auto& firstQuery = world.query<A, const B>();
@@ -15,10 +15,10 @@ TEST_CASE("mesma instância para a mesma combinação; filtros mudam a chave") {
 
   CHECK(&firstQuery == &secondQuery);
   CHECK(static_cast<void*>(&world.query<A, const B>(oly::ecs::Without<Tag>{})) != static_cast<void*>(&firstQuery));
-  CHECK(static_cast<void*>(&world.query<A, B>()) != static_cast<void*>(&firstQuery)); // constness entra na chave
+  CHECK(static_cast<void*>(&world.query<A, B>()) != static_cast<void*>(&firstQuery)); // constness is part of the key
 }
 
-TEST_CASE("arquétipos criados antes e depois da query; with/without de tag") {
+TEST_CASE("archetypes created before and after the query; with/without of a tag") {
   oly::ecs::World world;
   world.spawn(A{1});
   world.spawn(A{2}, Tag{});
@@ -35,7 +35,7 @@ TEST_CASE("arquétipos criados antes e depois da query; with/without de tag") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") {
+TEST_CASE("query created before any archetype with its types exists") {
   oly::ecs::World world;
   auto& query = world.query<A, B>();
   CHECK(query.matchedCount() == 0);
@@ -48,14 +48,14 @@ TEST_CASE("query criada antes de existir qualquer arquétipo com seus tipos") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("Query guarda metadados de leitura/escrita por tipo") {
+TEST_CASE("Query stores read/write metadata per type") {
   using ReadWriteQuery = oly::ecs::Query<A, const B>;
   static_assert(ReadWriteQuery::writes[0] == true);
   static_assert(ReadWriteQuery::writes[1] == false);
   CHECK(ReadWriteQuery::writes.size() == 2);
 }
 
-TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
+TEST_CASE("each visits exactly the model's entities and allows writing") {
   oly::ecs::World world;
   std::set<uint32_t> expected;
   std::vector<oly::ecs::Entity> withB;
@@ -67,9 +67,9 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
     }
   }
 
-  world.spawn(B{0, 0}); // arquétipo sem A
+  world.spawn(B{0, 0}); // archetype without A
   auto empty = world.spawn(A{0}, B{0, 0}, Tag{});
-  world.destroy(empty); // arquétipo vazio é pulado
+  world.destroy(empty); // empty archetype is skipped
 
   std::set<uint32_t> seen;
   size_t visits = 0;
@@ -80,13 +80,13 @@ TEST_CASE("each visita exatamente as entidades do modelo e permite escrita") {
   });
 
   CHECK(seen == expected);
-  CHECK(visits == expected.size()); // cada entidade exatamente uma vez
+  CHECK(visits == expected.size()); // each entity exactly once
   for (auto entity : withB) {
     CHECK(world.get<A>(entity).value >= 1000);
   }
 }
 
-TEST_CASE("each sem entidade no lambda") {
+TEST_CASE("each without entity in the lambda") {
   oly::ecs::World world;
   for (uint64_t i = 0; i < 10; ++i) {
     world.spawn(A{i});
@@ -98,7 +98,7 @@ TEST_CASE("each sem entidade no lambda") {
   CHECK(sum == 45);
 }
 
-TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
+TEST_CASE("eachBlock hands contiguous spans with count == table size") {
   oly::ecs::World world;
   size_t expected = 0;
   for (uint64_t i = 0; i < 200; ++i) {
@@ -124,7 +124,7 @@ TEST_CASE("eachBlock entrega spans contíguos com count == tamanho da tabela") {
   CHECK(blocks == 1);
 }
 
-TEST_CASE("isIterating aninha e volta a zero, inclusive com exceção") {
+TEST_CASE("isIterating nests and returns to zero, even with an exception") {
   oly::ecs::World world;
   world.spawn(A{1});
 
@@ -142,7 +142,7 @@ TEST_CASE("isIterating aninha e volta a zero, inclusive com exceção") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("single devolve a entidade e referências da única linha") {
+TEST_CASE("single returns the entity and references of the only row") {
   oly::ecs::World world;
   auto expected = world.spawn(A{1}, B{2, 3});
   world.spawn(B{4, 5});
@@ -156,7 +156,7 @@ TEST_CASE("single devolve a entidade e referências da única linha") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("single acha a linha em qualquer tabela casada e respeita With/Without") {
+TEST_CASE("single finds the row in any matched table and honors With/Without") {
   oly::ecs::World world;
   auto emptied = world.spawn(A{1});
   auto excluded = world.spawn(A{2}, Tag{});
@@ -169,7 +169,7 @@ TEST_CASE("single acha a linha em qualquer tabela casada e respeita With/Without
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("trySingle: vazio sem linhas e a linha com uma") {
+TEST_CASE("trySingle: empty with no rows and the row with one") {
   oly::ecs::World world;
   CHECK(!world.query<A>().trySingle());
 

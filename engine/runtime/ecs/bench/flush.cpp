@@ -11,8 +11,8 @@
 namespace {
   using oly::ecs::World;
 
-  // N entidades no arquétipo raiz, com os arquétipos e as arestas do caminho já criados por uma
-  // entidade de aquecimento descartada, para que o tempo medido não inclua essa criação.
+  // N entities in the root archetype, with the path's archetypes and edges already created by a
+  // discarded warm-up entity, so that the measured time does not include that creation.
   struct Setup {
     std::unique_ptr<World> world = std::make_unique<World>();
     std::vector<oly::ecs::Entity> entities;
@@ -47,7 +47,7 @@ namespace {
     }
   }
 
-  // NF-P5 mede o flush: a gravação (3N comandos) fica fora do tempo; BM_RecordAndFlush a inclui.
+  // NF-P5 measures the flush: recording (3N commands) stays outside the timing; BM_RecordAndFlush includes it.
   void BM_FlushCoalesced(benchmark::State& state) {
     const int64_t entityCount = state.range(0);
 

@@ -12,10 +12,10 @@
 #include "oly/ecs/world.hpp"
 
 struct FuzzState {
-  std::string text; // não trivial; valor sempre > 32 chars para sair do SSO
+  std::string text; // non-trivial; value always > 32 chars to escape SSO
 };
 
-// Tags entram no modelo com valor 0.
+// Tags enter the model with value 0.
 using Model = std::unordered_map<oly::ecs::Entity, std::map<oly::ecs::ComponentId, uint64_t>, oly::ecs::EntityHash>;
 
 namespace fuzz {
@@ -36,7 +36,7 @@ namespace fuzz {
   }
 }
 
-// Mistura index, generation e contador (splitmix64): troca de linhas aparece como valor errado.
+// Mixes index, generation and counter (splitmix64): swapped rows show up as a wrong value.
 inline uint64_t makeValue(oly::ecs::Entity entity, uint64_t counter) {
   uint64_t hash = (uint64_t(entity.index) << 32 | entity.generation) ^ (counter * 0x9e3779b97f4a7c15ull);
   hash += 0x9e3779b97f4a7c15ull;
@@ -59,7 +59,7 @@ inline void addToWorld(oly::ecs::World& world, oly::ecs::Entity entity, oly::ecs
   }
 }
 
-// Devolve false se a entidade não tem o componente. Tag devolve 0.
+// Returns false if the entity does not have the component. A tag returns 0.
 inline bool readFromWorld(oly::ecs::World& world, oly::ecs::Entity entity, oly::ecs::ComponentId componentId, uint64_t& out) {
   if (!world.hasById(entity, componentId)) {
     return false;
@@ -69,7 +69,7 @@ inline bool readFromWorld(oly::ecs::World& world, oly::ecs::Entity entity, oly::
     out = world.get<A>(entity).value;
   } else if (componentId == oly::ecs::componentId<B>()) {
     auto& componentB = world.get<B>(entity);
-    out = (componentB.second == ~componentB.first) ? componentB.first : ~uint64_t(0); // second corrompido vira valor impossível de casar
+    out = (componentB.second == ~componentB.first) ? componentB.first : ~uint64_t(0); // a corrupted second becomes a value that cannot match
   } else if (componentId == oly::ecs::componentId<FuzzState>()) {
     const std::string& text = world.get<FuzzState>(entity).text;
     out = text.compare(0, fuzz::kFuzzStatePrefix.size(), fuzz::kFuzzStatePrefix) == 0 ? std::strtoull(text.c_str() + fuzz::kFuzzStatePrefix.size(), nullptr, 10) : ~uint64_t(0);
@@ -85,7 +85,7 @@ inline bool readFromWorld(oly::ecs::World& world, oly::ecs::Entity entity, oly::
 inline void requireEqual(oly::ecs::World& world, const Model& model) {
   for (const auto& [entity, components] : model) {
     if (!world.isAlive(entity)) {
-      FAIL("entidade do modelo morta no World: e=" << entity.index << ":" << entity.generation);
+      FAIL("model entity dead in the World: e=" << entity.index << ":" << entity.generation);
     }
 
     for (int i = 0; i < 5; ++i) {
@@ -94,11 +94,11 @@ inline void requireEqual(oly::ecs::World& world, const Model& model) {
       uint64_t got = 0;
       const bool has = readFromWorld(world, entity, componentId, got);
       if (has != (it != components.end())) {
-        FAIL("presença diverge: e=" << entity.index << ":" << entity.generation << " tipo=" << oly::ecs::typeInfo(componentId).name);
+        FAIL("presence diverges: e=" << entity.index << ":" << entity.generation << " type=" << oly::ecs::typeInfo(componentId).name);
       }
       if (has && got != it->second) {
-        FAIL("valor diverge: e=" << entity.index << ":" << entity.generation << " tipo=" << oly::ecs::typeInfo(componentId).name
-                                 << " esperado=" << it->second << " obtido=" << got);
+        FAIL("value diverges: e=" << entity.index << ":" << entity.generation << " type=" << oly::ecs::typeInfo(componentId).name
+                                  << " expected=" << it->second << " got=" << got);
       }
     }
   }

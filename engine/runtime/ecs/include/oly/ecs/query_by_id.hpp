@@ -19,13 +19,13 @@ namespace oly::ecs {
   class QueryById;
   class World;
 
-  // `read` e `write`: componentes registrados, com dados e sem repetição (OLY_ASSERT); a ordem dos dois,
-  // nessa sequência, define as colunas de BlockById. `with` e `without` só filtram e aceitam tags.
+  // `read` and `write`: registered components, with data and without repetition (OLY_ASSERT); the order of both,
+  // in that sequence, defines the columns of BlockById. `with` and `without` only filter and accept tags.
   struct QueryByIdSpec {
     std::vector<ComponentId> read{}, write{}, with{}, without{};
   };
 
-  // Valor leve sobre o descritor de um bloco; vale enquanto a QueryIteration de origem existir.
+  // Lightweight value over a block's descriptor; valid while the originating QueryIteration exists.
   class BlockById {
    private:
     const uintptr_t* descriptor_;
@@ -40,14 +40,14 @@ namespace oly::ecs {
     std::span<const Entity> entities() const noexcept {
       return {reinterpret_cast<const Entity*>(descriptor_[1]), count()};
     }
-    // `index` na ordem read seguida de write.
+    // `index` in read-then-write order.
     void* column(size_t index) const noexcept {
       return reinterpret_cast<void*>(descriptor_[2 + index]);
     }
   };
 
-  // Marca o World como iterando até ser destruída. Só movível; o objeto movido não encerra de novo.
-  // Iterações aninhadas precisam terminar na ordem inversa da abertura (OLY_ASSERT).
+  // Marks the World as iterating until destroyed. Move-only; the moved-from object does not end it again.
+  // Nested iterations must end in reverse order of opening (OLY_ASSERT).
   class QueryIteration {
    private:
     friend class QueryById;
@@ -76,7 +76,7 @@ namespace oly::ecs {
     BlockById block(uint32_t index) const noexcept {
       return BlockById(descriptors_ + size_t(index) * stride_);
     }
-    // blockCount × (2 + components().size()): [count, entidades, colunas...] por bloco.
+    // blockCount × (2 + components().size()): [count, entities, columns...] per block.
     std::span<const uintptr_t> descriptors() const noexcept {
       return {descriptors_, size_t(blockCount_) * stride_};
     }
@@ -90,8 +90,8 @@ namespace oly::ecs {
         level_(level) {}
   };
 
-  // Query por ComponentId, sem tipos em tempo de compilação: serve a camadas que só conhecem IDs.
-  // Possuída pelo World e válida enquanto ele existir.
+  // Query by ComponentId, without compile-time types: serves layers that only know IDs.
+  // Owned by the World and valid while it exists.
   class QueryById : public detail::QueryCacheBase {
    private:
     friend class World;
@@ -99,11 +99,11 @@ namespace oly::ecs {
 
     std::vector<ComponentId> with_, without_, components_;
     std::vector<detail::MatchedTableById> matched_;
-    std::vector<std::vector<uintptr_t>> descriptorPool_; // um buffer por nível de aninhamento; cresce e não encolhe
+    std::vector<std::vector<uintptr_t>> descriptorPool_; // one buffer per nesting level; grows and never shrinks
     uint32_t depth_ = 0;
 
    public:
-    // `with` = read ∪ write ∪ with, ordenado e sem repetição; `components` = read seguido de write.
+    // `with` = read ∪ write ∪ with, sorted and without repetition; `components` = read followed by write.
     QueryById(uint32_t* iterating, std::vector<ComponentId> components, std::vector<ComponentId> with, std::vector<ComponentId> without)
       : QueryCacheBase(iterating),
         with_(std::move(with)),
@@ -117,7 +117,7 @@ namespace oly::ecs {
       return matched_.size();
     }
 
-    // Só tabelas não vazias. A iteração termina mesmo se o callback lançar.
+    // Only non-empty tables. The iteration ends even if the callback throws.
     template <class F>
     void eachBlock(F&& callback) {
       QueryIteration current = iterate();
@@ -190,7 +190,7 @@ namespace oly::ecs {
     }
 
     void endIteration([[maybe_unused]] uint32_t level) noexcept {
-      OLY_ASSERT(depth_ > 0 && level == depth_ - 1, "iterate: iteração encerrada fora de ordem (nível=%u, profundidade=%u)", level, depth_);
+      OLY_ASSERT(depth_ > 0 && level == depth_ - 1, "iterate: iteration ended out of order (level=%u, depth=%u)", level, depth_);
       --*iterating_;
       --depth_;
     }

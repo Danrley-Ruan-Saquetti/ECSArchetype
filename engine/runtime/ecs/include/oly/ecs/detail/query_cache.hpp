@@ -24,7 +24,7 @@ namespace oly::ecs::detail {
     virtual bool isMatched(const Archetype* archetype) const = 0;
   };
 
-  // `signature`, `with` e `without` precisam estar ordenados.
+  // `signature`, `with` and `without` must be sorted.
   inline bool signatureMatches(const Signature& signature, std::span<const ComponentId> with, std::span<const ComponentId> without) {
     if (!std::includes(signature.begin(), signature.end(), with.begin(), with.end())) {
       return false;
@@ -60,6 +60,6 @@ namespace oly::ecs::detail {
 
   struct MatchedTableById {
     Archetype* archetype;
-    std::vector<uint16_t> columns; // columns[i] é a coluna de components()[i]
+    std::vector<uint16_t> columns; // columns[i] is the column of components()[i]
   };
 }

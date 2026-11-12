@@ -20,10 +20,10 @@ namespace oly::ecs {
     struct CommandBufferTestAccess;
   }
 
-  // Registro (alinhado a 8): [operation:u8][payloadAlignment:u8][pad:6][entity:u64][componentId:u32][size:u32][payload alinhado].
-  // O bloco é alinhado a 64. Ao crescer, cada payload é realocado pelo seu TypeInfo
-  // (memcpy se trivial, moveConstruct + destroy caso contrário): um memmove cego quebraria
-  // tipos que apontam para si mesmos (ex.: std::string com SSO).
+  // Record (8-aligned): [operation:u8][payloadAlignment:u8][pad:6][entity:u64][componentId:u32][size:u32][aligned payload].
+  // The block is 64-aligned. On growth, each payload is relocated through its TypeInfo
+  // (memcpy if trivial, moveConstruct + destroy otherwise): a blind memmove would break
+  // self-referencing types (e.g. std::string with SSO).
   class CommandBuffer {
    private:
     friend class World;
@@ -36,8 +36,8 @@ namespace oly::ecs {
     bool hasNonTrivialPayload_ = false;
     std::vector<Entity> spawned_;
 
-    // Enquanto cada entidade ocupa um trecho consecutivo (caso comum de lotes), os trechos são
-    // mantidos na gravação e plan() não precisa reler o buffer. `seen_` é um bitset por slot.
+    // While each entity occupies a consecutive run (the common batch case), the runs are
+    // kept during recording and plan() does not need to reread the buffer. `seen_` is a per-slot bitset.
     bool grouped_ = true;
     std::vector<detail::EntityPlan> runs_;
     std::vector<uint64_t> seen_;
@@ -49,7 +49,7 @@ namespace oly::ecs {
     CommandBuffer(const CommandBuffer&) = delete;
     CommandBuffer& operator=(const CommandBuffer&) = delete;
 
-    // Reserva um índice imediatamente (R-CB-1); a entidade só fica viva no flush.
+    // Reserves an index immediately (R-CB-1); the entity only becomes alive on flush.
     Entity spawn();
     void destroy(Entity entity);
 
@@ -60,7 +60,7 @@ namespace oly::ecs {
       removeById(entity, componentId<T>());
     }
 
-    // Move de `value` (quem chamou segue dono do moved-from); ignorado para tags.
+    // Moves from `value` (the caller still owns the moved-from object); ignored for tags.
     void addById(Entity entity, ComponentId componentId, void* value);
     void removeById(Entity entity, ComponentId componentId);
 
@@ -71,15 +71,15 @@ namespace oly::ecs {
       return count_ == 0;
     }
 
-    // Destrói os payloads não triviais (inclusive moved-from), zera o buffer e esquece os spawns
-    // (já materializados ou liberados pelo flush).
+    // Destroys the non-trivial payloads (moved-from ones included), empties the buffer and forgets the spawns
+    // (already materialized or released by the flush).
     void clear() noexcept;
 
    private:
     explicit CommandBuffer(detail::EntityStore& store) noexcept
       : store_(&store) {}
 
-    // Visita os comandos em ordem de gravação.
+    // Visits the commands in recording order.
     template <class F>
     void forEach(F&& callback) const {
       for (size_t offset = 0; offset < size_;) {
@@ -97,7 +97,7 @@ namespace oly::ecs {
     }
 
     std::byte* pushRecord(detail::CommandOperation operation, Entity entity, ComponentId componentId, uint32_t size, uint32_t alignment, bool trivial);
-    size_t readAt(size_t offset, detail::CommandView& out) const noexcept; // devolve o offset do próximo registro
+    size_t readAt(size_t offset, detail::CommandView& out) const noexcept; // returns the offset of the next record
     void grow(size_t need);
     void freeBlock() noexcept;
     void releasePendingSpawns() noexcept;

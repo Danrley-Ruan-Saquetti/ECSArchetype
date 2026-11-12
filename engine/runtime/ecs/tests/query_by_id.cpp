@@ -13,7 +13,7 @@
 #include "components.hpp"
 #include "oly/ecs/world.hpp"
 
-TEST_CASE("eachBlock entrega count, entidades e colunas na ordem read, write") {
+TEST_CASE("eachBlock hands count, entities and columns in read, write order") {
   oly::ecs::World world;
   std::vector<oly::ecs::Entity> entities;
   for (uint64_t i = 0; i < 10; ++i) {
@@ -42,7 +42,7 @@ TEST_CASE("eachBlock entrega count, entidades e colunas na ordem read, write") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("queryById é cacheada pela spec") {
+TEST_CASE("queryById is cached by spec") {
   oly::ecs::World world;
   const oly::ecs::QueryByIdSpec spec{.read = {oly::ecs::componentId<A>()}, .write = {oly::ecs::componentId<B>()}};
 
@@ -53,7 +53,7 @@ TEST_CASE("queryById é cacheada pela spec") {
   CHECK(&firstOrder != &secondOrder);
 }
 
-TEST_CASE("QueryById e Query<Ts...> com a mesma assinatura são instâncias distintas") {
+TEST_CASE("QueryById and Query<Ts...> with the same signature are distinct instances") {
   oly::ecs::World world;
   world.spawn(A{1}, B{2, 3});
 
@@ -69,7 +69,7 @@ TEST_CASE("QueryById e Query<Ts...> com a mesma assinatura são instâncias dist
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("queryById acompanha arquétipos criados depois") {
+TEST_CASE("queryById tracks archetypes created later") {
   oly::ecs::World world;
   auto& query = world.queryById({.read = {oly::ecs::componentId<A>()}});
   CHECK(query.matchedCount() == 0);
@@ -83,7 +83,7 @@ TEST_CASE("queryById acompanha arquétipos criados depois") {
   CHECK(rows == 1);
 }
 
-TEST_CASE("queryById filtra por with e without") {
+TEST_CASE("queryById filters by with and without") {
   oly::ecs::World world;
   for (int i = 0; i < 3; ++i) {
     world.spawn(A{1}, Tag{});
@@ -103,7 +103,7 @@ TEST_CASE("queryById filtra por with e without") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("queryById pula tabelas vazias") {
+TEST_CASE("queryById skips empty tables") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1});
   auto& query = world.queryById({.read = {oly::ecs::componentId<A>()}});
@@ -115,7 +115,7 @@ TEST_CASE("queryById pula tabelas vazias") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("iterate marca o World como iterando até o destrutor") {
+TEST_CASE("iterate marks the World as iterating until the destructor") {
   oly::ecs::World world;
   auto& query = world.queryById({.read = {oly::ecs::componentId<A>()}});
 
@@ -128,7 +128,7 @@ TEST_CASE("iterate marca o World como iterando até o destrutor") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("iterate aninhado mantém os blocos de cada nível") {
+TEST_CASE("nested iterate keeps the blocks of each level") {
   oly::ecs::World world;
   for (uint64_t i = 0; i < 5; ++i) {
     world.spawn(A{i});
@@ -150,7 +150,7 @@ TEST_CASE("iterate aninhado mantém os blocos de cada nível") {
   CHECK(before == after);
 }
 
-TEST_CASE("QueryIteration movida encerra a iteração uma vez só") {
+TEST_CASE("moved QueryIteration ends the iteration only once") {
   oly::ecs::World world;
   world.spawn(A{1});
   auto& query = world.queryById({.read = {oly::ecs::componentId<A>()}});
@@ -172,19 +172,19 @@ TEST_CASE("QueryIteration movida encerra a iteração uma vez só") {
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("exceção no callback de eachBlock encerra a iteração") {
+TEST_CASE("exception in the eachBlock callback ends the iteration") {
   oly::ecs::World world;
   world.spawn(A{1});
   auto& query = world.queryById({.read = {oly::ecs::componentId<A>()}});
 
-  CHECK_THROWS_AS(query.eachBlock([](const oly::ecs::BlockById&) { throw std::runtime_error("falha"); }), std::runtime_error);
+  CHECK_THROWS_AS(query.eachBlock([](const oly::ecs::BlockById&) { throw std::runtime_error("failure"); }), std::runtime_error);
 
   CHECK_FALSE(world.isIterating());
   world.spawn(A{2});
   CHECK_INVARIANTS(world);
 }
 
-TEST_CASE("iterate em regime não aloca") {
+TEST_CASE("steady-state iterate does not allocate") {
   oly::ecs::World world;
   for (uint64_t i = 0; i < 100; ++i) {
     world.spawn(A{i});
@@ -205,7 +205,7 @@ TEST_CASE("iterate em regime não aloca") {
   CHECK(allocationCount() == allocationsBefore);
 }
 
-TEST_CASE("getById e tryGetById") {
+TEST_CASE("getById and tryGetById") {
   oly::ecs::World world;
   auto entity = world.spawn(A{7}, Tag{});
   auto dead = world.spawn(A{1});
@@ -218,7 +218,7 @@ TEST_CASE("getById e tryGetById") {
   CHECK(world.hasById(entity, oly::ecs::componentId<Tag>()));
 }
 
-TEST_CASE("QueryIteration não aceita atribuição por movimento") {
+TEST_CASE("QueryIteration does not accept move assignment") {
   static_assert(!std::is_move_assignable_v<oly::ecs::QueryIteration>);
   static_assert(!std::is_copy_assignable_v<oly::ecs::QueryIteration>);
 }

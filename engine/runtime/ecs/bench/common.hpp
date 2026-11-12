@@ -14,8 +14,8 @@ struct Velocity {
 
 inline constexpr float kDeltaTime = 1.0f / 60.0f;
 
-// Mesmos bytes que T, mas com move-constructor e destrutor definidos pelo usuário:
-// força o caminho não trivial (moveConstruct + destroy) em vez do memcpy.
+// Same bytes as T, but with a user-defined move constructor and destructor:
+// forces the non-trivial path (moveConstruct + destroy) instead of memcpy.
 template <class T>
 struct NonTrivial {
   T value;

@@ -1,5 +1,5 @@
-// Casos de morte: cada violação de contrato deve disparar OLY_ASSERT, então só existe com asserts ligados.
-// Uso: contract_death <caso>. Sai com 0 só se o assert disparar com todas as substrings exigidas.
+// Death cases: each contract violation must fire OLY_ASSERT, so this only exists with asserts enabled.
+// Usage: contract_death <case>. Exits with 0 only if the assert fires with all the required substrings.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -22,7 +22,7 @@ namespace {
     if (g_required) {
       for (const char* needle : *g_required) {
         if (!std::strstr(message, needle)) {
-          std::fprintf(stderr, "mensagem sem a substring exigida: \"%s\"\n", needle);
+          std::fprintf(stderr, "message missing the required substring: \"%s\"\n", needle);
           std::fflush(stderr);
           std::_Exit(2);
         }
@@ -148,19 +148,19 @@ int main(int argumentCount, char** arguments) {
     {"command_after_destroy", commandAfterDestroy, {"after destroy"}},
     {"destroy_during_each_block", destroyDuringEachBlock, {"destroy"}},
     {"query_by_id_tag_in_read", queryByIdTagInRead, {"queryById", "tag"}},
-    {"query_by_id_repeated_component", queryByIdRepeatedComponent, {"queryById", "repetido"}},
-    {"query_by_id_unknown_component", queryByIdUnknownComponent, {"queryById", "desconhecido"}},
-    {"query_by_id_iteration_out_of_order", queryByIdIterationOutOfOrder, {"iterate", "fora de ordem"}},
+    {"query_by_id_repeated_component", queryByIdRepeatedComponent, {"queryById", "repeated"}},
+    {"query_by_id_unknown_component", queryByIdUnknownComponent, {"queryById", "unknown"}},
+    {"query_by_id_iteration_out_of_order", queryByIdIterationOutOfOrder, {"iterate", "out of order"}},
     {"add_during_query_by_id_iteration", addDuringQueryByIdIteration, {"add"}},
     {"get_by_id_missing", getByIdMissing, {"getById", "e="}},
-    {"spawn_during_each", spawnDuringEach, {"spawn", "iteração"}},
-    {"single_empty", singleEmpty, {"single:", "0 linhas"}},
-    {"single_many", singleMany, {"single:", "2 linhas"}},
-    {"try_single_many", trySingleMany, {"trySingle:", "2 linhas"}},
+    {"spawn_during_each", spawnDuringEach, {"spawn", "iteration"}},
+    {"single_empty", singleEmpty, {"single:", "0 rows"}},
+    {"single_many", singleMany, {"single:", "2 rows"}},
+    {"try_single_many", trySingleMany, {"trySingle:", "2 rows"}},
   };
 
   if (argumentCount != 2) {
-    std::fprintf(stderr, "uso: contract_death <caso>\n");
+    std::fprintf(stderr, "usage: contract_death <case>\n");
     return 64;
   }
 
@@ -172,10 +172,10 @@ int main(int argumentCount, char** arguments) {
     g_required = &testCase.required;
     oly::core::setAssertHandler(&handler);
     testCase.run();
-    std::fprintf(stderr, "assert não disparou\n");
+    std::fprintf(stderr, "assert did not fire\n");
     return 1;
   }
 
-  std::fprintf(stderr, "caso desconhecido: %s\n", arguments[1]);
+  std::fprintf(stderr, "unknown case: %s\n", arguments[1]);
   return 64;
 }

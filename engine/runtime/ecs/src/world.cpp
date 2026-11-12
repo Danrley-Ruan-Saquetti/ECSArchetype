@@ -86,12 +86,12 @@ namespace oly::ecs {
         for (const auto& [componentId, edge] : adding ? archetype.addEdges : archetype.removeEdges) {
           const std::string where = std::string(adding ? "add" : "remove") + " cid=" + std::to_string(componentId) + " " + archetypeLabel(archetype);
           if (!edge.target) {
-            return fail(why, "I-9", where + " sem destino");
+            return fail(why, "I-9", where + " no destination");
           }
 
           const detail::Archetype& target = *edge.target;
           if (target.signature != edgeSignature(archetype.signature, componentId, adding)) {
-            return fail(why, "I-9", where + " assinatura");
+            return fail(why, "I-9", where + " signature");
           }
           if (!checkEdgeMapping(archetype, target, edge)) {
             return fail(why, "I-9", where + " sourceToDestination");
@@ -107,17 +107,17 @@ namespace oly::ecs {
       return true;
     }
 
-    // Memo do último resultado do flush: entidades de um lote costumam ter o mesmo (origem, operações),
-    // então a assinatura final, a aresta e as colunas são calculadas uma vez só.
+    // Memo of the last flush result: entities in a batch tend to share the same (source, operations),
+    // so the final signature, the edge and the columns are computed only once.
     struct FlushMemo {
       bool valid = false;
       const detail::Archetype* source = nullptr;
       std::vector<std::pair<ComponentId, bool>> key;
 
       detail::Archetype* destination = nullptr;
-      const detail::Edge* edge = nullptr; // nullptr se source == destination ou entidade reservada
-      std::vector<detail::Column*> columns; // por operação: coluna no destino (nullptr: sem valor a construir)
-      std::vector<uint8_t> existed; // por operação: o componente já existia na origem
+      const detail::Edge* edge = nullptr; // nullptr if source == destination or the entity is reserved
+      std::vector<detail::Column*> columns; // per operation: column in the destination (nullptr: no value to construct)
+      std::vector<uint8_t> existed; // per operation: the component already existed in the source
 
       bool matches(const detail::Archetype* candidateSource, std::span<const detail::NetComponentOperation> operations) const {
         if (!valid || source != candidateSource || key.size() != operations.size()) {
@@ -165,14 +165,14 @@ namespace oly::ecs {
       return signature;
     }
 
-    // `slot` não pode estar construído; `value` fica moved-from, e destruí-lo é do chamador.
+    // `slot` must not be constructed; `value` is left moved-from, and destroying it is up to the caller.
     void constructValue(const TypeInfo& info, void* slot, void* value) noexcept {
       if (!info.trivial) {
         info.moveConstruct(slot, value);
         return;
       }
 
-      // Tamanhos pequenos e comuns inline: evita a chamada a memcpy de tamanho variável.
+      // Small, common sizes inline: avoids the variable-size memcpy call.
       switch (info.size) {
       case 4: std::memcpy(slot, value, 4); break;
       case 8: std::memcpy(slot, value, 8); break;
@@ -202,10 +202,10 @@ namespace oly::ecs {
       std::vector<ComponentId> seen;
       for (const std::vector<ComponentId>* group : {&read, &write}) {
         for (ComponentId componentId : *group) {
-          OLY_ASSERT(componentId < registeredTypeCount(), "queryById: componente desconhecido id=%u", componentId);
+          OLY_ASSERT(componentId < registeredTypeCount(), "queryById: unknown component id=%u", componentId);
           [[maybe_unused]] const TypeInfo& info = typeInfo(componentId);
-          OLY_ASSERT(!info.tag, "queryById: tag em read/write não é permitido type=%.*s", int(info.name.size()), info.name.data());
-          OLY_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "queryById: componente repetido type=%.*s",
+          OLY_ASSERT(!info.tag, "queryById: tag in read/write is not allowed type=%.*s", int(info.name.size()), info.name.data());
+          OLY_ASSERT(std::find(seen.begin(), seen.end(), componentId) == seen.end(), "queryById: repeated component type=%.*s",
                      int(info.name.size()), info.name.data());
           seen.push_back(componentId);
         }
@@ -214,7 +214,7 @@ namespace oly::ecs {
   }
 
   World::World() {
-    findOrCreate({}); // o primeiro arquétipo recebe id 0: é o que root() devolve (R-AR-3)
+    findOrCreate({}); // the first archetype gets id 0: it is what root() returns (R-AR-3)
   }
 
   World::~World() = default;
@@ -255,12 +255,12 @@ namespace oly::ecs {
   }
 
   Entity World::spawn() {
-    OLY_ASSERT(iterating_ == 0, "spawn durante iteração=%u", iterating_);
+    OLY_ASSERT(iterating_ == 0, "spawn during iteration=%u", iterating_);
     return place(root());
   }
 
   void World::destroy(Entity entity) {
-    OLY_ASSERT(isAlive(entity) && iterating_ == 0, "destroy e=%u:%u durante iteração=%u", entity.index, entity.generation, iterating_);
+    OLY_ASSERT(isAlive(entity) && iterating_ == 0, "destroy e=%u:%u during iteration=%u", entity.index, entity.generation, iterating_);
 
     detail::EntityRecord& record = store_.record(entity.index);
     detail::Table& table = record.archetype->table;
@@ -392,7 +392,7 @@ namespace oly::ecs {
     }
 
     if (bySignature_.size() != archetypes_.size()) {
-      return fail(why, "I-6", "tamanhos diferentes");
+      return fail(why, "I-6", "different sizes");
     }
 
     return true;
@@ -441,7 +441,7 @@ namespace oly::ecs {
 
     std::sort(freeList.begin(), freeList.end());
     if (std::adjacent_find(freeList.begin(), freeList.end()) != freeList.end()) {
-      return fail(why, "I-10", "repetido");
+      return fail(why, "I-10", "repeated");
     }
 
     return true;
@@ -499,7 +499,7 @@ namespace oly::ecs {
         return fail(why, "I-9", where + " id");
       }
       if (edge.target != archetypes_[destinationId].get()) {
-        return fail(why, "I-9", where + " destino");
+        return fail(why, "I-9", where + " destination");
       }
       if (!checkEdgeMapping(*archetypes_[sourceId], *archetypes_[destinationId], edge)) {
         return fail(why, "I-9", where + " sourceToDestination");
@@ -549,7 +549,7 @@ namespace oly::ecs {
     return registered;
   }
 
-  // Índice do componente de `with` presente em menos arquétipos (R-QY-3); nullptr se `with` é vazio.
+  // Index of the `with` component present in the fewest archetypes (R-QY-3); nullptr if `with` is empty.
   const core::SmallMap<detail::ArchetypeId, uint16_t>* World::smallestIndex(const detail::Signature& with) const {
     static const core::SmallMap<detail::ArchetypeId, uint16_t> empty;
 
@@ -592,8 +592,8 @@ namespace oly::ecs {
   }
 
   void World::flushSequential(CommandBuffer& commandBuffer) {
-    OLY_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
-    OLY_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
+    OLY_ASSERT(iterating_ == 0, "flush during iteration=%u", iterating_);
+    OLY_ASSERT(commandBuffer.store() == &store_, "flush of a buffer created by another World");
 
     commandBuffer.forEach([&](const detail::CommandView& command) {
       switch (command.operation) {
@@ -635,8 +635,8 @@ namespace oly::ecs {
   }
 
   void World::flush(CommandBuffer& commandBuffer) {
-    OLY_ASSERT(iterating_ == 0, "flush durante iteração=%u", iterating_);
-    OLY_ASSERT(commandBuffer.store() == &store_, "flush de buffer criado por outro World");
+    OLY_ASSERT(iterating_ == 0, "flush during iteration=%u", iterating_);
+    OLY_ASSERT(commandBuffer.store() == &store_, "flush of a buffer created by another World");
 
     const detail::CommandPlan plan = commandBuffer.plan();
     detail::NetEffect net;
@@ -649,7 +649,7 @@ namespace oly::ecs {
       const bool alive = store_.isAlive(entity);
       const bool reserved = net.spawned && store_.isReserved(entity);
       if (!alive && !reserved) {
-        continue; // handle obsoleto: ignorado em vez de cancelar os comandos no destroy (spec §10, questão 3)
+        continue; // stale handle: ignored instead of cancelling the commands on destroy (spec §10, question 3)
       }
 
       if (net.destroyed) {
@@ -659,7 +659,7 @@ namespace oly::ecs {
 
       const std::span<const detail::NetComponentOperation> operations = net.operations;
       detail::EntityRecord& record = store_.record(entity.index);
-      detail::Archetype* source = record.archetype; // nullptr se reservada
+      detail::Archetype* source = record.archetype; // nullptr if reserved
       if (!memo.matches(source, operations)) {
         detail::Archetype* destination = findOrCreate(applyOperations(source ? source->signature : detail::Signature{}, operations));
         memo.assign(source, operations, destination, (source && destination != source) ? &jumpEdge(*source, *destination) : nullptr);

@@ -6,7 +6,7 @@
 #include "oly/ecs/detail/test_access.hpp"
 #include "oly/ecs/entity.hpp"
 
-TEST_CASE("reciclagem incrementa geração e invalida handle antigo") {
+TEST_CASE("recycling increments the generation and invalidates the old handle") {
   oly::ecs::detail::EntityStore store;
   oly::ecs::detail::Archetype* fakeArchetype = reinterpret_cast<oly::ecs::detail::Archetype*>(0x10);
 
@@ -29,7 +29,7 @@ TEST_CASE("reciclagem incrementa geração e invalida handle antigo") {
   CHECK(store.isAlive(recycled));
 }
 
-TEST_CASE("slot com geração UINT32_MAX é aposentado") {
+TEST_CASE("slot with generation UINT32_MAX is retired") {
   oly::ecs::detail::EntityStore store;
   auto entity = store.allocate();
   oly::ecs::detail::EntityStoreTestAccess::setGeneration(store, entity.index, UINT32_MAX - 1);
@@ -40,7 +40,7 @@ TEST_CASE("slot com geração UINT32_MAX é aposentado") {
   CHECK(store.allocate().index != entity.index);
 }
 
-TEST_CASE("NullEntity nunca está vivo") {
+TEST_CASE("NullEntity is never alive") {
   oly::ecs::detail::EntityStore store;
   CHECK_FALSE(store.isAlive(oly::ecs::NullEntity));
 }

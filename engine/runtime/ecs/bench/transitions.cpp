@@ -38,7 +38,7 @@ namespace {
     }
 
     using ToggledComponent = decltype(makeComponent<IsNonTrivial, kToggledComponentIndex>(0));
-    for (auto entity : entities) { // aquece arestas e capacidades
+    for (auto entity : entities) { // warms up edges and capacities
       world.add(entity, makeComponent<IsNonTrivial, kToggledComponentIndex>(1));
       world.remove<ToggledComponent>(entity);
     }
@@ -63,7 +63,7 @@ namespace {
   BENCHMARK_TEMPLATE2(BM_Transition, true, 8)->Name("BM_Transition_NonTrivial/8");
   BENCHMARK_TEMPLATE2(BM_Transition, true, 16)->Name("BM_Transition_NonTrivial/16");
 
-  // Primeira transição para um arquétipo inédito (inclui criar arquétipo e aresta).
+  // First transition to a never-seen archetype (includes creating the archetype and the edge).
   void BM_TransitionCold(benchmark::State& state) {
     for (auto _ : state) {
       state.PauseTiming();
@@ -94,7 +94,7 @@ namespace {
 
   constexpr uint32_t kGetCount = 1'000'000;
 
-  // NF-P6: sem meta.
+  // NF-P6: no target.
   void BM_RandomGet(benchmark::State& state) {
     oly::ecs::World world;
     std::vector<oly::ecs::Entity> entities;

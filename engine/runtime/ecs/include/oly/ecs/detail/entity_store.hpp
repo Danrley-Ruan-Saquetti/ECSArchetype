@@ -10,14 +10,14 @@ namespace oly::ecs::detail {
   struct Archetype;
 
   struct EntityRecord {
-    Archetype* archetype; // nullptr = morto ou reservado (pendente)
+    Archetype* archetype; // nullptr = dead or reserved (pending)
     uint32_t row;
     uint32_t generation;
   };
-  static_assert(sizeof(EntityRecord) == sizeof(void*) + 8, "NF-M1: um ponteiro + 8 bytes por EntityRecord");
+  static_assert(sizeof(EntityRecord) == sizeof(void*) + 8, "NF-M1: one pointer + 8 bytes per EntityRecord");
 
-  // Dono dos records e da freeList. Fica aqui (e não no World) para que o CommandBuffer,
-  // uma camada abaixo do World, possa reservar índices (R-CB-1) sem conhecê-lo.
+  // Owner of the records and the freeList. It lives here (and not in the World) so that the CommandBuffer,
+  // one layer below the World, can reserve indices (R-CB-1) without knowing it.
   class EntityStore {
    private:
     friend struct EntityStoreTestAccess;
@@ -26,7 +26,7 @@ namespace oly::ecs::detail {
     std::vector<uint32_t> freeList_;
 
    public:
-    // Pega do fim da freeList (LIFO) ou cria um slot novo. Deixa archetype = nullptr (reservado, R-EN-3).
+    // Takes from the end of the freeList (LIFO) or creates a new slot. Leaves archetype = nullptr (reserved, R-EN-3).
     Entity allocate() {
       uint32_t index;
       if (!freeList_.empty()) {
@@ -41,7 +41,7 @@ namespace oly::ecs::detail {
       return Entity{index, records_[index].generation};
     }
 
-    // Invalida o handle (geração + 1). Slot com geração UINT32_MAX é aposentado (R-EN-1).
+    // Invalidates the handle (generation + 1). A slot with generation UINT32_MAX is retired (R-EN-1).
     void release(uint32_t index) noexcept {
       EntityRecord& record = records_[index];
       record.archetype = nullptr;

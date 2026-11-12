@@ -10,7 +10,7 @@ namespace oly::ecs::detail {
     constexpr size_t kCacheLineBytes = 64;
     constexpr uint32_t kInitialRowCapacity = 64;
 
-    // R-TB-3: alinhada pelo menos à linha de cache, para favorecer a vetorização.
+    // R-TB-3: aligned at least to the cache line, to favor vectorization.
     size_t columnAlignment(const TypeInfo& info) {
       return std::max<size_t>(info.alignment, kCacheLineBytes);
     }
@@ -21,7 +21,7 @@ namespace oly::ecs::detail {
     columns_.reserve(columnTypes.size());
     for (ComponentId id : columnTypes) {
       const TypeInfo& info = typeInfo(id);
-      OLY_ASSERT(!info.tag, "Table::Table tipo=%.*s é tag", int(info.name.size()), info.name.data());
+      OLY_ASSERT(!info.tag, "Table::Table type=%.*s is a tag", int(info.name.size()), info.name.data());
       columns_.push_back(Column{&info, nullptr});
     }
   }
@@ -80,9 +80,9 @@ namespace oly::ecs::detail {
   }
 
   void Table::reserve(uint32_t newCapacity) {
-    entities_.reserve(newCapacity); // NF-P4: push sem alocar até a capacidade
+    entities_.reserve(newCapacity); // NF-P4: push without allocating up to capacity
 
-    // Aloca tudo antes de mover qualquer coisa: se uma alocação lançar, nada foi tocado.
+    // Allocates everything before moving anything: if an allocation throws, nothing was touched.
     std::vector<std::byte*> fresh(columns_.size(), nullptr);
     try {
       for (size_t i = 0; i < columns_.size(); ++i) {

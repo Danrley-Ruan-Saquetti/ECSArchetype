@@ -20,7 +20,7 @@ namespace {
     g_count.fetch_add(1, std::memory_order_relaxed);
 
     const size_t alignmentBytes = static_cast<size_t>(alignment);
-    size = (size + alignmentBytes - 1) / alignmentBytes * alignmentBytes; // aligned_alloc exige múltiplo do alinhamento
+    size = (size + alignmentBytes - 1) / alignmentBytes * alignmentBytes; // aligned_alloc requires a multiple of the alignment
     if (void* pointer = std::aligned_alloc(alignmentBytes, size ? size : alignmentBytes)) {
       return pointer;
     }

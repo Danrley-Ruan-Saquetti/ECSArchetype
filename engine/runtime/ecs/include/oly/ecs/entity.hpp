@@ -12,7 +12,7 @@ namespace oly::ecs {
   };
   inline constexpr Entity NullEntity{UINT32_MAX, 0};
 
-  // Finalizador do splitmix64: espalha índice e geração por todos os bits do hash.
+  // splitmix64 finalizer: spreads index and generation across all the bits of the hash.
   struct EntityHash {
     size_t operator()(Entity entity) const noexcept {
       uint64_t hash = (uint64_t(entity.index) << 32) | entity.generation;

@@ -170,7 +170,7 @@ namespace oly::ecs {
 
         const uint64_t bit = uint64_t(1) << (entity.index & 63);
         if (seen_[word] & bit) {
-          grouped_ = false; // entidade voltou fora do trecho atual: plan() agrupa por counting sort
+          grouped_ = false; // entity came back outside the current run: plan() groups by counting sort
           runs_.clear();
         } else {
           seen_[word] |= bit;
@@ -183,7 +183,7 @@ namespace oly::ecs {
     const uint64_t entityBits = (uint64_t(entity.generation) << 32) | entity.index;
     header[0] = static_cast<std::byte>(operation);
     std::memset(header + 1, 0, 7);
-    header[1] = static_cast<std::byte>(alignment); // para readAt não consultar o TypeInfo
+    header[1] = static_cast<std::byte>(alignment); // so readAt does not look up the TypeInfo
     std::memcpy(header + 8, &entityBits, 8);
     std::memcpy(header + 16, &componentId, 4);
     std::memcpy(header + 20, &size, 4);
@@ -255,7 +255,7 @@ namespace oly::ecs {
 
     constexpr uint32_t kNoPlan = UINT32_MAX;
     std::vector<uint32_t> planBySlot(store_->slotCount(), kNoPlan);
-    std::unordered_map<uint64_t, uint32_t> overflow; // geração diferente no mesmo índice / índice fora da faixa
+    std::unordered_map<uint64_t, uint32_t> overflow; // different generation at the same index / index out of range
     auto planOf = [&](Entity entity) -> uint32_t {
       auto appendPlan = [&] {
         result.owned.push_back(detail::EntityPlan{entity});
@@ -293,7 +293,7 @@ namespace oly::ecs {
       accumulated += entityPlan.count;
     }
 
-    // `begin` serve de cursor de escrita e é restaurado logo abaixo.
+    // `begin` serves as the write cursor and is restored right below.
     result.order.resize(accumulated);
     for (size_t offset = 0; offset < size_;) {
       detail::CommandView command;
@@ -329,7 +329,7 @@ namespace oly::ecs {
       }
       if (out.destroyed) {
         OLY_ASSERT(false, "command after destroy e=%u:%u", command.entity.index, command.entity.generation);
-        continue; // sem asserts: ignorado (R-CB-4)
+        continue; // without asserts: ignored (R-CB-4)
       }
       if (command.operation == detail::CommandOperation::Destroy) {
         out.operations.clear();
@@ -338,7 +338,7 @@ namespace oly::ecs {
       }
 
       const detail::NetComponentOperation net{command.componentId, command.operation == detail::CommandOperation::Add, command.operation == detail::CommandOperation::Add ? command.payload : nullptr};
-      if (out.operations.empty() || out.operations.back().componentId < command.componentId) { // caso comum: ids crescentes
+      if (out.operations.empty() || out.operations.back().componentId < command.componentId) { // common case: increasing ids
         out.operations.push_back(net);
         continue;
       }

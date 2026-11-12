@@ -24,7 +24,7 @@ namespace {
   concept HasOnArchetypeCreated = requires(Q& query, oly::ecs::detail::Archetype& archetype) { query.onArchetypeCreated(archetype); };
 }
 
-TEST_CASE("World e CommandBuffer não expõem diagnóstico nem ganchos de teste") {
+TEST_CASE("World and CommandBuffer expose neither diagnostics nor test hooks") {
   static_assert(!HasMemberStats<oly::ecs::World>);
   static_assert(!HasMemberCheckInvariants<oly::ecs::World>);
   static_assert(!HasFlushSequential<oly::ecs::World, oly::ecs::CommandBuffer>);
@@ -33,7 +33,7 @@ TEST_CASE("World e CommandBuffer não expõem diagnóstico nem ganchos de teste"
   static_assert(!std::is_constructible_v<oly::ecs::CommandBuffer, oly::ecs::detail::EntityStore&>);
 }
 
-TEST_CASE("diagnóstico por funções livres") {
+TEST_CASE("diagnostics through free functions") {
   oly::ecs::World world;
   world.spawn(A{1});
 

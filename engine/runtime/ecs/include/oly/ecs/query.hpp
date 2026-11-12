@@ -21,21 +21,21 @@
 namespace oly::ecs {
   class World;
 
-  // Filtros: tags (ou componentes) que o arquétipo deve / não deve ter, sem entregá-los ao sistema.
+  // Filters: tags (or components) the archetype must / must not have, without handing them to the system.
   template <class... Us>
   struct With {};
   template <class... Us>
   struct Without {};
 
-  // Possuída pelo World e válida enquanto ele existir. Durante each/eachBlock o World fica marcado
-  // como iterando: mudança estrutural direta é erro de contrato (OLY_ASSERT) e deve passar por um
-  // CommandBuffer. Spans e referências entregues ao callback só valem dentro dele.
+  // Owned by the World and valid while it exists. During each/eachBlock the World is marked
+  // as iterating: a direct structural change is a contract error (OLY_ASSERT) and must go through a
+  // CommandBuffer. Spans and references handed to the callback are only valid inside it.
   template <class... Ts>
   class Query : public detail::QueryCacheBase {
     static_assert((!std::is_empty_v<std::remove_const_t<Ts>> && ...),
-                  "tag em Query<Ts...> não é permitido; use With<Tag>/Without<Tag> (R-QY-2)");
+                  "tag in Query<Ts...> is not allowed; use With<Tag>/Without<Tag> (R-QY-2)");
     static_assert(((!std::is_reference_v<Ts> && !std::is_volatile_v<Ts>) && ...),
-                  "Query<Ts...> aceita apenas T ou const T");
+                  "Query<Ts...> accepts only T or const T");
 
    private:
     friend class World;
@@ -45,10 +45,10 @@ namespace oly::ecs {
     std::vector<detail::MatchedTable<Ts...>> matched_;
 
    public:
-    // Sem uso na v1: reservado para o scheduler (R-QY-1).
+    // Unused in v1: reserved for the scheduler (R-QY-1).
     static constexpr std::array<bool, sizeof...(Ts)> writes{!std::is_const_v<Ts>...};
 
-    // `with` = ids de Ts ∪ With<...>, ordenados e sem repetição; `without` idem.
+    // `with` = ids of Ts ∪ With<...>, sorted and without repetition; `without` likewise.
     Query(uint32_t* iterating, std::vector<ComponentId> with, std::vector<ComponentId> without)
       : QueryCacheBase(iterating),
         with_(std::move(with)),
@@ -59,7 +59,7 @@ namespace oly::ecs {
       return matched_.size();
     }
 
-    // callback(std::span<Ts>...) uma vez por tabela não vazia. Ts const → std::span<const T>.
+    // callback(std::span<Ts>...) once per non-empty table. Ts const → std::span<const T>.
     template <class F>
     void eachBlock(F&& callback) {
       detail::IterationGuard guard(iterating_);
@@ -73,7 +73,7 @@ namespace oly::ecs {
       }
     }
 
-    // callback(Ts&...) ou callback(Entity, Ts&...).
+    // callback(Ts&...) or callback(Entity, Ts&...).
     template <class F>
     void each(F&& callback) {
       detail::IterationGuard guard(iterating_);
@@ -88,18 +88,18 @@ namespace oly::ecs {
       }
     }
 
-    // A única linha da query, como (Entity, Ts&...). Sem iteração: não chama código do usuário, então
-    // as referências valem até a próxima mudança estrutural. Com 0 linhas o comportamento é indefinido.
+    // The query's only row, as (Entity, Ts&...). No iteration: it calls no user code, so
+    // the references stay valid until the next structural change. With 0 rows the behavior is undefined.
     std::tuple<Entity, Ts&...> single() {
       const RowSummary summary = summarizeRows();
-      OLY_ASSERT(summary.rowCount == 1, "single: %.*s com %u linhas; esperava 1", static_cast<int>(core::typeName<Query<Ts...>>().size()), core::typeName<Query<Ts...>>().data(), summary.rowCount);
+      OLY_ASSERT(summary.rowCount == 1, "single: %.*s with %u rows; expected 1", static_cast<int>(core::typeName<Query<Ts...>>().size()), core::typeName<Query<Ts...>>().data(), summary.rowCount);
 
       return firstRow(*summary.firstTable, std::index_sequence_for<Ts...>{});
     }
 
     std::optional<std::tuple<Entity, Ts&...>> trySingle() {
       const RowSummary summary = summarizeRows();
-      OLY_ASSERT(summary.rowCount <= 1, "trySingle: %.*s com %u linhas; esperava 0 ou 1", static_cast<int>(core::typeName<Query<Ts...>>().size()), core::typeName<Query<Ts...>>().data(), summary.rowCount);
+      OLY_ASSERT(summary.rowCount <= 1, "trySingle: %.*s with %u rows; expected 0 or 1", static_cast<int>(core::typeName<Query<Ts...>>().size()), core::typeName<Query<Ts...>>().data(), summary.rowCount);
       if (summary.rowCount == 0) {
         return std::nullopt;
       }
@@ -133,7 +133,7 @@ namespace oly::ecs {
       return std::tuple<Entity, Ts&...>(table.entities()[0], reinterpret_cast<Ts*>(table.column(matched.columns[Is]).data)[0]...);
     }
 
-    // Com `smallest`, percorre só os arquétipos do menor componentIndex (R-QY-3).
+    // With `smallest`, walks only the archetypes of the smallest componentIndex (R-QY-3).
     void initialize(const std::vector<std::unique_ptr<detail::Archetype>>& all, const core::SmallMap<detail::ArchetypeId, uint16_t>* smallest) {
       if (smallest) {
         for (const auto& [archetypeId, column] : *smallest) {

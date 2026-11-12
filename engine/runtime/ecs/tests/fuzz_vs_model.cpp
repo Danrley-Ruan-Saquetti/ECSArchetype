@@ -8,7 +8,7 @@
 #include "oly/ecs/world.hpp"
 #include "model.hpp"
 
-TEST_CASE("fuzz: World == modelo de referência") {
+TEST_CASE("fuzz: World == reference model") {
   const uint64_t seed = fuzzSeed();
   const uint64_t operationCount = fuzzOperationCount();
   MESSAGE("seed=" << seed << " ops=" << operationCount);
@@ -107,7 +107,7 @@ TEST_CASE("fuzz: World == modelo de referência") {
           uint64_t got = 0;
           bool has = readFromWorld(world, entity, componentId, got);
           if (has != (it != components.end()) || (has && got != it->second)) {
-            FAIL("get diverge no op " << operation << " e=" << entity.index << ":" << entity.generation);
+            FAIL("get diverges at op " << operation << " e=" << entity.index << ":" << entity.generation);
           }
         }
       }
@@ -115,7 +115,7 @@ TEST_CASE("fuzz: World == modelo de referência") {
       if (!dead.empty() && generator() % 100 == 0) {
         oly::ecs::Entity old = dead[generator() % dead.size()];
         if (world.isAlive(old) || world.tryGet<A>(old) != nullptr) {
-          FAIL("handle obsoleto vivo: e=" << old.index);
+          FAIL("stale handle alive: e=" << old.index);
         }
       }
 

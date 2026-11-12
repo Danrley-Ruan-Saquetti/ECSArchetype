@@ -17,7 +17,7 @@ namespace {
   }
 }
 
-TEST_CASE("columnTypes exclui tags; signature ordenada inclui") {
+TEST_CASE("columnTypes excludes tags; sorted signature includes them") {
   oly::ecs::detail::Signature signature = sorted({oly::ecs::componentId<A>(), oly::ecs::componentId<Tag>(), oly::ecs::componentId<B>()});
 
   oly::ecs::detail::Archetype archetype(1, signature);
@@ -30,7 +30,7 @@ TEST_CASE("columnTypes exclui tags; signature ordenada inclui") {
   CHECK(oly::ecs::detail::columnOf(archetype, oly::ecs::componentId<C>()) == oly::ecs::detail::NoColumn);
 }
 
-TEST_CASE("buildEdge mapeia colunas por merge") {
+TEST_CASE("buildEdge maps columns by merge") {
   const auto idA = oly::ecs::componentId<A>(), idB = oly::ecs::componentId<B>(), idC = oly::ecs::componentId<C>();
   oly::ecs::detail::Archetype source(1, sorted({idA, idB}));
   {
@@ -52,13 +52,13 @@ TEST_CASE("buildEdge mapeia colunas por merge") {
   {
     oly::ecs::detail::Archetype destination(4, sorted({idA, idB, oly::ecs::componentId<Tag>()}));
     auto edge = oly::ecs::detail::buildEdge(source, destination, oly::ecs::componentId<Tag>());
-    CHECK(edge.addedColumn == -1); // tag não tem coluna
+    CHECK(edge.addedColumn == -1); // a tag has no column
     CHECK(edge.sourceToDestination[0] == 0);
     CHECK(edge.sourceToDestination[1] == 1);
   }
 }
 
-TEST_CASE("SmallMap mantém ordem e encontra") {
+TEST_CASE("SmallMap keeps order and finds") {
   oly::core::SmallMap<uint32_t, int> map;
 
   map.insert(5, 50);
@@ -73,6 +73,6 @@ TEST_CASE("SmallMap mantém ordem e encontra") {
   CHECK(map.capacityBytes() >= 3 * sizeof(std::pair<uint32_t, int>));
 }
 
-TEST_CASE("SignatureHash difere para assinaturas diferentes") {
+TEST_CASE("SignatureHash differs for different signatures") {
   CHECK(oly::ecs::detail::SignatureHash{}({1, 2}) != oly::ecs::detail::SignatureHash{}({2, 1, 0}));
 }

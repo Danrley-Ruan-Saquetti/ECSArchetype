@@ -11,7 +11,7 @@
 #include "oly/ecs/entity.hpp"
 
 namespace oly::ecs::detail {
-  // `destination` não pode estar construído; `source` termina destruído.
+  // `destination` must not be constructed; `source` ends up destroyed.
   inline void relocateValue(const TypeInfo& info, void* destination, void* source) noexcept {
     if (info.trivial) {
       std::memcpy(destination, source, info.size);
@@ -61,9 +61,9 @@ namespace oly::ecs::detail {
       return capacity_;
     }
 
-    uint32_t pushUninitialized(Entity entity); // devolve a linha nova, MORTA (o chamador a constrói); pode realocar as colunas
-    void destroyRow(uint32_t row) noexcept; // linha viva → morta
-    std::optional<Entity> fillHole(uint32_t row) noexcept; // tapa a linha morta com a última; devolve a entidade deslocada, se houve
+    uint32_t pushUninitialized(Entity entity); // returns the new row, DEAD (the caller constructs it); may reallocate the columns
+    void destroyRow(uint32_t row) noexcept; // live row → dead
+    std::optional<Entity> fillHole(uint32_t row) noexcept; // fills the dead row with the last one; returns the displaced entity, if any
 
     std::span<const Entity> entities() const noexcept {
       return entities_;

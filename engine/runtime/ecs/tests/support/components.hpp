@@ -41,7 +41,7 @@ struct LifeCounter {
   }
 };
 
-// Requer doctest incluído antes do uso.
+// Requires doctest to be included before use.
 #define CHECK_INVARIANTS(world)                          \
   do {                                                   \
     std::string why_;                                    \

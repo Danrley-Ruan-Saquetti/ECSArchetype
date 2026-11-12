@@ -14,7 +14,7 @@ namespace {
   }
 }
 
-TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e transições") {
+TEST_CASE("string, unique_ptr, vector and LifeCounter survive reallocation and transitions") {
   LifeCounter::alive = 0;
   {
     oly::ecs::World world;
@@ -56,7 +56,7 @@ TEST_CASE("string, unique_ptr, vector e LifeCounter sobrevivem a realocação e 
   CHECK(LifeCounter::alive == 0);
 }
 
-TEST_CASE("remover componente não trivial destrói o valor") {
+TEST_CASE("removing a non-trivial component destroys the value") {
   LifeCounter::alive = 0;
   {
     oly::ecs::World world;
@@ -68,7 +68,7 @@ TEST_CASE("remover componente não trivial destrói o valor") {
     CHECK(world.get<A>(entity).value == 2);
 
     world.add(entity, LifeCounter{3});
-    world.add(entity, LifeCounter{4}); // atribui sobre o existente
+    world.add(entity, LifeCounter{4}); // assigns over the existing one
     CHECK(LifeCounter::alive == 1);
     CHECK(world.get<LifeCounter>(entity).value == 4);
   }

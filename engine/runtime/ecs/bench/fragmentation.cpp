@@ -13,7 +13,7 @@ namespace {
   template <int I>
   struct Fragment {};
 
-  constexpr int kFragmentTags = 12; // 2^12 = 4096 combinações
+  constexpr int kFragmentTags = 12; // 2^12 = 4096 combinations
 
   template <size_t... Is>
   std::array<oly::ecs::ComponentId, sizeof...(Is)> fragmentIds(std::index_sequence<Is...>) {
@@ -22,7 +22,7 @@ namespace {
 
   constexpr uint32_t kEntityCount = 1'000'000;
 
-  // Baseline no mesmo binário.
+  // Baseline in the same binary.
   void BM_IterateSingle_SoA(benchmark::State& state) {
     const auto entityCount = static_cast<size_t>(state.range(0));
     std::vector<float3> positions(entityCount, float3{0.f, 0.f, 0.f});
@@ -47,8 +47,8 @@ namespace {
   }
   BENCHMARK(BM_IterateSingle_SoA)->Arg(kEntityCount);
 
-  // 1M entidades distribuídas uniformemente em `archetypeCount` arquétipos: o arquétipo da entidade i é
-  // {Position, Velocity} + as tags Fragment<j> cujos bits estão ligados em (i % archetypeCount).
+  // 1M entities spread uniformly across `archetypeCount` archetypes: entity i's archetype is
+  // {Position, Velocity} + the Fragment<j> tags whose bits are set in (i % archetypeCount).
   void BM_IterateFragmented(benchmark::State& state) {
     const auto archetypeCount = static_cast<uint32_t>(state.range(0));
     const auto tags = fragmentIds(std::make_index_sequence<kFragmentTags>{});

@@ -36,23 +36,23 @@ namespace oly::ecs::detail {
 
   struct Edge {
     Archetype* target = nullptr;
-    std::vector<int16_t> sourceToDestination; // por coluna da origem: coluna no destino, ou -1
-    int16_t addedColumn = -1; // coluna do componente adicionado, ou -1 se a aresta não constrói valor (remoção, tag, salto)
+    std::vector<int16_t> sourceToDestination; // per source column: column in the destination, or -1
+    int16_t addedColumn = -1; // column of the added component, or -1 if the edge builds no value (removal, tag, jump)
   };
 
   struct Archetype {
     ArchetypeId id;
-    Signature signature; // ordenada, inclui tags
-    std::vector<ComponentId> columnTypes; // ordenada, só dados
+    Signature signature; // sorted, includes tags
+    std::vector<ComponentId> columnTypes; // sorted, data only
     Table table;
     core::SmallMap<ComponentId, Edge> addEdges, removeEdges;
 
     Archetype(ArchetypeId id, Signature signature);
   };
 
-  // NoColumn se `componentId` estiver ausente ou for tag.
+  // NoColumn if `componentId` is absent or is a tag.
   uint16_t columnOf(const Archetype& archetype, ComponentId componentId) noexcept;
 
-  // `added` = componente recém-adicionado; NoComponent para remoção ou salto arbitrário.
+  // `added` = the newly added component; NoComponent for a removal or an arbitrary jump.
   Edge buildEdge(const Archetype& source, Archetype& destination, ComponentId added);
 }

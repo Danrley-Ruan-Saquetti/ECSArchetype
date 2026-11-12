@@ -16,13 +16,13 @@ namespace oly::ecs {
     uint32_t alignment;
     bool trivial;
     bool tag;
-    void (*moveConstruct)(void* destination, void* source) noexcept; // nullptr se trivial
-    void (*destroy)(void* object) noexcept; // nullptr se trivial
+    void (*moveConstruct)(void* destination, void* source) noexcept; // nullptr if trivial
+    void (*destroy)(void* object) noexcept; // nullptr if trivial
     std::string_view name;
   };
 
-  // `id` precisa ser menor que registeredTypeCount() (sem verificação). A referência vale até o
-  // fim do processo.
+  // `id` must be less than registeredTypeCount() (not checked). The reference stays valid until the
+  // end of the process.
   const TypeInfo& typeInfo(ComponentId id);
   uint32_t registeredTypeCount() noexcept;
 
@@ -46,19 +46,19 @@ namespace oly::ecs {
       return info;
     }
 
-    // O static fica em U (já sem cvref) para que componentId<const A&> e componentId<A> compartilhem o ID.
+    // The static lives in U (already without cvref) so that componentId<const A&> and componentId<A> share the ID.
     template <class U>
     ComponentId componentIdOf() {
-      static_assert(std::is_nothrow_move_constructible_v<U>, "componente exige move-constructor noexcept (R-TI-3)");
-      static_assert(alignof(U) <= 64, "componente exige alignof <= 64 (R-TI-3)");
+      static_assert(std::is_nothrow_move_constructible_v<U>, "component requires a noexcept move constructor (R-TI-3)");
+      static_assert(alignof(U) <= 64, "component requires alignof <= 64 (R-TI-3)");
 
       static const ComponentId id = registerType(makeTypeInfo<U>());
       return id;
     }
   }
 
-  // ID denso, atribuído na primeira chamada para cada tipo: depende da ordem dessas chamadas,
-  // então não serve para persistir. Ignora const, volatile e referência.
+  // Dense ID, assigned on the first call for each type: it depends on the order of those calls,
+  // so it is not suitable for persisting. Ignores const, volatile and reference.
   template <class T>
   ComponentId componentId() {
     return detail::componentIdOf<std::remove_cvref_t<T>>();

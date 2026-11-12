@@ -17,41 +17,41 @@ namespace oly::ecs::detail {
     CommandOperation operation;
     Entity entity;
     ComponentId componentId;
-    void* payload; // nullptr em Spawn, Destroy, Remove e em Add de tag
+    void* payload; // nullptr for Spawn, Destroy, Remove and for an Add of a tag
   };
 
   struct NetComponentOperation {
     ComponentId componentId;
     bool present;
-    void* payload; // valor do último Add (nullptr para tags e remoções)
+    void* payload; // value of the last Add (nullptr for tags and removals)
   };
 
   struct EntityPlan {
     Entity entity;
-    uint32_t begin = 0, count = 0; // faixa em CommandPlan::order (ou offset/8 do primeiro registro, se contíguo)
+    uint32_t begin = 0, count = 0; // range in CommandPlan::order (or offset/8 of the first record, if contiguous)
   };
 
   struct NetEffect {
     bool spawned = false;
     bool destroyed = false;
-    std::vector<NetComponentOperation> operations; // ordenado por componentId
+    std::vector<NetComponentOperation> operations; // sorted by componentId
   };
 
-  // Guarda só offsets/8 dos registros, para tocar pouca memória; o efeito líquido sai de
-  // netEffect, uma entidade por vez.
+  // Stores only the records' offsets/8, to touch little memory; the net effect comes from
+  // netEffect, one entity at a time.
   struct CommandPlan {
     std::vector<EntityPlan> owned;
-    // Na ordem da primeira aparição. Aponta para `owned` ou para os trechos guardados no CommandBuffer,
-    // então o plano só vale enquanto o buffer não mudar.
+    // In order of first appearance. Points to `owned` or to the runs stored in the CommandBuffer,
+    // so the plan is only valid while the buffer does not change.
     std::span<const EntityPlan> entities;
-    // Vazio quando os comandos de cada entidade já são consecutivos no buffer (caso comum de lotes):
-    // então `EntityPlan::begin` é o offset/8 do primeiro registro e basta andar `count` registros.
-    // Senão, o offset/8 de cada registro, agrupado por entidade e na ordem de gravação.
+    // Empty when each entity's commands are already consecutive in the buffer (the common batch case):
+    // then `EntityPlan::begin` is the offset/8 of the first record and walking `count` records is enough.
+    // Otherwise, the offset/8 of each record, grouped by entity and in recording order.
     std::vector<uint32_t> order;
     bool contiguous = true;
 
     CommandPlan() = default;
     CommandPlan(CommandPlan&&) = default;
-    CommandPlan(const CommandPlan&) = delete; // a span `entities` da cópia apontaria para o `owned` do original
+    CommandPlan(const CommandPlan&) = delete; // the copy's `entities` span would point to the original's `owned`
   };
 }

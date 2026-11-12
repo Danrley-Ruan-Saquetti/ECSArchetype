@@ -8,7 +8,7 @@
 #include "components.hpp"
 #include "oly/ecs/world.hpp"
 
-TEST_CASE("spawn() nasce vivo no arquétipo raiz") {
+TEST_CASE("spawn() is born alive in the root archetype") {
   oly::ecs::World world;
 
   auto entity = world.spawn();
@@ -17,7 +17,7 @@ TEST_CASE("spawn() nasce vivo no arquétipo raiz") {
   CHECK_FALSE(world.has<A>(entity));
 }
 
-TEST_CASE("spawn(components...) nasce no arquétipo final com valores") {
+TEST_CASE("spawn(components...) is born in the final archetype with values") {
   oly::ecs::World world;
 
   auto entity = world.spawn(A{1}, B{2, 3}, Tag{});
@@ -27,7 +27,7 @@ TEST_CASE("spawn(components...) nasce no arquétipo final com valores") {
   CHECK(world.has<Tag>(entity));
 }
 
-TEST_CASE("spawn(components...) copia lvalues") {
+TEST_CASE("spawn(components...) copies lvalues") {
   oly::ecs::World world;
   A componentA{4};
 
@@ -37,7 +37,7 @@ TEST_CASE("spawn(components...) copia lvalues") {
   CHECK(world.get<A>(entity).value == 4);
 }
 
-TEST_CASE("add sobre T existente atribui sem mudar arquétipo") {
+TEST_CASE("add over an existing T assigns without changing archetype") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1});
 
@@ -46,7 +46,7 @@ TEST_CASE("add sobre T existente atribui sem mudar arquétipo") {
   CHECK(world.get<A>(entity).value == 7);
 }
 
-TEST_CASE("add de T ausente move para o arquétipo com T") {
+TEST_CASE("add of an absent T moves to the archetype with T") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1});
 
@@ -56,7 +56,7 @@ TEST_CASE("add de T ausente move para o arquétipo com T") {
   CHECK(world.get<B>(entity).second == 3);
 }
 
-TEST_CASE("remove de T ausente é no-op") {
+TEST_CASE("remove of an absent T is a no-op") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1});
 
@@ -65,7 +65,7 @@ TEST_CASE("remove de T ausente é no-op") {
   CHECK(world.get<A>(entity).value == 1);
 }
 
-TEST_CASE("remove de T presente") {
+TEST_CASE("remove of a present T") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1}, B{2, 3});
 
@@ -75,7 +75,7 @@ TEST_CASE("remove de T presente") {
   CHECK(world.get<B>(entity).first == 2);
 }
 
-TEST_CASE("destroy atualiza o record da entidade deslocada") {
+TEST_CASE("destroy updates the record of the displaced entity") {
   oly::ecs::World world;
   auto first = world.spawn(A{0});
   auto second = world.spawn(A{1});
@@ -89,7 +89,7 @@ TEST_CASE("destroy atualiza o record da entidade deslocada") {
   CHECK(world.tryGet<A>(first) == nullptr);
 }
 
-TEST_CASE("remove/destroy da última e da única linha") {
+TEST_CASE("remove/destroy of the last and of the only row") {
   oly::ecs::World world;
   auto first = world.spawn(A{1});
   auto second = world.spawn(A{2});
@@ -102,22 +102,22 @@ TEST_CASE("remove/destroy da última e da única linha") {
   CHECK(world.isAlive(second));
 }
 
-TEST_CASE("add com valor lido de outra entidade da tabela destino que realoca") {
+TEST_CASE("add with a value read from another entity of the destination table that reallocates") {
   oly::ecs::World world;
   std::vector<oly::ecs::Entity> full;
   for (uint64_t i = 0; i < 64; ++i) {
-    full.push_back(world.spawn(A{i}, B{i, i})); // capacidade 64 cheia
+    full.push_back(world.spawn(A{i}, B{i, i})); // capacity 64 full
   }
 
   auto entity = world.spawn(A{999});
 
-  world.add(entity, world.get<B>(full[5])); // destino {A,B} realoca no pushUninitialized
+  world.add(entity, world.get<B>(full[5])); // destination {A,B} reallocates in pushUninitialized
 
   CHECK(world.get<B>(entity).first == 5);
   CHECK(world.get<B>(full[5]).second == 5);
 }
 
-TEST_CASE("tryGet em entidade morta e sem T devolve nullptr") {
+TEST_CASE("tryGet on a dead entity and without T returns nullptr") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1});
   CHECK(world.tryGet<B>(entity) == nullptr);
@@ -130,7 +130,7 @@ TEST_CASE("tryGet em entidade morta e sem T devolve nullptr") {
   CHECK_FALSE(world.has<A>(entity));
 }
 
-TEST_CASE("tags: add/has/remove sem coluna") {
+TEST_CASE("tags: add/has/remove without a column") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1});
 
@@ -143,7 +143,7 @@ TEST_CASE("tags: add/has/remove sem coluna") {
   CHECK(world.get<A>(entity).value == 1);
 }
 
-TEST_CASE("handle antigo após reciclagem do índice") {
+TEST_CASE("old handle after index recycling") {
   oly::ecs::World world;
   auto entity = world.spawn(A{1});
   world.destroy(entity);
@@ -156,7 +156,7 @@ TEST_CASE("handle antigo após reciclagem do índice") {
   CHECK(world.get<A>(recycled).value == 2);
 }
 
-TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") {
+TEST_CASE("NF-P4: add/remove with a cached edge neither allocates nor queries a hash") {
   struct C1 {
     uint64_t value;
   };
@@ -173,7 +173,7 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
   oly::ecs::World world;
   auto entity = world.spawn(C1{1}, C2{2}, C3{3});
   world.add(entity, C4{4});
-  world.remove<C4>(entity); // aquece arestas e capacidade (64 linhas)
+  world.remove<C4>(entity); // warms up edges and capacity (64 rows)
   auto allocationsBefore = allocationCount();
   auto lookupsBefore = oly::ecs::signatureLookupCount(world);
 
@@ -189,7 +189,7 @@ TEST_CASE("NF-P4: add/remove com aresta em cache não aloca nem consulta hash") 
   CHECK(world.get<C3>(entity).value == 3);
 }
 
-TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
+TEST_CASE("archetypeCount counts the root and the created archetypes") {
   oly::ecs::World world;
   CHECK(oly::ecs::archetypeCount(world) == 1);
 
@@ -203,7 +203,7 @@ TEST_CASE("archetypeCount conta a raiz e os arquétipos criados") {
   CHECK(oly::ecs::archetypeCount(world) == 3);
 }
 
-TEST_CASE("stats: contagens, histograma e memória ociosa") {
+TEST_CASE("stats: counts, histogram and idle memory") {
   oly::ecs::World world;
   for (uint64_t i = 0; i < 5; ++i) {
     world.spawn(A{i}); // {A}: 5
@@ -212,9 +212,9 @@ TEST_CASE("stats: contagens, histograma e memória ociosa") {
 
   auto stats = oly::ecs::stats(world);
 
-  CHECK(stats.archetypeCount == 3); // raiz, {A}, {A,B}
+  CHECK(stats.archetypeCount == 3); // root, {A}, {A,B}
   CHECK(stats.liveEntities == 6);
-  CHECK(stats.histogram[0] == 1); // raiz vazia
+  CHECK(stats.histogram[0] == 1); // empty root
   CHECK(stats.histogram[1] == 1); // count 1
   CHECK(stats.histogram[3] == 1); // count 5 ∈ [4, 8)
 

@@ -6,7 +6,7 @@
 #include "components.hpp"
 #include "oly/ecs/world.hpp"
 
-TEST_CASE("sequência spawn/add/remove/destroy mantém invariantes") {
+TEST_CASE("spawn/add/remove/destroy sequence keeps invariants") {
   oly::ecs::World world;
   CHECK_INVARIANTS(world);
 
@@ -37,12 +37,12 @@ TEST_CASE("sequência spawn/add/remove/destroy mantém invariantes") {
   }
 
   for (int i = 0; i < 20; ++i) {
-    world.spawn(A{1}, LifeCounter{}); // reusa slots da freeList
+    world.spawn(A{1}, LifeCounter{}); // reuses freeList slots
     CHECK_INVARIANTS(world);
   }
 }
 
-TEST_CASE("I-2: LifeCounter bate com linhas vivas") {
+TEST_CASE("I-2: LifeCounter matches live rows") {
   LifeCounter::alive = 0;
   {
     oly::ecs::World world;
