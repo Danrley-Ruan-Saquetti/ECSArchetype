@@ -88,6 +88,9 @@ export function installGame(engine: Engine, options: GameOptions): ArenaScore {
   engine.addSystem(Phase.Render, "render", createRenderSystem(options.drawer, score));
 
   engine.onEnter(playing, "startRound", (context) => startRound(context, score, options.random));
+  // A pausa vale para a engine inteira, e só o resumeOnPress (restrito a playing) a tira: sair de playing pausado
+  // travaria o estado seguinte.
+  engine.onExit(playing, "resumeOnExit", (context) => context.resume());
   engine.requestState(menu);
 
   return score;
@@ -164,7 +167,5 @@ function collectCoin(context: HandlerContext, score: MutableScore, batch: EventB
 
 function endRound(context: HandlerContext, score: MutableScore): void {
   score.finalScore = score.score;
-  // Esc apertado no passo da morte pausaria o gameOver, onde nada tira a pausa.
-  context.resume();
   context.requestState(gameOver);
 }

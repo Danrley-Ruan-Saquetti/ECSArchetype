@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { Bullet, Chaser, Coin, Collider, Dash, Enemy, Health, Invulnerable, Player, Position, Velocity } from "../schema.js";
+import { Bullet, Chaser, Coin, Collider, Dash, Enemy, Health, Invulnerable, Player, Position, Velocity, menu } from "../schema.js";
 import { ArenaHeight, ArenaWidth, PlayerRadius } from "../src/arena.js";
 import { loadArena, withArena } from "./harness.js";
 import type { ArenaTest } from "./harness.js";
@@ -364,19 +364,28 @@ test("jogador além da parede volta para a arena antes da colisão: não pega a 
   });
 });
 
-test("Esc no passo em que o jogador morre não deixa o gameOver pausado", () => {
+test("Esc no passo em que o jogador morre: gameOver sem pausa", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     arena.engine.world.set(arena.player(), Health, { value: 1 });
     spawnEnemy(arena, 480, 270);
 
     arena.tap("Escape");
+
     assert.equal(arena.engine.state?.name, "gameOver");
-    arena.step();
-    arena.tap("Enter");
+    assert.equal(arena.engine.paused, false);
+  });
+});
+
+test("sair de playing pausado por requestState do host tira a pausa", () => {
+  withArena(runtime, (arena) => {
+    startPlaying(arena);
+    arena.tap("Escape");
+
+    arena.engine.requestState(menu);
     arena.step();
 
+    assert.equal(arena.engine.state?.name, "menu");
     assert.equal(arena.engine.paused, false);
-    assert.equal(arena.engine.state?.name, "playing");
   });
 });

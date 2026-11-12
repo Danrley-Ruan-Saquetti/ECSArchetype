@@ -917,7 +917,10 @@ games/arena/
 - O jogo pede `menu` antes de rodar (§4.7, estado inicial).
 - `onEnter(playing)` (T): zera o placar, cria o jogador e agenda `every` das ondas (inimigos nas bordas, mais a cada
   onda) e das moedas soltas pela arena. Tudo tem escopo de `playing`: a troca para `gameOver` limpa entidades e tarefas
-  sem `onExit`, e "jogar de novo" começa limpo.
+  sem código de limpeza, e "jogar de novo" começa limpo.
+- `onExit(playing)` (T): `resume()`. A pausa vale para a engine inteira e só o `resumeOnPress` (restrito a `playing`)
+  a tira; sem o gancho, qualquer saída de `playing` pausado (Esc no passo da morte, `requestState` do host) travaria o
+  estado seguinte.
 
 **Render** (fase `render`, T): jogador, inimigos, balas e moedas por `eachBlock` (uma query por tag), HUD (placar,
 vida, dash pronto) e o texto de menu, pausa e game over. **[decisão do design]** Sem interpolação: desenha a posição
