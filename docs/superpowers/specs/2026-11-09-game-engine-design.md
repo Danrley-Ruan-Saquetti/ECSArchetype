@@ -21,6 +21,11 @@ Revisão de 2026-11-11 (antes da fase 5): §4.6 detalhado para o schedule — o 
 (o TS chega ao C++ por evento), descarte que avisa o TS para soltar a closure. Testes da fase 5 no §5 e ausência de
 benchmark justificada no §7.
 
+Revisão de 2026-11-12 (antes da fase 6): §4.7 detalhado para os estados — estados declarados no esquema, entrada do
+estado inicial pela regra de qualquer troca, escopo por uma tag interna no `World`, persistência pedida depois de
+criar (`persist`), spawn direto do TS passando pela engine. Uso indicativo (§4.8), testes da fase 6 no §5 e ausência
+de benchmark justificada no §7.
+
 Convenção deste documento: o que não vem marcado foi decidido pelo autor do projeto. Itens marcados
 **[decisão do design]** foram escolhas feitas ao escrever o documento, sem confirmação explícita; podem ser revistas
 no plano da fase correspondente sem voltar ao autor, desde que respeitem os objetivos e anti-objetivos.
@@ -242,7 +247,7 @@ E, por quadro do `requestAnimationFrame`: fase `render` (uma só vez, após os p
   do ECS, aplicado **ao fim de cada fase**. Sistemas C++ e TS escrevem no **mesmo** `CommandBuffer` da fase; o TS
   chega a ele pela API C (operações por `ComponentId`). **[decisão do design]** **[decisão do design]** `spawn` devolve a `Entity` na hora (o ECS já
   reserva o índice). Alterar valores de componentes é direto.
-- Um sistema pode ser restrito a estados (`inState("playing")`, §4.7); fora deles não roda.
+- Um sistema pode ser restrito a estados (`inState(playing)`, §4.7); fora deles não roda.
 - Um sistema registrado com `.whilePaused()` roda **só** enquanto a engine está pausada pelo jogo; os demais, só
   enquanto não está. As duas restrições (estado e pausa) se combinam.
 
@@ -641,10 +646,10 @@ os estados existirem.
 
 ### 4.7 Estados de jogo
 
-- O jogo declara um conjunto plano de estados (ex.: `menu`, `playing`, `gameOver`) e o inicial. Não há estados
-  aninhados nem pilha. **[decisão do design]**
+- O jogo declara um conjunto plano de estados (ex.: `menu`, `playing`, `gameOver`). Não há estados aninhados nem
+  pilha. **[decisão do design]**
 - Ganchos `onEnter(estado)` e `onExit(estado)`; podem fazer mudanças estruturais e usar o `schedule`.
-- Pedir transição (`context.setState("gameOver")`) não troca na hora: a troca acontece no passo 5 do loop
+- Pedir transição (`context.requestState(gameOver)`) não troca na hora: a troca acontece no passo 5 do loop
   (`onExit` do antigo, limpeza de escopo, `onEnter` do novo). Dois pedidos no mesmo passo: vale o último.
   **[decisão do design]**
 - **Escopo:** entidades e tarefas agendadas criadas enquanto um estado está ativo (inclusive no `onEnter`) pertencem a
@@ -652,23 +657,156 @@ os estados existirem.
   **[decisão do design]** Assim "jogar de novo" (`gameOver → playing`) começa limpo sem código de limpeza no jogo.
 - Sistemas e handlers podem ser restritos a estados.
 
+**Declaração**
+- `StateId` é um `uint32_t` denso, na ordem de declaração; `NoState = 0xFFFFFFFF`. A engine começa em `NoState`.
+- Um jogo só em C++ declara com `engine.declareState(name)`. No caminho TS, os estados são declarados no esquema
+  (`state("menu")`), e `olyEngineCreate` os declara na ordem do esquema, depois dos eventos e das ações; o índice no
+  esquema é o `StateId` nos dois lados.
+- Declarar durante `frame` ou com nome repetido é erro de contrato. **[decisão do design]** No máximo 32 estados,
+  para que a restrição `inState` seja uma máscara `uint32_t`.
+
+**Pedido e estado atual**
+- `requestState(state)` existe na `Engine` e em todos os contextos (sistema, handler, tarefa, gancho). Vale dentro e
+  fora de `frame`; vale o último pedido feito antes do passo 5.
+- `state()` devolve o estado atual, que só muda no passo 5.
+- **Estado inicial, [decisão do design]:** não existe conceito próprio. O jogo pede o primeiro estado antes de rodar
+  (`engine.requestState(menu)`), e a entrada acontece no passo 5 do primeiro passo fixo, pela regra de qualquer troca.
+  Nesse primeiro passo só rodam os sistemas sem `inState`. Alternativa rejeitada: entrar no início do primeiro passo,
+  que criaria uma segunda regra só para poupar um passo.
+- **Reentrada, [decisão do design]:** pedir o estado atual roda `onExit`, a limpeza e `onEnter` dele, o que serve
+  para reiniciar a fase.
+- **[decisão do design]** A troca não mexe na pausa. O jogo que quiser sair da pausa ao entrar num estado chama
+  `resume()` no `onEnter`.
+
+**Transição (passo 5, em todo passo fixo, pausado ou não)**
+1. Consome o pedido pendente. Sem pedido, o passo 5 não faz nada.
+2. Roda os `onExit` do estado atual, na ordem de registro. O estado ainda está ativo, então o que esses ganchos criam
+   tem escopo e é limpo no item seguinte.
+3. Limpa o escopo (abaixo).
+4. O estado atual passa a ser o novo.
+5. Roda os `onEnter` do novo estado, na ordem de registro; o que eles criam tem o escopo do novo estado. No primeiro
+   `onEnter`, o estado de origem é `NoState`.
+6. Se houver eventos pendentes, roda um novo despacho (§4.4), que conta para o mesmo limite de rodadas do passo.
+
+**[decisão do design]** Um pedido feito num gancho ou no despacho do item 6 vale no passo 5 do próximo passo fixo:
+não há laço de trocas dentro de um passo.
+
+**Ganchos**
+- C++: `engine.onEnter(state, name, function, userData)` e `engine.onExit(...)`, com
+  `StateHookFunction = void (*)(StateContext&)`. Por nome, com a macro `OLY_STATE_HOOK(name)`, que o TS adiciona com
+  `addNativeOnEnter(state, name)` e `addNativeOnExit(state, name)`, como `OLY_SYSTEM`/`addNativeSystem`.
+- Ganchos TS usam a chamada de volta única (§4.3) com um `kind` novo, uma vez por gancho. Ganchos C++ e TS do mesmo
+  estado e do mesmo momento (entrada ou saída) se misturam na ordem de registro.
+- Registrar gancho durante `frame` é erro de contrato.
+- **`StateContext`, [decisão do design]:** derivado do `DirectContext` (§4.6): mudanças estruturais diretas, `emit`,
+  `schedule` e `requestState`, mais `fromState()` e `toState()`. Só vale durante a chamada.
+
+**Escopo**
+- **Mecanismo, [decisão do design]:** uma tag interna, `StateScoped` (em `engine/runtime/app/detail/`, sem dados nem
+  coluna). Como só um estado fica ativo por vez, toda entidade com a tag pertence ao estado atual, e uma tag basta.
+  Nenhum jogo precisa citá-la; ela só aparece em queries que filtram por ela. Custo aceito: arquétipos gêmeos (com e
+  sem a tag) quando o jogo cria a mesma combinação com e sem escopo. Alternativa rejeitada: uma lista de entidades na
+  `Engine`, que cresce com cada spawn (cada bala), precisa de compactação e faria `persist` buscar na lista ou manter
+  um conjunto extra.
+- **Entidades com escopo:** as criadas por `spawn` de qualquer contexto enquanto `state() != NoState`. No
+  `SystemContext`, o spawn e o `add` da tag entram no `CommandBuffer` e viram uma transição só no flush; no
+  `DirectContext`, a tag entra no próprio `world.spawn(componentes..., StateScoped{})`. Sem estado ativo, e portanto
+  num jogo que não usa estados, nenhuma entidade recebe a tag.
+- **Spawn direto no `World`** (fora de qualquer contexto, ex.: `engine.world().spawn()` no setup) é sempre
+  persistente: o `World` está abaixo da engine, que não vê esse spawn.
+- **Spawn direto no TS:** o `DirectContext` do `@oly/core` criava entidades pelo `World` (`olyEntitySpawn`), sem
+  passar pela engine. Ele passa a usar `olyDirectSpawn`, e quem decide a tag é o C++. `add`, `remove` e `destroy`
+  diretos continuam pelo `World`.
+- **Tarefas com escopo:** as agendadas pelo `Scheduler` (na `Engine` ou num contexto) enquanto `state() != NoState`.
+  O slot da fila de tarefas (§4.6) ganha o campo de escopo.
+- **Persistir, depois de criar:** `context.persist(entity)` remove a tag. Num sistema, entra no `CommandBuffer`, e o
+  `add` e o `remove` da tag do mesmo spawn se anulam no flush (R-CB-4); num contexto direto, é um `remove` direto.
+  Entidade sem a tag: não faz nada (o `remove` do ECS é no-op para componente ausente). Entidade morta: erro de
+  contrato, o mesmo do `remove`. Para tarefas, `schedule().persist(handle)` devolve `false` se a tarefa não está
+  pendente, como `cancel`. Não existe o inverso (dar escopo a algo persistente), por falta de caso de uso.
+- **Limpeza (item 3), [decisão do design]:** destrói as entidades com a tag por uma `QueryById` com
+  `with: [StateScoped]`, criada uma vez; as entidades são juntadas num vetor reaproveitado e destruídas depois da
+  iteração, em O(entidades com escopo). Depois cancela as tarefas com escopo, e o descarte de cada uma roda uma vez (o
+  TS solta a closure). Uma tarefa agendada por um descarte durante a limpeza ainda vê o estado antigo, então tem escopo
+  e também é cancelada: a limpeza repete até não sobrar nenhuma, como a destruição da `Engine`. A limpeza não emite
+  eventos (§4.4).
+
+**`inState`**
+- Sistemas e handlers podem ser restritos a um ou mais estados. Sem restrição, rodam em qualquer estado, inclusive
+  `NoState`. A restrição combina com `.whilePaused()` (§4.3).
+- O handler confere o estado atual em cada rodada; no despacho do item 6, vale o novo estado.
+- C++: `engine.setSystemStates(system, {states...})` e `engine.setHandlerStates(handler, {states...})`; a lista vazia
+  tira a restrição. TS: `.inState(...states)` em `SystemRegistration` e `HandlerRegistration`. Durante `frame`, erro
+  de contrato.
+
+**Exceção e destruição, [decisão do design]**
+- A recuperação (§4.3) descarta o pedido pendente, junto com os comandos e os eventos pendentes.
+- Uma exceção num gancho TS para a troca onde ela estava: num `onExit`, o estado não muda e a limpeza não roda; num
+  `onEnter`, o estado já é o novo e os ganchos seguintes não rodam. O que já foi feito fica.
+- Destruir a `Engine` descarta as tarefas (§4.6). As entidades ficam no `World`, que não pertence à `Engine`.
+
+**Esquema e codegen.** `state("menu")` vai para `schema.states`, com `schemaIndex` na ordem. O nome é único entre
+tipos, eventos, ações e estados e precisa ser identificador C++ válido. O hash do esquema inclui os estados, então um
+WASM desatualizado dá `SchemaMismatchError`. O codegen gera `namespace states { inline constexpr oly::app::StateId
+menu{0}; }` e um `schemaStates()`, como o `schemaActions()`; um nome errado num sistema nativo é erro de compilação.
+Mais de 32 estados é erro do gerador.
+
+**API C**
+
+```c
+#define OLY_NO_STATE 0xFFFFFFFFu
+#define OLY_INVALID_STATE_HOOK 0xFFFFFFFFu
+#define OLY_SCRIPT_STATE_HOOK 4u   // olyHostInvokeScript(engine, kind, hookId, NULL, 0)
+#define OLY_STATE_ENTER 0u
+#define OLY_STATE_EXIT 1u
+
+OLY_API void olyEngineRequestState(OlyEngine* engine, uint32_t state);
+OLY_API uint32_t olyEngineState(OlyEngine* engine);
+// stateMask 0 tira a restrição.
+OLY_API void olyEngineSetSystemStates(OlyEngine* engine, uint32_t systemId, uint32_t stateMask);
+OLY_API void olyEngineSetHandlerStates(OlyEngine* engine, uint32_t handlerId, uint32_t stateMask);
+// `when` é OLY_STATE_ENTER ou OLY_STATE_EXIT. OLY_INVALID_STATE_HOOK se não há gancho nativo com esse nome.
+OLY_API uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name);
+OLY_API uint32_t olyEngineAddScriptStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name);
+// Só dentro de um handler, tarefa ou gancho TS; aplica o escopo do estado atual.
+OLY_API void olyDirectSpawn(OlyEngine* engine, OlyEntity* out);
+// Dentro de um sistema TS, adiado; num contexto direto TS, direto. A ponte escolhe pelo contexto atual.
+OLY_API void olyContextPersist(OlyEngine* engine, uint32_t index, uint32_t generation);
+OLY_API int32_t olyEnginePersistTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
+```
+
+**`@oly/core`.**
+- `state(name)` no esquema devolve um handle `State`.
+- `engine.requestState(state)` e `engine.state` (`State | null`, `null` para `NoState`); `context.requestState`,
+  `context.state` e `context.persist(entity)` em todos os contextos; `schedule.persist(handle)`.
+- `engine.onEnter(state, name, hook)`, `engine.onExit(...)`, `addNativeOnEnter(state, name)` e
+  `addNativeOnExit(state, name)`.
+- `StateContext` com `fromState` e `toState` (`null` para `NoState`). Só vale durante a chamada; fora dela,
+  `ContractError`.
+
+**Erros de contrato** (`OLY_ASSERT` no C++; no TS, `ContractError` antes de chegar ao assert): declarar estado durante
+`frame`, com nome repetido ou além de 32; `StateId` fora do intervalo (pedido, gancho, `inState`); registrar gancho ou
+`inState` durante `frame`; `persist` de entidade morta; `olyDirectSpawn` fora de um contexto direto; no TS, handle de
+estado de outro esquema e `StateContext` usado fora da chamada.
+
 ### 4.8 Uso indicativo
 
 Esboço aceito como base de uso (nomes indicativos, não normativos):
 
 ```ts
 const engine = await Engine.boot({ wasm: "game.wasm", fixedHz: 60 });
-engine.states(["menu", "playing", "gameOver"], { initial: "menu" });
+// menu, playing e gameOver vêm do esquema: state("menu"), ...
 // move, aim, shoot e dash vêm do esquema: action("move", "axis2d"), action("aim", "pointer"), ...
 engine.actions.bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" });
 engine.actions.bind(shoot, "MouseLeft");
 engine.actions.bind(dash, "Space");
-engine.onEnter("playing", (context) => {
+engine.requestState(menu);
+engine.onEnter(playing, "startRound", (context) => {
   context.spawn([Player, Position, Velocity, Dash], { Dash: { ready: 1, speed: 600 } });
   context.schedule.every(5.0, spawnWave);
 });
-engine.addSystem(Phase.Update, "chasePlayer", chasePlayerSystem).inState("playing");
-engine.addNativeSystem(Phase.Update, "move").inState("playing");
+engine.addSystem(Phase.Update, "chasePlayer", chasePlayerSystem).inState(playing);
+engine.addNativeSystem(Phase.Update, "move").inState(playing);
 engine.on(EnemyDied, dropCoin);
 engine.run();
 
@@ -706,7 +844,7 @@ Cada fase ganha um plano próprio em `docs/superpowers/plans/` quando começar. 
 | 3 | **Eventos** | `event` no esquema e no gerador; filas tipadas na memória do WASM; emissão nos dois lados; handlers C++ (por função e por nome) e TS por lote; despacho tipo a tipo com cascata e limite | teste C++ nativo do fluxo de referência (§4.4) sem TS, terminando com `checkInvariants` e o inimigo destruído; testes de ordem (tipo, registro, rodadas), cascata, estouro do limite (caso de morte no C++), evento duplicado, emissão na fase `render`, handlers C++ e TS misturados (teste TS em node contra o WASM), crescimento de memória dentro de handler TS e recuperação de exceção; medição do §7 registrada |
 | 4 | **Ações de input** | módulo `input` (`ActionMap`, botões físicos HID, fila de bordas, captura no passo 1); `action` no esquema e no gerador; API C de ligações, entrada do host e snapshot; leitura pelos contextos em C++ e TS; `attachBrowserInput` em `@oly/client` | `input.unit` sem `Engine` cobrindo bordas, toque mais curto que um passo, várias ligações, auto-repeat, `releaseAll`, eixo (anulação e diagonal) e religação; no `app`, uma captura por passo (inclusive pausado), bordas só no primeiro passo do frame e sair da pausa por uma ação num sistema `.whilePaused()`; casos de morte novos; teste TS em node contra o WASM com sistema TS lendo ações, toque curto e saída da pausa; amostras da tabela HID iguais nos dois lados; `attachBrowserInput` testado com ambiente falso |
 | 5 | **Schedule** | fila de tarefas no `app` (`Scheduler`, `TaskContext`, `DirectContext`); `after`/`every`/cancelar no relógio do jogo, congelando na pausa; payload e descarte; API C de tarefas TS; `schedule` na `Engine` e nos contextos do `@oly/core` | no `app`, C++ nativo com relógio falso e sem TS: passo do disparo (atraso fora do passo, `after(0)` dentro e fora de `frame`), ordem por vencimento e criação, `every` sem deriva e com intervalo menor que o passo, tarefa criada no passo 2 esperando o seguinte, cancelar antes/durante/depois, pausa, aba oculta, passos descartados, descarte uma única vez e nunca depois de `lastRun`, payload, mudanças diretas com `checkInvariants`, `emit` em tarefa despachado no mesmo passo, tarefas sobrevivendo à recuperação; casos de morte novos; `bridge.c_api`; teste TS em node contra o WASM com tarefas C++ e TS intercaladas, exceção e recuperação, crescimento de memória dentro de tarefa TS e mapa de closures vazio em todos os caminhos |
-| 6 | **Estados** | estados, `onEnter`/`onExit`, `inState`, escopo de entidades e de tarefas agendadas | teste de `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`) |
+| 6 | **Estados** | `declareState`, pedido e transição no passo 5, `onEnter`/`onExit` (por função e por nome) com `StateContext`, `inState` em sistemas e handlers, escopo por tag `StateScoped` e nas tarefas, `persist`; `state` no esquema e no gerador; API C de estados, `olyDirectSpawn` e `olyContextPersist`; estados nos contextos do `@oly/core` | no `app`, C++ nativo com relógio falso e sem TS: entrada do estado inicial, ordem `onExit` → limpeza → `onEnter`, último pedido vence, reentrada, pedido em gancho valendo no passo seguinte, troca em passo pausado, `inState` com `whilePaused`, escopo de entidades (sistema, handler, tarefa, gancho; spawn direto no `World` persistente) e de tarefas com descarte uma única vez, `persist` dos dois, descarte que agenda durante a limpeza, evento emitido em gancho despachado no mesmo passo, recuperação (pedido descartado, exceção em `onExit` e em `onEnter`) e `playing → gameOver → playing` sem sobras no `World` (`checkInvariants`); casos de morte novos; `ts.codegen.unit`; `bridge.c_api`; teste TS em node contra o WASM com ganchos C++ e TS intercalados, `inState` pelo TS, spawn direto do TS com escopo, `persist`, mapa de closures vazio depois da troca, exceção em gancho TS e crescimento de memória dentro de gancho TS |
 | 7 | **Jogo de validação** | o jogo de tiro em `examples/` (ou equivalente), com render em canvas e colisão simples feitos no jogo | jogável no navegador de ponta a ponta; lista do que precisou ser feito fora da engine, se algo |
 
 Estados (6) depende do schedule (5) por causa do escopo das tarefas agendadas. Eventos, ações e schedule (3–5) dependem
@@ -747,6 +885,10 @@ só de 2 entre si; a ordem acima é a recomendada.
 - Schedule (fase 5, **[decisão do design]**): sem benchmark. Um jogo tem dezenas de tarefas, a fronteira é cruzada uma
   vez por disparo ou descarte de tarefa TS e nada é feito por entidade. A escolha heap vs varredura linear (§4.6) só
   seria medida se um jogo chegasse a milhares de tarefas.
+- Estados (fase 6, **[decisão do design]**): sem benchmark. A troca de estado é rara (troca de tela), o custo por
+  passo é um teste de máscara por sistema e por handler, e os arquétipos gêmeos da tag `StateScoped` só aparecem
+  quando o jogo cria a mesma combinação com e sem escopo. Medir só faria sentido se um jogo mostrasse fragmentação
+  relevante (`stats()` do ECS).
 - Ambiente ruidoso (WSL2/Docker): só razões da mesma execução, como no ECS.
 - Resultados versionados em `docs/benchmarks/` com registro no `README.md` correspondente.
 
