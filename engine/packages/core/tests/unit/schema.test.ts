@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ContractError, action, component, defineSchema, event, tag } from "@oly/core";
+import { ContractError, action, component, defineSchema, event, state, tag } from "@oly/core";
 import { canonicalSchema, fnv1a32, schemaHash } from "@oly/core/internal";
 
 test("component sem campos é erro", () => {
@@ -166,4 +166,50 @@ test("acrescentar uma ação ou trocar o tipo dela muda o hash", () => {
 
   assert.notEqual(withoutActions, button);
   assert.notEqual(button, axis);
+});
+
+test("state valida o nome", () => {
+  assert.throws(() => state("Menu"), ContractError);
+  assert.throws(() => state("class"), ContractError);
+  assert.throws(() => state("1menu"), ContractError);
+  assert.equal(state("menu").schemaIndex, -1);
+  assert.equal(state("menu").kind, "state");
+});
+
+test("defineSchema dá o índice dos estados na ordem de declaração", () => {
+  const A = component("StA", { x: "f32" });
+  const menu = state("stMenu");
+  const fire = action("stFire", "button");
+  const playing = state("stPlaying");
+
+  const schema = defineSchema([menu, A, fire, playing]);
+
+  assert.deepEqual(schema.states, [menu, playing]);
+  assert.equal(menu.schemaIndex, 0);
+  assert.equal(playing.schemaIndex, 1);
+  assert.equal(schema.types.length, 1);
+  assert.equal(schema.actions.length, 1);
+});
+
+test("nome de estado repetido entre estado, componente e ação é erro", () => {
+  assert.throws(() => defineSchema([state("dupState1"), state("dupState1")]), ContractError);
+  assert.throws(() => defineSchema([action("dupState2", "button"), state("dupState2")]), ContractError);
+});
+
+test("33 estados é erro com o máximo na mensagem", () => {
+  const states = Array.from({ length: 33 }, (_, index) => state(`many${index}`));
+
+  assert.throws(() => defineSchema(states), /máximo/);
+  assert.doesNotThrow(() => defineSchema(Array.from({ length: 32 }, (_, index) => state(`ok${index}`))));
+});
+
+test("forma canônica acrescenta os estados depois das ações", () => {
+  assert.equal(canonicalSchema([], [], [action("go", "button")], [state("menu"), state("playing")]), "@go:button;#menu;#playing;");
+});
+
+test("acrescentar ou renomear um estado muda o hash", () => {
+  const base = schemaHash([], [], [], [state("a1")]);
+
+  assert.notEqual(base, schemaHash([], [], [], []));
+  assert.notEqual(base, schemaHash([], [], [], [state("a2")]));
 });

@@ -4,6 +4,7 @@
 
 #include "handles.hpp"
 #include "oly/app/handler.hpp"
+#include "oly/app/state_context.hpp"
 #include "oly/app/system.hpp"
 #include "oly/app/task_context.hpp"
 #include "oly/bridge/engine.hpp"
@@ -40,10 +41,38 @@ namespace oly::bridge {
       engine->currentContext = nullptr;
     }
 
+    // Guarda o contexto direto atual para olyDirectSpawn e olyContextPersist e restaura o anterior ao sair.
+    class DirectContextScope {
+     private:
+      OlyEngine* engine_;
+      oly::app::DirectContext* previous_;
+
+     public:
+      DirectContextScope(OlyEngine* engine, oly::app::DirectContext& context) noexcept
+        : engine_(engine),
+          previous_(engine->directContext) {
+        engine->directContext = &context;
+      }
+      DirectContextScope(const DirectContextScope&) = delete;
+      DirectContextScope& operator=(const DirectContextScope&) = delete;
+      ~DirectContextScope() {
+        engine_->directContext = previous_;
+      }
+    };
+
     void runScriptHandler(oly::app::HandlerContext& context) {
       OlyEngine* engine = static_cast<OlyEngine*>(context.userData());
 
+      DirectContextScope scope(engine, context);
       g_invoker(engine, OLY_SCRIPT_HANDLER, context.handlerId(), context.eventData(), context.eventCount());
+    }
+
+    void runScriptStateHook(oly::app::StateContext& context) {
+      OlyEngine* engine = static_cast<OlyEngine*>(context.userData());
+      const oly::app::StateId otherSide = context.entering() ? context.fromState() : context.toState();
+
+      DirectContextScope scope(engine, context);
+      g_invoker(engine, OLY_SCRIPT_STATE_HOOK, context.hookId(), nullptr, otherSide);
     }
 
     struct ScriptTaskPayload {
@@ -54,6 +83,7 @@ namespace oly::bridge {
     void runScriptTask(oly::app::TaskContext& context) {
       const ScriptTaskPayload& payload = context.payload<ScriptTaskPayload>();
 
+      DirectContextScope scope(payload.engine, context);
       g_invoker(payload.engine, OLY_SCRIPT_TASK, payload.scriptId, nullptr, context.lastRun() ? 1 : 0);
     }
 
@@ -81,6 +111,11 @@ namespace oly::bridge {
     oly::app::Phase phaseOf(uint32_t phase, [[maybe_unused]] const char* operation) {
       OLY_ASSERT(phase < oly::app::PhaseCount, "%s: phase=%u fora do intervalo (0..%u)", operation, phase, oly::app::PhaseCount - 1);
       return static_cast<oly::app::Phase>(phase);
+    }
+
+    uint32_t checkedWhen([[maybe_unused]] uint32_t when, [[maybe_unused]] const char* operation) {
+      OLY_ASSERT(when == OLY_STATE_ENTER || when == OLY_STATE_EXIT, "%s: when=%u inválido", operation, when);
+      return when;
     }
 
     oly::ecs::Entity entityOf(uint32_t index, uint32_t generation) {
@@ -112,6 +147,11 @@ OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame, uint32_t m
     OLY_ASSERT(id == engine->engine.actions().actionCount() - 1, "olyEngineCreate: ação \"%.*s\" fora de ordem", static_cast<int>(schemaAction.name.size()), schemaAction.name.data());
   }
 
+  for (const oly::bridge::SchemaState& schemaState : oly::bridge::schemaStates()) {
+    [[maybe_unused]] const oly::app::StateId id = engine->engine.declareState(schemaState.name);
+    OLY_ASSERT(id == engine->engine.stateCount() - 1, "olyEngineCreate: estado \"%.*s\" fora de ordem", static_cast<int>(schemaState.name.size()), schemaState.name.data());
+  }
+
   return engine;
 }
 
@@ -126,6 +166,7 @@ OlyWorld* olyEngineWorld(OlyEngine* engine) {
 void olyEngineFrame(OlyEngine* engine, double nowSeconds) {
   // Depois de uma exceção JS o ponteiro ficou apontando para uma pilha que já não existe.
   engine->currentContext = nullptr;
+  engine->directContext = nullptr;
   engine->engine.frame(nowSeconds);
 }
 
@@ -214,6 +255,42 @@ int32_t olyEngineIsTaskPending(OlyEngine* engine, uint32_t slot, uint32_t genera
   return engine->engine.schedule().isPending(oly::app::TaskHandle{slot, generation}) ? 1 : 0;
 }
 
+int32_t olyEnginePersistTask(OlyEngine* engine, uint32_t slot, uint32_t generation) {
+  return engine->engine.schedule().persist(oly::app::TaskHandle{slot, generation}) ? 1 : 0;
+}
+
+void olyEngineRequestState(OlyEngine* engine, uint32_t state) {
+  engine->engine.requestState(state);
+}
+
+uint32_t olyEngineState(OlyEngine* engine) {
+  return engine->engine.state();
+}
+
+void olyEngineSetSystemStates(OlyEngine* engine, uint32_t systemId, uint32_t stateMask) {
+  engine->engine.setSystemStateMask(systemId, stateMask);
+}
+
+void olyEngineSetHandlerStates(OlyEngine* engine, uint32_t handlerId, uint32_t stateMask) {
+  engine->engine.setHandlerStateMask(handlerId, stateMask);
+}
+
+uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name) {
+  const uint32_t checkedWhen = oly::bridge::checkedWhen(when, "olyEngineAddNativeStateHook");
+  const oly::app::StateHookFunction function = oly::app::findNamedStateHook(name);
+  if (function == nullptr) {
+    return OLY_INVALID_STATE_HOOK;
+  }
+
+  return checkedWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, function) : engine->engine.onExit(state, name, function);
+}
+
+uint32_t olyEngineAddScriptStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name) {
+  const uint32_t checkedWhen = oly::bridge::checkedWhen(when, "olyEngineAddScriptStateHook");
+
+  return checkedWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, &oly::bridge::runScriptStateHook, engine) : engine->engine.onExit(state, name, &oly::bridge::runScriptStateHook, engine);
+}
+
 void olyEngineBindButton(OlyEngine* engine, uint32_t action, uint32_t button) {
   oly::input::ActionMap& actions = engine->engine.actions();
   oly::bridge::checkedAction(actions, action, oly::input::ActionKind::Button, "olyEngineBindButton");
@@ -275,5 +352,24 @@ void olySystemAdd(OlyEngine* engine, uint32_t index, uint32_t generation, uint32
 
 void olySystemRemove(OlyEngine* engine, uint32_t index, uint32_t generation, uint32_t componentId) {
   oly::bridge::currentContext(engine, "olySystemRemove").removeById(oly::bridge::entityOf(index, generation), componentId);
+}
+
+void olyDirectSpawn(OlyEngine* engine, OlyEntity* out) {
+  OLY_ASSERT(engine->directContext != nullptr, "olyDirectSpawn: chamado fora de handler, tarefa ou gancho");
+
+  const oly::ecs::Entity entity = engine->directContext->spawn();
+  out->index = entity.index;
+  out->generation = entity.generation;
+}
+
+void olyContextPersist(OlyEngine* engine, uint32_t index, uint32_t generation) {
+  OLY_ASSERT(engine->directContext != nullptr || engine->currentContext != nullptr, "olyContextPersist: chamado fora de sistema, handler, tarefa ou gancho");
+
+  const oly::ecs::Entity entity = oly::bridge::entityOf(index, generation);
+  if (engine->directContext != nullptr) {
+    engine->directContext->persist(entity);
+  } else {
+    engine->currentContext->persist(entity);
+  }
 }
 }

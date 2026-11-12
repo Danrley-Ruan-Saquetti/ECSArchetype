@@ -222,3 +222,7 @@ TEST_CASE("ações do esquema expostas pela API C") {
   CHECK(olySchemaActionKind(1) == OLY_ACTION_AXIS2D);
   CHECK(olySchemaActionKind(2) == OLY_ACTION_POINTER);
 }
+
+TEST_CASE("estados do esquema expostos pela API C") {
+  CHECK(olySchemaStateCount() == 2);
+}

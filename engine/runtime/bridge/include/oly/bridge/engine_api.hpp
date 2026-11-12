@@ -15,6 +15,12 @@ struct OlyEngine;
 #define OLY_SCRIPT_HANDLER 1u
 #define OLY_SCRIPT_TASK 2u
 #define OLY_SCRIPT_TASK_DISCARD 3u
+#define OLY_SCRIPT_STATE_HOOK 4u
+
+#define OLY_NO_STATE 0xFFFFFFFFu
+#define OLY_INVALID_STATE_HOOK 0xFFFFFFFFu
+#define OLY_STATE_ENTER 0u
+#define OLY_STATE_EXIT 1u
 
 struct OlyTaskHandle {
   uint32_t slot;
@@ -36,6 +42,8 @@ struct OlyActionState {
 extern "C" {
 // fixedHz, maxStepsPerFrame e maxEventRounds precisam ser positivos (OLY_ASSERT). Declara, na ordem do esquema, todos
 // os eventos de oly::bridge::schemaEvents(): o índice do evento no esquema é o seu tipo de evento (eventType).
+// Depois dos eventos e das ações, declara os estados de oly::bridge::schemaStates(): o índice do estado no esquema é o
+// seu StateId.
 OLY_API OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame, uint32_t maxEventRounds);
 OLY_API void olyEngineDestroy(OlyEngine* engine);
 // Pertence à engine: vale até olyEngineDestroy e nunca vai para olyWorldDestroy.
@@ -75,6 +83,27 @@ OLY_API void olyEngineScheduleScriptTask(OlyEngine* engine, double delaySeconds,
 // 1 se a tarefa estava pendente; 0 se já terminou, foi cancelada ou o handle é de uma tarefa antiga do slot.
 OLY_API int32_t olyEngineCancelTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
 OLY_API int32_t olyEngineIsTaskPending(OlyEngine* engine, uint32_t slot, uint32_t generation);
+
+// Estados: olyEngineCreate declara os do esquema, então o índice no esquema é o StateId. O pedido vale dentro e fora de
+// olyEngineFrame (o último vence) e a troca acontece no passo 5. Estado fora do intervalo é erro de contrato (OLY_ASSERT).
+OLY_API void olyEngineRequestState(OlyEngine* engine, uint32_t state);
+// OLY_NO_STATE até a primeira troca.
+OLY_API uint32_t olyEngineState(OlyEngine* engine);
+// Um bit por estado; stateMask 0 tira a restrição. Máscara com bit de estado não declarado é erro de contrato.
+OLY_API void olyEngineSetSystemStates(OlyEngine* engine, uint32_t systemId, uint32_t stateMask);
+OLY_API void olyEngineSetHandlerStates(OlyEngine* engine, uint32_t handlerId, uint32_t stateMask);
+// `when` é OLY_STATE_ENTER ou OLY_STATE_EXIT (outro valor é erro de contrato). O nativo devolve OLY_INVALID_STATE_HOOK se
+// não há gancho com esse nome (OLY_STATE_HOOK). O de script chama olyHostInvokeScript(engine, OLY_SCRIPT_STATE_HOOK,
+// hookId, NULL, outro), onde `outro` é o estado do outro lado da troca: o de origem num OLY_STATE_ENTER e o de destino
+// num OLY_STATE_EXIT. O lado do gancho é olyEngineState no momento da chamada.
+OLY_API uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name);
+OLY_API uint32_t olyEngineAddScriptStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name);
+// Só dentro de um handler, tarefa ou gancho de script; aplica o escopo do estado atual.
+OLY_API void olyDirectSpawn(OlyEngine* engine, OlyEntity* out);
+// Dentro de um sistema de script é adiado; num handler, tarefa ou gancho de script é direto (a entidade precisa estar viva).
+OLY_API void olyContextPersist(OlyEngine* engine, uint32_t index, uint32_t generation);
+// 1 se a tarefa estava pendente e perdeu o escopo; 0 se não está pendente.
+OLY_API int32_t olyEnginePersistTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
 
 // Ações: olyEngineCreate declara, depois dos eventos, todas as de oly::bridge::schemaActions(); o índice da ação no
 // esquema é o seu ActionId (action). `button` é um usage HID (página nos 16 bits altos). Ligar confere o intervalo

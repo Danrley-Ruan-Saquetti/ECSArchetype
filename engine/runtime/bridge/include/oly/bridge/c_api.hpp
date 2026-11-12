@@ -43,6 +43,8 @@ OLY_API uint32_t olySchemaActionCount();
 // actionIndex < olySchemaActionCount(), sem verificação. O índice é o da ação no esquema, que é também o seu
 // ActionId na Engine.
 OLY_API uint32_t olySchemaActionKind(uint32_t actionIndex);
+// O índice do estado no esquema é o seu StateId na Engine.
+OLY_API uint32_t olySchemaStateCount();
 
 // Mudanças estruturais (spawn, destroy, add, remove) exigem nenhuma iteração aberta; destroy, add e remove
 // também exigem entidade viva (OLY_ASSERT). Qualquer mudança estrutural invalida os ponteiros de

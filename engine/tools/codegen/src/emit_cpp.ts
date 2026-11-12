@@ -1,4 +1,4 @@
-import type { ActionKind, ActionType, ComponentLayout, EventType, ScalarType, Schema, SchemaType } from "@oly/core";
+import type { ActionKind, ActionType, ComponentLayout, EventType, ScalarType, Schema, SchemaType, State } from "@oly/core";
 
 const cppTypes: Readonly<Record<ScalarType, string>> = {
   f32: "float",
@@ -60,11 +60,24 @@ function emitActions(actions: readonly ActionType[]): string {
   return `\nnamespace actions {\n${handles}}\n`;
 }
 
+function emitStates(states: readonly State[]): string {
+  if (states.length === 0) {
+    return "";
+  }
+
+  const handles = states
+    .map((state) => `  inline constexpr oly::app::StateId ${state.name}{${state.schemaIndex}};\n`)
+    .join("");
+
+  return `\nnamespace states {\n${handles}}\n`;
+}
+
 export function emitHeader(schema: Schema): string {
   const structs = [...schema.types, ...schema.events].map(emitStruct).join("\n");
   const inputInclude = schema.actions.length === 0 ? "" : '#include "oly/input/action_map.hpp"\n';
+  const stateInclude = schema.states.length === 0 ? "" : '#include "oly/app/state.hpp"\n';
 
-  return `// Gerado por oly-codegen: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n${inputInclude}\n${structs}${emitActions(schema.actions)}`;
+  return `// Gerado por oly-codegen: não edite.\n#pragma once\n\n#include <cstddef>\n#include <cstdint>\n\n#include "oly/ecs/entity.hpp"\n${inputInclude}${stateInclude}\n${structs}${emitActions(schema.actions)}${emitStates(schema.states)}`;
 }
 
 function emitEventsRegistry(schema: Schema): string {
@@ -112,6 +125,25 @@ ${entries},
 `;
 }
 
+function emitStatesRegistry(schema: Schema): string {
+  if (schema.states.length === 0) {
+    return `  std::span<const SchemaState> schemaStates() {
+    return {};
+  }
+`;
+  }
+
+  const entries = schema.states.map((state) => `      {"${state.name}"}`).join(",\n");
+
+  return `  std::span<const SchemaState> schemaStates() {
+    static const SchemaState states[] = {
+${entries},
+    };
+    return states;
+  }
+`;
+}
+
 export function emitRegistry(schema: Schema): string {
   const ids = schema.types.map((type) => `      oly::ecs::componentId<${type.name}>()`).join(",\n");
 
@@ -132,6 +164,7 @@ ${ids}};
   }
 
 ${emitEventsRegistry(schema)}
-${emitActionsRegistry(schema)}}
+${emitActionsRegistry(schema)}
+${emitStatesRegistry(schema)}}
 `;
 }

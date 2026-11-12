@@ -21,6 +21,10 @@ namespace {
   std::vector<uint32_t> g_eventCounts;
   std::vector<uint32_t> g_values;
   void (*g_action)(OlyEngine*, uint32_t) = nullptr;
+  uint32_t g_actionKind = OLY_SCRIPT_SYSTEM;
+  OlyEntity g_created{};
+  OlyEntity g_createdByHandler{};
+  int g_actionCalls = 0;
 
   void recordingInvoker(OlyEngine* engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount) {
     g_order.push_back("s");
@@ -31,7 +35,7 @@ namespace {
     for (uint32_t index = 0; batch != nullptr && index < eventCount; ++index) {
       g_values.push_back(batch[index].value);
     }
-    if (g_action && kind == OLY_SCRIPT_SYSTEM) {
+    if (g_action && kind == g_actionKind) {
       g_action(engine, id);
     }
   }
@@ -54,6 +58,8 @@ namespace {
   struct EngineFixture {
     OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
     oly::bridge::ScriptInvoker previous = oly::bridge::setScriptInvoker(&recordingInvoker);
+    double now = 0.0;
+    bool primed = false;
 
     EngineFixture() {
       g_order.clear();
@@ -62,6 +68,10 @@ namespace {
       g_eventCounts.clear();
       g_values.clear();
       g_action = nullptr;
+      g_actionKind = OLY_SCRIPT_SYSTEM;
+      g_created = OlyEntity{};
+      g_createdByHandler = OlyEntity{};
+      g_actionCalls = 0;
     }
 
     ~EngineFixture() {
@@ -72,6 +82,17 @@ namespace {
     void step() {
       olyEngineFrame(engine, 0.0);
       olyEngineFrame(engine, 1.0 / 60);
+    }
+
+    // Um passo por chamada, em sequência (step só serve a testes de um passo).
+    void next() {
+      if (!primed) {
+        olyEngineFrame(engine, 0.0);
+        primed = true;
+      }
+
+      now += 1.0 / 60;
+      olyEngineFrame(engine, now);
     }
 
     bool invariantsHold() {
@@ -291,6 +312,12 @@ TEST_CASE("ações do esquema são declaradas na criação, na ordem") {
   CHECK(actions.kind(2) == oly::input::ActionKind::Pointer);
 }
 
+TEST_CASE("olyEngineCreate declara os estados do esquema na ordem") {
+  EngineFixture fixture;
+
+  CHECK(oly::bridge::engineOf(fixture.engine).stateCount() == 2);
+}
+
 TEST_CASE("ligar, apertar e ler pelo snapshot") {
   ActionFixture fixture;
   g_sawJumpPressed = false;
@@ -412,5 +439,203 @@ TEST_CASE("tarefas de script e nativas na ordem de vencimento") {
   }
 
   CHECK(g_order == std::vector<std::string>{"s", "n", "s"});
+  CHECK(fixture.invariantsHold());
+}
+
+OLY_STATE_HOOK(bridgeNamedEnter) {
+  g_order.push_back("ne");
+}
+
+namespace {
+  constexpr uint32_t MenuState = 0;
+  constexpr uint32_t PlayingState = 1;
+
+  uint32_t countKind(uint32_t kind) {
+    uint32_t count = 0;
+    for (const uint32_t recorded : g_kinds) {
+      count += recorded == kind ? 1 : 0;
+    }
+
+    return count;
+  }
+
+  void spawnWithScopeOnce(OlyEngine* engine, uint32_t) {
+    if (olyEngineState(engine) != MenuState || g_actionCalls > 0) {
+      return;
+    }
+
+    ++g_actionCalls;
+    olyDirectSpawn(engine, &g_created);
+  }
+
+  void spawnAndPersistOnce(OlyEngine* engine, uint32_t) {
+    if (olyEngineState(engine) != MenuState || g_actionCalls > 0) {
+      return;
+    }
+
+    ++g_actionCalls;
+    if (g_actionKind == OLY_SCRIPT_SYSTEM) {
+      olySystemSpawn(engine, &g_created);
+      olyContextPersist(engine, g_created.index, g_created.generation);
+    } else {
+      olyDirectSpawn(engine, &g_createdByHandler);
+      olyContextPersist(engine, g_createdByHandler.index, g_createdByHandler.generation);
+    }
+  }
+}
+
+TEST_CASE("olyEngineState começa em OLY_NO_STATE e muda no passo 5") {
+  EngineFixture fixture;
+  CHECK(olyEngineState(fixture.engine) == OLY_NO_STATE);
+
+  olyEngineRequestState(fixture.engine, PlayingState);
+
+  CHECK(olyEngineState(fixture.engine) == OLY_NO_STATE);
+
+  fixture.next();
+
+  CHECK(olyEngineState(fixture.engine) == PlayingState);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("gancho de script: OLY_SCRIPT_STATE_HOOK com o hookId e o outro estado") {
+  EngineFixture fixture;
+  const uint32_t enterPlaying = olyEngineAddScriptStateHook(fixture.engine, OLY_STATE_ENTER, PlayingState, "enterPlaying");
+  const uint32_t exitMenu = olyEngineAddScriptStateHook(fixture.engine, OLY_STATE_EXIT, MenuState, "exitMenu");
+  olyEngineRequestState(fixture.engine, MenuState);
+  fixture.next();
+  fixture.next();
+  g_kinds.clear();
+  g_eventCounts.clear();
+  g_invocations.clear();
+
+  olyEngineRequestState(fixture.engine, PlayingState);
+  fixture.next();
+
+  CHECK(g_kinds == std::vector<uint32_t>{OLY_SCRIPT_STATE_HOOK, OLY_SCRIPT_STATE_HOOK});
+  CHECK(g_eventCounts == std::vector<uint32_t>{PlayingState, MenuState});
+  REQUIRE(g_invocations.size() == 2);
+  CHECK(g_invocations[0].second == exitMenu);
+  CHECK(g_invocations[1].second == enterPlaying);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("gancho nativo por nome e OLY_INVALID_STATE_HOOK para nome desconhecido") {
+  EngineFixture fixture;
+  const uint32_t named = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "bridgeNamedEnter");
+  const uint32_t unknown = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "naoExiste");
+  olyEngineRequestState(fixture.engine, MenuState);
+
+  fixture.next();
+  fixture.next();
+
+  CHECK(named != OLY_INVALID_STATE_HOOK);
+  CHECK(unknown == OLY_INVALID_STATE_HOOK);
+  CHECK(g_order == std::vector<std::string>{"ne"});
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("máscara de estados em sistema e handler; 0 tira a restrição") {
+  EngineFixture fixture;
+  const uint32_t system = olyEngineAddScriptSystem(fixture.engine, 1, "restricted");
+  const uint32_t handler = olyEngineAddScriptHandler(fixture.engine, 0, "restricted");
+  olyEngineSetSystemStates(fixture.engine, system, 1u << PlayingState);
+  olyEngineSetHandlerStates(fixture.engine, handler, 1u << PlayingState);
+  emitValue(fixture.engine, 1);
+
+  fixture.next();
+
+  CHECK(countKind(OLY_SCRIPT_SYSTEM) == 0);
+  CHECK(countKind(OLY_SCRIPT_HANDLER) == 0);
+
+  olyEngineRequestState(fixture.engine, PlayingState);
+  fixture.next();
+  emitValue(fixture.engine, 2);
+  fixture.next();
+
+  CHECK(countKind(OLY_SCRIPT_SYSTEM) == 1);
+  CHECK(countKind(OLY_SCRIPT_HANDLER) == 1);
+
+  olyEngineSetSystemStates(fixture.engine, system, 0);
+  olyEngineRequestState(fixture.engine, MenuState);
+  fixture.next();
+  fixture.next();
+
+  CHECK(countKind(OLY_SCRIPT_SYSTEM) == 3);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("olyDirectSpawn num handler de script tem escopo e some na troca") {
+  EngineFixture fixture;
+  olyEngineAddScriptHandler(fixture.engine, 0, "spawner");
+  g_action = spawnWithScopeOnce;
+  g_actionKind = OLY_SCRIPT_HANDLER;
+  olyEngineRequestState(fixture.engine, MenuState);
+  fixture.next();
+  fixture.next();
+  emitValue(fixture.engine, 1);
+  fixture.next();
+  OlyWorld* world = olyEngineWorld(fixture.engine);
+
+  CHECK(olyEntityIsAlive(world, g_created.index, g_created.generation) == 1);
+
+  olyEngineRequestState(fixture.engine, PlayingState);
+  fixture.next();
+
+  CHECK(olyEntityIsAlive(world, g_created.index, g_created.generation) == 0);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("olyContextPersist em sistema de script (adiado) e em handler de script (direto)") {
+  EngineFixture fixture;
+  olyEngineAddScriptSystem(fixture.engine, 1, "persister");
+  olyEngineAddScriptHandler(fixture.engine, 0, "persister");
+  g_action = spawnAndPersistOnce;
+  olyEngineRequestState(fixture.engine, MenuState);
+  fixture.next();
+  fixture.next();
+  OlyEntity persistedBySystem = g_created;
+  g_actionKind = OLY_SCRIPT_HANDLER;
+  g_actionCalls = 0;
+  emitValue(fixture.engine, 1);
+  fixture.next();
+  OlyEntity persistedByHandler = g_createdByHandler;
+
+  olyEngineRequestState(fixture.engine, PlayingState);
+  fixture.next();
+  OlyWorld* world = olyEngineWorld(fixture.engine);
+
+  CHECK(olyEntityIsAlive(world, persistedBySystem.index, persistedBySystem.generation) == 1);
+  CHECK(olyEntityIsAlive(world, persistedByHandler.index, persistedByHandler.generation) == 1);
+  CHECK(fixture.invariantsHold());
+}
+
+TEST_CASE("olyEnginePersistTask mantém a tarefa de script na troca e devolve 0 para tarefa não pendente") {
+  EngineFixture fixture;
+  olyEngineRequestState(fixture.engine, MenuState);
+  fixture.next();
+  fixture.next();
+  OlyTaskHandle scoped{};
+  OlyTaskHandle persisted{};
+  olyEngineScheduleScriptTask(fixture.engine, 100.0, 0.0, 11, &scoped);
+  olyEngineScheduleScriptTask(fixture.engine, 100.0, 0.0, 12, &persisted);
+  OlyTaskHandle canceled{};
+  olyEngineScheduleScriptTask(fixture.engine, 100.0, 0.0, 13, &canceled);
+  olyEngineCancelTask(fixture.engine, canceled.slot, canceled.generation);
+
+  const int32_t persistedResult = olyEnginePersistTask(fixture.engine, persisted.slot, persisted.generation);
+  const int32_t canceledResult = olyEnginePersistTask(fixture.engine, canceled.slot, canceled.generation);
+  olyEngineRequestState(fixture.engine, PlayingState);
+  fixture.next();
+
+  CHECK(persistedResult == 1);
+  CHECK(canceledResult == 0);
+  CHECK(olyEngineIsTaskPending(fixture.engine, persisted.slot, persisted.generation) == 1);
+  CHECK(olyEngineIsTaskPending(fixture.engine, scoped.slot, scoped.generation) == 0);
+  CHECK(discardsOf(11) == 1);
+  CHECK(discardsOf(12) == 0);
+
+  olyEngineCancelTask(fixture.engine, persisted.slot, persisted.generation);
+
   CHECK(fixture.invariantsHold());
 }

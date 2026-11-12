@@ -98,6 +98,10 @@ uint32_t olySchemaActionKind(uint32_t actionIndex) {
   return static_cast<uint32_t>(oly::bridge::schemaActions()[actionIndex].kind);
 }
 
+uint32_t olySchemaStateCount() {
+  return static_cast<uint32_t>(oly::bridge::schemaStates().size());
+}
+
 void olyEntitySpawn(OlyWorld* world, OlyEntity* out) {
   const oly::ecs::Entity entity = world->world.spawn();
   out->index = entity.index;

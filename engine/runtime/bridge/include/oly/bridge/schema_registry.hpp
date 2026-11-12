@@ -24,6 +24,10 @@ namespace oly::bridge {
     oly::input::ActionKind kind;
   };
 
+  struct SchemaState {
+    std::string_view name;
+  };
+
   // Definidas pelo código gerado do jogo (ou, nos testes, por um registro escrito à mão).
   uint32_t schemaHash() noexcept;
   std::span<const oly::ecs::ComponentId> schemaComponentIds();
@@ -31,4 +35,6 @@ namespace oly::bridge {
   std::span<const SchemaEvent> schemaEvents();
   // Na ordem do esquema; o índice é o ActionId na ActionMap da Engine.
   std::span<const SchemaAction> schemaActions();
+  // Na ordem do esquema; o índice é o StateId na Engine.
+  std::span<const SchemaState> schemaStates();
 }

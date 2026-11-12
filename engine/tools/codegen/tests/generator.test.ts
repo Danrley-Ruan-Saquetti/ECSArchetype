@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { action, component, defineSchema, event, tag } from "@oly/core";
+import { action, component, defineSchema, event, state, tag } from "@oly/core";
 
 import { emitHeader, emitRegistry } from "../dist/emit_cpp.js";
 
@@ -84,4 +84,31 @@ test("registro lista as ações na ordem do esquema", () => {
 
 test("esquema sem ações gera schemaActions vazio", () => {
   assert.match(emitRegistry(schema), /schemaActions\(\) \{\s*return \{\};/);
+});
+
+const schemaWithStates = defineSchema([component("S", { a: "u8" }), state("menu"), state("playing")]);
+
+test("header com estados declara states::<nome> com o StateId", () => {
+  const header = emitHeader(schemaWithStates);
+
+  assert.ok(header.includes('#include "oly/app/state.hpp"'));
+  assert.ok(header.includes("namespace states {"));
+  assert.ok(header.includes("inline constexpr oly::app::StateId menu{0};"));
+  assert.ok(header.includes("inline constexpr oly::app::StateId playing{1};"));
+});
+
+test("header sem estados não inclui oly/app/state", () => {
+  assert.ok(!emitHeader(schema).includes("oly/app/state"));
+});
+
+test("registro lista os estados na ordem do esquema", () => {
+  const registry = emitRegistry(schemaWithStates);
+
+  assert.ok(registry.indexOf('{"menu"}') >= 0);
+  assert.ok(registry.indexOf('{"menu"}') < registry.indexOf('{"playing"}'));
+  assert.match(registry, /schemaStates\(\)/);
+});
+
+test("esquema sem estados gera schemaStates vazio", () => {
+  assert.match(emitRegistry(schema), /schemaStates\(\) \{\s*return \{\};/);
 });

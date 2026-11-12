@@ -2,7 +2,7 @@ import { Bridge } from "./bridge.js";
 import { Engine, invokeScript, type EngineConfig } from "./engine.js";
 import { ContractError, SchemaMismatchError } from "./errors.js";
 import type { OlyModule, OlyModuleFactory } from "./module.js";
-import type { ActionKind, ActionType, EventType, Schema, SchemaType } from "./schema.js";
+import type { ActionKind, ActionType, EventType, Schema, SchemaType, State } from "./schema.js";
 import { World } from "./world.js";
 
 interface RuntimeInternals {
@@ -11,6 +11,8 @@ interface RuntimeInternals {
   componentIdOf(runtime: Runtime, type: SchemaType): number;
   eventIndexOf(runtime: Runtime, type: EventType): number;
   actionIndexOf(runtime: Runtime, action: ActionType): number;
+  stateIndexOf(runtime: Runtime, state: State): number;
+  stateAt(runtime: Runtime, index: number): State | null;
 }
 
 let runtimeInternals!: RuntimeInternals;
@@ -99,6 +101,15 @@ export class Runtime {
         // O WASM declara as ações do esquema na ordem dele: o índice no esquema é o ActionId.
         return action.schemaIndex;
       },
+      stateIndexOf: (runtime, state) => {
+        if (runtime.schema.states[state.schemaIndex] !== state) {
+          throw new ContractError(`state=${state.name}: estado não pertence ao esquema deste runtime`);
+        }
+
+        // O WASM declara os estados do esquema na ordem dele: o índice no esquema é o StateId.
+        return state.schemaIndex;
+      },
+      stateAt: (runtime, index) => runtime.schema.states[index] ?? null,
     };
   }
 
@@ -168,6 +179,15 @@ export function actionIndexOf(runtime: Runtime, action: ActionType): number {
   return runtimeInternals.actionIndexOf(runtime, action);
 }
 
+export function stateIndexOf(runtime: Runtime, state: State): number {
+  return runtimeInternals.stateIndexOf(runtime, state);
+}
+
+/** `null` para o estado vazio (0xFFFFFFFF), que nenhum esquema declara. */
+export function stateAt(runtime: Runtime, index: number): State | null {
+  return runtimeInternals.stateAt(runtime, index);
+}
+
 /**
  * Carrega o módulo WASM e confere que ele foi compilado com `schema`. Rejeita com SchemaMismatchError se o
  * hash, o nº de tipos ou o tamanho/alinhamento de algum tipo diferirem.
@@ -179,13 +199,14 @@ export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Pr
   const divergent = firstDivergentType(module, schema);
   const countMatches =
     module._olySchemaComponentCount() === schema.types.length && module._olySchemaEventCount() === schema.events.length &&
-    module._olySchemaActionCount() === schema.actions.length;
+    module._olySchemaActionCount() === schema.actions.length && module._olySchemaStateCount() === schema.states.length;
   if (wasmHash !== schema.hash || !countMatches || divergent !== null) {
     throw new SchemaMismatchError(
       `esquema do WASM (${hex(wasmHash)}) difere do esquema TS (${hex(schema.hash)}); ` +
         `tipos no WASM: ${module._olySchemaComponentCount()}, no TS: ${schema.types.length}; ` +
         `eventos no WASM: ${module._olySchemaEventCount()}, no TS: ${schema.events.length}; ` +
         `ações no WASM: ${module._olySchemaActionCount()}, no TS: ${schema.actions.length}; ` +
+        `estados no WASM: ${module._olySchemaStateCount()}, no TS: ${schema.states.length}; ` +
         `primeiro tipo, evento ou ação divergente: ${divergent ?? "nenhum por tamanho (campos ou ordem mudaram)"}; recompile o WASM`,
     );
   }

@@ -16,6 +16,7 @@ export interface OlyModule {
   _olySchemaEventAlignment(eventIndex: number): number;
   _olySchemaActionCount(): number;
   _olySchemaActionKind(actionIndex: number): number;
+  _olySchemaStateCount(): number;
   _olyEntitySpawn(world: number, out: number): void;
   _olyEntityDestroy(world: number, index: number, generation: number): void;
   _olyEntityIsAlive(world: number, index: number, generation: number): number;

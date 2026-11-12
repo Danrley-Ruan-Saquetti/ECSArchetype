@@ -32,6 +32,10 @@ namespace oly::bridge {
     };
     return actions;
   }
+
+  std::span<const SchemaState> schemaStates() {
+    return {};
+  }
 }
 
 namespace {
@@ -107,6 +111,31 @@ namespace {
     olyEngineClearBindings(engine, 9);
   }
 
+  void directSpawnOutsideContext() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+    OlyEntity entity{};
+
+    olyDirectSpawn(engine, &entity);
+  }
+
+  void contextPersistOutsideContext() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+
+    olyContextPersist(engine, 0, 0);
+  }
+
+  void stateHookInvalidWhen() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+
+    olyEngineAddScriptStateHook(engine, 2, 0, "x");
+  }
+
+  void requestStateOutOfRangeC() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+
+    olyEngineRequestState(engine, 9);
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -117,6 +146,10 @@ namespace {
 int main(int argumentCount, char** arguments) {
   static const std::vector<Case> cases = {
     {"query_end_out_of_order", queryEndOutOfOrder, {"olyQueryEnd", "fora de ordem"}},
+    {"direct_spawn_outside_context", directSpawnOutsideContext, {"olyDirectSpawn", "fora"}},
+    {"context_persist_outside_context", contextPersistOutsideContext, {"olyContextPersist", "fora"}},
+    {"state_hook_invalid_when", stateHookInvalidWhen, {"when", "inválido"}},
+    {"request_state_out_of_range_c", requestStateOutOfRangeC, {"requestState", "fora do intervalo"}},
     {"system_spawn_outside_system", systemSpawnOutsideSystem, {"olySystemSpawn", "fora de sistema"}},
     {"engine_phase_out_of_range", enginePhaseOutOfRange, {"phase"}},
     {"bind_button_wrong_kind", bindButtonWrongKind, {"olyEngineBindButton", "tipo"}},

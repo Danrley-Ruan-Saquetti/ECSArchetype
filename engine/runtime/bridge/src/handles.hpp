@@ -26,6 +26,7 @@ struct OlyEngine {
   OlyWorld world; // antes de `engine`: ela guarda uma referência a world.world
   oly::app::Engine engine;
   oly::app::SystemContext* currentContext = nullptr;
+  oly::app::DirectContext* directContext = nullptr;
 
   explicit OlyEngine(oly::app::EngineConfig config)
     : engine(world.world, config) {}

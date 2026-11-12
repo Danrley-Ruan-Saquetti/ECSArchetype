@@ -28,4 +28,12 @@ namespace oly::bridge {
     };
     return actions;
   }
+
+  std::span<const SchemaState> schemaStates() {
+    static const SchemaState states[] = {
+      {"bridgeMenu"},
+      {"bridgePlaying"},
+    };
+    return states;
+  }
 }
