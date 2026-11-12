@@ -52,7 +52,7 @@ export function median(values: number[]): number {
   return sorted.length % 2 === 1 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
 
-// Mesma aritmética em f32 das variantes, para conferir o acumulado sem erro de comparação.
+// Same f32 arithmetic as the variants, so the accumulated value is checked without comparison error.
 export function expectedPositionX(iterations: number, deltaTime: number): number {
   let value = 0;
   for (let iteration = 0; iteration < iterations; ++iteration) {

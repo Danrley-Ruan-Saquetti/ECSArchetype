@@ -5,7 +5,7 @@ import { SchemaMismatchError, action, component, defineSchema, event, loadRuntim
 
 import { fixtureFactory, loadFixture } from "./fixture.js";
 
-test("carrega com o esquema do fixture", async () => {
+test("loads with the fixture schema", async () => {
   const { runtime } = await loadFixture();
   const world = runtime.createWorld();
 
@@ -14,7 +14,7 @@ test("carrega com o esquema do fixture", async () => {
   world.dispose();
 });
 
-test("esquema divergente é rejeitado", async () => {
+test("mismatched schema is rejected", async () => {
   const otherSchema = defineSchema([
     component("Position", { x: "f64", y: "f32" }),
     component("Velocity", { x: "f32", y: "f32" }),
@@ -41,7 +41,7 @@ function fixtureTypes() {
   ];
 }
 
-test("esquema TS com um evento a mais que o WASM é rejeitado com a contagem de eventos", async () => {
+test("TS schema with one more event than the WASM is rejected with the event count", async () => {
   const withExtraEvent = defineSchema([
     ...fixtureTypes(),
     event("Ping", { target: "entity", value: "f32" }),
@@ -51,20 +51,20 @@ test("esquema TS com um evento a mais que o WASM é rejeitado com a contagem de 
 
   await assert.rejects(
     loadRuntime(fixtureFactory(), withExtraEvent),
-    (error: unknown) => error instanceof SchemaMismatchError && /eventos no WASM: 2, no TS: 3/.test(error.message),
+    (error: unknown) => error instanceof SchemaMismatchError && /events in WASM: 2, in TS: 3/.test(error.message),
   );
 });
 
-test("evento com tamanho diferente do WASM é rejeitado com o nome do evento", async () => {
+test("event with a size different from the WASM is rejected with the event name", async () => {
   const withWiderPing = defineSchema([...fixtureTypes(), event("Ping", { target: "entity", value: "f64" }), event("Echo", { depth: "u32" })]);
 
   await assert.rejects(
     loadRuntime(fixtureFactory(), withWiderPing),
-    (error: unknown) => error instanceof SchemaMismatchError && /eventos no WASM: 2, no TS: 2/.test(error.message) && /divergente: Ping/.test(error.message),
+    (error: unknown) => error instanceof SchemaMismatchError && /events in WASM: 2, in TS: 2/.test(error.message) && /divergent type, event or action: Ping/.test(error.message),
   );
 });
 
-test("ação a mais no TS é rejeitada com a contagem de ações", async () => {
+test("extra action in TS is rejected with the action count", async () => {
   const withAction = defineSchema([
     ...fixtureTypes(),
     event("Ping", { target: "entity", value: "f32" }),
@@ -78,11 +78,11 @@ test("ação a mais no TS é rejeitada com a contagem de ações", async () => {
 
   await assert.rejects(
     loadRuntime(fixtureFactory(), withAction),
-    (error: unknown) => error instanceof SchemaMismatchError && /ações no WASM: 4, no TS: 5/.test(error.message),
+    (error: unknown) => error instanceof SchemaMismatchError && /actions in WASM: 4, in TS: 5/.test(error.message),
   );
 });
 
-test("ação com tipo diferente do WASM é rejeitada com o nome da ação", async () => {
+test("action with a kind different from the WASM is rejected with the action name", async () => {
   const withWrongKind = defineSchema([
     ...fixtureTypes(),
     event("Ping", { target: "entity", value: "f32" }),
@@ -95,6 +95,6 @@ test("ação com tipo diferente do WASM é rejeitada com o nome da ação", asyn
 
   await assert.rejects(
     loadRuntime(fixtureFactory(), withWrongKind),
-    (error: unknown) => error instanceof SchemaMismatchError && /ações no WASM: 4, no TS: 4/.test(error.message) && /divergente: fire/.test(error.message),
+    (error: unknown) => error instanceof SchemaMismatchError && /actions in WASM: 4, in TS: 4/.test(error.message) && /divergent type, event or action: fire/.test(error.message),
   );
 });

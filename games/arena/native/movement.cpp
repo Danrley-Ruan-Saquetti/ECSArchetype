@@ -23,7 +23,7 @@ namespace {
     }
   }
 
-  // A diagonal de WASD chega com comprimento raiz de 2; o jogador não pode ser mais rápido nela.
+  // The WASD diagonal arrives with length root of 2; the player must not be faster along it.
   arena::Direction limitedToUnit(const oly::input::Vector2& axis) {
     const float length = std::sqrt(axis.x * axis.x + axis.y * axis.y);
     if (length <= 1.0f) {

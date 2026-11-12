@@ -13,7 +13,7 @@
 namespace {
   constexpr uint32_t CoinSeed = 20261112;
 
-  // Semente fixa: o std::minstd_rand dá a mesma sequência em qualquer biblioteca padrão (as distribuições não).
+  // Fixed seed: std::minstd_rand gives the same sequence on any standard library (the distributions do not).
   std::minstd_rand coinGenerator(CoinSeed);
 
   void endInvulnerability(oly::app::TaskContext& context) {
@@ -23,7 +23,7 @@ namespace {
     }
   }
 
-  // Cada bala acerta no máximo um inimigo. Duas balas no mesmo inimigo emitem duas mortes.
+  // Each bullet hits at most one enemy. Two bullets on the same enemy emit two deaths.
   void hitEnemiesWithBullets(oly::app::SystemContext& context) {
     auto& enemies = context.query<const Position, const Collider, Health>(oly::ecs::With<Enemy>{});
 

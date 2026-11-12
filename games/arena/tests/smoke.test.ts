@@ -8,7 +8,7 @@ import type { ArenaTest } from "./harness.js";
 
 const runtime = await loadArena();
 
-test("installGame entra em menu no primeiro passo, sem jogador", () => {
+test("installGame enters menu on the first step, with no player", () => {
   withArena(runtime, (arena) => {
     arena.step();
 
@@ -17,7 +17,7 @@ test("installGame entra em menu no primeiro passo, sem jogador", () => {
   });
 });
 
-test("Enter em menu começa: playing com um jogador no centro, vida 3 e placar zerado", () => {
+test("Enter in menu starts: playing with one player in the center, health 3 and a reset score", () => {
   withArena(runtime, (arena) => {
     arena.step();
 
@@ -32,7 +32,7 @@ test("Enter em menu começa: playing com um jogador no centro, vida 3 e placar z
   });
 });
 
-test("clique (MouseLeft) em menu também começa", () => {
+test("click (MouseLeft) in menu also starts", () => {
   withArena(runtime, (arena) => {
     arena.step();
 
@@ -64,10 +64,10 @@ function spawnBullet(arena: ArenaTest, x: number, y: number): number {
 }
 
 function expectClose(actual: number, expected: number): void {
-  assert.ok(Math.abs(actual - expected) < 1e-3, `esperava ${expected}, veio ${actual}`);
+  assert.ok(Math.abs(actual - expected) < 1e-3, `expected ${expected}, got ${actual}`);
 }
 
-test("WASD move o jogador a 220 px/s; diagonal normalizada", () => {
+test("WASD moves the player at 220 px/s; normalized diagonal", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const player = arena.player();
@@ -83,7 +83,7 @@ test("WASD move o jogador a 220 px/s; diagonal normalizada", () => {
   });
 });
 
-test("dash: impulso de 600 na direção do movimento, fim em 0,15 s e recarga em 0,8 s", () => {
+test("dash: impulse of 600 in the movement direction, ends in 0.15 s and recharges in 0.8 s", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const player = arena.player();
@@ -107,7 +107,7 @@ test("dash: impulso de 600 na direção do movimento, fim em 0,15 s e recarga em
   });
 });
 
-test("dash parado vai para o ponteiro; sem ponteiro válido não gasta a recarga", () => {
+test("dash while standing goes toward the pointer; without a valid pointer it does not spend the recharge", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const player = arena.player();
@@ -124,7 +124,7 @@ test("dash parado vai para o ponteiro; sem ponteiro válido não gasta a recarga
   });
 });
 
-test("chasePlayer aponta a velocidade do inimigo para o jogador com a velocidade do Chaser", () => {
+test("chasePlayer points the enemy velocity at the player with the Chaser speed", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const enemy = spawnEnemy(arena, 780, 670, 90);
@@ -137,7 +137,7 @@ test("chasePlayer aponta a velocidade do inimigo para o jogador com a velocidade
   });
 });
 
-test("confine prende o jogador em ArenaWidth − raio e destrói a bala fora da arena", () => {
+test("confine pins the player at ArenaWidth − radius and destroys the bullet outside the arena", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const player = arena.player();
@@ -156,7 +156,7 @@ test("confine prende o jogador em ArenaWidth − raio e destrói a bala fora da 
   });
 });
 
-test("tiro na direção do ponteiro mata o inimigo sem sobra de bala nem de inimigo", () => {
+test("shot toward the pointer kills the enemy with no leftover bullet or enemy", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const enemy = spawnEnemy(arena, 580, 270);
@@ -173,7 +173,7 @@ test("tiro na direção do ponteiro mata o inimigo sem sobra de bala nem de inim
   });
 });
 
-test("duas balas no mesmo inimigo no mesmo passo: uma morte no placar e no máximo uma moeda", () => {
+test("two bullets on the same enemy in the same step: one kill on the score and at most one coin", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const enemy = spawnEnemy(arena, 200, 100);
@@ -189,7 +189,7 @@ test("duas balas no mesmo inimigo no mesmo passo: uma morte no placar e no máxi
   });
 });
 
-test("moeda encostada no jogador some e soma no placar", () => {
+test("coin touching the player disappears and adds to the score", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const coin = arena.engine.world.spawn([Coin, Position, Collider], { Position: { x: 480, y: 270 }, Collider: { radius: 8 } });
@@ -202,7 +202,7 @@ test("moeda encostada no jogador some e soma no placar", () => {
   });
 });
 
-test("dano dá 1 s de invulnerabilidade; vida 0 leva a gameOver sem jogador", () => {
+test("damage gives 1 s of invulnerability; health 0 leads to gameOver with no player", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const player = arena.player();
@@ -226,7 +226,7 @@ test("dano dá 1 s de invulnerabilidade; vida 0 leva a gameOver sem jogador", ()
   });
 });
 
-test("Esc pausa: relógio, posições e dash congelam; Esc de novo retoma e o dash acaba no tempo restante", () => {
+test("Esc pauses: clock, positions and dash freeze; Esc again resumes and the dash ends in the remaining time", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const player = arena.player();
@@ -260,7 +260,7 @@ function isOnBorder(x: number, y: number): boolean {
   return x <= margin || x >= ArenaWidth - margin || y <= margin || y >= ArenaHeight - margin;
 }
 
-test("ondas a cada 5 s com 2 + n inimigos nas bordas; uma moeda solta a cada 2 s dentro da arena", () => {
+test("waves every 5 s with 2 + n enemies at the edges; one loose coin every 2 s inside the arena", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     arena.engine.world.set(arena.player(), Health, { value: 1000 });
@@ -283,7 +283,7 @@ test("ondas a cada 5 s com 2 + n inimigos nas bordas; uma moeda solta a cada 2 s
     arena.engine.world.query({ read: [Position], with: [Enemy] }).eachBlock((block) => {
       const position = block.read(Position);
       for (let row = 0; row < block.count; ++row) {
-        assert.ok(isOnBorder(position.x.get(row), position.y.get(row)), `inimigo longe da borda: ${position.x.get(row)}, ${position.y.get(row)}`);
+        assert.ok(isOnBorder(position.x.get(row), position.y.get(row)), `enemy far from the edge: ${position.x.get(row)}, ${position.y.get(row)}`);
       }
     });
 
@@ -292,26 +292,26 @@ test("ondas a cada 5 s com 2 + n inimigos nas bordas; uma moeda solta a cada 2 s
   });
 });
 
-test("render: menu sem jogador, HUD em playing, pausa e fim de jogo", () => {
+test("render: menu with no player, HUD in playing, pause and game over", () => {
   withArena(runtime, (arena) => {
     arena.step();
     assert.ok(arena.drawer.texts().includes("OLY ARENA"));
-    assert.ok(arena.drawer.texts().includes("Enter ou clique para jogar"));
+    assert.ok(arena.drawer.texts().includes("Enter or click to play"));
     assert.equal(arena.drawer.circles().length, 0);
 
     arena.tap("Enter");
     arena.step();
-    assert.ok(arena.drawer.texts().includes("Vida 3"));
-    assert.ok(arena.drawer.texts().includes("Pontos 0"));
-    assert.ok(arena.drawer.texts().includes("Dash pronto"));
+    assert.ok(arena.drawer.texts().includes("Health 3"));
+    assert.ok(arena.drawer.texts().includes("Score 0"));
+    assert.ok(arena.drawer.texts().includes("Dash ready"));
     assert.equal(arena.drawer.circles().length, arena.count(Collider));
 
     arena.tap("Escape");
-    assert.ok(arena.drawer.texts().includes("Pausado — Esc para continuar"));
+    assert.ok(arena.drawer.texts().includes("Paused — Esc to continue"));
   });
 });
 
-test("roteiro: menu → playing → onda → morte → gameOver com o mundo vazio → jogar de novo do zero", () => {
+test("script: menu → playing → wave → death → gameOver with an empty world → play again from scratch", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     arena.engine.world.set(arena.player(), Health, { value: 1 });
@@ -323,8 +323,8 @@ test("roteiro: menu → playing → onda → morte → gameOver com o mundo vazi
     assert.equal(arena.engine.state?.name, "gameOver");
     assert.equal(arena.count(), 0);
     assert.notEqual(arena.score.finalScore, null);
-    assert.ok(arena.drawer.texts().includes(`Fim de jogo — ${arena.score.finalScore} pontos`));
-    assert.ok(arena.drawer.texts().includes("Enter ou clique para jogar de novo"));
+    assert.ok(arena.drawer.texts().includes(`Game over — ${arena.score.finalScore} points`));
+    assert.ok(arena.drawer.texts().includes("Enter or click to play again"));
 
     arena.tap("Enter");
     arena.step();
@@ -338,7 +338,7 @@ test("roteiro: menu → playing → onda → morte → gameOver com o mundo vazi
   });
 });
 
-test("bala fora da arena é descartada antes da colisão: não acerta o inimigo na borda", () => {
+test("bullet outside the arena is discarded before collision: it does not hit the enemy at the edge", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     const enemy = spawnEnemy(arena, 0, 100);
@@ -351,7 +351,7 @@ test("bala fora da arena é descartada antes da colisão: não acerta o inimigo 
   });
 });
 
-test("jogador além da parede volta para a arena antes da colisão: não pega a moeda de fora", () => {
+test("player beyond the wall returns to the arena before collision: it does not take the coin outside", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     arena.engine.world.set(arena.player(), Position, { x: 1100, y: 270 });
@@ -364,7 +364,7 @@ test("jogador além da parede volta para a arena antes da colisão: não pega a 
   });
 });
 
-test("Esc no passo em que o jogador morre: gameOver sem pausa", () => {
+test("Esc on the step the player dies: gameOver without pause", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     arena.engine.world.set(arena.player(), Health, { value: 1 });
@@ -377,7 +377,7 @@ test("Esc no passo em que o jogador morre: gameOver sem pausa", () => {
   });
 });
 
-test("sair de playing pausado por requestState do host tira a pausa", () => {
+test("leaving paused playing through a host requestState lifts the pause", () => {
   withArena(runtime, (arena) => {
     startPlaying(arena);
     arena.tap("Escape");

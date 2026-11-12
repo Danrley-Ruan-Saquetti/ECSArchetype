@@ -74,8 +74,8 @@ export function installGame(engine: Engine, options: GameOptions): ArenaScore {
   engine.addNativeSystem(Phase.Update, "fireWeapon").inState(playing);
   engine.addNativeSystem(Phase.Update, "chasePlayer").inState(playing);
   engine.addNativeSystem(Phase.Update, "integrate").inState(playing);
-  // Em update, não em updateAfter: os destroys das balas fora são aplicados no fim da fase, então o collide não vê
-  // bala fora da arena (que ele destruiria de novo) nem jogador além da parede.
+  // In update, not in updateAfter: the destroys of out-of-bounds bullets are applied at the end of the phase, so collide sees no
+  // bullet outside the arena (which it would destroy again) and no player beyond the wall.
   engine.addNativeSystem(Phase.Update, "confine").inState(playing);
   engine.addNativeSystem(Phase.UpdateAfter, "collide").inState(playing);
 
@@ -88,8 +88,8 @@ export function installGame(engine: Engine, options: GameOptions): ArenaScore {
   engine.addSystem(Phase.Render, "render", createRenderSystem(options.drawer, score));
 
   engine.onEnter(playing, "startRound", (context) => startRound(context, score, options.random));
-  // A pausa vale para a engine inteira, e só o resumeOnPress (restrito a playing) a tira: sair de playing pausado
-  // travaria o estado seguinte.
+  // The pause applies to the whole engine, and only resumeOnPress (restricted to playing) lifts it: leaving playing while paused
+  // would lock the next state.
   engine.onExit(playing, "resumeOnExit", (context) => context.resume());
   engine.requestState(menu);
 
@@ -141,7 +141,7 @@ function spawnLooseCoin(context: TaskContext, random: () => number): void {
   });
 }
 
-// Duas balas no mesmo passo geram duas mortes do mesmo inimigo no lote (§4.4).
+// Two bullets in the same step produce two deaths of the same enemy in the batch (§4.4).
 function countKill(score: MutableScore, batch: EventBatch<typeof EnemyDied.fields>): void {
   const enemies = batch.read().entity;
   const counted = new Set<number>();

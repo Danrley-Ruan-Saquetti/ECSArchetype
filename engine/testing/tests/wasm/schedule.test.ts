@@ -46,7 +46,7 @@ function appendDigit(entity: Entity, digit: number): (task: TaskContext) => void
 
 function nothing(): void {}
 
-test("after e every do engine.schedule disparam no passo do vencimento", () => {
+test("engine.schedule after and every fire on the step they fall due", () => {
   withEngine((engine) => {
     const afterTimes: number[] = [];
     const everyTimes: number[] = [];
@@ -64,7 +64,7 @@ test("after e every do engine.schedule disparam no passo do vencimento", () => {
   });
 });
 
-test("tarefas C++ e TS intercaladas por vencimento e criação", () => {
+test("C++ and TS tasks interleaved by due time and creation", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     const handle = engineHandleOf(engine);
@@ -83,7 +83,7 @@ test("tarefas C++ e TS intercaladas por vencimento e criação", () => {
   });
 });
 
-test("tarefa TS faz mudanças diretas e o evento emitido é despachado no mesmo passo", () => {
+test("TS task makes direct changes and the emitted event is dispatched in the same step", () => {
   withEngine((engine) => {
     let taskTime = -1;
     let handlerTime = -2;
@@ -107,7 +107,7 @@ test("tarefa TS faz mudanças diretas e o evento emitido é despachado no mesmo 
   });
 });
 
-test("cancel, isPending e every que cancela a si mesma", () => {
+test("cancel, isPending and every that cancels itself", () => {
   withEngine((engine) => {
     let afterRuns = 0;
     let everyRuns = 0;
@@ -135,7 +135,7 @@ test("cancel, isPending e every que cancela a si mesma", () => {
   });
 });
 
-test("a mesma closure agendada duas vezes: cancelar um handle não afeta o outro", () => {
+test("the same closure scheduled twice: cancelling one handle does not affect the other", () => {
   withEngine((engine) => {
     let runs = 0;
     const closure = (): void => {
@@ -155,7 +155,7 @@ test("a mesma closure agendada duas vezes: cancelar um handle não afeta o outro
   });
 });
 
-test("exceção em after TS chega a quem chamou frame; o frame seguinte se recupera e a closure some", () => {
+test("exception in a TS after reaches the frame caller; the next frame recovers and the closure is gone", () => {
   withEngine((engine) => {
     engine.schedule.after(StepSeconds, () => {
       throw new Error("boom");
@@ -170,7 +170,7 @@ test("exceção em after TS chega a quem chamou frame; o frame seguinte se recup
   });
 });
 
-test("every TS que lança continua pendente e roda de novo depois da recuperação", () => {
+test("a TS every that throws stays pending and runs again after recovery", () => {
   withEngine((engine) => {
     let runs = 0;
     const handle = engine.schedule.every(StepSeconds, () => {
@@ -187,13 +187,13 @@ test("every TS que lança continua pendente e roda de novo depois da recuperaç�
       step();
     }
 
-    assert.ok(runs > 1, `a tarefa deveria rodar de novo (runs=${runs})`);
+    assert.ok(runs > 1, `the task should run again (runs=${runs})`);
     assert.equal(engine.schedule.isPending(handle), true);
     assert.equal(scriptTaskCount(engine.schedule), 1);
   });
 });
 
-test("memória cresce dentro da tarefa TS e o contexto continua válido", () => {
+test("memory grows inside the TS task and the context stays valid", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     const module = moduleOf(runtime);
@@ -211,12 +211,12 @@ test("memória cresce dentro da tarefa TS e o contexto continua válido", () => 
 
     stepper(engine)();
 
-    assert.ok(grew, "a memória do WASM deveria ter crescido");
+    assert.ok(grew, "WASM memory should have grown");
     assert.equal(value, 5);
   });
 });
 
-test("mapa de closures termina vazio em todos os caminhos", () => {
+test("closure map ends empty on every path", () => {
   withEngine((engine) => {
     const schedule = engine.schedule;
     const step = stepper(engine);
@@ -249,7 +249,7 @@ test("mapa de closures termina vazio em todos os caminhos", () => {
   assert.equal(scriptTaskCount(schedule), 0);
 });
 
-test("context.schedule e engine.schedule são o mesmo objeto", () => {
+test("context.schedule and engine.schedule are the same object", () => {
   withEngine((engine) => {
     let fromSystem: Scheduler | undefined;
     let fromTask: Scheduler | undefined;
@@ -267,13 +267,13 @@ test("context.schedule e engine.schedule são o mesmo objeto", () => {
   });
 });
 
-test("erros: atraso negativo ou NaN, intervalo 0, callback que não é função, handle de outra Engine, Engine liberada", () => {
+test("errors: negative or NaN delay, interval 0, callback that is not a function, handle from another Engine, disposed Engine", () => {
   withEngine((engine) => {
     assert.throws(() => engine.schedule.after(-1, nothing), ContractError);
     assert.throws(() => engine.schedule.after(Number.NaN, nothing), ContractError);
     assert.throws(() => engine.schedule.every(0, nothing), ContractError);
     assert.throws(() => engine.schedule.every(Number.POSITIVE_INFINITY, nothing), ContractError);
-    assert.throws(() => engine.schedule.after(1, "não é função" as never), ContractError);
+    assert.throws(() => engine.schedule.after(1, "not a function" as never), ContractError);
 
     const other = createEngine();
     try {
@@ -296,7 +296,7 @@ test("erros: atraso negativo ou NaN, intervalo 0, callback que não é função,
   assert.throws(() => schedule.after(1, nothing), ContractError);
 });
 
-test("TaskContext fora da chamada da tarefa é ContractError", () => {
+test("TaskContext outside the task call is ContractError", () => {
   withEngine((engine) => {
     let captured: TaskContext | undefined;
     engine.schedule.after(0, (task) => {

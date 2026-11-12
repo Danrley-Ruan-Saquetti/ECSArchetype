@@ -91,7 +91,7 @@ OLY_SYSTEM(appendNine) {
   context.query<Trace>().each([](Trace& trace) { trace.value = trace.value * 10 + 9; });
 }
 
-// Grande o bastante para o heap do WASM crescer antes do sistema TS seguinte.
+// Large enough for the WASM heap to grow before the next TS system.
 OLY_SYSTEM(spawnBatch) {
   for (uint32_t count = 0; count < 400000; ++count) {
     context.spawn(Position{1, 0});

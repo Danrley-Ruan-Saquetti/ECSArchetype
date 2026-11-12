@@ -1,4 +1,4 @@
-// Valores iniciais, sem medição: ajustados jogando. O que o C++ também usa tem par em native/arena.hpp
+// Initial values, not measured: tuned by playing. What C++ also uses has a pair in native/arena.hpp
 // (ArenaWidth, ArenaHeight, BulletSpeed, BulletRadius, CoinRadius, InvulnerableSeconds, CoinDropPercent).
 export const ArenaWidth = 960;
 export const ArenaHeight = 540;

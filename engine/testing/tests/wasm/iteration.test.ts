@@ -18,7 +18,7 @@ function withWorld(body: (world: World) => void): void {
   }
 }
 
-test("exceção no callback de eachBlock encerra a iteração", () => {
+test("exception in the eachBlock callback ends the iteration", () => {
   withWorld((world) => {
     world.spawn([Position]);
 
@@ -35,7 +35,7 @@ test("exceção no callback de eachBlock encerra a iteração", () => {
   });
 });
 
-test("eachBlock aninhado em outra query mantém o bloco externo", () => {
+test("eachBlock nested in another query keeps the outer block", () => {
   withWorld((world) => {
     for (let index = 0; index < 8; ++index) {
       world.spawn([Position, Velocity], { Position: { x: index }, Velocity: { x: 100 + index } });
@@ -62,7 +62,7 @@ test("eachBlock aninhado em outra query mantém o bloco externo", () => {
   });
 });
 
-test("query criada dentro de eachBlock (memória pode crescer) não corrompe o bloco externo", () => {
+test("query created inside eachBlock (memory may grow) does not corrupt the outer block", () => {
   withWorld((world) => {
     const entities: number[] = [];
     for (let index = 0; index < 16; ++index) {

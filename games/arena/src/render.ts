@@ -48,13 +48,13 @@ function drawHud(context: SystemContext, drawer: Drawer, score: ArenaScore): voi
     return;
   }
 
-  const dashLabel = player.get(Dash).ready === 1 ? "Dash pronto" : "Dash recarregando";
-  drawer.text(HudMargin, HudMargin + HudLineHeight, `Vida ${player.get(Health).value}`, Colors.text);
-  drawer.text(HudMargin, HudMargin + 2 * HudLineHeight, `Pontos ${score.score}`, Colors.text);
+  const dashLabel = player.get(Dash).ready === 1 ? "Dash ready" : "Dash recharging";
+  drawer.text(HudMargin, HudMargin + HudLineHeight, `Health ${player.get(Health).value}`, Colors.text);
+  drawer.text(HudMargin, HudMargin + 2 * HudLineHeight, `Score ${score.score}`, Colors.text);
   drawer.text(HudMargin, HudMargin + 3 * HudLineHeight, dashLabel, Colors.text);
 }
 
-// Sem interpolação: desenha a posição do último passo.
+// No interpolation: draws the position of the last step.
 export function createRenderSystem(drawer: Drawer, score: ArenaScore): SystemFunction {
   return (context) => {
     drawer.clear();
@@ -67,13 +67,13 @@ export function createRenderSystem(drawer: Drawer, score: ArenaScore): SystemFun
 
     const stateName = context.state?.name;
     if (stateName === menu.name) {
-      drawCentered(drawer, ["OLY ARENA", "Enter ou clique para jogar"]);
+      drawCentered(drawer, ["OLY ARENA", "Enter or click to play"]);
     } else if (stateName === gameOver.name) {
-      drawCentered(drawer, [`Fim de jogo — ${score.finalScore ?? score.score} pontos`, "Enter ou clique para jogar de novo"]);
+      drawCentered(drawer, [`Game over — ${score.finalScore ?? score.score} points`, "Enter or click to play again"]);
     } else if (stateName === playing.name) {
       drawHud(context, drawer, score);
       if (context.paused) {
-        drawCentered(drawer, ["Pausado — Esc para continuar"]);
+        drawCentered(drawer, ["Paused — Esc to continue"]);
       }
     }
   };

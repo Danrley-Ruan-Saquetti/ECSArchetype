@@ -5,8 +5,8 @@
 
 #include "oly/ecs/entity.hpp"
 
-// Valores iniciais, sem medição: ajustados jogando. Cada um tem par em src/arena.ts, que precisa
-// mudar junto (o teste de fumaça do confine prende ArenaWidth e ArenaHeight).
+// Initial values, not measured: tuned by playing. Each one has a pair in src/arena.ts that must
+// change with it (the confine smoke test pins ArenaWidth and ArenaHeight).
 namespace arena {
   inline constexpr float ArenaWidth = 960.0f;
   inline constexpr float ArenaHeight = 540.0f;
@@ -17,7 +17,7 @@ namespace arena {
   inline constexpr double InvulnerableSeconds = 1.0;
   inline constexpr uint32_t CoinDropPercent = 30;
 
-  // Payload das tarefas que agem sobre o jogador.
+  // Payload of the tasks that act on the player.
   struct PlayerTarget {
     oly::ecs::Entity player;
   };
@@ -27,7 +27,7 @@ namespace arena {
     float y;
   };
 
-  // Normalizada; {0, 0} quando os pontos coincidem.
+  // Normalized; {0, 0} when the points coincide.
   inline Direction directionTo(float fromX, float fromY, float toX, float toY) {
     const float deltaX = toX - fromX;
     const float deltaY = toY - fromY;

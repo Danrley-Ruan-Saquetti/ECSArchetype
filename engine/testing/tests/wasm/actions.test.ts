@@ -33,7 +33,7 @@ function withEngine(body: (engine: Engine) => void): void {
   }
 }
 
-test("antes da primeira captura tudo é falso e o ponteiro é inválido", () => {
+test("before the first capture everything is false and the pointer is invalid", () => {
   withEngine((engine) => {
     assert.deepEqual(engine.actions.button(fire), idle);
     assert.deepEqual(engine.actions.axis2d(move), { x: 0, y: 0 });
@@ -41,7 +41,7 @@ test("antes da primeira captura tudo é falso e o ponteiro é inválido", () => 
   });
 });
 
-test("sistema TS lê pressed, held e released", () => {
+test("TS system reads pressed, held and released", () => {
   withEngine((engine) => {
     const seen: ButtonState[] = [];
     engine.addSystem(Phase.Update, "reader", (context) => {
@@ -64,7 +64,7 @@ test("sistema TS lê pressed, held e released", () => {
   });
 });
 
-test("toque mais curto que um passo aparece num passo só", () => {
+test("a tap shorter than a step shows up in a single step", () => {
   withEngine((engine) => {
     const seen: ButtonState[] = [];
     engine.addSystem(Phase.Update, "reader", (context) => {
@@ -82,7 +82,7 @@ test("toque mais curto que um passo aparece num passo só", () => {
   });
 });
 
-test("sistemas C++ e TS veem o mesmo snapshot no mesmo passo", () => {
+test("C++ and TS systems see the same snapshot in the same step", () => {
   withEngine((engine) => {
     let tsSawPressed = false;
     engine.addNativeSystem(Phase.Update, "countFirePresses");
@@ -101,7 +101,7 @@ test("sistemas C++ e TS veem o mesmo snapshot no mesmo passo", () => {
   });
 });
 
-test("eixo WASD com diagonal normalizada e ponteiro", () => {
+test("WASD axis with normalized diagonal and pointer", () => {
   withEngine((engine) => {
     engine.actions.bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" });
     const step = stepper(engine);
@@ -118,7 +118,7 @@ test("eixo WASD com diagonal normalizada e ponteiro", () => {
   });
 });
 
-test("sair da pausa por togglePause num sistema whilePaused", () => {
+test("leaving pause via togglePause in a whilePaused system", () => {
   withEngine((engine) => {
     engine
       .addSystem(Phase.Update, "toggle", (context) => {
@@ -138,7 +138,7 @@ test("sair da pausa por togglePause num sistema whilePaused", () => {
   });
 });
 
-test("religar de dentro de um sistema vale na captura seguinte, sem bordas fantasmas", () => {
+test("rebinding from inside a system takes effect on the next capture, without ghost edges", () => {
   withEngine((engine) => {
     const seen: ButtonState[] = [];
     let rebound = false;
@@ -159,7 +159,7 @@ test("religar de dentro de um sistema vale na captura seguinte, sem bordas fanta
   });
 });
 
-test("memória cresce antes do sistema TS e a leitura continua certa", () => {
+test("memory grows before the TS system and the read stays correct", () => {
   withEngine((engine) => {
     const bufferBefore = moduleOf(runtime).HEAPU8.buffer;
     let pressed = false;
@@ -177,7 +177,7 @@ test("memória cresce antes do sistema TS e a leitura continua certa", () => {
   });
 });
 
-test("isBound e clearBindings", () => {
+test("isBound and clearBindings", () => {
   withEngine((engine) => {
     engine.actions.bind(fire, "Space");
     engine.actions.bind(move, { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD" });
@@ -191,7 +191,7 @@ test("isBound e clearBindings", () => {
   });
 });
 
-test("erros: botão fora da tabela, ação de outro esquema, tipo errado, ponteiro não finito, Engine liberada", () => {
+test("errors: button outside the table, action from another schema, wrong kind, non-finite pointer, disposed Engine", () => {
   withEngine((engine) => {
     const foreign = defineSchema([action("fire", "button")]).actions[0]!;
 
@@ -213,7 +213,7 @@ test("erros: botão fora da tabela, ação de outro esquema, tipo errado, pontei
   assert.throws(() => actions.button(fire), ContractError);
 });
 
-test("context.actions fora da chamada do sistema é ContractError", () => {
+test("context.actions outside the system call is ContractError", () => {
   withEngine((engine) => {
     let captured: { readonly actions: unknown } | undefined;
     engine.addSystem(Phase.Update, "capture", (context) => {
@@ -226,7 +226,7 @@ test("context.actions fora da chamada do sistema é ContractError", () => {
   });
 });
 
-test("setHidden que cresce a memória não deixa a leitura de ações com o heap antigo", () => {
+test("setHidden that grows memory does not leave the action read on the old heap", () => {
   withEngine((engine) => {
     const module = moduleOf(runtime);
     const original = module._olyEngineSetHidden;

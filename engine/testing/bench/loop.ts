@@ -40,9 +40,9 @@ interface EmptySystemsRow {
 
 interface InterleavingRow {
   systems: number;
-  alternado: Summary;
-  agrupado: Summary;
-  alternadoOverAgrupado: number;
+  alternating: Summary;
+  grouped: Summary;
+  alternatingOverGrouped: number;
 }
 
 interface BoundaryRow {
@@ -152,7 +152,7 @@ function verifyPositions(cases: Case[], label: string): boolean {
     const expected = expectedPositionX(entry.steps(), DeltaTime);
     const actual = entry.positionX();
     if (Math.abs(actual - expected) > 1e-3 * Math.abs(expected)) {
-      console.error(`${label} ${entry.name}: x=${actual}, esperado ${expected}`);
+      console.error(`${label} ${entry.name}: x=${actual}, expected ${expected}`);
       correct = false;
     }
   }
@@ -213,16 +213,16 @@ function measureInterleaving(runtime: Runtime, rounds: number): InterleavingRow[
   return InterleavingCounts.map((count) => {
     const half = count / 2;
     const cases = [
-      makeEngineCase(runtime, "alternado", (engine) => addAlternating(engine, half)),
-      makeEngineCase(runtime, "agrupado", (engine) => addGrouped(engine, half, half)),
+      makeEngineCase(runtime, "alternating", (engine) => addAlternating(engine, half)),
+      makeEngineCase(runtime, "grouped", (engine) => addGrouped(engine, half, half)),
     ];
     const summaries = measureNanosecondsPerStep(cases, EmptySteps, rounds);
     cases.forEach((entry) => entry.dispose());
 
-    const alternado = summaries.get("alternado")!;
-    const agrupado = summaries.get("agrupado")!;
+    const alternating = summaries.get("alternating")!;
+    const grouped = summaries.get("grouped")!;
 
-    return { systems: count, alternado, agrupado, alternadoOverAgrupado: alternado.median / agrupado.median };
+    return { systems: count, alternating, grouped, alternatingOverGrouped: alternating.median / grouped.median };
   });
 }
 
@@ -254,16 +254,16 @@ function measureBoundaryInLoop(runtime: Runtime, sizes: number[], rounds: number
 }
 
 function printTables(emptySystems: EmptySystemsRow[], interleaving: InterleavingRow[], boundary: BoundaryRow[]): void {
-  console.log("K\tzero ns/passo\tcpp\tts\tts/cpp\tns/chamada de volta");
+  console.log("K\tzero ns/step\tcpp\tts\tts/cpp\tns/callback");
   for (const row of emptySystems) {
     console.log(
       `${row.systems}\t${row.zero.median.toFixed(0)}\t${row.cpp.median.toFixed(0)}\t${row.ts.median.toFixed(0)}\t${row.tsOverCpp.toFixed(2)}\t${row.nsPerCallback.toFixed(1)}`,
     );
   }
 
-  console.log("\nK\talternado\tagrupado\talternado/agrupado");
+  console.log("\nK\talternating\tgrouped\talternating/grouped");
   for (const row of interleaving) {
-    console.log(`${row.systems}\t${row.alternado.median.toFixed(0)}\t${row.agrupado.median.toFixed(0)}\t${row.alternadoOverAgrupado.toFixed(2)}`);
+    console.log(`${row.systems}\t${row.alternating.median.toFixed(0)}\t${row.grouped.median.toFixed(0)}\t${row.alternatingOverGrouped.toFixed(2)}`);
   }
 
   console.log("\nN\tts-loop/ts-manual\tts-loop/cpp-loop");
@@ -275,7 +275,7 @@ function printTables(emptySystems: EmptySystemsRow[], interleaving: Interleaving
 async function main(): Promise<void> {
   const options = parseOptions(
     process.argv.slice(2),
-    "uso: node loop.js --module <fixture_game.mjs> --out <json> [--sizes 1000,10000] [--rounds 10] [--commit <hash>]",
+    "usage: node loop.js --module <fixture_game.mjs> --out <json> [--sizes 1000,10000] [--rounds 10] [--commit <hash>]",
   );
   const runtime = await loadBenchRuntime(options.modulePath);
 

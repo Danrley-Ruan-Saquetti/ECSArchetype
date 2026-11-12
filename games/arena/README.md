@@ -1,47 +1,47 @@
 # Arena
 
-Jogo de tiro de validação da engine (fase 7, §4.9 do spec). O C++ faz o gameplay por entidade; o TS faz render, HUD, ganchos de estado e ondas.
+Shooter that validates the engine (phase 7, §4.9 of the spec). C++ runs the per-entity gameplay; TS does render, HUD, state hooks and waves.
 
-## Como rodar
+## How to run
 
 ```sh
 WC="docker compose run --rm wasm"
-$WC make games-test                                          # inclui ts.arena.smoke
-docker compose run --rm --service-ports web make serve G=arena   # abra http://localhost:8000 no Chromium
-$WC make game G=arena                                        # só monta a pasta estática em build/wasm-games-release/web/arena/
+$WC make games-test                                          # includes ts.arena.smoke
+docker compose run --rm --service-ports web make serve G=arena   # open http://localhost:8000 in Chromium
+$WC make game G=arena                                        # only assembles the static folder in build/wasm-games-release/web/arena/
 ```
 
-O `make serve` precisa de stdin aberto (terminal interativo): o esbuild encerra quando o stdin fecha.
-O servidor entrega `arena_game.wasm` como `application/wasm`.
+`make serve` needs an open stdin (interactive terminal): esbuild exits when stdin closes.
+The server serves `arena_game.wasm` as `application/wasm`.
 
-## Checklist manual (Chromium)
+## Manual checklist (Chromium)
 
-Feito pelo agente com o MCP do Playwright em `http://localhost:8000` (Chromium), em 2026-11-12. Marcado: conferido; `(não)`: não conferido pelo agente, falta o autor.
+Done by the agent with the Playwright MCP at `http://localhost:8000` (Chromium), on 2026-11-12. Checked: verified; `(no)`: not verified by the agent, left for the author.
 
-- [x] A página abre sem erro no console e mostra o menu.
-- [x] Enter começa. (Clique: coberto só pelo teste de fumaça.)
-- [x] WASD move; a diagonal normalizada é coberta pelo teste de fumaça (não vista a olho).
-- [x] Segurar o botão esquerdo atira na direção do mouse (balas somem; tiro mata é coberto pelo teste de fumaça).
-- [x] Clique direito não abre o menu do navegador (`contextmenu` com `defaultPrevented`) e Space não rola a página.
-- [x] Space faz dash e o HUD mostra a recarga (não vista a olho; coberto pelo teste de fumaça).
-- [x] Ondas nas bordas a cada 5 s perseguem o jogador.
-- [x] Moedas soltas aparecem a cada 2 s.
-- [x] Esc pausa e retoma com tudo congelado.
-- [x] Dano e fim de jogo: com o jogador parado, 3 danos levam a "Fim de jogo — 0 pontos".
-- [x] Enter joga de novo com placar zerado e arena limpa.
-- [ ] (não) Trocar de aba e voltar sem salto: só simulado com `visibilitychange` falso, sem salto visível; falta conferir com aba de verdade.
-- [ ] (não) F5 recarrega; a sensação do jogo (números iniciais, sem medição) precisa de quem joga.
-- [ ] (não) Soltar moeda ao matar e pontuar jogando; o profiler do Chromium se travar.
+- [x] The page opens with no console error and shows the menu.
+- [x] Enter starts. (Click: covered only by the smoke test.)
+- [x] WASD moves; the normalized diagonal is covered by the smoke test (not seen by eye).
+- [x] Holding the left button shoots toward the mouse (bullets disappear; shot kills is covered by the smoke test).
+- [x] Right click does not open the browser menu (`contextmenu` with `defaultPrevented`) and Space does not scroll the page.
+- [x] Space dashes and the HUD shows the recharge (not seen by eye; covered by the smoke test).
+- [x] Waves at the edges every 5 s chase the player.
+- [x] Loose coins appear every 2 s.
+- [x] Esc pauses and resumes with everything frozen.
+- [x] Damage and game over: with the player standing still, 3 hits lead to "Game over — 0 points".
+- [x] Enter plays again with a reset score and a clean arena.
+- [ ] (no) Switching tabs and coming back without a jump: only simulated with a fake `visibilitychange`, no visible jump; still needs checking with a real tab.
+- [ ] (no) F5 reloads; the game feel (initial numbers, not measured) needs someone who plays.
+- [ ] (no) Dropping a coin on kill and scoring while playing; the Chromium profiler if it stutters.
 
-## A lista da fase (§4.9)
+## The phase list (§4.9)
 
-**Faltava na engine (adicionado)**
-- `single`/`trySingle` em C++ e em TS: posição do jogador em `chasePlayer` e `fireWeapon`, vida e dash no HUD (commits "single e trySingle no Query do ECS" e "single e trySingle no @oly/core").
-- Lint de fronteiras nos presets `wasm-games*`: o `DEPENDS` dos jogos não era conferido (commit do esqueleto do arena).
+**Missing from the engine (added)**
+- `single`/`trySingle` in C++ and in TS: player position in `chasePlayer` and `fireWeapon`, health and dash in the HUD (commits "single and trySingle in the ECS Query" and "single and trySingle in @oly/core").
+- Boundary lint in the `wasm-games*` presets: the games' `DEPENDS` was not checked (arena skeleton commit).
 
-**Feito no jogo por ser do jogo**
-- Render em Canvas 2D por `Drawer`, colisão por força bruta, placar, ondas, aleatoriedade (`minstd_rand` com semente fixa no C++, `random` injetado no TS) e os números iniciais.
+**Done in the game because it belongs to the game**
+- Canvas 2D render through `Drawer`, brute-force collision, score, waves, randomness (`minstd_rand` with a fixed seed in C++, `random` injected in TS) and the initial numbers.
 
-**Contornado**
-- O menu do clique direito: `attachBrowserInput` só o impede quando `MouseRight` está ligado a uma ação, e o arena não usa esse botão. O `main.ts` impede por conta própria. A correção genérica (uma opção do `attachBrowserInput`) fica para quando um segundo jogo pedir; hoje só o arena precisa.
-- Os projetos TS dos testes emitem em `dist/tests/` (não em `dist-tests/`) para que os imports relativos `../schema.js` e `../src/game.js` existam em tempo de execução.
+**Worked around**
+- The right-click menu: `attachBrowserInput` only prevents it when `MouseRight` is bound to an action, and the arena does not use that button. `main.ts` prevents it on its own. The generic fix (an `attachBrowserInput` option) waits until a second game needs it; today only the arena does.
+- The test TS projects emit to `dist/tests/` (not to `dist-tests/`) so that the relative imports `../schema.js` and `../src/game.js` exist at run time.

@@ -90,7 +90,7 @@ function measureNanosecondsPerEvent(cases: Case[], eventCount: number, rounds: n
 
 function checkSum(label: string, actual: number, expected: number): boolean {
   if (actual !== expected) {
-    console.error(`${label}: soma ${actual}, esperado ${expected}`);
+    console.error(`${label}: sum ${actual}, expected ${expected}`);
     return false;
   }
 
@@ -168,7 +168,7 @@ function measureEmission(runtime: Runtime, module: FixtureModule, rounds: number
     ];
     const summaries = measureNanosecondsPerEvent(cases, eventCount, rounds);
     const totalSteps = cases.reduce((total, entry) => total + entry.steps(), 0);
-    correct = checkSum(`emissão N=${eventCount}`, module._fixtureTakePingSum(), eventCount * totalSteps) && correct;
+    correct = checkSum(`emission N=${eventCount}`, module._fixtureTakePingSum(), eventCount * totalSteps) && correct;
     cases.forEach((entry) => entry.dispose());
 
     return {
@@ -182,7 +182,7 @@ function measureEmission(runtime: Runtime, module: FixtureModule, rounds: number
 }
 
 function printTables(handler: HandlerRow[], emission: EmissionRow[]): void {
-  console.log("N\tnone ns/evento\tcpp\tts\tts/cpp\t(ts-cpp) ns/lote");
+  console.log("N\tnone ns/event\tcpp\tts\tts/cpp\t(ts-cpp) ns/batch");
   for (const row of handler) {
     const ns = row.nsPerEvent;
     console.log(
@@ -190,14 +190,14 @@ function printTables(handler: HandlerRow[], emission: EmissionRow[]): void {
     );
   }
 
-  console.log("\nN\temissão cpp ns/evento\tts\tts/cpp");
+  console.log("\nN\temission cpp ns/event\tts\tts/cpp");
   for (const row of emission) {
     console.log(`${row.events}\t${row.nsPerEvent["cpp"]!.median.toFixed(2)}\t${row.nsPerEvent["ts"]!.median.toFixed(2)}\t${row.tsOverCpp.toFixed(2)}`);
   }
 }
 
 async function main(): Promise<void> {
-  const options = parseOptions(process.argv.slice(2), "uso: node events.js --module <fixture_game.mjs> --out <json> [--rounds 10] [--commit <hash>]");
+  const options = parseOptions(process.argv.slice(2), "usage: node events.js --module <fixture_game.mjs> --out <json> [--rounds 10] [--commit <hash>]");
   const runtime = await loadBenchRuntime(options.modulePath);
   const module = moduleOf(runtime) as FixtureModule;
 

@@ -36,7 +36,7 @@ function withEngine(body: (engine: Engine) => void): void {
   }
 }
 
-test("pausado: só whilePaused roda, time congela, render continua", () => {
+test("paused: only whilePaused runs, time freezes, render continues", () => {
   withEngine((engine) => {
     const calls: string[] = [];
     engine.addSystem(Phase.Update, "u", () => calls.push("u"));
@@ -61,7 +61,7 @@ test("pausado: só whilePaused roda, time congela, render continua", () => {
   });
 });
 
-test("sistema whilePaused chama context.resume() e o próximo passo roda o gameplay", () => {
+test("whilePaused system calls context.resume() and the next step runs gameplay", () => {
   withEngine((engine) => {
     const calls: string[] = [];
     engine
@@ -82,7 +82,7 @@ test("sistema whilePaused chama context.resume() e o próximo passo roda o gamep
   });
 });
 
-test("whilePaused() num sistema de Render é ContractError", () => {
+test("whilePaused() on a Render system is ContractError", () => {
   withEngine((engine) => {
     const registration = engine.addSystem(Phase.Render, "r", () => {});
 
@@ -90,7 +90,7 @@ test("whilePaused() num sistema de Render é ContractError", () => {
   });
 });
 
-test("setHidden(true) ignora frames; depois de setHidden(false) o 1º frame só registra o tempo", () => {
+test("setHidden(true) ignores frames; after setHidden(false) the 1st frame only records the time", () => {
   withEngine((engine) => {
     const calls: string[] = [];
     engine.addSystem(Phase.Update, "u", () => calls.push("u"));
@@ -109,7 +109,7 @@ test("setHidden(true) ignora frames; depois de setHidden(false) o 1º frame só 
   });
 });
 
-test("exceção dentro de eachBlock num sistema TS chega a quem chamou frame e o frame seguinte se recupera", () => {
+test("exception inside eachBlock in a TS system reaches the frame caller and the next frame recovers", () => {
   withEngine((engine) => {
     engine.world.spawn([Position]);
     let calls = 0;
@@ -140,7 +140,7 @@ test("exceção dentro de eachBlock num sistema TS chega a quem chamou frame e o
   });
 });
 
-test("frame chamado de dentro de um sistema é ContractError", () => {
+test("frame called from inside a system is ContractError", () => {
   withEngine((engine) => {
     let thrown: unknown = null;
     engine.addSystem(Phase.Update, "reentrant", () => {
@@ -157,7 +157,7 @@ test("frame chamado de dentro de um sistema é ContractError", () => {
   });
 });
 
-test("frame com tempo menor que o anterior ou NaN é ContractError", () => {
+test("frame with a time lower than the previous one or NaN is ContractError", () => {
   withEngine((engine) => {
     engine.frame(1);
 

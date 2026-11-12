@@ -17,7 +17,7 @@ export interface Circle {
   readonly color: string;
 }
 
-/** Guarda as chamadas feitas desde o último `clear`, que é o que um quadro desenhou. */
+/** Keeps the calls made since the last `clear`, which is what one frame drew. */
 export class RecordingDrawer implements Drawer {
   readonly #texts: string[] = [];
   readonly #circles: Circle[] = [];
@@ -58,11 +58,11 @@ export interface ArenaTest {
   readonly drawer: RecordingDrawer;
   step(count?: number): void;
   stepSeconds(seconds: number): void;
-  /** Toque curto: dá `pressed` mas não `held` (§4.5). Para atirar use hold, step e release. */
+  /** Short tap: gives `pressed` but not `held` (§4.5). To shoot use hold, step and release. */
   tap(button: ButtonName): void;
   hold(button: ButtonName): void;
   release(button: ButtonName): void;
-  /** Sem tipos, conta todas as entidades. */
+  /** With no types, counts every entity. */
   count(...types: SchemaType[]): number;
   player(): Entity;
 }
@@ -70,7 +70,7 @@ export interface ArenaTest {
 function arenaFactory(): OlyModuleFactory {
   const modulePath = process.env.OLY_ARENA_MODULE;
   if (!modulePath) {
-    throw new Error("defina OLY_ARENA_MODULE com o caminho de arena_game.mjs (o ctest já faz isso)");
+    throw new Error("set OLY_ARENA_MODULE to the path of arena_game.mjs (ctest already does this)");
   }
 
   return async () => {
@@ -101,7 +101,7 @@ export function withArena(runtime: Runtime, body: (arena: ArenaTest) => void, ra
         engine.frame(stepNumber / StepsPerSecond);
         const broken = engine.world.checkInvariants();
         if (broken !== null) {
-          throw new Error(`invariante quebrada no passo ${stepNumber}: ${broken}`);
+          throw new Error(`invariant broken at step ${stepNumber}: ${broken}`);
         }
       }
     },

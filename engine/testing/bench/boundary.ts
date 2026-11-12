@@ -125,7 +125,7 @@ function makeTsManual(count: number): Variant {
 }
 
 async function main(): Promise<void> {
-  const options = parseOptions(process.argv.slice(2), "uso: node boundary.js --module <fixture_game.mjs> --out <json> [--sizes 1000,10000] [--rounds 10] [--commit <hash>]");
+  const options = parseOptions(process.argv.slice(2), "usage: node boundary.js --module <fixture_game.mjs> --out <json> [--sizes 1000,10000] [--rounds 10] [--commit <hash>]");
   const runtime = await loadBenchRuntime(options.modulePath);
   const results: { size: number; variant: VariantName; nsPerEntity: number[]; median: number; min: number; max: number }[] = [];
   const ratios: { size: number; tsEngineOverTsManual: number; tsEngineOverCpp: number; tsEngineRawOverTsManual: number }[] = [];
@@ -162,7 +162,7 @@ async function main(): Promise<void> {
       const expected = expectedPositionX(executed.get(variant.name)!, DeltaTime);
       const actual = variant.positionX();
       if (Math.abs(actual - expected) > 1e-3 * Math.abs(expected)) {
-        console.error(`variante ${variant.name} N=${size}: x=${actual}, esperado ${expected}`);
+        console.error(`variant ${variant.name} N=${size}: x=${actual}, expected ${expected}`);
         failed = true;
       }
     }

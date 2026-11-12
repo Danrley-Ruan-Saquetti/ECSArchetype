@@ -43,7 +43,7 @@ function names(...states: (State | null)[]): (string | null)[] {
   return states.map((item) => item?.name ?? null);
 }
 
-test("requestState, engine.state e context.state; vale o último pedido", () => {
+test("requestState, engine.state and context.state; the last request wins", () => {
   withEngine((engine) => {
     const seen: (string | null)[] = [];
     engine.addSystem(Phase.Update, "watch", (context) => seen.push(context.state?.name ?? null));
@@ -66,7 +66,7 @@ test("requestState, engine.state e context.state; vale o último pedido", () => 
   });
 });
 
-test("ganchos C++ e TS intercalados na ordem de registro", () => {
+test("C++ and TS hooks interleaved in registration order", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     const appendDigit = (digit: number) => (context: StateContext) => {
@@ -83,7 +83,7 @@ test("ganchos C++ e TS intercalados na ordem de registro", () => {
   });
 });
 
-test("fromState e toState no onExit e no onEnter; null para o estado vazio", () => {
+test("fromState and toState in onExit and onEnter; null for the empty state", () => {
   withEngine((engine) => {
     const log: (string | null)[][] = [];
     const record = (label: string) => (context: StateContext) => {
@@ -107,7 +107,7 @@ test("fromState e toState no onExit e no onEnter; null para o estado vazio", () 
   });
 });
 
-test("inState pelo TS em sistema nativo, sistema TS e handler", () => {
+test("inState from TS on a native system, a TS system and a handler", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     let handlerEvents = 0;
@@ -141,7 +141,7 @@ test("inState pelo TS em sistema nativo, sistema TS e handler", () => {
   });
 });
 
-test("spawn direto do TS em gancho e handler tem escopo; World.spawn fora de contexto é persistente", () => {
+test("direct TS spawn in a hook and a handler is scoped; World.spawn outside a context is persistent", () => {
   withEngine((engine) => {
     let fromHook: Entity | undefined;
     let fromHandler: Entity | undefined;
@@ -176,7 +176,7 @@ test("spawn direto do TS em gancho e handler tem escopo; World.spawn fora de con
   });
 });
 
-test("persist em sistema TS, em contexto direto e de tarefa", () => {
+test("persist in a TS system, in a direct context and in a task context", () => {
   withEngine((engine) => {
     let fromSystem: Entity | undefined;
     let fromHandler: Entity | undefined;
@@ -222,7 +222,7 @@ test("persist em sistema TS, em contexto direto e de tarefa", () => {
   });
 });
 
-test("mapa de closures vazio depois da troca", () => {
+test("closure map empty after the transition", () => {
   withEngine((engine) => {
     const step = stepper(engine);
     engine.requestState(menu);
@@ -239,7 +239,7 @@ test("mapa de closures vazio depois da troca", () => {
   });
 });
 
-test("exceção em onExit TS: estado não muda e a limpeza não roda; o frame seguinte se recupera", () => {
+test("exception in TS onExit: state does not change and cleanup does not run; the next frame recovers", () => {
   withEngine((engine) => {
     let scoped: Entity | undefined;
     engine.onEnter(menu, "spawn", (context) => {
@@ -265,7 +265,7 @@ test("exceção em onExit TS: estado não muda e a limpeza não roda; o frame se
   });
 });
 
-test("exceção em onEnter TS: estado novo e os ganchos seguintes não rodam", () => {
+test("exception in TS onEnter: new state, and the following hooks do not run", () => {
   withEngine((engine) => {
     let secondCalls = 0;
     engine.onEnter(playing, "boom", () => {
@@ -282,7 +282,7 @@ test("exceção em onEnter TS: estado novo e os ganchos seguintes não rodam", (
   });
 });
 
-test("memória cresce dentro do gancho TS e o contexto continua válido", () => {
+test("memory grows inside the TS hook and the context stays valid", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 5 } });
     const module = moduleOf(runtime);
@@ -300,12 +300,12 @@ test("memória cresce dentro do gancho TS e o contexto continua válido", () => 
 
     stepper(engine)();
 
-    assert.ok(grew, "a memória do WASM deveria ter crescido");
+    assert.ok(grew, "WASM memory should have grown");
     assert.equal(value, 5);
   });
 });
 
-test("StateContext fora da chamada do gancho é ContractError", () => {
+test("StateContext outside the hook call is ContractError", () => {
   withEngine((engine) => {
     let captured: StateContext | undefined;
     engine.onEnter(menu, "capture", (context) => {
@@ -321,7 +321,7 @@ test("StateContext fora da chamada do gancho é ContractError", () => {
   });
 });
 
-test("erros: estado de outro esquema, registro e inState durante frame e após frame interrompido, persist de entidade morta, gancho nativo desconhecido", () => {
+test("errors: state from another schema, registration and inState during frame and after an interrupted frame, persist of a dead entity, unknown native hook", () => {
   withEngine((engine) => {
     const foreign = state("foreign");
     const duringFrame: unknown[] = [];
@@ -360,7 +360,7 @@ test("erros: estado de outro esquema, registro e inState durante frame e após f
     assert.throws(() => engine.requestState(foreign), ContractError);
     assert.throws(() => engine.onEnter(foreign, "x", nothing), ContractError);
     assert.throws(() => registration.inState(foreign), ContractError);
-    assert.throws(() => engine.addNativeOnEnter(menu, "naoExiste"), ContractError);
+    assert.throws(() => engine.addNativeOnEnter(menu, "doesNotExist"), ContractError);
     assert.throws(() => step(), /boom/);
     assert.equal(duringFrame.length, 4);
     for (const error of duringFrame) {
@@ -373,6 +373,6 @@ test("erros: estado de outro esquema, registro e inState durante frame e após f
     step();
 
     assert.ok(deadPersist instanceof ContractError);
-    assert.match((deadPersist as ContractError).message, /entidade morta/);
+    assert.match((deadPersist as ContractError).message, /dead entity/);
   });
 });

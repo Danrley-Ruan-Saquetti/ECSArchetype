@@ -29,7 +29,7 @@ function spawnMovers(world: World, count: number): number[] {
   return entities;
 }
 
-test("movimento no TS e no C++ dão o mesmo resultado", () => {
+test("movement in TS and in C++ gives the same result", () => {
   withWorld((tsWorld) => {
     withWorld((cppWorld) => {
       const count = 1000;
@@ -58,7 +58,7 @@ test("movimento no TS e no C++ dão o mesmo resultado", () => {
   });
 });
 
-test("blocos, contagens e filtros", () => {
+test("blocks, counts and filters", () => {
   withWorld((world) => {
     spawnMovers(world, 1000);
 
@@ -79,7 +79,7 @@ test("blocos, contagens e filtros", () => {
   });
 });
 
-test("entity(row) identifica a linha", () => {
+test("entity(row) identifies the row", () => {
   withWorld((world) => {
     spawnMovers(world, 100);
 
@@ -92,7 +92,7 @@ test("entity(row) identifica a linha", () => {
   });
 });
 
-test("query criada antes dos arquétipos os enxerga", () => {
+test("query created before the archetypes sees them", () => {
   withWorld((world) => {
     const query = world.query({ read: [Position] });
 
@@ -107,7 +107,7 @@ test("query criada antes dos arquétipos os enxerga", () => {
   });
 });
 
-test("tabela esvaziada não gera bloco", () => {
+test("emptied table yields no block", () => {
   withWorld((world) => {
     const entity = world.spawn([Position]);
     const query = world.query({ read: [Position] });
@@ -122,7 +122,7 @@ test("tabela esvaziada não gera bloco", () => {
   });
 });
 
-test("mesma spec devolve a mesma Query", () => {
+test("same spec returns the same Query", () => {
   withWorld((world) => {
     const spec = { read: [Velocity], write: [Position], without: [Enemy] };
 
@@ -131,7 +131,7 @@ test("mesma spec devolve a mesma Query", () => {
   });
 });
 
-test("campos f64, u8, i16 e entity pela view", () => {
+test("f64, u8, i16 and entity fields through the view", () => {
   withWorld((world) => {
     const other = world.spawn([Player]);
     const entity = world.spawn([Mixed], { Mixed: { a: 200, b: 1.5, c: -3, owner: other } });
@@ -146,7 +146,7 @@ test("campos f64, u8, i16 e entity pela view", () => {
   });
 });
 
-test("raw() lê o mesmo que get()", () => {
+test("raw() reads the same as get()", () => {
   withWorld((world) => {
     spawnMovers(world, 50);
 
@@ -160,7 +160,7 @@ test("raw() lê o mesmo que get()", () => {
   });
 });
 
-test("erros de spec e de acesso", () => {
+test("spec and access errors", () => {
   withWorld((world) => {
     assert.throws(() => world.query({ read: [Player] } as never), ContractError);
     assert.throws(() => world.query({ read: [Position], write: [Position] }), ContractError);
@@ -173,7 +173,7 @@ test("erros de spec e de acesso", () => {
   });
 });
 
-test("mudança estrutural dentro de eachBlock é erro e o World segue usável", () => {
+test("structural change inside eachBlock is an error and the World stays usable", () => {
   withWorld((world) => {
     const entity = world.spawn([Position]);
 
@@ -188,7 +188,7 @@ test("mudança estrutural dentro de eachBlock é erro e o World segue usável", 
   });
 });
 
-test("exceção no callback encerra a iteração", () => {
+test("exception in the callback ends the iteration", () => {
   withWorld((world) => {
     world.spawn([Position]);
     const query = world.query({ read: [Position] });
@@ -196,16 +196,16 @@ test("exceção no callback encerra a iteração", () => {
     assert.throws(
       () =>
         query.eachBlock(() => {
-          throw new Error("falha do jogo");
+          throw new Error("game failure");
         }),
-      /falha do jogo/,
+      /game failure/,
     );
 
     assert.ok(world.spawn([Position]));
   });
 });
 
-test("bloco usado fora do callback", () => {
+test("block used outside the callback", () => {
   withWorld((world) => {
     world.spawn([Position]);
     let saved: Block | undefined;
@@ -219,7 +219,7 @@ test("bloco usado fora do callback", () => {
   });
 });
 
-test("eachBlock aninhado na mesma query", () => {
+test("eachBlock nested in the same query", () => {
   withWorld((world) => {
     for (let index = 0; index < 10; ++index) {
       world.spawn([Position], { Position: { x: index } });
@@ -244,7 +244,7 @@ test("eachBlock aninhado na mesma query", () => {
   });
 });
 
-test("crescimento da memória durante eachBlock", () => {
+test("memory growth during eachBlock", () => {
   withWorld((world) => {
     const count = 100;
     for (let index = 0; index < count; ++index) {
@@ -267,7 +267,7 @@ test("crescimento da memória durante eachBlock", () => {
   });
 });
 
-test("dispose dentro de eachBlock é erro e o World segue usável", () => {
+test("dispose inside eachBlock is an error and the World stays usable", () => {
   withWorld((world) => {
     world.spawn([Position, Velocity]);
 
@@ -279,7 +279,7 @@ test("dispose dentro de eachBlock é erro e o World segue usável", () => {
   });
 });
 
-test("checkInvariants sincroniza o heap da Bridge depois de chamar o C++", () => {
+test("checkInvariants syncs the Bridge heap after calling C++", () => {
   withWorld((world) => {
     const bridge = bridgeOf(runtime);
     const pointers: number[] = [];
@@ -296,7 +296,7 @@ test("checkInvariants sincroniza o heap da Bridge depois de chamar o C++", () =>
   });
 });
 
-test("single devolve a entidade e cópias dos componentes da única linha", () => {
+test("single returns the entity and copies of the components of the only row", () => {
   withWorld((world) => {
     const player = world.spawn([Position, Velocity, Player], { Position: { x: 1, y: 2 }, Velocity: { x: 3, y: 4 } });
     world.spawn([Position, Enemy]);
@@ -312,7 +312,7 @@ test("single devolve a entidade e cópias dos componentes da única linha", () =
   });
 });
 
-test("single escolhe pela spec entre várias entidades", () => {
+test("single picks by spec among several entities", () => {
   withWorld((world) => {
     world.spawn([Position, Enemy]);
     world.spawn([Position, Enemy]);
@@ -325,7 +325,7 @@ test("single escolhe pela spec entre várias entidades", () => {
   });
 });
 
-test("trySingle devolve null sem linhas e a linha com uma", () => {
+test("trySingle returns null with no rows and the row with one", () => {
   withWorld((world) => {
     const query = world.query({ read: [Position], with: [Player] });
     assert.equal(query.trySingle(), null);
@@ -338,7 +338,7 @@ test("trySingle devolve null sem linhas e a linha com uma", () => {
   });
 });
 
-test("single dentro do eachBlock de outra query", () => {
+test("single inside the eachBlock of another query", () => {
   withWorld((world) => {
     const player = world.spawn([Position, Player], { Position: { x: 7, y: 8 } });
     world.spawn([Velocity]);
@@ -354,19 +354,19 @@ test("single dentro do eachBlock de outra query", () => {
   });
 });
 
-test("erros de single, trySingle e SingleRow.get", () => {
+test("single, trySingle and SingleRow.get errors", () => {
   withWorld((world) => {
     const query = world.query({ read: [Position] });
-    assert.throws(() => query.single(), new ContractError("single: query com 0 linhas; esperava 1"));
+    assert.throws(() => query.single(), new ContractError("single: query with 0 rows; expected 1"));
 
     world.spawn([Position]);
     world.spawn([Position]);
-    assert.throws(() => query.single(), /single: query com 2 linhas/);
-    assert.throws(() => query.trySingle(), /trySingle: query com 2 linhas; esperava 0 ou 1/);
+    assert.throws(() => query.single(), /single: query with 2 rows/);
+    assert.throws(() => query.trySingle(), /trySingle: query with 2 rows; expected 0 or 1/);
     assert.equal(world.checkInvariants(), null);
 
     const only = world.query({ read: [Position], with: [Enemy] });
     world.spawn([Position, Enemy]);
-    assert.throws(() => only.single().get(Velocity), /get type=Velocity: tipo não está na query/);
+    assert.throws(() => only.single().get(Velocity), /get type=Velocity: type is not in the query/);
   });
 });

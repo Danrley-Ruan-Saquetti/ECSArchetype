@@ -44,7 +44,7 @@ function appendDigit(entity: number, digit: number): (context: HandlerContext) =
   };
 }
 
-test("handlers TS e C++ de Ping na ordem de registro", () => {
+test("TS and C++ Ping handlers in registration order", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     engine.addSystem(Phase.Update, "emit", (context) => context.emit(Ping, { target: entity, value: 1 }));
@@ -58,7 +58,7 @@ test("handlers TS e C++ de Ping na ordem de registro", () => {
   });
 });
 
-test("tipos despachados na ordem do esquema, não na de emissão", () => {
+test("types dispatched in schema order, not in emission order", () => {
   withEngine((engine) => {
     const calls: string[] = [];
     engine.addSystem(Phase.Update, "emit", (context) => {
@@ -78,7 +78,7 @@ test("tipos despachados na ordem do esquema, não na de emissão", () => {
   });
 });
 
-test("lote: count e valores pelas views, inclusive entity", () => {
+test("batch: count and values through the views, entity included", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     const seen = { count: 0, values: [] as number[], target: -1 };
@@ -104,7 +104,7 @@ test("lote: count e valores pelas views, inclusive entity", () => {
   });
 });
 
-test("evento emitido por handler TS vai para a rodada seguinte do mesmo passo", () => {
+test("event emitted by a TS handler goes to the next round of the same step", () => {
   withEngine((engine) => {
     const pingCounts: number[] = [];
     const echoDepths: number[] = [];
@@ -131,7 +131,7 @@ test("evento emitido por handler TS vai para a rodada seguinte do mesmo passo", 
   });
 });
 
-test("handler TS destrói direto; evento repetido não quebra", () => {
+test("TS handler destroys directly; repeated event does not break", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     engine.addSystem(Phase.Update, "emit", (context) => {
@@ -154,7 +154,7 @@ test("handler TS destrói direto; evento repetido não quebra", () => {
   });
 });
 
-test("evento emitido em Render é despachado no passo seguinte", () => {
+test("event emitted in Render is dispatched in the next step", () => {
   withEngine((engine) => {
     let calls = 0;
     engine.addSystem(Phase.Render, "emit", (context) => context.emit(Ping, { value: 1 }));
@@ -171,7 +171,7 @@ test("evento emitido em Render é despachado no passo seguinte", () => {
   });
 });
 
-test("memória cresce dentro do handler TS e o lote continua legível", () => {
+test("memory grows inside the TS handler and the batch stays readable", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     const module = moduleOf(runtime);
@@ -180,7 +180,7 @@ test("memória cresce dentro do handler TS e o lote continua legível", () => {
     let target = -1;
     engine.addSystem(Phase.Update, "emit", (context) => context.emit(Ping, { target: entity, value: 42 }));
     engine.on(Ping, "grow", (context, batch) => {
-      // A view nasce antes do crescimento e é reusada depois: ela não pode guardar o buffer antigo.
+      // The view is created before the growth and reused after it: it must not hold the old buffer.
       const view = batch.read();
       assert.equal(view.value.get(0), 42);
       const before = module.HEAPU8.buffer;
@@ -194,13 +194,13 @@ test("memória cresce dentro do handler TS e o lote continua legível", () => {
 
     stepper(engine)();
 
-    assert.ok(grew, "a memória do WASM deveria ter crescido");
+    assert.ok(grew, "WASM memory should have grown");
     assert.equal(value, 42);
     assert.equal(target, entity);
   });
 });
 
-test("exceção num handler TS chega a quem chamou frame e o frame seguinte descarta os eventos pendentes", () => {
+test("exception in a TS handler reaches the frame caller and the next frame discards the pending events", () => {
   withEngine((engine) => {
     let echoes = 0;
     let thrown = false;
@@ -235,7 +235,7 @@ test("exceção num handler TS chega a quem chamou frame e o frame seguinte desc
   });
 });
 
-test("registro depois de frame interrompido é ContractError até o próximo frame", () => {
+test("registration after an interrupted frame is ContractError until the next frame", () => {
   withEngine((engine) => {
     engine.addSystem(Phase.UpdateBefore, "arm", (context) => context.emit(Ping, { value: 1 }));
     let thrown = false;
@@ -248,7 +248,7 @@ test("registro depois de frame interrompido é ContractError até o próximo fra
 
     assert.throws(() => engine.frame(StepSeconds), /boom/);
 
-    const interrupted = (error: unknown) => error instanceof ContractError && /interrompido/.test(error.message);
+    const interrupted = (error: unknown) => error instanceof ContractError && /interrupted/.test(error.message);
     assert.throws(() => engine.on(Echo, "late", () => {}), interrupted);
     assert.throws(() => engine.addNativeHandler(Ping, "sumPing"), interrupted);
     assert.throws(() => engine.addSystem(Phase.Update, "late", () => {}), interrupted);
@@ -265,7 +265,7 @@ test("registro depois de frame interrompido é ContractError até o próximo fra
   });
 });
 
-test("mudança estrutural direta no World dentro do handler é permitida; dentro do sistema continua proibida", () => {
+test("direct structural change on the World inside the handler is allowed; inside the system it is still forbidden", () => {
   withEngine((engine) => {
     let handlerSpawned = -1;
     let systemError: unknown = null;
@@ -288,7 +288,7 @@ test("mudança estrutural direta no World dentro do handler é permitida; dentro
   });
 });
 
-test("emit com campo desconhecido, com evento de outro esquema ou fora da chamada é ContractError", () => {
+test("emit with an unknown field, with an event from another schema or outside the call is ContractError", () => {
   withEngine((engine) => {
     let captured: SystemContext | null = null;
     const errors: unknown[] = [];
@@ -311,10 +311,10 @@ test("emit com campo desconhecido, com evento de outro esquema ou fora da chamad
   });
 });
 
-test("addNativeHandler com nome desconhecido ou de outro tipo é ContractError com os nomes", () => {
+test("addNativeHandler with an unknown name or one of another type is ContractError with the names", () => {
   withEngine((engine) => {
-    assert.throws(() => engine.addNativeHandler(Ping, "naoExiste"), (error: unknown) => {
-      return error instanceof ContractError && error.message.includes("naoExiste");
+    assert.throws(() => engine.addNativeHandler(Ping, "doesNotExist"), (error: unknown) => {
+      return error instanceof ContractError && error.message.includes("doesNotExist");
     });
     assert.throws(() => engine.addNativeHandler(Echo, "appendNineOnPing"), (error: unknown) => {
       return error instanceof ContractError && error.message.includes("appendNineOnPing") && error.message.includes("Echo");
@@ -322,7 +322,7 @@ test("addNativeHandler com nome desconhecido ou de outro tipo é ContractError c
   });
 });
 
-test("on durante frame é ContractError; batch.read() e context depois do handler são ContractError", () => {
+test("on during frame is ContractError; batch.read() and context after the handler are ContractError", () => {
   withEngine((engine) => {
     let duringFrame: unknown = null;
     let staleContext: HandlerContext | null = null;
@@ -349,7 +349,7 @@ test("on durante frame é ContractError; batch.read() e context depois do handle
   });
 });
 
-test("evento sem handler é descartado no fim do passo", () => {
+test("event without a handler is discarded at the end of the step", () => {
   withEngine((engine) => {
     let calls = 0;
     engine.addSystem(Phase.Update, "emit", (context) => context.emit(Ping, { value: 1 }));
@@ -365,7 +365,7 @@ test("evento sem handler é descartado no fim do passo", () => {
   });
 });
 
-test("maxEventRounds que não é inteiro positivo é ContractError em createEngine", () => {
+test("maxEventRounds that is not a positive integer is ContractError in createEngine", () => {
   for (const maxEventRounds of [0, -1, 1.5, Number.NaN]) {
     assert.throws(() => runtime.createEngine({ maxEventRounds }), (error: unknown) => error instanceof ContractError && /maxEventRounds/.test(error.message));
   }

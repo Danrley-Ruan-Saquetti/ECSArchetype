@@ -44,7 +44,7 @@ function appendDigit(entity: number, digit: number): (context: SystemContext) =>
   };
 }
 
-test("sistemas TS e C++ na ordem das fases e de registro", () => {
+test("TS and C++ systems in phase and registration order", () => {
   withEngine((engine) => {
     const entity = engine.world.spawn([Trace], { Trace: { value: 0 } });
     engine.addSystem(Phase.Update, "u2", appendDigit(entity, 2));
@@ -58,7 +58,7 @@ test("sistemas TS e C++ na ordem das fases e de registro", () => {
   });
 });
 
-test("frame(k/60) para k = 0..60 roda 60 passos", () => {
+test("frame(k/60) for k = 0..60 runs 60 steps", () => {
   const engine = runtime.createEngine({ fixedHz: 60 });
   try {
     let steps = 0;
@@ -77,7 +77,7 @@ test("frame(k/60) para k = 0..60 roda 60 passos", () => {
   }
 });
 
-test("context.spawn é adiado e o C++ vê o valor", () => {
+test("context.spawn is deferred and C++ sees the value", () => {
   withEngine((engine) => {
     let spawned = 0;
     let aliveInSameSystem = true;
@@ -98,7 +98,7 @@ test("context.spawn é adiado e o C++ vê o valor", () => {
   });
 });
 
-test("memória cresce num sistema C++ antes de um sistema TS", () => {
+test("memory grows in a C++ system before a TS system", () => {
   withEngine((engine) => {
     const module = moduleOf(runtime);
     const bufferBefore = module.HEAPU8.buffer;
@@ -120,7 +120,7 @@ test("memória cresce num sistema C++ antes de um sistema TS", () => {
   });
 });
 
-test("mudança estrutural direta no World durante frame é ContractError", () => {
+test("direct structural change on the World during frame is ContractError", () => {
   withEngine((engine) => {
     let message = "";
     engine.addSystem(Phase.Update, "direct", () => {
@@ -139,7 +139,7 @@ test("mudança estrutural direta no World durante frame é ContractError", () =>
   });
 });
 
-test("contexto usado fora da chamada é ContractError", () => {
+test("context used outside the call is ContractError", () => {
   withEngine((engine) => {
     let captured: SystemContext | null = null;
     engine.addSystem(Phase.Update, "capture", (context) => {
@@ -155,20 +155,20 @@ test("contexto usado fora da chamada é ContractError", () => {
   });
 });
 
-test("addNativeSystem com nome desconhecido é ContractError com o nome", () => {
+test("addNativeSystem with an unknown name is ContractError with the name", () => {
   withEngine((engine) => {
-    assert.throws(() => engine.addNativeSystem(Phase.Update, "naoExiste"), (error: unknown) => {
-      return error instanceof ContractError && error.message.includes("naoExiste");
+    assert.throws(() => engine.addNativeSystem(Phase.Update, "doesNotExist"), (error: unknown) => {
+      return error instanceof ContractError && error.message.includes("doesNotExist");
     });
   });
 });
 
-test("addSystem durante frame é ContractError", () => {
+test("addSystem during frame is ContractError", () => {
   withEngine((engine) => {
     let thrown: unknown = null;
     engine.addSystem(Phase.Update, "adder", () => {
       try {
-        engine.addSystem(Phase.Update, "outro", () => {});
+        engine.addSystem(Phase.Update, "other", () => {});
       } catch (error) {
         thrown = error;
       }
@@ -180,7 +180,7 @@ test("addSystem durante frame é ContractError", () => {
   });
 });
 
-test("duas engines no mesmo módulo recebem só os próprios sistemas", () => {
+test("two engines in the same module receive only their own systems", () => {
   const first = createEngine();
   const second = createEngine();
   try {
@@ -203,7 +203,7 @@ test("duas engines no mesmo módulo recebem só os próprios sistemas", () => {
   }
 });
 
-test("engine.world.dispose() é ContractError; frame depois de engine.dispose() é ContractError", () => {
+test("engine.world.dispose() is ContractError; frame after engine.dispose() is ContractError", () => {
   const engine = createEngine();
 
   assert.throws(() => engine.world.dispose(), ContractError);

@@ -34,20 +34,20 @@ function createCanvasDrawer(context: CanvasRenderingContext2D): Drawer {
 async function boot(): Promise<void> {
   const canvas = document.getElementById("arena");
   if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error('canvas com id "arena" não encontrado na página');
+    throw new Error('canvas with id "arena" not found on the page');
   }
 
   canvas.width = ArenaWidth;
   canvas.height = ArenaHeight;
   const context = canvas.getContext("2d");
   if (context === null) {
-    throw new Error("o navegador não deu um contexto 2D para o canvas");
+    throw new Error("the browser did not provide a 2D context for the canvas");
   }
 
   const runtime = await loadRuntime(moduleFactoryFromUrl("./arena_game.mjs"), schema);
   const engine = runtime.createEngine({ fixedHz: 60 });
   installGame(engine, { drawer: createCanvasDrawer(context), random: Math.random });
-  // O attachBrowserInput só impede o menu do clique direito quando MouseRight está ligado a uma ação; o jogo não usa esse botão.
+  // attachBrowserInput only prevents the right-click menu when MouseRight is bound to an action; the game does not use that button.
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
   attachBrowserInput(engine, canvas);
   runInBrowser(engine);
@@ -55,5 +55,5 @@ async function boot(): Promise<void> {
 
 boot().catch((error: unknown) => {
   console.error(error);
-  document.body.textContent = `Erro ao iniciar o jogo: ${error instanceof Error ? error.message : String(error)}`;
+  document.body.textContent = `Error starting the game: ${error instanceof Error ? error.message : String(error)}`;
 });

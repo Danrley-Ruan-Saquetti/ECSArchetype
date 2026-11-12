@@ -18,7 +18,7 @@ function withWorld(body: (world: World) => void): void {
   }
 }
 
-test("spawn com valores e get", () => {
+test("spawn with values and get", () => {
   withWorld((world) => {
     const entity = world.spawn([Player, Position, Velocity], { Position: { x: 1.5, y: -2 } });
 
@@ -29,7 +29,7 @@ test("spawn com valores e get", () => {
   });
 });
 
-test("set parcial", () => {
+test("partial set", () => {
   withWorld((world) => {
     const entity = world.spawn([Position], { Position: { x: 1.5, y: -2 } });
 
@@ -39,7 +39,7 @@ test("set parcial", () => {
   });
 });
 
-test("add de tag, add que atribui, remove", () => {
+test("add of a tag, add that assigns, remove", () => {
   withWorld((world) => {
     const entity = world.spawn([Position]);
 
@@ -58,7 +58,7 @@ test("add de tag, add que atribui, remove", () => {
   });
 });
 
-test("destroy e reuso do slot", () => {
+test("destroy and slot reuse", () => {
   withWorld((world) => {
     const entity = world.spawn([Position]);
 
@@ -71,7 +71,7 @@ test("destroy e reuso do slot", () => {
   });
 });
 
-test("Mixed bate com o C++", () => {
+test("Mixed matches C++", () => {
   withWorld((world) => {
     const other = world.spawn([Player]);
     const entity = world.spawn([Mixed], { Mixed: { a: 200, b: 1.5, c: -3, owner: other } });
@@ -84,7 +84,7 @@ test("Mixed bate com o C++", () => {
   });
 });
 
-test("valor escrito pelo TS é visto pelo C++", () => {
+test("value written by TS is seen by C++", () => {
   withWorld((world) => {
     for (const x of [1, 2, 3]) {
       world.spawn([Position], { Position: { x } });
@@ -94,7 +94,7 @@ test("valor escrito pelo TS é visto pelo C++", () => {
   });
 });
 
-test("erros de contrato", () => {
+test("contract errors", () => {
   withWorld((world) => {
     const dead = world.spawn([Position]);
     world.destroy(dead);
