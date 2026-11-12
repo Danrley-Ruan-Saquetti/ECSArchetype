@@ -2,6 +2,8 @@
 
 #include "oly/app/handler.hpp"
 #include "oly/app/system.hpp"
+#include "oly/app/task_context.hpp"
+#include "oly/bridge/engine.hpp"
 #include "oly/bridge/c_api.hpp"
 #include "oly/bridge/world.hpp"
 #include "oly/ecs/entity.hpp"
@@ -11,6 +13,17 @@ namespace {
   uint32_t fixtureFirePressCount = 0;
   uint32_t fixturePingCount = 0;
   double fixturePingSum = 0;
+
+  struct AppendDigit {
+    oly::ecs::Entity target;
+    uint32_t digit;
+  };
+
+  void appendDigitTask(oly::app::TaskContext& context) {
+    const AppendDigit& payload = context.payload<AppendDigit>();
+    Trace& trace = context.get<Trace>(payload.target);
+    trace.value = trace.value * 10 + payload.digit;
+  }
 }
 
 extern "C" {
@@ -37,6 +50,10 @@ OLY_API uint32_t fixtureTakeFirePressCount() {
   fixtureFirePressCount = 0;
 
   return count;
+}
+
+OLY_API void fixtureScheduleDigit(OlyEngine* engine, double delaySeconds, uint32_t index, uint32_t generation, uint32_t digit) {
+  oly::bridge::engineOf(engine).schedule().after(delaySeconds, appendDigitTask, AppendDigit{oly::ecs::Entity{index, generation}, digit});
 }
 
 OLY_API double fixtureTakePingSum() {

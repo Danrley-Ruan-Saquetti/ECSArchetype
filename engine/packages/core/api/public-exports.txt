@@ -32,6 +32,7 @@ ReadField
 ReadView
 Runtime
 ScalarType
+Scheduler
 Schema
 SchemaMismatchError
 SchemaType
@@ -40,6 +41,9 @@ SystemContext
 SystemFunction
 SystemRegistration
 TagType
+TaskContext
+TaskFunction
+TaskHandle
 ValueOf
 Vector2
 World

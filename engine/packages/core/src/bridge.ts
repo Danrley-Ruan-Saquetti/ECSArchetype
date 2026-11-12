@@ -321,6 +321,26 @@ export class Bridge {
     this.sync();
   }
 
+  // O descarte de tarefas chama o JS e pode crescer a memória do WASM.
+  engineScheduleScriptTask(engine: number, delaySeconds: number, intervalSeconds: number, scriptId: number): { slot: number; generation: number } {
+    this.module._olyEngineScheduleScriptTask(engine, delaySeconds, intervalSeconds, scriptId, this.scratch + OutputOffset);
+    this.sync();
+
+    const base = (this.scratch + OutputOffset) >> 2;
+    return { slot: this.heap.u32[base]!, generation: this.heap.u32[base + 1]! };
+  }
+
+  engineCancelTask(engine: number, slot: number, generation: number): boolean {
+    const cancelled = this.module._olyEngineCancelTask(engine, slot, generation) !== 0;
+    this.sync();
+
+    return cancelled;
+  }
+
+  engineIsTaskPending(engine: number, slot: number, generation: number): boolean {
+    return this.module._olyEngineIsTaskPending(engine, slot, generation) !== 0;
+  }
+
   setWhilePaused(engine: number, systemId: number, whilePaused: boolean): void {
     this.module._olyEngineSetWhilePaused(engine, systemId, whilePaused ? 1 : 0);
   }

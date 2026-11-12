@@ -4,6 +4,7 @@ import { assertContextActive, EngineContext } from "./context.js";
 import type { Entity } from "./entity.js";
 import type { Phase } from "./engine.js";
 import { componentIdOf, type Runtime } from "./runtime.js";
+import type { Scheduler } from "./scheduler.js";
 import type { ComponentType, Fields, SchemaType, ValueOf } from "./schema.js";
 import { assertKnownFields, assertSpawnArguments, writeValue } from "./values.js";
 import type { SpawnValues, World } from "./world.js";
@@ -22,8 +23,8 @@ export class SystemContext extends EngineContext {
   readonly #bridge: Bridge;
   readonly #engineHandle: number;
 
-  constructor(phase: Phase, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap) {
-    super({ label: "system", className: "SystemContext", callNoun: "sistema" }, name, runtime, bridge, engineHandle, world, actions);
+  constructor(phase: Phase, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap, scheduler: Scheduler) {
+    super({ label: "system", className: "SystemContext", callNoun: "sistema" }, name, runtime, bridge, engineHandle, world, actions, scheduler);
     this.phase = phase;
     this.name = name;
     this.#runtime = runtime;

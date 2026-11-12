@@ -81,6 +81,7 @@ test("Engine expõe só a API do glossário", () => {
     "pause",
     "paused",
     "resume",
+    "schedule",
     "setHidden",
     "time",
     "world",
@@ -105,6 +106,7 @@ test("SystemContext expõe só a API do glossário", () => {
     "query",
     "remove",
     "resume",
+    "schedule",
     "set",
     "spawn",
     "time",
@@ -128,10 +130,39 @@ test("HandlerContext expõe só a API do glossário", () => {
     "query",
     "remove",
     "resume",
+    "schedule",
     "set",
     "spawn",
     "time",
   ]);
+});
+
+test("TaskContext expõe só a API do glossário", () => {
+  assert.deepEqual(memberNames("TaskContext"), [
+    "actions",
+    "add",
+    "destroy",
+    "emit",
+    "fixedDeltaTime",
+    "get",
+    "handle",
+    "has",
+    "isAlive",
+    "lastRun",
+    "pause",
+    "paused",
+    "query",
+    "remove",
+    "resume",
+    "schedule",
+    "set",
+    "spawn",
+    "time",
+  ]);
+});
+
+test("Scheduler expõe só after, every, cancel e isPending", () => {
+  assert.deepEqual(memberNames("Scheduler"), ["after", "cancel", "every", "isPending"]);
 });
 
 test("ActionMap expõe só ligação, entrada do host e leitura", () => {

@@ -16,6 +16,7 @@ export interface FixtureExports {
   fixtureSetPingCount(count: number): void;
   fixtureTakePingSum(): number;
   fixtureTakeFirePressCount(): number;
+  fixtureScheduleDigit(engine: number, delaySeconds: number, index: number, generation: number, digit: number): void;
 }
 
 interface FixtureModule extends OlyModule {
@@ -25,6 +26,7 @@ interface FixtureModule extends OlyModule {
   _fixtureSetPingCount(count: number): void;
   _fixtureTakePingSum(): number;
   _fixtureTakeFirePressCount(): number;
+  _fixtureScheduleDigit(engine: number, delaySeconds: number, index: number, generation: number, digit: number): void;
 }
 
 export function fixtureFactory(): OlyModuleFactory {
@@ -53,6 +55,7 @@ export async function loadFixture(): Promise<{ runtime: Runtime; fixture: Fixtur
       fixtureSetPingCount: (count) => module._fixtureSetPingCount(count),
       fixtureTakePingSum: () => module._fixtureTakePingSum(),
       fixtureTakeFirePressCount: () => module._fixtureTakeFirePressCount(),
+      fixtureScheduleDigit: (engine, delaySeconds, index, generation, digit) => module._fixtureScheduleDigit(engine, delaySeconds, index, generation, digit),
     },
   };
 }

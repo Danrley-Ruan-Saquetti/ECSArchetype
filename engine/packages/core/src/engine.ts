@@ -5,6 +5,7 @@ import { ContractError } from "./errors.js";
 import { EventBatch, endBatch } from "./event_batch.js";
 import { HandlerContext, type HandlerFunction } from "./handler_context.js";
 import { bridgeOf, eventIndexOf, type Runtime } from "./runtime.js";
+import { discardScriptTask, invokeScriptTask, Scheduler } from "./scheduler.js";
 import type { EventType, Fields } from "./schema.js";
 import { SystemContext, type SystemFunction } from "./system_context.js";
 import { releaseOwnedWorld, setStructureLocked, type World } from "./world.js";
@@ -35,6 +36,8 @@ const InvalidSystem = 0xffffffff;
 const InvalidHandler = 0xffffffff;
 const HandlerTypeMismatch = 0xfffffffe;
 const ScriptHandler = 1;
+const ScriptTask = 2;
+const ScriptTaskDiscard = 3;
 
 interface ScriptSystem {
   readonly function: SystemFunction;
@@ -47,6 +50,7 @@ interface ScriptHandlerEntry {
   readonly type: EventType;
 }
 
+let engineHandleOfInternal!: (engine: Engine) => number;
 let invokeScriptInternal!: (engine: Engine, kind: number, id: number, events: number, eventCount: number) => void;
 
 // Regras do loop vivem no núcleo C++; aqui só validação de uso e a chamada de volta dos sistemas TS.
@@ -56,6 +60,7 @@ export class Engine {
   readonly #runtime: Runtime;
   readonly #bridge: Bridge;
   readonly #actions: ActionMap;
+  readonly #scheduler: Scheduler;
   readonly #handle: number;
   readonly #onDispose: () => void;
   readonly #scriptSystems = new Map<number, ScriptSystem>();
@@ -67,9 +72,14 @@ export class Engine {
   #lastFrameTime = -Infinity;
 
   static {
+    engineHandleOfInternal = (engine) => engine.#handle;
     invokeScriptInternal = (engine, kind, id, events, eventCount) => {
       if (kind === ScriptHandler) {
         engine.#invokeHandler(id, events, eventCount);
+      } else if (kind === ScriptTask) {
+        invokeScriptTask(engine.#scheduler, id, eventCount !== 0);
+      } else if (kind === ScriptTaskDiscard) {
+        discardScriptTask(engine.#scheduler, id);
       } else {
         engine.#invoke(id);
       }
@@ -85,6 +95,9 @@ export class Engine {
     this.#actions = new ActionMap(runtime, this.#bridge, handle, this.#bridge.engineActionSnapshot(handle), (operation) => {
       this.#assertUsable(operation);
     });
+    this.#scheduler = new Scheduler(runtime, this.#bridge, handle, world, this.#actions, (operation) => {
+      this.#assertUsable(operation);
+    });
   }
 
   /** Ligações, entrada do host e leitura das ações do esquema. O mesmo objeto de `context.actions`. */
@@ -92,6 +105,13 @@ export class Engine {
     this.#assertUsable("actions");
 
     return this.#actions;
+  }
+
+  /** Tarefas no relógio do jogo. O mesmo objeto de `context.schedule`. */
+  get schedule(): Scheduler {
+    this.#assertUsable("schedule");
+
+    return this.#scheduler;
   }
 
   /**
@@ -168,7 +188,7 @@ export class Engine {
     this.#assertCanRegister("addSystem", phase, name);
 
     const id = this.#bridge.addScriptSystem(this.#handle, phase, name);
-    const context = new SystemContext(phase, name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions);
+    const context = new SystemContext(phase, name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions, this.#scheduler);
     this.#scriptSystems.set(id, { function: system, context });
 
     return this.#registration(id, phase, name);
@@ -193,7 +213,7 @@ export class Engine {
     const eventType = this.#assertCanRegisterHandler("on", type, name);
 
     const id = this.#bridge.addScriptHandler(this.#handle, eventType, name);
-    const context = new HandlerContext(type, name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions);
+    const context = new HandlerContext(type, name, this.#runtime, this.#bridge, this.#handle, this.world, this.#actions, this.#scheduler);
     this.#scriptHandlers.set(id, { function: handler as unknown as HandlerFunction, context, type });
 
     return { id };
@@ -313,6 +333,10 @@ export class Engine {
       throw new ContractError(`${operation}: Engine já liberada`);
     }
   }
+}
+
+export function engineHandleOf(engine: Engine): number {
+  return engineHandleOfInternal(engine);
 }
 
 export function invokeScript(engine: Engine, kind: number, id: number, events: number, eventCount: number): void {

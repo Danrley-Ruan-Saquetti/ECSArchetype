@@ -4,6 +4,7 @@ import type { Entity } from "./entity.js";
 import { ContractError } from "./errors.js";
 import type { Query, QuerySpec } from "./query.js";
 import { eventIndexOf, type Runtime } from "./runtime.js";
+import type { Scheduler } from "./scheduler.js";
 import type { ComponentType, EventType, Fields, SchemaType, ValueOf } from "./schema.js";
 import { assertKnownFields, writeValue } from "./values.js";
 import type { World } from "./world.js";
@@ -22,12 +23,13 @@ interface ContextInternals {
 let contextInternals!: ContextInternals;
 
 /**
- * O que o SystemContext e o HandlerContext têm em comum. Válido só durante a chamada do seu sistema ou handler;
- * fora dela, qualquer uso lança ContractError.
+ * O que o SystemContext, o HandlerContext e o TaskContext têm em comum. Válido só durante a chamada do seu sistema,
+ * handler ou tarefa; fora dela, qualquer uso lança ContractError.
  */
 export class EngineContext {
   #active = false;
   readonly #actions: ActionMap;
+  readonly #scheduler: Scheduler;
   readonly #kind: ContextKind;
   readonly #name: string;
   readonly #runtime: Runtime;
@@ -49,8 +51,9 @@ export class EngineContext {
     };
   }
 
-  constructor(kind: ContextKind, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap) {
+  constructor(kind: ContextKind, name: string, runtime: Runtime, bridge: Bridge, engineHandle: number, world: World, actions: ActionMap, scheduler: Scheduler) {
     this.#actions = actions;
+    this.#scheduler = scheduler;
     this.#kind = kind;
     this.#name = name;
     this.#runtime = runtime;
@@ -64,6 +67,13 @@ export class EngineContext {
     contextInternals.assertActive(this, "actions");
 
     return this.#actions;
+  }
+
+  /** O mesmo objeto de `Engine.schedule`. */
+  get schedule(): Scheduler {
+    contextInternals.assertActive(this, "schedule");
+
+    return this.#scheduler;
   }
 
   get fixedDeltaTime(): number {

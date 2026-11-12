@@ -41,6 +41,9 @@ export interface OlyModule {
   _olyEngineEmit(engine: number, eventType: number, value: number): void;
   _olyEngineAddNativeHandler(engine: number, eventType: number, name: number): number;
   _olyEngineAddScriptHandler(engine: number, eventType: number, name: number): number;
+  _olyEngineScheduleScriptTask(engine: number, delaySeconds: number, intervalSeconds: number, scriptId: number, out: number): void;
+  _olyEngineCancelTask(engine: number, slot: number, generation: number): number;
+  _olyEngineIsTaskPending(engine: number, slot: number, generation: number): number;
   _olyEngineFrame(engine: number, nowSeconds: number): void;
   _olyEngineSetHidden(engine: number, hidden: number): void;
   _olyEnginePause(engine: number): void;
