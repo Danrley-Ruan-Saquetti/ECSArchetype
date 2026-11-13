@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ContractError, Phase, action, defineSchema } from "@oly/core";
+import { ContractError, Phase } from "@oly/core";
 import type { ButtonName, ButtonState, Engine } from "@oly/core";
 import { moduleOf } from "@oly/core/internal";
+
+import { fire as foreignFire } from "../../fixture/schemas/foreign_action.generated.js";
 
 import { aim, fire, loadFixture, move, togglePause } from "./fixture.js";
 
@@ -193,7 +195,7 @@ test("isBound and clearBindings", () => {
 
 test("errors: button outside the table, action from another schema, wrong kind, non-finite pointer, disposed Engine", () => {
   withEngine((engine) => {
-    const foreign = defineSchema([action("fire", "button")]).actions[0]!;
+    const foreign = foreignFire;
 
     assert.throws(() => engine.actions.bind(fire, "w" as ButtonName), ContractError);
     assert.throws(() => engine.actions.buttonDown("Unidentified" as ButtonName), ContractError);

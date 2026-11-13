@@ -1,0 +1,15 @@
+component Position { x: f32, y: f32 }
+component Velocity { x: f32, y: f32 }
+component Mixed { a: u8, b: f64, c: i16, owner: entity }
+component Trace { value: f64 }
+tag Player
+tag Enemy
+
+event Ping { target: entity, value: f32 }
+event Echo { depth: u32 }
+
+action fire: button
+action move: axis2d
+action aim: pointer
+action togglePause: button
+action extra: button

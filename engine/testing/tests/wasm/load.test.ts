@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ContractError, SchemaMismatchError, action, component, defineSchema, event, loadRuntime, tag } from "@oly/core";
+import { ContractError, SchemaMismatchError, loadRuntime } from "@oly/core";
 import type { OlyModuleFactory } from "@oly/core";
 
+import extraActionSchema from "../../fixture/schemas/extra_action.generated.js";
+import extraEventSchema from "../../fixture/schemas/extra_event.generated.js";
+import fireAxis2dSchema from "../../fixture/schemas/fire_axis2d.generated.js";
+import positionF64Schema from "../../fixture/schemas/position_f64.generated.js";
+import widerPingSchema from "../../fixture/schemas/wider_ping.generated.js";
 import { fixtureFactory, loadFixture, schema } from "./fixture.js";
 
 test("loads with the fixture schema", async () => {
@@ -16,16 +21,8 @@ test("loads with the fixture schema", async () => {
 });
 
 test("mismatched schema is rejected", async () => {
-  const otherSchema = defineSchema([
-    component("Position", { x: "f64", y: "f32" }),
-    component("Velocity", { x: "f32", y: "f32" }),
-    component("Mixed", { a: "u8", b: "f64", c: "i16", owner: "entity" }),
-    tag("Player"),
-    tag("Enemy"),
-  ]);
-
   await assert.rejects(
-    loadRuntime(fixtureFactory(), otherSchema),
+    loadRuntime(fixtureFactory(), positionF64Schema),
     (error: unknown) =>
       error instanceof SchemaMismatchError && /0x[0-9a-f]+.*0x[0-9a-f]+/s.test(error.message) && /Position/.test(error.message),
   );
@@ -46,71 +43,30 @@ test("a module without the web host's invoker is rejected at load", async () => 
   );
 });
 
-function fixtureTypes() {
-  return [
-    component("Position", { x: "f32", y: "f32" }),
-    component("Velocity", { x: "f32", y: "f32" }),
-    component("Mixed", { a: "u8", b: "f64", c: "i16", owner: "entity" }),
-    component("Trace", { value: "f64" }),
-    tag("Player"),
-    tag("Enemy"),
-  ];
-}
-
 test("TS schema with one more event than the WASM is rejected with the event count", async () => {
-  const withExtraEvent = defineSchema([
-    ...fixtureTypes(),
-    event("Ping", { target: "entity", value: "f32" }),
-    event("Echo", { depth: "u32" }),
-    event("Extra", { x: "f32" }),
-  ]);
-
   await assert.rejects(
-    loadRuntime(fixtureFactory(), withExtraEvent),
+    loadRuntime(fixtureFactory(), extraEventSchema),
     (error: unknown) => error instanceof SchemaMismatchError && /events in WASM: 2, in TS: 3/.test(error.message),
   );
 });
 
 test("event with a size different from the WASM is rejected with the event name", async () => {
-  const withWiderPing = defineSchema([...fixtureTypes(), event("Ping", { target: "entity", value: "f64" }), event("Echo", { depth: "u32" })]);
-
   await assert.rejects(
-    loadRuntime(fixtureFactory(), withWiderPing),
+    loadRuntime(fixtureFactory(), widerPingSchema),
     (error: unknown) => error instanceof SchemaMismatchError && /events in WASM: 2, in TS: 2/.test(error.message) && /divergent type, event or action: Ping/.test(error.message),
   );
 });
 
 test("extra action in TS is rejected with the action count", async () => {
-  const withAction = defineSchema([
-    ...fixtureTypes(),
-    event("Ping", { target: "entity", value: "f32" }),
-    event("Echo", { depth: "u32" }),
-    action("fire", "button"),
-    action("move", "axis2d"),
-    action("aim", "pointer"),
-    action("togglePause", "button"),
-    action("extra", "button"),
-  ]);
-
   await assert.rejects(
-    loadRuntime(fixtureFactory(), withAction),
+    loadRuntime(fixtureFactory(), extraActionSchema),
     (error: unknown) => error instanceof SchemaMismatchError && /actions in WASM: 4, in TS: 5/.test(error.message),
   );
 });
 
 test("action with a kind different from the WASM is rejected with the action name", async () => {
-  const withWrongKind = defineSchema([
-    ...fixtureTypes(),
-    event("Ping", { target: "entity", value: "f32" }),
-    event("Echo", { depth: "u32" }),
-    action("fire", "axis2d"),
-    action("move", "axis2d"),
-    action("aim", "pointer"),
-    action("togglePause", "button"),
-  ]);
-
   await assert.rejects(
-    loadRuntime(fixtureFactory(), withWrongKind),
+    loadRuntime(fixtureFactory(), fireAxis2dSchema),
     (error: unknown) => error instanceof SchemaMismatchError && /actions in WASM: 4, in TS: 4/.test(error.message) && /divergent type, event or action: fire/.test(error.message),
   );
 });

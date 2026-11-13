@@ -1,0 +1,5 @@
+component Position { x: f64, y: f32 }
+component Velocity { x: f32, y: f32 }
+component Mixed { a: u8, b: f64, c: i16, owner: entity }
+tag Player
+tag Enemy

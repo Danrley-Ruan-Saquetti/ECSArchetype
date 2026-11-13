@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ContractError, Phase, state } from "@oly/core";
+import { ContractError, Phase } from "@oly/core";
 import type { Engine, Entity, State, StateContext } from "@oly/core";
 import { moduleOf, scriptTaskCount } from "@oly/core/internal";
+
+import { foreign } from "../../fixture/schemas/foreign_state.generated.js";
 
 import { Ping, Position, Trace, loadFixture, menu, playing } from "./fixture.js";
 
@@ -323,7 +325,6 @@ test("StateContext outside the hook call is ContractError", () => {
 
 test("errors: state from another schema, registration and inState during frame and after an interrupted frame, persist of a dead entity, unknown native hook", () => {
   withEngine((engine) => {
-    const foreign = state("foreign");
     const duringFrame: unknown[] = [];
     const registration = engine.addNativeSystem(Phase.Update, "noop");
     let deadPersist: unknown;
