@@ -83,8 +83,8 @@ versus environments and clients) and an engine neutralized so that it is decoupl
 - **A C++ game and a C++ host use `oly::app::Engine` directly**, never the C API **[author decision]**. The C API
   exists for clients in other languages. Consequence for the generator: the schema declaration that today lives inside
   `olyEngineCreate` (events, actions and states in schema order) becomes a generated function that declares the schema
-  into an `oly::app::Engine`. `capi` calls it on engine creation, and the native host calls it too. The native host
-  depends on `app`, not on `capi`.
+  into an `oly::app::Engine` (§6.3). `capi` calls it on engine creation, and a native game's `main` calls it too. The
+  native host depends on `app`, not on `capi`.
 
 ### 3.2 Tree
 
@@ -138,7 +138,7 @@ same host. Following the glossary rule, there is no alias package.
 - nothing in `engine/runtime/` includes or imports anything from `engine/environments/`;
 - one environment does not include another;
 - `__EMSCRIPTEN__` and `EM_*` macros appear only in `engine/environments/web/` and in `OLY_API`
-  (`engine/runtime/capi/include/oly/capi/c_api.hpp`); tests that skip a case on WASM (today
+  (`engine/runtime/capi/include/oly/capi/c_api.hpp`, `c_api.h` from phase 4 on, §6.5); tests that skip a case on WASM (today
   `engine/runtime/app/tests/recovery.cpp`) are exempt;
 - the existing rules keep their meaning with the new paths.
 
@@ -245,27 +245,111 @@ import { Position, move } from "../schema.generated.js";
 
 ## 6. The `native` environment
 
-- **Host**: a C++ module in `engine/environments/native/host/`, on **SDL3** **[author decision]**. It opens a window,
-  runs the loop (`frame` with the real time, `setHidden` on minimize and focus loss) and turns keyboard and mouse
-  events into the engine's input calls (`ButtonDown/Up`, `PointerMove`, `ReleaseAll` on focus loss), with the same rules
-  the browser host has today.
-- It gives the game a hook to draw after each `frame` and access to the SDL window and renderer. The engine draws
-  nothing.
-- **Game build**: `oly_add_game` takes an environment. On `web` it produces `<game>_game.{mjs,wasm}` as today; on
-  `native` it produces an executable that links the core, the game's C++ and the native host. The shared library for
-  future clients is out of scope.
-- **Proof of the C API outside WASM**: a native test that drives an engine only through `oly*` functions and
-  `olyEngineSetScriptInvoker`, playing the role of a foreign client (spawn, query, systems, events, tasks, state
-  hooks).
-- **Example game**: one C++-only game in `games/`, with a `desktop/` shell, that runs on `native` **[author decision]**.
-  Its theme and name are left to the builder; it follows the example-game layout and has its own `README.md`.
-- **Platforms: Linux and Windows** **[user decision]**. Both are built in Docker, since the host machine has no C++
-  compiler:
-  - **Linux** (the `dev` image): the host and the example game run headless in ctest with SDL's dummy video driver and
-    a fixed number of frames.
-  - **Windows**: a cross-compile preset (MinGW in Docker) with SDL3 built for Windows produces a `.exe` the user runs
-    with a double click. This exercises the Windows branch of `OLY_API` (`__declspec(dllexport)`). How the Windows
-    build is checked in CI (Wine in Docker, or a link-only check) is left to the builder.
+Revised on 2026-11-13, before phase 4, with the base at `a96068a` (phases 1–3 done). Two sentences of the first version
+are replaced: "`setHidden` on minimize and focus loss" (§6.2, Visibility and focus) and "a hook to draw after each
+`frame`" (§6.2, Drawing).
+
+### 6.1 Approaches for the host
+
+- **A. The host is a library the game calls** **[user decision]**. The game's `desktop/main.cpp` owns `main`: it
+  creates the `World` and the `Engine`, declares the schema, registers its systems and calls the host's loop. This is
+  the shape of `runInBrowser(engine)` on `web`, and a test runs a fixed number of frames by passing an option, with no
+  other entry point.
+- **B. The host is a framework that owns `main`** and calls functions the game implements (`setup(Engine&)`,
+  `draw(...)`). Rejected: less repeated code in each game, but `main` is hidden, the call order is implicit, and the
+  headless test needs a second entry point.
+
+### 6.2 Host
+
+A C++ module in `engine/environments/native/host/`, on **SDL3** **[author decision]**. It depends on `app` and SDL3,
+never on `capi`. It has no engine rules (§3.1). The shape, with names left to the builder (§10):
+
+```cpp
+oly::native_host::Window window({.title = "Example", .width = 960, .height = 540});
+engine.addSystem(oly::app::Phase::Render, "draw", draw, window.renderer());
+
+return oly::native_host::run(engine, window, {.maxFrames = 0});
+```
+
+- **Loop.** Each iteration reads the pending SDL events and turns them into input calls, clears the renderer, calls
+  `engine.frame` with a monotonic time in seconds, then presents. It ends on the window's quit event or after
+  `maxFrames` frames (0 = no limit), and `run` returns the process exit code.
+- **Drawing** **[user decision]**: the game draws in a system of the `Render` phase and gets the SDL renderer through
+  that system's `userData`; there is no separate draw hook. It is how `arena` draws on `web`
+  (`games/arena/web/src/game.ts`), and drawing keeps the engine's rules for `Render`: state restriction, nothing runs
+  while hidden, registration order. The game also gets the `SDL_Window` and `SDL_Renderer` from `Window`. The engine
+  draws nothing.
+- **Visibility and focus** **[user decision]**: window minimized, hidden or occluded → `setHidden(true)`; restored or
+  exposed → `setHidden(false)`; focus lost → `releaseAll` only. The browser does the same: only a hidden tab calls
+  `setHidden`, and `blur` only releases the buttons. Hiding on focus loss would freeze the game whenever the player
+  clicks another window.
+- **Keyboard** **[author decision]**: `oly::input::Key` values are HID usages (page `0x07` in the high 16 bits), and
+  SDL3 scancodes are the usages of that same page, so the button is `0x0007'0000 | scancode`, with no table. A test
+  checks the assumption for every key `Key` declares. Only scancodes that `Key` declares are forwarded, as the browser
+  host forwards only known button names.
+- **Mouse**: left, right and middle map to `oly::input::MouseButton`. A press counts only inside the window and a
+  release counts anywhere, as on `web`. The pointer position is in the renderer's logical coordinates, not in screen
+  pixels, as the browser host reports canvas pixels.
+
+### 6.3 Schema declaration
+
+- The C++ emitter of `oly-schema` emits a function that declares the schema into an `oly::app::Engine`: events,
+  actions and states in schema order, with the same order checks `olyEngineCreate` makes today. The phase 3 plan left
+  it to this phase, which brings its first consumer.
+- `olyEngineCreate` calls it instead of walking the tables itself; a native game's `main` calls it after creating the
+  `Engine`. A native game and the native host do not link `capi`. Whatever `capi` still needs from the generated tables
+  for its own checks stays available to it.
+
+### 6.4 Game build
+
+- `oly_add_game` takes `ENVIRONMENT web|native`. On `web` it produces `<game>_game.{mjs,wasm}` as today. On `native` it
+  produces an executable from the game's C++ (`native/`), its shell (`desktop/`), the core and the native host, and
+  generates only the C++ schema.
+- SDL3 enters through `cmake/Dependencies.cmake` with FetchContent and a pinned tag, as the other dependencies do, and
+  only when the native host is built (a CMake option). WASM builds never fetch it.
+- The shared library for future clients is out of scope.
+
+### 6.5 Proof of the C API outside WASM
+
+The proof is a real C ABI, the one a C#, Rust or Lua client consumes **[user decision]**:
+
+- The public C API headers become valid C. Today they are C++ only (`<cstdint>`, `extern "C" {` without a
+  `__cplusplus` guard, `OlyWorld*` and the other handles used without `struct` or `typedef`). They use `<stdint.h>`,
+  guard `extern "C"`, and declare a `typedef` for every opaque handle and struct. The project enables `LANGUAGES C`.
+- They are renamed from `.hpp` to `.h` (`oly/capi/c_api.h`, `oly/capi/engine_api.h`) **[author decision]**: a C client
+  reads the extension as the language of the file. Following the glossary rule, there is no alias header; every
+  include moves.
+- The test is a `.c` file that includes only those headers and drives an engine only through `oly*` functions and
+  `olyEngineSetScriptInvoker`, playing the role of a foreign client (spawn, query, systems, events, tasks, state hooks).
+  It runs on Linux and under Wine.
+- This is a public-API change, so the guide and `capi.md` change in the same phase. The existing C++ suites
+  `capi.engine_api` and `capi.c_api` stay.
+
+### 6.6 Example game
+
+One C++-only game in `games/`, with a `desktop/` shell, that runs on `native` **[author decision]**. Its theme and name
+are left to the builder; it follows the example-game layout and has its own `README.md`.
+
+### 6.7 Platforms: Linux and Windows **[user decision]**
+
+Both are built in Docker, since the host machine has no C++ compiler.
+
+- **Linux is playable** **[user decision]**: the executable opens a real window on a Linux desktop. The `dev` image
+  gains the X11, Wayland, xkbcommon and EGL/GL development packages, and SDL3 is built with those video backends. The
+  native host tests, the C API test and the example game also run headless in ctest, with SDL's `dummy` video driver
+  and `maxFrames`. The real window is checked by hand (WSLg on the Windows host); ctest cannot check it.
+- **Windows** **[author decision]**: a separate Docker image with mingw-w64 and Wine, and its own compose service, so
+  the `dev` image does not carry a second toolchain. A cross-compile preset uses a toolchain file that sets
+  `CMAKE_CROSSCOMPILING_EMULATOR=wine`, so ctest runs the same Windows `.exe` tests under Wine with no extra script.
+  This exercises the Windows branch of `OLY_API` (`__declspec(dllexport)`). Rejected: a link-only check, which does not
+  prove the `.exe` starts.
+- The example game's `.exe` runs with a double click on a Windows machine that has nothing installed: SDL3 and the
+  MinGW runtime are linked statically or shipped next to it (left to the builder).
+
+### 6.8 Docs in this phase
+
+The native host and `ENVIRONMENT` in `oly_add_game` are public API, so phase 4 documents them in the guide as it is
+then (the `CLAUDE.md` rule); phase 5 moves that text into `environments/native/getting-started.md`.
 
 ## 7. The user guide
 
@@ -330,7 +414,9 @@ the reorganization of the guide itself.
 - The exact `.oly` grammar within §4.1, and the parser technique.
 - The shape of the emitter interface and how client emitters are registered in the build.
 - How `oly-schema` is built in each Docker image (a host compiler in the `wasm` image may need to be added).
-- How SDL3 enters the build (`cmake/Dependencies.cmake`, as the other dependencies do).
+- The SDL3 tag and the name of the CMake option that turns the native host on.
 - The native host's C++ API names, following the glossary and code style.
+- How the Windows `.exe` carries SDL3 and the MinGW runtime (static link or files next to it), and which test suites
+  run under Wine besides the native host, the C API test and the example game.
 - The example native game's theme and name.
 - Plan granularity inside each phase.
