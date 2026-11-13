@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { loadRuntime } from "@oly/core";
 import type { ButtonName, Engine, Entity, OlyModuleFactory, Runtime, SchemaType } from "@oly/core";
 
-import schema, { Player } from "../schema.js";
+import schema, { Player } from "../schema.generated.js";
 import { installGame } from "../src/game.js";
 import type { ArenaScore } from "../src/game.js";
 import type { Drawer } from "../src/render.js";

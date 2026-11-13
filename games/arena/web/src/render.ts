@@ -1,6 +1,6 @@
 import type { QuerySpec, SystemContext, SystemFunction } from "@oly/core";
 
-import { Bullet, Coin, Collider, Dash, Enemy, Health, Invulnerable, Player, Position, gameOver, menu, playing } from "../schema.js";
+import { Bullet, Coin, Collider, Dash, Enemy, Health, Invulnerable, Player, Position, gameOver, menu, playing } from "../schema.generated.js";
 import { ArenaHeight, ArenaWidth } from "./arena.js";
 import type { ArenaScore } from "./game.js";
 

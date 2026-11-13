@@ -25,7 +25,20 @@ run: test
 
 all: test
 
-ts:
+SCHEMA_TOOL = build/schema-tool/bin/oly-schema
+
+# Built for the machine: a WASM build cannot run the oly-schema it compiles. Only in the wasm image; native presets
+# build oly-schema with the tree.
+schema-tool:
+	cmake --preset schema-tool
+	cmake --build --preset schema-tool -j
+.PHONY: schema-tool
+
+# The TS code imports the generated schemas, so they exist before tsc: a game's goes into its web/ package, a test
+# schema's next to its .oly.
+ts: schema-tool
+	for web in games/*/web; do game=$$(basename $$(dirname $$web)); $(SCHEMA_TOOL) games/$$game/$$game.oly --emit ts=$$web/schema.generated.ts || exit 1; done
+	for schema in $$(find engine/testing -name '*.oly'); do $(SCHEMA_TOOL) $$schema --emit ts=$${schema%.oly}.generated.ts || exit 1; done
 	([ -d node_modules ] || $(NPM) ci --no-audit --no-fund) && $(NPM) run build
 .PHONY: ts
 

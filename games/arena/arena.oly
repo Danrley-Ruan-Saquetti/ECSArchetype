@@ -1,0 +1,27 @@
+component Position { x: f32, y: f32 }
+component Velocity { x: f32, y: f32 }
+component Collider { radius: f32 }
+component Health { value: i32 }
+component Chaser { speed: f32 }
+component Weapon { interval: f32, cooldown: f32 }
+component Dash { speed: f32, duration: f32, recharge: f32, ready: u8, active: u8 }
+tag Player
+tag Enemy
+tag Bullet
+tag Coin
+tag Invulnerable
+
+event EnemyDied { entity: entity, x: f32, y: f32 }
+event CoinCollected { coin: entity }
+event PlayerDied { entity: entity }
+
+action move: axis2d
+action aim: pointer
+action shoot: button
+action dash: button
+action pause: button
+action confirm: button
+
+state menu
+state playing
+state gameOver

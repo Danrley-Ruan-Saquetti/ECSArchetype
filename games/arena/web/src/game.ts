@@ -1,7 +1,7 @@
 import { Phase } from "@oly/core";
 import type { ActionMap, Engine, EventBatch, HandlerContext, StateContext, SystemContext, TaskContext } from "@oly/core";
 
-import { Chaser, Coin, CoinCollected, Collider, Dash, Enemy, EnemyDied, Health, Player, PlayerDied, Position, Velocity, Weapon, confirm, dash, gameOver, menu, move, pause, playing, shoot } from "../schema.js";
+import { Chaser, Coin, CoinCollected, Collider, Dash, Enemy, EnemyDied, Health, Player, PlayerDied, Position, Velocity, Weapon, confirm, dash, gameOver, menu, move, pause, playing, shoot } from "../schema.generated.js";
 import { ArenaHeight, ArenaWidth, CoinInterval, CoinPoints, CoinRadius, DashDuration, DashRecharge, DashSpeed, EnemyHealth, EnemyRadius, EnemySpeed, KillPoints, PlayerHealth, PlayerRadius, WaveBaseEnemies, WaveInterval, WeaponInterval } from "./arena.js";
 import { createRenderSystem } from "./render.js";
 import type { Drawer } from "./render.js";

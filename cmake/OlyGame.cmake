@@ -1,16 +1,13 @@
 find_program(OLY_NODE node)
-set(OLY_GENERATOR ${PROJECT_SOURCE_DIR}/engine/tools/codegen/dist/main.js)
+set(OLY_SCHEMA_TOOL ${PROJECT_SOURCE_DIR}/build/schema-tool/bin/oly-schema CACHE FILEPATH "oly-schema executable that oly_add_game runs")
 
-# oly_add_game(<target> SCHEMA_JS <compiled schema.js> SOURCES <cpp...> DEPENDS <m...>)
-# Generates the schema structs and registration, compiles the game with the modules and links the WASM module (.mjs) with the web host's script invoker.
+# oly_add_game(<target> SCHEMA <file.oly> SOURCES <cpp...> DEPENDS <m...>)
+# Generates the schema structs and registration with oly-schema, compiles the game with the modules and links the WASM module (.mjs) with the web host's script invoker.
 function(oly_add_game target)
-  cmake_parse_arguments(GAME "" "SCHEMA_JS" "SOURCES;DEPENDS" ${ARGN})
+  cmake_parse_arguments(GAME "" "SCHEMA" "SOURCES;DEPENDS" ${ARGN})
 
-  if(NOT OLY_NODE)
-    message(FATAL_ERROR "node not found: it runs the schema generator")
-  endif()
-  if(NOT EXISTS ${OLY_GENERATOR})
-    message(FATAL_ERROR "run 'make ts' before configuring with OLY_BUILD_GAMES=ON")
+  if(NOT EXISTS ${OLY_SCHEMA_TOOL})
+    message(FATAL_ERROR "oly-schema not found at ${OLY_SCHEMA_TOOL}: run 'make schema-tool' (or 'make ts') before configuring with OLY_BUILD_GAMES=ON")
   endif()
 
   set(generatedDirectory ${CMAKE_CURRENT_BINARY_DIR}/${target}_generated)
@@ -18,8 +15,8 @@ function(oly_add_game target)
   set(generatedRegistry ${generatedDirectory}/schema_registry.generated.cpp)
   add_custom_command(
     OUTPUT ${generatedHeader} ${generatedRegistry}
-    COMMAND ${OLY_NODE} ${OLY_GENERATOR} --schema ${GAME_SCHEMA_JS} --out ${generatedDirectory}
-    DEPENDS ${GAME_SCHEMA_JS} ${OLY_GENERATOR}
+    COMMAND ${OLY_SCHEMA_TOOL} ${GAME_SCHEMA} --emit cpp=${generatedDirectory}
+    DEPENDS ${GAME_SCHEMA} ${OLY_SCHEMA_TOOL}
     COMMENT "Generating the C++ schema for ${target}"
     VERBATIM)
 

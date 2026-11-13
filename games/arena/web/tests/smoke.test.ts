@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { Bullet, Chaser, Coin, Collider, Dash, Enemy, Health, Invulnerable, Player, Position, Velocity, menu } from "../schema.js";
+import { Bullet, Chaser, Coin, Collider, Dash, Enemy, Health, Invulnerable, Player, Position, Velocity, menu } from "../schema.generated.js";
 import { ArenaHeight, ArenaWidth, PlayerRadius } from "../src/arena.js";
 import { loadArena, withArena } from "./harness.js";
 import type { ArenaTest } from "./harness.js";

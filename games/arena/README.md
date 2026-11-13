@@ -44,4 +44,4 @@ Done by the agent with the Playwright MCP at `http://localhost:8000` (Chromium),
 
 **Worked around**
 - The right-click menu: `attachBrowserInput` only prevents it when `MouseRight` is bound to an action, and the arena does not use that button. `main.ts` prevents it on its own. The generic fix (an `attachBrowserInput` option) waits until a second game needs it; today only the arena does.
-- The test TS projects emit to `web/dist/tests/` (not to `dist-tests/`) so that the relative imports `../schema.js` and `../src/game.js` exist at run time.
+- The test TS projects emit to `web/dist/tests/` (not to `dist-tests/`) so that the relative imports `../schema.generated.js` and `../src/game.js` exist at run time.

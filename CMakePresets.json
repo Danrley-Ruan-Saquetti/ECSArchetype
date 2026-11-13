@@ -29,6 +29,13 @@
       }
     },
     {
+      "name": "schema-tool", "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release", "OLY_SANITIZE": "OFF", "OLY_WERROR": "OFF",
+        "OLY_BUILD_TESTS": "OFF", "OLY_BUILD_BENCH": "OFF"
+      }
+    },
+    {
       "name": "variant", "hidden": true, "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release", "OLY_SANITIZE": "OFF",
@@ -94,6 +101,7 @@
     { "name": "debug-asan", "configurePreset": "debug-asan" },
     { "name": "release", "configurePreset": "release" },
     { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" },
+    { "name": "schema-tool", "configurePreset": "schema-tool", "targets": ["oly-schema"] },
     { "name": "native-clang", "configurePreset": "native-clang" },
     { "name": "native-clang-32", "configurePreset": "native-clang-32" },
     { "name": "native-clang-32-scalar", "configurePreset": "native-clang-32-scalar" },

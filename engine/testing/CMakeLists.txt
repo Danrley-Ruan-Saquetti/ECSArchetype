@@ -1,5 +1,5 @@
 oly_add_game(fixture_game
-  SCHEMA_JS ${PROJECT_SOURCE_DIR}/engine/testing/dist/fixture/schema.js
+  SCHEMA ${CMAKE_CURRENT_SOURCE_DIR}/fixture/fixture.oly
   SOURCES fixture/systems.cpp
   DEPENDS ecs app capi)
 

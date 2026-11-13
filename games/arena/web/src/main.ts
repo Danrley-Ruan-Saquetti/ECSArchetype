@@ -1,7 +1,7 @@
 import { loadRuntime } from "@oly/core";
 import { attachBrowserInput, moduleFactoryFromUrl, runInBrowser } from "@oly/web-host";
 
-import schema from "../schema.js";
+import schema from "../schema.generated.js";
 import { ArenaHeight, ArenaWidth } from "./arena.js";
 import { installGame } from "./game.js";
 import type { Drawer } from "./render.js";

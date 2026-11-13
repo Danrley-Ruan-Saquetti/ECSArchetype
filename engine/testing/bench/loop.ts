@@ -3,7 +3,7 @@ import { writeFileSync } from "node:fs";
 import { Phase } from "@oly/core";
 import type { Engine, Entity, Runtime, SystemContext } from "@oly/core";
 
-import { Position, Velocity } from "../fixture/schema.js";
+import { Position, Velocity } from "../fixture/fixture.generated.js";
 import { expectedPositionX, loadBenchRuntime, median, parseOptions, rotated } from "./common.js";
 
 const DeltaTime = Math.fround(1 / 60);

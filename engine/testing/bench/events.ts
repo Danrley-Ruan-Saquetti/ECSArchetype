@@ -4,7 +4,7 @@ import { Phase } from "@oly/core";
 import type { Engine, EventBatch, HandlerContext, Runtime, SystemContext } from "@oly/core";
 import { moduleOf, type OlyModule } from "@oly/core/internal";
 
-import { Ping } from "../fixture/schema.js";
+import { Ping } from "../fixture/fixture.generated.js";
 import { loadBenchRuntime, median, parseOptions, rotated } from "./common.js";
 
 const FixedHz = 60;

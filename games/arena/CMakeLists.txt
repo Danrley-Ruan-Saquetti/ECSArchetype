@@ -1,7 +1,7 @@
 file(GLOB nativeSources CONFIGURE_DEPENDS native/*.cpp)
 
 oly_add_game(arena_game
-  SCHEMA_JS ${CMAKE_CURRENT_SOURCE_DIR}/web/dist/schema.js
+  SCHEMA ${CMAKE_CURRENT_SOURCE_DIR}/arena.oly
   SOURCES ${nativeSources}
   DEPENDS ecs app capi)
 

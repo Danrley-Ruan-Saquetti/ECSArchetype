@@ -6,7 +6,7 @@
     "lib": ["ES2022"],
     "types": []
   },
-  "include": ["schema.ts", "src"],
+  "include": ["schema.generated.ts", "src"],
   "exclude": ["src/main.ts"],
   "references": [{ "path": "../../../engine/environments/web/clients/typescript/core" }]
 }
