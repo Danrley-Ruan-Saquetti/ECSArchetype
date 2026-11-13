@@ -255,7 +255,7 @@ The test TS project must emit to `dist/tests/`, so its relative imports (`../sch
     "types": ["node"]
   },
   "include": ["**/*.ts"],
-  "references": [{ "path": ".." }, { "path": "../../../engine/packages/core" }]
+  "references": [{ "path": ".." }, { "path": "../../../engine/environments/web/clients/typescript/core" }]
 }
 ```
 

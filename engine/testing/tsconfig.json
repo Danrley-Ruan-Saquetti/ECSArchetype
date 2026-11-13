@@ -6,5 +6,5 @@
     "types": ["node"]
   },
   "include": ["fixture", "tests", "bench"],
-  "references": [{ "path": "../packages/core" }]
+  "references": [{ "path": "../environments/web/clients/typescript/core" }]
 }

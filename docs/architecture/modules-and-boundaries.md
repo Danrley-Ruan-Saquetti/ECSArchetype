@@ -38,7 +38,7 @@ The boundaries do not hold by convention alone. Three mechanisms enforce them:
    - `@oly/core/internal` imported outside `engine/`;
    - `@oly/client` imported in `@oly/core`;
    - a relative import that crosses packages.
-3. **The TS surface test** (`ts.core.unit`, `surface.test.ts`). It checks the public exports of `@oly/core` against the versioned list `engine/packages/core/api/public-exports.txt`. Adding something to the public API is an explicit change in that file.
+3. **The TS surface test** (`ts.core.unit`, `surface.test.ts`). It checks the public exports of `@oly/core` against the versioned list `engine/environments/web/clients/typescript/core/api/public-exports.txt`. Adding something to the public API is an explicit change in that file.
 
 Why `detail/` and a lint, and not pimpl: the hot-path templates (`Query<Ts...>::each`, `World::get<T>`, `World::spawn<Ts...>`) need to see `Table` and `Archetype` to inline. Hiding these types behind pimpl or a virtual interface would put indirection in the iteration loop. The compiler sees the details; the build rejects whoever uses them from outside.
 

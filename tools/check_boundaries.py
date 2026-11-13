@@ -71,7 +71,7 @@ def package_root(path, root):
 def check_ts_file(path, relative_path, root):
     violations = []
     inside_engine = relative_path.startswith("engine/")
-    inside_core = relative_path.startswith("engine/packages/core/")
+    inside_core = relative_path.startswith("engine/environments/web/clients/typescript/core/")
     package_directory = package_root(path, root)
     with open(path, encoding="utf-8", errors="replace") as handle:
         for line_number, line in enumerate(handle, start=1):

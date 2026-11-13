@@ -80,7 +80,7 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
   "compilerOptions": { "rootDir": ".", "outDir": "dist", "lib": ["ES2022"], "types": [] },
   "include": ["schema.ts", "src"],
   "exclude": ["src/main.ts"],
-  "references": [{ "path": "../../engine/packages/core" }]
+  "references": [{ "path": "../../engine/environments/web/clients/typescript/core" }]
 }
 ```
 
@@ -91,7 +91,7 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
   "include": ["src/main.ts"],
   "references": [
     { "path": "./tsconfig.json" },
-    { "path": "../../engine/packages/core" },
+    { "path": "../../engine/environments/web/clients/typescript/core" },
     { "path": "../../engine/packages/client" }
   ]
 }

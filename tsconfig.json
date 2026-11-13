@@ -1,8 +1,8 @@
 {
   "files": [],
   "references": [
-    { "path": "engine/packages/core" },
-    { "path": "engine/packages/core/tests" },
+    { "path": "engine/environments/web/clients/typescript/core" },
+    { "path": "engine/environments/web/clients/typescript/core/tests" },
     { "path": "engine/packages/client" },
     { "path": "engine/packages/client/tests" },
     { "path": "engine/tools/codegen" },

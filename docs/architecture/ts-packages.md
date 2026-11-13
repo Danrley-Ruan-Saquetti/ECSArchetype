@@ -4,7 +4,7 @@ npm workspaces at the root, a single `package-lock.json`, `tsconfig.base.json` (
 
 ## `@oly/core`
 
-The engine on the TS side (`engine/packages/core/`), with no DOM and no node (`types: []`): it runs in node, in the browser and in a worker. What depends on the environment comes in by injection (the WASM module factory, the time, the input).
+The engine on the TS side (`engine/environments/web/clients/typescript/core/`), with no DOM and no node (`types: []`): it runs in node, in the browser and in a worker. What depends on the environment comes in by injection (the WASM module factory, the time, the input).
 
 - **Schema**: `defineSchema`, `component`, `tag`, `event`, `action`, `state`.
 - **Runtime**: `loadRuntime(factory, schema)` → `Runtime` (`schema`, `createWorld()`).
@@ -13,7 +13,7 @@ The engine on the TS side (`engine/packages/core/`), with no DOM and no node (`t
 - **Errors**: `ContractError`, `SchemaMismatchError`.
 - **Internal** (`@oly/core/internal`, only for `engine/`): `Bridge`, `bridgeOf`, `moduleOf`, `componentIdOf`, `Heap`, layout and hash.
 
-The exact public list is `engine/packages/core/api/public-exports.txt` ([modules-and-boundaries.md](modules-and-boundaries.md#how-the-boundaries-are-enforced)).
+The exact public list is `engine/environments/web/clients/typescript/core/api/public-exports.txt` ([modules-and-boundaries.md](modules-and-boundaries.md#how-the-boundaries-are-enforced)).
 
 Implementation rules:
 
