@@ -115,6 +115,59 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("engine/environments/web/host/js/src/a.ts:1: relative import crosses packages; use the package name", output)
 
+    def test_runtime_including_environment_fails(self):
+        self.write("engine/environments/web/host/native/include/oly/web_host/script_invoker.hpp", "#pragma once\n")
+        self.write("engine/runtime/capi/src/x.cpp", '#include "oly/web_host/script_invoker.hpp"\n')
+
+        code, output = self.run_check([("web_host", "engine/environments/web/host/native", ["capi"]), ("capi", "engine/runtime/capi", ["web_host"])])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/runtime/capi/src/x.cpp:1: engine/runtime cannot depend on environment web (oly/web_host)", output)
+
+    def test_environment_including_other_environment_fails(self):
+        self.write("engine/environments/native/host/include/oly/native_host/window.hpp", "#pragma once\n")
+        self.write("engine/environments/web/host/native/src/x.cpp", '#include "oly/native_host/window.hpp"\n')
+
+        code, output = self.run_check([("native_host", "engine/environments/native/host", []), ("web_host", "engine/environments/web/host/native", ["native_host"])])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/environments/web/host/native/src/x.cpp:1: environment web cannot depend on environment native (oly/native_host)", output)
+
+    def test_environment_importing_other_environment_package_fails(self):
+        self.write("engine/environments/other/clients/x/package.json", '{"name": "@oly/other-client"}')
+        self.write("engine/environments/web/clients/typescript/core/src/a.ts", 'import { thing } from "@oly/other-client";\n')
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/environments/web/clients/typescript/core/src/a.ts:1: environment web cannot depend on environment other (@oly/other-client)", output)
+
+    def test_emscripten_in_runtime_fails(self):
+        self.write("engine/runtime/app/src/x.cpp", "#if defined(__EMSCRIPTEN__)\n#endif\n")
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/runtime/app/src/x.cpp:1: Emscripten (__EMSCRIPTEN__) is allowed only in engine/environments/web/ and OLY_API", output)
+
+    def test_em_macro_in_runtime_test_fails(self):
+        self.write("engine/runtime/app/tests/t.cpp", "EM_ASM({});\n")
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/runtime/app/tests/t.cpp:1: Emscripten (EM_ASM) is allowed only in engine/environments/web/ and OLY_API", output)
+
+    def test_emscripten_in_allowed_places_passes(self):
+        self.write("engine/runtime/capi/include/oly/capi/c_api.hpp", "#include <emscripten.h>\n#define OLY_API EMSCRIPTEN_KEEPALIVE\n")
+        self.write("engine/environments/web/host/native/src/x.cpp", "#include <emscripten.h>\nEM_JS(void, f, (), {});\n")
+        self.write("engine/runtime/app/tests/t.cpp", "#if !defined(__EMSCRIPTEN__)\n#endif\n")
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(output, "")
+
 
 if __name__ == "__main__":
     unittest.main()

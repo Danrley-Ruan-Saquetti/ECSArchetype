@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rejects includes that cross the boundaries between Oly modules.
+"""Rejects includes that cross the boundaries between Oly modules and environment boundaries, and Emscripten outside the web environment.
 
 Usage: python3 -I tools/check_boundaries.py --root <repo> --manifest <json>
 Exits 0 with no violations; exits 1 printing "<file>:<line>: <reason>" per violation.
@@ -10,12 +10,19 @@ import os
 import re
 import sys
 
-IGNORED_DIRECTORIES = {"build", "node_modules", ".git", ".superpowers", "dist", "dist-tests"}
+IGNORED_DIRECTORIES = {"build", "node_modules", ".git", ".superpowers", "dist", "dist-tests", ".claude"}
 CPP_EXTENSIONS = (".hpp", ".cpp")
 TS_EXTENSION = ".ts"
 
 INCLUDE_PATTERN = re.compile(r'^\s*#\s*include\s+"oly/([a-z_]+)/([^"]*)"')
 RUNTIME_PREFIX = "engine/runtime/"
+ENVIRONMENTS_PREFIX = "engine/environments/"
+MODULE_INCLUDE_DIRECTORY = re.compile(r"^(.+)/include/oly/([a-z_]+)$")
+
+EMSCRIPTEN_PATTERN = re.compile(r"__EMSCRIPTEN__|\bEM_[A-Z_]+|\bEMSCRIPTEN_[A-Z_]+|<emscripten[./]")
+EMSCRIPTEN_ALLOWED_PREFIX = "engine/environments/web/"
+# OLY_API is the core's only Emscripten-aware line (EMSCRIPTEN_KEEPALIVE on WASM).
+OLY_API_HEADER = "engine/runtime/capi/include/oly/capi/c_api.hpp"
 
 TS_IMPORT_PATTERN = re.compile(r"""(?:\bfrom\s+|\bimport\s*\(?\s*)["'](\.{1,2}/[^"']*|@oly/[^"']*)["']""")
 
@@ -33,6 +40,59 @@ def owner_of(relative_path, owners):
     return None, set()
 
 
+def repository_layout(root):
+    module_directories = {}
+    package_directories = {}
+    for current, directories, files in os.walk(root):
+        directories[:] = [directory for directory in directories if directory not in IGNORED_DIRECTORIES]
+        relative_directory = os.path.relpath(current, root).replace(os.sep, "/")
+        module_match = MODULE_INCLUDE_DIRECTORY.match(relative_directory)
+        if module_match is not None:
+            module_directories[module_match.group(2)] = module_match.group(1) + "/"
+        if "package.json" in files:
+            try:
+                with open(os.path.join(current, "package.json"), encoding="utf-8") as handle:
+                    name = json.load(handle).get("name")
+            except ValueError:
+                name = None
+            if name:
+                package_directories[name] = relative_directory + "/"
+
+    return module_directories, package_directories
+
+
+def environment_of(relative_path):
+    if not relative_path.startswith(ENVIRONMENTS_PREFIX):
+        return None
+    return relative_path[len(ENVIRONMENTS_PREFIX):].split("/")[0]
+
+
+def environment_violation(relative_path, target_directory, target_name):
+    if target_directory is None:
+        return None
+    target_environment = environment_of(target_directory)
+    if target_environment is None:
+        return None
+    if relative_path.startswith(RUNTIME_PREFIX):
+        return f"engine/runtime cannot depend on environment {target_environment} ({target_name})"
+    source_environment = environment_of(relative_path)
+    if source_environment is not None and source_environment != target_environment:
+        return f"environment {source_environment} cannot depend on environment {target_environment} ({target_name})"
+    return None
+
+
+def emscripten_violation(relative_path, line):
+    if relative_path.startswith(EMSCRIPTEN_ALLOWED_PREFIX) or relative_path == OLY_API_HEADER:
+        return None
+    matches = [match.group(0) for match in EMSCRIPTEN_PATTERN.finditer(line)]
+    if not matches:
+        return None
+    # A test may skip a case on WASM, but never calls Emscripten.
+    if "/tests/" in relative_path and all(match == "__EMSCRIPTEN__" for match in matches):
+        return None
+    return f"Emscripten ({matches[0]}) is allowed only in engine/environments/web/ and OLY_API"
+
+
 def source_files(root):
     for current, directories, files in os.walk(root):
         directories[:] = [directory for directory in directories if directory not in IGNORED_DIRECTORIES]
@@ -41,11 +101,14 @@ def source_files(root):
                 yield os.path.join(current, file_name)
 
 
-def check_cpp_file(path, relative_path, owners):
+def check_cpp_file(path, relative_path, owners, module_directories):
     violations = []
     owner, depends = owner_of(relative_path, owners)
     with open(path, encoding="utf-8", errors="replace") as handle:
         for line_number, line in enumerate(handle, start=1):
+            emscripten_message = emscripten_violation(relative_path, line)
+            if emscripten_message is not None:
+                violations.append(f"{relative_path}:{line_number}: {emscripten_message}")
             match = INCLUDE_PATTERN.match(line)
             if match is None:
                 continue
@@ -55,6 +118,9 @@ def check_cpp_file(path, relative_path, owners):
             inside_included_module = relative_path.startswith(f"{RUNTIME_PREFIX}{included_module}/")
             if included_path.startswith("detail/") and not inside_included_module:
                 violations.append(f"{relative_path}:{line_number}: oly/{included_module}/detail is internal to module {included_module}")
+            environment_message = environment_violation(relative_path, module_directories.get(included_module), f"oly/{included_module}")
+            if environment_message is not None:
+                violations.append(f"{relative_path}:{line_number}: {environment_message}")
 
     return violations
 
@@ -68,7 +134,7 @@ def package_root(path, root):
     return None
 
 
-def check_ts_file(path, relative_path, root):
+def check_ts_file(path, relative_path, root, package_directories):
     violations = []
     inside_engine = relative_path.startswith("engine/")
     inside_core = relative_path.startswith("engine/environments/web/clients/typescript/core/")
@@ -81,6 +147,11 @@ def check_ts_file(path, relative_path, root):
                     violations.append(f"{relative_path}:{line_number}: @oly/core/internal can only be used inside engine/")
                 if specifier.startswith("@oly/web-host") and inside_core:
                     violations.append(f"{relative_path}:{line_number}: @oly/core cannot depend on @oly/web-host")
+                if specifier.startswith("@oly/"):
+                    package_name = "/".join(specifier.split("/")[:2])
+                    environment_message = environment_violation(relative_path, package_directories.get(package_name), package_name)
+                    if environment_message is not None:
+                        violations.append(f"{relative_path}:{line_number}: {environment_message}")
                 if specifier.startswith(".") and package_directory is not None:
                     resolved = os.path.abspath(os.path.join(os.path.dirname(path), specifier))
                     if os.path.commonpath([resolved, os.path.abspath(package_directory)]) != os.path.abspath(package_directory):
@@ -91,13 +162,14 @@ def check_ts_file(path, relative_path, root):
 
 def check(root, manifest):
     owners = load_owners(manifest)
+    module_directories, package_directories = repository_layout(root)
     violations = []
     for path in source_files(root):
         relative_path = os.path.relpath(path, root).replace(os.sep, "/")
         if path.endswith(TS_EXTENSION):
-            violations.extend(check_ts_file(path, relative_path, root))
+            violations.extend(check_ts_file(path, relative_path, root, package_directories))
         else:
-            violations.extend(check_cpp_file(path, relative_path, owners))
+            violations.extend(check_cpp_file(path, relative_path, owners, module_directories))
 
     return sorted(violations)
 
