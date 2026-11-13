@@ -25,9 +25,9 @@ Three rules guide the design:
    @oly/web-host: rAF, visibility, │    app:    Engine (loop, phases, pause,
                   keyboard, mouse │            events, schedule, states)
    @oly/core:     schema, World,   │    input:  ActionMap
-                  Engine, contexts │    capi: C API oly*, callback
+                  Engine, contexts │    capi: C API oly*, script invoker
                   copy-free views  │    the game's C++ systems and handlers
- ──────────────── C API (extern "C") + 1 imported JS function ────────────
+ ──────────────── C API (extern "C") + per-engine script invoker ─────────────
  ECS: component → entity → table → archetype → query / command_buffer → world
  core: assert, align, small_map, type_name
 ```
@@ -42,7 +42,7 @@ Three rules guide the design:
 | [ecs.md](ecs.md) | the archetype ECS: layers, indices, costs, iteration, `CommandBuffer` |
 | [input.md](input.md) | input actions and HID physical buttons |
 | [app.md](app.md) | the `Engine`: loop, systems, pause, events, schedule, states, recovery |
-| [bridge.md](bridge.md) | the C API and the callback into TS |
+| [bridge.md](bridge.md) | the C API and the per-engine script invoker |
 | [schema-and-codegen.md](schema-and-codegen.md) | the game schema, the generator and each game's WASM module |
 | [ts-packages.md](ts-packages.md) | `@oly/core`, `@oly/web-host`, `@oly/codegen`, `@oly/testing` |
 | [games.md](games.md) | the validation game `games/arena` |

@@ -15,6 +15,7 @@ engine/
   environments/   one folder per target environment
     web/clients/typescript/core/  @oly/core: the engine on the TS side, no DOM
     web/host/js/                  @oly/web-host: browser layer
+    web/host/native/              web_host: C++ linked into every web game's WASM (JS script invoker)
   tools/codegen/  @oly/codegen: TS schema -> C++ header
   testing/        @oly/testing (private): fixture game, WASM tests, boundary benchmarks
 games/

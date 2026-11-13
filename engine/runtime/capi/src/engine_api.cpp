@@ -11,23 +11,12 @@
 #include "oly/capi/schema_registry.hpp"
 #include "oly/core/assert.hpp"
 
-#if defined(__EMSCRIPTEN__)
-#include <emscripten.h>
-
-// Module.olyInvokeScript is installed by the @oly/core Runtime (runtime.ts) before any frame.
-EM_JS(void, olyHostInvokeScript, (OlyEngine * engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount), { Module["olyInvokeScript"](engine, kind, id, events, eventCount); });
-#endif
-
 static_assert(sizeof(OlyActionState) == sizeof(oly::input::ActionState) && offsetof(OlyActionState, x) == offsetof(oly::input::ActionState, x) && offsetof(OlyActionState, y) == offsetof(oly::input::ActionState, y) && offsetof(OlyActionState, flags) == offsetof(oly::input::ActionState, flags), "OlyActionState must have the layout of oly::input::ActionState");
 static_assert(OLY_ACTION_PRESSED == oly::input::ActionPressed && OLY_ACTION_HELD == oly::input::ActionHeld && OLY_ACTION_RELEASED == oly::input::ActionReleased && OLY_ACTION_VALID == oly::input::ActionValid, "OLY_ACTION_* must match oly::input::Action*");
 
 namespace oly::capi {
   void missingScriptInvoker([[maybe_unused]] void* userData, [[maybe_unused]] OlyEngine* engine, [[maybe_unused]] uint32_t kind, [[maybe_unused]] uint32_t id, [[maybe_unused]] const void* events, [[maybe_unused]] uint32_t eventCount) {
-#if defined(__EMSCRIPTEN__)
-    olyHostInvokeScript(engine, kind, id, events, eventCount);
-#else
     OLY_ASSERT(false, "script called with no invoker installed (olyEngineSetScriptInvoker) kind=%u id=%u", kind, id);
-#endif
   }
 
   namespace {

@@ -9,7 +9,9 @@ graph BT
   app --> ecs
   app --> input
   capi --> app
+  webHost_native["web_host (C++, web only)"] --> capi
   games["games (oly_add_game)"] --> capi
+  games --> webHost_native
   codegen["@oly/codegen"] --> tscore["@oly/core"]
   webHost["@oly/web-host"] --> tscore
   testing["@oly/testing"] --> tscore
@@ -24,8 +26,9 @@ graph BT
 | `input` | `oly::input` | `core` | library |
 | `app` | `oly::app` | `input ecs core` | library |
 | `capi` | `oly::capi` | `app input ecs core` | `OBJECT` |
+| `web_host` | `oly::web_host` | `capi` | `OBJECT`, built only with Emscripten |
 
-`capi` is `OBJECT` because, in a static library, the linker would discard the unreferenced members and take the `EMSCRIPTEN_KEEPALIVE` functions with them.
+`capi` and `web_host` are `OBJECT` because, in a static library, the linker would discard the unreferenced members and take the `EMSCRIPTEN_KEEPALIVE` functions with them.
 
 ## How the boundaries are enforced
 

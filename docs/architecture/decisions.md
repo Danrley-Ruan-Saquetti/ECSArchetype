@@ -9,7 +9,7 @@
 | Separate template API and `ById` API | the hot path pays no indirection | two implementations to maintain |
 | `CommandBuffer` with one transition per entity | cheap batched flush | coalescing complexity (covered by fuzz) |
 | Loop and every engine rule in C++ | a C++-only game does not end up with an incomplete engine | TS needs the callback |
-| A single imported JS function, with `kind` | no growing function table; several engines per module | dispatch by `kind` in TS |
+| A per-engine script invoker set through the C API; the web host installs the JS one | the core knows no environment; a managed client passes its own handle in `userData` | one function pointer and one `userData` per engine; dispatch by `kind` in each client |
 | TS schema as the single source + codegen + hash | layout never diverges between C++ and TS | WASM compiled per game |
 | Column of structs, strided view | does not change the `Table` or the query API | strided accessor in TS |
 | `Engine` does not own the `World` | the ECS stays below and independent of the engine | two `Engine`s on the same `World` share the scope tag |

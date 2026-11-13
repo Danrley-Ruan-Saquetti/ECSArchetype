@@ -39,6 +39,7 @@ export interface OlyModule {
   _olyEngineCreate(fixedHz: number, maxStepsPerFrame: number, maxEventRounds: number): number;
   _olyEngineDestroy(engine: number): void;
   _olyEngineWorld(engine: number): number;
+  _olyWebHostInstallScriptInvoker(engine: number): void;
   _olyEngineEmit(engine: number, eventType: number, value: number): void;
   _olyEngineAddNativeHandler(engine: number, eventType: number, name: number): number;
   _olyEngineAddScriptHandler(engine: number, eventType: number, name: number): number;
@@ -79,7 +80,7 @@ export interface OlyModule {
   _olySystemAdd(engine: number, index: number, generation: number, componentId: number, value: number): void;
   _olySystemRemove(engine: number, index: number, generation: number, componentId: number): void;
 
-  // Callback from the core (olyHostInvokeScript): the Runtime installs it once and dispatches by engine.
+  // Called by the web host's script invoker (olyWebHostInstallScriptInvoker): the Runtime installs it once and dispatches by engine.
   olyInvokeScript?: (engine: number, kind: number, id: number, events: number, eventCount: number) => void;
 }
 

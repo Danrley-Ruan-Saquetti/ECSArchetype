@@ -20,9 +20,9 @@ state("playing")
 
 ```
 schema.ts ──tsc──► schema.js ──oly-codegen──► C++ header (structs, ids, static_assert, hash)
-                                                   │
-the game's C++ systems (OLY_SYSTEM, OLY_HANDLER) ──┤
-oly::capi + app + input + ecs + core ──────────────┴──► emcc ──► <game>_game.mjs + .wasm
+                                                     │
+the game's C++ systems (OLY_SYSTEM, OLY_HANDLER) ────┤
+oly::capi + app + input + ecs + core + oly::web_host ┴──► emcc ──► <game>_game.mjs + .wasm
 ```
 
 - `oly_add_game` (`cmake/OlyGame.cmake`) puts it all together. The WASM is compiled **per game**.

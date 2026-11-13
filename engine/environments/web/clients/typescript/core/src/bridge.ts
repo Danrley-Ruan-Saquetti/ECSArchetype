@@ -234,6 +234,7 @@ export class Bridge {
 
   engineCreate(fixedHz: number, maxStepsPerFrame: number, maxEventRounds: number): number {
     const engine = this.module._olyEngineCreate(fixedHz, maxStepsPerFrame, maxEventRounds) >>> 0;
+    this.module._olyWebHostInstallScriptInvoker(engine);
     this.sync();
 
     return engine;

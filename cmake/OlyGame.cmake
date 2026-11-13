@@ -2,7 +2,7 @@ find_program(OLY_NODE node)
 set(OLY_GENERATOR ${PROJECT_SOURCE_DIR}/engine/tools/codegen/dist/main.js)
 
 # oly_add_game(<target> SCHEMA_JS <compiled schema.js> SOURCES <cpp...> DEPENDS <m...>)
-# Generates the schema structs and registration, compiles the game with the modules and links the WASM module (.mjs).
+# Generates the schema structs and registration, compiles the game with the modules and links the WASM module (.mjs) with the web host's script invoker.
 function(oly_add_game target)
   cmake_parse_arguments(GAME "" "SCHEMA_JS" "SOURCES;DEPENDS" ${ARGN})
 
@@ -32,6 +32,7 @@ function(oly_add_game target)
   set_target_properties(${target} PROPERTIES SUFFIX ".mjs" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/games)
 
   if(EMSCRIPTEN)
+    target_link_libraries(${target} PRIVATE oly::web_host)
     # EXIT_RUNTIME=0 overrides the global =1: TS calls the module after it loads, so the runtime must not exit.
     target_link_options(${target} PRIVATE
       -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=node,web

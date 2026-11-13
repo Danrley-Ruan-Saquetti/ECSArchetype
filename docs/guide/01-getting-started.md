@@ -33,7 +33,7 @@ You write the schema and the gameplay. The build turns them into one WASM module
 ```
 games/<game>/web/schema.ts ──tsc──► schema.js ──oly-codegen──► schema.generated.hpp (C++ structs, ids)
 games/<game>/native/*.cpp  (your C++ systems, optional) ──┐
-engine (ecs + app + input + capi) ────────────────────────┴──emcc──► <game>_game.mjs + .wasm
+engine (ecs + app + input + capi + web_host) ─────────────┴──emcc──► <game>_game.mjs + .wasm
 games/<game>/web/src/*.ts  (your TS systems and the shell) ──tsc + esbuild──► main.js
 ```
 

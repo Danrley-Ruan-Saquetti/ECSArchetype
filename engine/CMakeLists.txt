@@ -1,5 +1,9 @@
 add_subdirectory(runtime)
 
+if(EMSCRIPTEN)
+  add_subdirectory(environments/web/host/native)
+endif()
+
 if(OLY_BUILD_GAMES)
   if(OLY_BUILD_TESTS)
     add_test(NAME ts.core.unit COMMAND ${OLY_NODE} --test ${PROJECT_SOURCE_DIR}/engine/environments/web/clients/typescript/core/dist-tests/unit/)

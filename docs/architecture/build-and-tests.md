@@ -36,7 +36,7 @@ CMake options: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR
 | `oly_add_test` | registers a doctest suite as an executable and a ctest test |
 | `oly_add_contract_death` | registers a module's death cases |
 | `oly_add_bench` | registers a benchmark executable |
-| `oly_add_game` | runs codegen and links a game's `.mjs`/`.wasm` module |
+| `oly_add_game` | runs codegen and links a game's `.mjs`/`.wasm` module, with `oly::web_host` |
 | `oly_warnings`, `oly_wasm_exceptions`, `oly_wasm_node_env` | warnings and Emscripten settings |
 
 ## Tests

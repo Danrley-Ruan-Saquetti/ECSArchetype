@@ -142,6 +142,14 @@ namespace {
     olyEngineSetScriptInvoker(engine, nullptr, nullptr);
   }
 
+  void scriptWithoutInvoker() {
+    OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
+    olyEngineAddScriptSystem(engine, 1, "x");
+
+    olyEngineFrame(engine, 0.0);
+    olyEngineFrame(engine, 1.0 / 60);
+  }
+
   struct Case {
     const char* name;
     void (*run)();
@@ -163,6 +171,7 @@ int main(int argumentCount, char** arguments) {
     {"engine_emit_out_of_range", engineEmitOutOfRange, {"olyEngineEmit", "eventType"}},
     {"schedule_script_task_negative_interval", scheduleScriptTaskNegativeInterval, {"schedule", "interval"}},
     {"set_script_invoker_null", setScriptInvokerNull, {"olyEngineSetScriptInvoker", "null"}},
+    {"script_without_invoker", scriptWithoutInvoker, {"no invoker", "kind=0"}},
   };
 
   if (argumentCount != 2) {

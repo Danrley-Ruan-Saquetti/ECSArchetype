@@ -28,6 +28,7 @@ The same verb stands for the same concept in C++, in the C API and in TS.
 | declare state (order = StateId) | `Engine::declareState(name)` | (schema states, when the `OlyEngine` is created) | `state(name)` in the schema |
 | request / read state | `Engine::requestState`, `state`; `EngineContext::requestState/state` | `olyEngineRequestState`, `olyEngineState` | `engine.requestState`, `engine.state`, `context.requestState/state` |
 | state hook | `Engine::onEnter/onExit(state, name, function)`, `OLY_STATE_HOOK(name)` (by name) | `olyEngineAddNativeStateHook` (by name), `olyEngineAddScriptStateHook` | `onEnter`, `onExit`, `addNativeOnEnter/addNativeOnExit` |
+| call script code | — (C++ code is called directly) | `olyEngineSetScriptInvoker` (per engine, dispatch by `kind`) | installed by `Runtime.createEngine` |
 | restrict to states | `Engine::setSystemStates/setHandlerStates` (and `*StateMask`) | `olyEngineSetSystemStates/SetHandlerStates` | `registration.inState(...states)` |
 | persist (remove the state scope) | `SystemContext/DirectContext::persist`, `Scheduler::persist` | `olyContextPersist`, `olyEnginePersistTask` | `context.persist`, `schedule.persist` |
 | variant by ID | `ById` suffix: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById` | (all by ID) | — |
