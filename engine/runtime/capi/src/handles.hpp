@@ -22,8 +22,16 @@ struct OlyWorld {
   uint32_t activeIterations = 0;
 };
 
+namespace oly::capi {
+  // Every OlyEngine starts with it: a script call before olyEngineSetScriptInvoker is a contract violation.
+  void missingScriptInvoker(void* userData, OlyEngine* engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount);
+}
+
 struct OlyEngine {
   OlyWorld world; // before `engine`: it keeps a reference to world.world
+  // Before `engine`: its destructor discards the pending script tasks through the invoker.
+  OlyScriptInvoker scriptInvoker = &oly::capi::missingScriptInvoker;
+  void* scriptUserData = nullptr;
   oly::app::Engine engine;
   oly::app::SystemContext* currentContext = nullptr;
   oly::app::DirectContext* directContext = nullptr;

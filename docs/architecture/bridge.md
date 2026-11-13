@@ -7,7 +7,7 @@
 | World and schema | `olyWorldCreate/Destroy/CheckInvariants`, `olySchemaHash`, `olySchemaComponentCount/ComponentId`, `olySchemaEvent*`, `olySchemaAction*`, `olySchemaStateCount`, `olyComponentSize/Alignment` |
 | Entities and components | `olyEntitySpawn/Destroy/IsAlive`, `olyComponentAdd/Remove/Has/Get` |
 | Queries | `olyQueryCreate`, `olyQueryBegin`, `olyQueryEnd` |
-| Engine and loop | `olyEngineCreate/Destroy/World`, `olyEngineFrame/SetHidden`, `olyEnginePause/Resume/IsPaused`, `olyEngineTime/FixedDeltaTime/Interpolation` |
+| Engine and loop | `olyEngineCreate/Destroy/World/SetScriptInvoker`, `olyEngineFrame/SetHidden`, `olyEnginePause/Resume/IsPaused`, `olyEngineTime/FixedDeltaTime/Interpolation` |
 | Systems | `olyEngineAddNativeSystem` (by name), `olyEngineAddScriptSystem`, `olyEngineSetWhilePaused`, `olySystemSpawn/Destroy/Add/Remove` |
 | Events | `olyEngineEmit`, `olyEngineAddNativeHandler`, `olyEngineAddScriptHandler` |
 | Input | `olyEngineBindButton/BindAxis2d/ClearBindings/IsBound`, `olyEngineButtonDown/Up`, `olyEnginePointerMove`, `olyEngineReleaseAll`, `olyEngineActionSnapshot` |
@@ -19,7 +19,7 @@
 - **`OlyWorld` is opaque.** It holds the `World` and a stack of iteration slots. The game's C++ systems reach the `World` through `oly::capi::worldOf(OlyWorld*)`.
 - **`olyQueryBegin` returns an `OlyIteration*`** with its own descriptor buffer (`count`, address of the entities, address of each column). A nested `eachBlock` does not overwrite the outer one. `olyQueryEnd` must close the top slot.
 - **`OlyEngine`** holds an `OlyWorld` and the `Engine` on top of it (one `World` per `OlyEngine`). On creation, it declares the schema's events, actions and states in schema order, so the index in the TS schema is the id in C++.
-- **A single imported JS function**, `olyHostInvokeScript(engine, kind, id, events, eventCount)`, serves all TS code called from C++. There is no `addFunction` and no growing function table. The `engine` parameter allows several engines per WASM module. `kind` says what to call and the meaning of the other parameters:
+- **A per-engine script invoker.** `olyEngineSetScriptInvoker(engine, invoker, userData)` installs the function that runs all script code of that engine; `userData` lets a client pass its own handle. `kind` says what to call and the meaning of the other parameters:
 
   | `kind` | `id` | `events` / `eventCount` |
   |---|---|---|
@@ -30,6 +30,6 @@
   | `OLY_SCRIPT_STATE_HOOK` | `hookId` | null / the state on the other side of the change (the source in an `onEnter`, the destination in an `onExit`) |
 - **Native names are resolved at creation.** `OLY_SYSTEM`, `OLY_HANDLER(name, EventType)` and `OLY_STATE_HOOK` register functions by name. An unknown name returns `OLY_INVALID_HANDLER`; a wrong event type, `OLY_HANDLER_TYPE_MISMATCH`.
 - **Current context.** `olyDirectSpawn` and `olyContextPersist` use the context TS is in: direct in a handler, task or hook; deferred in a system.
-- In the native build, `oly::capi::setScriptInvoker` swaps the invoker for tests.
+- A script call with no invoker installed is a contract violation (`OLY_ASSERT`, with kind and id).
 
 The TS side that consumes this API is in [ts-packages.md](ts-packages.md). The link contract with the game's generated code is in [schema-and-codegen.md](schema-and-codegen.md).

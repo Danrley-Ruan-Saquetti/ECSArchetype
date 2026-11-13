@@ -10,7 +10,7 @@ struct OlyEngine;
 #define OLY_INVALID_HANDLER 0xFFFFFFFFu
 #define OLY_HANDLER_TYPE_MISMATCH 0xFFFFFFFEu
 
-// `kind` of the single callback into JS (olyHostInvokeScript).
+// `kind` of a script call: what the invoker runs and the meaning of `id`, `events` and `eventCount` (OlyScriptInvoker).
 #define OLY_SCRIPT_SYSTEM 0u
 #define OLY_SCRIPT_HANDLER 1u
 #define OLY_SCRIPT_TASK 2u
@@ -40,6 +40,14 @@ struct OlyActionState {
 #define OLY_ACTION_VALID 8u
 
 extern "C" {
+// Runs the script code of one engine. `kind` is OLY_SCRIPT_SYSTEM (`id` is the system; `events` null and `eventCount`
+// 0), OLY_SCRIPT_HANDLER (`id` is the handler; `events` is the batch, with the event struct's layout), OLY_SCRIPT_TASK
+// (`id` is the task's scriptId; `events` null and `eventCount` 1 on the last run, 0 on the others),
+// OLY_SCRIPT_TASK_DISCARD (`id` is the scriptId; `events` null and `eventCount` 0) or OLY_SCRIPT_STATE_HOOK (`id` is
+// the hookId; `events` null and `eventCount` is the state on the other side of the switch). `userData` is the pointer
+// given to olyEngineSetScriptInvoker.
+typedef void (*OlyScriptInvoker)(void* userData, OlyEngine* engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount);
+
 // fixedHz, maxStepsPerFrame and maxEventRounds must be positive (OLY_ASSERT). Declares, in schema order, all
 // the events from oly::capi::schemaEvents(): the event's index in the schema is its event type (eventType).
 // After the events and the actions, declares the states from oly::capi::schemaStates(): the state's index in the schema is
@@ -48,6 +56,11 @@ OLY_API OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame, ui
 OLY_API void olyEngineDestroy(OlyEngine* engine);
 // Owned by the engine: valid until olyEngineDestroy and never passed to olyWorldDestroy.
 OLY_API OlyWorld* olyEngineWorld(OlyEngine* engine);
+// `invoker` is not null (OLY_ASSERT). Valid inside and outside olyEngineFrame: the next script call uses it. Before
+// the first call, a script call is a contract violation (OLY_ASSERT with kind and id), except in WASM until the web host
+// installs its invoker. olyEngineDestroy calls the invoker with OLY_SCRIPT_TASK_DISCARD for each pending script task,
+// so `userData` must stay valid until then.
+OLY_API void olyEngineSetScriptInvoker(OlyEngine* engine, OlyScriptInvoker invoker, void* userData);
 
 // Contract of the loop, pause and hidden tab: that of oly::app::Engine (oly/app/engine.hpp).
 OLY_API void olyEngineFrame(OlyEngine* engine, double nowSeconds);
@@ -62,7 +75,7 @@ OLY_API double olyEngineInterpolation(OlyEngine* engine);
 // `phase` is an oly::app::Phase (out of range, OLY_ASSERT). Registering during olyEngineFrame is a contract violation.
 // OLY_INVALID_SYSTEM if there is no native system with that name (registered by OLY_SYSTEM).
 OLY_API uint32_t olyEngineAddNativeSystem(OlyEngine* engine, uint32_t phase, const char* name);
-// The system is called by the script invoker (olyHostInvokeScript in WASM) with the id returned here.
+// The system is called by the engine's script invoker with the id returned here.
 OLY_API uint32_t olyEngineAddScriptSystem(OlyEngine* engine, uint32_t phase, const char* name);
 OLY_API void olyEngineSetWhilePaused(OlyEngine* engine, uint32_t systemId, int32_t whilePaused);
 
@@ -93,7 +106,7 @@ OLY_API uint32_t olyEngineState(OlyEngine* engine);
 OLY_API void olyEngineSetSystemStates(OlyEngine* engine, uint32_t systemId, uint32_t stateMask);
 OLY_API void olyEngineSetHandlerStates(OlyEngine* engine, uint32_t handlerId, uint32_t stateMask);
 // `when` is OLY_STATE_ENTER or OLY_STATE_EXIT (any other value is a contract violation). The native one returns OLY_INVALID_STATE_HOOK if
-// there is no hook with that name (OLY_STATE_HOOK). The script one calls olyHostInvokeScript(engine, OLY_SCRIPT_STATE_HOOK,
+// there is no hook with that name (OLY_STATE_HOOK). The script one calls the engine's invoker with (OLY_SCRIPT_STATE_HOOK,
 // hookId, NULL, other), where `other` is the state on the other side of the switch: the source one in an OLY_STATE_ENTER and the destination one
 // in an OLY_STATE_EXIT. The hook's side is olyEngineState at the time of the call.
 OLY_API uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name);

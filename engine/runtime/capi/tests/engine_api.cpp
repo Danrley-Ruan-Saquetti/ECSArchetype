@@ -20,14 +20,16 @@ namespace {
   std::vector<uint32_t> g_kinds;
   std::vector<uint32_t> g_eventCounts;
   std::vector<uint32_t> g_values;
+  std::vector<void*> g_userData;
   void (*g_action)(OlyEngine*, uint32_t) = nullptr;
   uint32_t g_actionKind = OLY_SCRIPT_SYSTEM;
   OlyEntity g_created{};
   OlyEntity g_createdByHandler{};
   int g_actionCalls = 0;
 
-  void recordingInvoker(OlyEngine* engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount) {
+  void recordingInvoker(void* userData, OlyEngine* engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount) {
     g_order.push_back("s");
+    g_userData.push_back(userData);
     g_invocations.emplace_back(engine, id);
     g_kinds.push_back(kind);
     g_eventCounts.push_back(eventCount);
@@ -57,7 +59,6 @@ namespace {
 
   struct EngineFixture {
     OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
-    oly::capi::ScriptInvoker previous = oly::capi::setScriptInvoker(&recordingInvoker);
     double now = 0.0;
     bool primed = false;
 
@@ -67,15 +68,16 @@ namespace {
       g_kinds.clear();
       g_eventCounts.clear();
       g_values.clear();
+      g_userData.clear();
       g_action = nullptr;
       g_actionKind = OLY_SCRIPT_SYSTEM;
       g_created = OlyEntity{};
       g_createdByHandler = OlyEntity{};
       g_actionCalls = 0;
+      olyEngineSetScriptInvoker(engine, &recordingInvoker, this);
     }
 
     ~EngineFixture() {
-      oly::capi::setScriptInvoker(previous);
       olyEngineDestroy(engine);
     }
 
@@ -186,7 +188,7 @@ TEST_CASE("olySystemSpawn and olySystemAdd inside the script are applied at the 
   CHECK(fixture.invariantsHold());
 }
 
-TEST_CASE("two engines in the same process: the invoker receives the right engine") {
+TEST_CASE("two engines in the same process: each calls its own invoker with its own userData") {
   EngineFixture fixture;
   EngineFixture other;
   olyEngineAddScriptSystem(fixture.engine, 1, "first");
@@ -195,9 +197,22 @@ TEST_CASE("two engines in the same process: the invoker receives the right engin
   other.step();
 
   REQUIRE(!g_invocations.empty());
-  for (const auto& [engine, systemId] : g_invocations) {
-    CHECK(engine == other.engine);
+  for (size_t index = 0; index < g_invocations.size(); ++index) {
+    CHECK(g_invocations[index].first == other.engine);
+    CHECK(g_userData[index] == &other);
   }
+}
+
+TEST_CASE("the invoker installed between frames runs the next script call") {
+  EngineFixture fixture;
+  int replacement = 0;
+  olyEngineAddScriptSystem(fixture.engine, 1, "s");
+  fixture.next();
+
+  olyEngineSetScriptInvoker(fixture.engine, &recordingInvoker, &replacement);
+  fixture.next();
+
+  CHECK(g_userData == std::vector<void*>{&fixture, &replacement});
 }
 
 TEST_CASE("olyEngineWorld works with the existing World API") {
@@ -461,6 +476,7 @@ TEST_CASE("olyEngineDestroy discards the pending script tasks") {
   CHECK(discardsOf(1) == 1);
   CHECK(discardsOf(2) == 1);
   CHECK(g_kinds.size() == 2);
+  CHECK(g_userData == std::vector<void*>{&fixture, &fixture});
 }
 
 TEST_CASE("script and native tasks in due order") {

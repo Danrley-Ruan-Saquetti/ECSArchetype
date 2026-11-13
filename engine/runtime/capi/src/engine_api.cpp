@@ -22,22 +22,24 @@ static_assert(sizeof(OlyActionState) == sizeof(oly::input::ActionState) && offse
 static_assert(OLY_ACTION_PRESSED == oly::input::ActionPressed && OLY_ACTION_HELD == oly::input::ActionHeld && OLY_ACTION_RELEASED == oly::input::ActionReleased && OLY_ACTION_VALID == oly::input::ActionValid, "OLY_ACTION_* must match oly::input::Action*");
 
 namespace oly::capi {
-  namespace {
-    void defaultInvoker([[maybe_unused]] OlyEngine* engine, [[maybe_unused]] uint32_t kind, [[maybe_unused]] uint32_t id, [[maybe_unused]] const void* events, [[maybe_unused]] uint32_t eventCount) {
+  void missingScriptInvoker([[maybe_unused]] void* userData, [[maybe_unused]] OlyEngine* engine, [[maybe_unused]] uint32_t kind, [[maybe_unused]] uint32_t id, [[maybe_unused]] const void* events, [[maybe_unused]] uint32_t eventCount) {
 #if defined(__EMSCRIPTEN__)
-      olyHostInvokeScript(engine, kind, id, events, eventCount);
+    olyHostInvokeScript(engine, kind, id, events, eventCount);
 #else
-      OLY_ASSERT(false, "script called with no invoker installed (setScriptInvoker) kind=%u id=%u", kind, id);
+    OLY_ASSERT(false, "script called with no invoker installed (olyEngineSetScriptInvoker) kind=%u id=%u", kind, id);
 #endif
-    }
+  }
 
-    ScriptInvoker g_invoker = &defaultInvoker;
+  namespace {
+    void invokeScript(OlyEngine* engine, uint32_t kind, uint32_t id, const void* events, uint32_t eventCount) {
+      engine->scriptInvoker(engine->scriptUserData, engine, kind, id, events, eventCount);
+    }
 
     void runScriptSystem(oly::app::SystemContext& context) {
       OlyEngine* engine = static_cast<OlyEngine*>(context.userData());
 
       engine->currentContext = &context;
-      g_invoker(engine, OLY_SCRIPT_SYSTEM, context.systemId(), nullptr, 0);
+      invokeScript(engine, OLY_SCRIPT_SYSTEM, context.systemId(), nullptr, 0);
       engine->currentContext = nullptr;
     }
 
@@ -64,7 +66,7 @@ namespace oly::capi {
       OlyEngine* engine = static_cast<OlyEngine*>(context.userData());
 
       DirectContextScope scope(engine, context);
-      g_invoker(engine, OLY_SCRIPT_HANDLER, context.handlerId(), context.eventData(), context.eventCount());
+      invokeScript(engine, OLY_SCRIPT_HANDLER, context.handlerId(), context.eventData(), context.eventCount());
     }
 
     void runScriptStateHook(oly::app::StateContext& context) {
@@ -72,7 +74,7 @@ namespace oly::capi {
       const oly::app::StateId otherSide = context.entering() ? context.fromState() : context.toState();
 
       DirectContextScope scope(engine, context);
-      g_invoker(engine, OLY_SCRIPT_STATE_HOOK, context.hookId(), nullptr, otherSide);
+      invokeScript(engine, OLY_SCRIPT_STATE_HOOK, context.hookId(), nullptr, otherSide);
     }
 
     struct ScriptTaskPayload {
@@ -84,13 +86,13 @@ namespace oly::capi {
       const ScriptTaskPayload& payload = context.payload<ScriptTaskPayload>();
 
       DirectContextScope scope(payload.engine, context);
-      g_invoker(payload.engine, OLY_SCRIPT_TASK, payload.scriptId, nullptr, context.lastRun() ? 1 : 0);
+      invokeScript(payload.engine, OLY_SCRIPT_TASK, payload.scriptId, nullptr, context.lastRun() ? 1 : 0);
     }
 
     void discardScriptTask(void* payload) {
       const ScriptTaskPayload& task = *static_cast<ScriptTaskPayload*>(payload);
 
-      g_invoker(task.engine, OLY_SCRIPT_TASK_DISCARD, task.scriptId, nullptr, 0);
+      invokeScript(task.engine, OLY_SCRIPT_TASK_DISCARD, task.scriptId, nullptr, 0);
     }
 
     uint32_t checkedEventType([[maybe_unused]] OlyEngine* engine, uint32_t eventType, [[maybe_unused]] const char* operation) {
@@ -126,12 +128,6 @@ namespace oly::capi {
   oly::app::Engine& engineOf(OlyEngine* engine) noexcept {
     return engine->engine;
   }
-
-  ScriptInvoker setScriptInvoker(ScriptInvoker invoker) noexcept {
-    const ScriptInvoker previous = g_invoker;
-    g_invoker = invoker;
-    return previous;
-  }
 }
 
 extern "C" {
@@ -161,6 +157,13 @@ void olyEngineDestroy(OlyEngine* engine) {
 
 OlyWorld* olyEngineWorld(OlyEngine* engine) {
   return &engine->world;
+}
+
+void olyEngineSetScriptInvoker(OlyEngine* engine, OlyScriptInvoker invoker, void* userData) {
+  OLY_ASSERT(invoker != nullptr, "olyEngineSetScriptInvoker: null invoker");
+
+  engine->scriptInvoker = invoker;
+  engine->scriptUserData = userData;
 }
 
 void olyEngineFrame(OlyEngine* engine, double nowSeconds) {
