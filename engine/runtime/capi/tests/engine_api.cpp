@@ -21,6 +21,7 @@ namespace {
   std::vector<uint32_t> g_eventCounts;
   std::vector<uint32_t> g_values;
   std::vector<void*> g_userData;
+  std::vector<void*> g_secondUserData;
   void (*g_action)(OlyEngine*, uint32_t) = nullptr;
   uint32_t g_actionKind = OLY_SCRIPT_SYSTEM;
   OlyEntity g_created{};
@@ -40,6 +41,10 @@ namespace {
     if (g_action && kind == g_actionKind) {
       g_action(engine, id);
     }
+  }
+
+  void secondInvoker(void* userData, OlyEngine*, uint32_t, uint32_t, const void*, uint32_t) {
+    g_secondUserData.push_back(userData);
   }
 
   void nativeTask(oly::app::TaskContext&) {
@@ -69,6 +74,7 @@ namespace {
       g_eventCounts.clear();
       g_values.clear();
       g_userData.clear();
+      g_secondUserData.clear();
       g_action = nullptr;
       g_actionKind = OLY_SCRIPT_SYSTEM;
       g_created = OlyEntity{};
@@ -201,6 +207,25 @@ TEST_CASE("two engines in the same process: each calls its own invoker with its 
     CHECK(g_invocations[index].first == other.engine);
     CHECK(g_userData[index] == &other);
   }
+}
+
+TEST_CASE("two engines with different invokers: each frame calls only its own engine's invoker") {
+  EngineFixture first;
+  EngineFixture second;
+  int secondData = 0;
+  olyEngineSetScriptInvoker(second.engine, &secondInvoker, &secondData);
+  olyEngineAddScriptSystem(first.engine, 1, "first");
+  olyEngineAddScriptSystem(second.engine, 1, "second");
+
+  first.step();
+  const size_t firstCalls = g_userData.size();
+  second.step();
+
+  REQUIRE(firstCalls > 0);
+  CHECK(g_userData.size() == firstCalls);
+  CHECK(g_userData == std::vector<void*>(firstCalls, &first));
+  REQUIRE(!g_secondUserData.empty());
+  CHECK(g_secondUserData == std::vector<void*>(g_secondUserData.size(), &secondData));
 }
 
 TEST_CASE("the invoker installed between frames runs the next script call") {

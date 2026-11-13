@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { SchemaMismatchError, action, component, defineSchema, event, loadRuntime, tag } from "@oly/core";
+import { ContractError, SchemaMismatchError, action, component, defineSchema, event, loadRuntime, tag } from "@oly/core";
+import type { OlyModuleFactory } from "@oly/core";
 
-import { fixtureFactory, loadFixture } from "./fixture.js";
+import { fixtureFactory, loadFixture, schema } from "./fixture.js";
 
 test("loads with the fixture schema", async () => {
   const { runtime } = await loadFixture();
@@ -27,6 +28,21 @@ test("mismatched schema is rejected", async () => {
     loadRuntime(fixtureFactory(), otherSchema),
     (error: unknown) =>
       error instanceof SchemaMismatchError && /0x[0-9a-f]+.*0x[0-9a-f]+/s.test(error.message) && /Position/.test(error.message),
+  );
+});
+
+test("a module without the web host's invoker is rejected at load", async () => {
+  const factory = fixtureFactory();
+  const withoutWebHost: OlyModuleFactory = async () => {
+    const module = await factory();
+    Reflect.deleteProperty(module, "_olyWebHostInstallScriptInvoker");
+
+    return module;
+  };
+
+  await assert.rejects(
+    loadRuntime(withoutWebHost, schema),
+    (error: unknown) => error instanceof ContractError && /olyWebHostInstallScriptInvoker/.test(error.message) && /oly::web_host/.test(error.message),
   );
 });
 

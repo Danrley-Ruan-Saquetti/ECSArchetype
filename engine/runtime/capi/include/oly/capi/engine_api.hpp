@@ -57,8 +57,9 @@ OLY_API void olyEngineDestroy(OlyEngine* engine);
 // Owned by the engine: valid until olyEngineDestroy and never passed to olyWorldDestroy.
 OLY_API OlyWorld* olyEngineWorld(OlyEngine* engine);
 // `invoker` is not null (OLY_ASSERT). Valid inside and outside olyEngineFrame: the next script call uses it. Before
-// the first call, a script call is a contract violation (OLY_ASSERT with kind and id). olyEngineDestroy calls the invoker with OLY_SCRIPT_TASK_DISCARD for each pending script task,
-// so `userData` must stay valid until then.
+// the first olyEngineSetScriptInvoker on an engine, a script call is a contract violation (OLY_ASSERT with kind and id).
+// olyEngineDestroy calls the invoker with OLY_SCRIPT_TASK_DISCARD for each pending script task, so `userData` must stay
+// valid until then. During those calls the invoker must not call any oly* function on that engine: it is being destroyed.
 OLY_API void olyEngineSetScriptInvoker(OlyEngine* engine, OlyScriptInvoker invoker, void* userData);
 
 // Contract of the loop, pause and hidden tab: that of oly::app::Engine (oly/app/engine.hpp).

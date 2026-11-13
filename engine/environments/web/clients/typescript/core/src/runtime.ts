@@ -194,6 +194,9 @@ export function stateAt(runtime: Runtime, index: number): State | null {
  */
 export async function loadRuntime(factory: OlyModuleFactory, schema: Schema): Promise<Runtime> {
   const module = await factory();
+  if (typeof module._olyWebHostInstallScriptInvoker !== "function") {
+    throw new ContractError("the WASM module does not export olyWebHostInstallScriptInvoker: link the game with oly::web_host");
+  }
 
   const wasmHash = module._olySchemaHash() >>> 0;
   const divergent = firstDivergentType(module, schema);

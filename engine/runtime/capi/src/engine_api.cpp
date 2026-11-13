@@ -156,7 +156,7 @@ void olyEngineSetScriptInvoker(OlyEngine* engine, OlyScriptInvoker invoker, void
 }
 
 void olyEngineFrame(OlyEngine* engine, double nowSeconds) {
-  // After a JS exception the pointer was left pointing to a stack that no longer exists.
+  // After an exception from script code the pointer was left pointing to a stack that no longer exists.
   engine->currentContext = nullptr;
   engine->directContext = nullptr;
   engine->engine.frame(nowSeconds);

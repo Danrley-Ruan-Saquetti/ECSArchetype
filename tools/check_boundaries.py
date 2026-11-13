@@ -11,7 +11,7 @@ import re
 import sys
 
 IGNORED_DIRECTORIES = {"build", "node_modules", ".git", ".superpowers", "dist", "dist-tests", ".claude"}
-CPP_EXTENSIONS = (".hpp", ".cpp")
+CPP_EXTENSIONS = (".hpp", ".cpp", ".h", ".inl")
 TS_EXTENSION = ".ts"
 
 INCLUDE_PATTERN = re.compile(r'^\s*#\s*include\s+"oly/([a-z_]+)/([^"]*)"')
@@ -19,7 +19,7 @@ RUNTIME_PREFIX = "engine/runtime/"
 ENVIRONMENTS_PREFIX = "engine/environments/"
 MODULE_INCLUDE_DIRECTORY = re.compile(r"^(.+)/include/oly/([a-z_]+)$")
 
-EMSCRIPTEN_PATTERN = re.compile(r"__EMSCRIPTEN__|\bEM_[A-Z_]+|\bEMSCRIPTEN_[A-Z_]+|<emscripten[./]")
+EMSCRIPTEN_PATTERN = re.compile(r"__EMSCRIPTEN(?:_[a-z]+)?__|\bEM_[A-Z_]+|\bEMSCRIPTEN_[A-Z_]+|<emscripten[./]")
 EMSCRIPTEN_ALLOWED_PREFIX = "engine/environments/web/"
 # OLY_API is the core's only Emscripten-aware line (EMSCRIPTEN_KEEPALIVE on WASM).
 OLY_API_HEADER = "engine/runtime/capi/include/oly/capi/c_api.hpp"
@@ -87,8 +87,8 @@ def emscripten_violation(relative_path, line):
     matches = [match.group(0) for match in EMSCRIPTEN_PATTERN.finditer(line)]
     if not matches:
         return None
-    # A test may skip a case on WASM, but never calls Emscripten.
-    if "/tests/" in relative_path and all(match == "__EMSCRIPTEN__" for match in matches):
+    # A test or a benchmark may skip a case on WASM, but never calls Emscripten.
+    if ("/tests/" in relative_path or "/bench/" in relative_path) and all(match == "__EMSCRIPTEN__" for match in matches):
         return None
     return f"Emscripten ({matches[0]}) is allowed only in engine/environments/web/ and OLY_API"
 
