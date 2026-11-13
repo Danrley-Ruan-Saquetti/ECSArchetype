@@ -2,6 +2,9 @@ add_subdirectory(runtime)
 
 if(EMSCRIPTEN)
   add_subdirectory(environments/web/host/native)
+else()
+  # oly-schema runs at build time, so it is built for the machine; WASM builds use the schema-tool preset's.
+  add_subdirectory(schema/codegen)
 endif()
 
 if(OLY_BUILD_GAMES)
