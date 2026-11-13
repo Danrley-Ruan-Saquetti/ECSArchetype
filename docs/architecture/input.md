@@ -9,4 +9,4 @@
 - **Bindings**: can be changed at any time, including from inside a system. The change takes effect on the next capture.
 - **Snapshot**: `ActionState { float x; float y; uint32_t flags; }`, 12 B per action. The address is stable in the `OlyEngine`, so TS reads the actions through heap views, without crossing the boundary ([bridge.md](bridge.md)).
 
-The host is not a platform interface: the core never asks the host anything, it only receives the events the host pushes. In the browser, `attachBrowserInput` does the pushing ([ts-packages.md](ts-packages.md#olyclient)).
+The host is not a platform interface: the core never asks the host anything, it only receives the events the host pushes. In the browser, `attachBrowserInput` does the pushing ([ts-packages.md](ts-packages.md#olyweb-host)).

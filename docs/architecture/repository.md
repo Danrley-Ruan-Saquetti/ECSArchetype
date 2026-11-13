@@ -12,10 +12,9 @@ engine/
     input/        input actions (ActionMap)
     app/          the Engine: loop, systems, events, schedule, states
     capi/         C API oly*, OlyWorld, OlyEngine, schema registration
-  environments/
+  environments/   one folder per target environment
     web/clients/typescript/core/  @oly/core: the engine on the TS side, no DOM
-  packages/       TS, one npm package per folder
-    client/       @oly/client: browser layer
+    web/host/js/                  @oly/web-host: browser layer
   tools/codegen/  @oly/codegen: TS schema -> C++ header
   testing/        @oly/testing (private): fixture game, WASM tests, boundary benchmarks
 games/

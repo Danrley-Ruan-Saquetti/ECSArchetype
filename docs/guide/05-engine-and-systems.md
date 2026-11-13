@@ -24,7 +24,7 @@ engine.dispose();          // also disposes engine.world
 Something outside the engine calls `engine.frame(nowSeconds)` once per display frame. In the browser, `runInBrowser(engine)` does it with `requestAnimationFrame` and also calls `engine.setHidden` when the tab is hidden.
 
 ```ts
-import { runInBrowser } from "@oly/client";
+import { runInBrowser } from "@oly/web-host";
 
 const loop = runInBrowser(engine);
 // loop.stop() to end it

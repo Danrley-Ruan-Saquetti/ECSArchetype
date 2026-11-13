@@ -22,11 +22,11 @@ Three rules guide the design:
  game (TS and/or C++)                        games/<game>/
  ───────────────────────────────────────────────────────────────────────
  TS packages (thin layer)          │  C++ core (WASM or native)
-   @oly/client: rAF, visibility,   │    app:    Engine (loop, phases, pause,
-                keyboard and mouse │            events, schedule, states)
-   @oly/core:   schema, World,     │    input:  ActionMap
-                Engine, contexts,  │    capi: C API oly*, callback
-                copy-free views    │    the game's C++ systems and handlers
+   @oly/web-host: rAF, visibility, │    app:    Engine (loop, phases, pause,
+                  keyboard, mouse │            events, schedule, states)
+   @oly/core:     schema, World,   │    input:  ActionMap
+                  Engine, contexts │    capi: C API oly*, callback
+                  copy-free views  │    the game's C++ systems and handlers
  ──────────────── C API (extern "C") + 1 imported JS function ────────────
  ECS: component → entity → table → archetype → query / command_buffer → world
  core: assert, align, small_map, type_name
@@ -44,7 +44,7 @@ Three rules guide the design:
 | [app.md](app.md) | the `Engine`: loop, systems, pause, events, schedule, states, recovery |
 | [bridge.md](bridge.md) | the C API and the callback into TS |
 | [schema-and-codegen.md](schema-and-codegen.md) | the game schema, the generator and each game's WASM module |
-| [ts-packages.md](ts-packages.md) | `@oly/core`, `@oly/client`, `@oly/codegen`, `@oly/testing` |
+| [ts-packages.md](ts-packages.md) | `@oly/core`, `@oly/web-host`, `@oly/codegen`, `@oly/testing` |
 | [games.md](games.md) | the validation game `games/arena` |
 | [build-and-tests.md](build-and-tests.md) | Docker, presets, tests and code quality |
 | [performance.md](performance.md) | targets, current status and boundary costs |

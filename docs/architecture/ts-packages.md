@@ -24,9 +24,9 @@ Implementation rules:
 - **`World` locked during `frame`.** A direct structural change in a TS system is a `ContractError`; the system uses `context.spawn/destroy/add/remove`.
 - One-off reads (`get`, `single`) cross the boundary a constant number of times per call and return copies.
 
-## `@oly/client`
+## `@oly/web-host`
 
-Thin browser layer (`engine/packages/client/`). It implements with DOM APIs the ports that `core` receives by injection and has no engine rule:
+Thin browser layer (`engine/environments/web/host/js/`). It implements with DOM APIs the ports that `core` receives by injection and has no engine rule:
 
 - `moduleFactoryFromUrl(url)`: loads a game's Emscripten `.mjs`.
 - `runInBrowser(engine)`: loop via `requestAnimationFrame` and `visibilitychange` → `setHidden`.

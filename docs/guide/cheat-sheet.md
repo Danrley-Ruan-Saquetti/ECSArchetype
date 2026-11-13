@@ -8,7 +8,7 @@ One page with every public name. TS unless marked C++.
 
 ```ts
 import { loadRuntime, Phase } from "@oly/core";
-import { attachBrowserInput, moduleFactoryFromUrl, runInBrowser } from "@oly/client";
+import { attachBrowserInput, moduleFactoryFromUrl, runInBrowser } from "@oly/web-host";
 
 const runtime = await loadRuntime(moduleFactoryFromUrl("./game_game.mjs"), schema);   // SchemaMismatchError
 const engine = runtime.createEngine({ fixedHz: 60, maxStepsPerFrame: 5, maxEventRounds: 16 });

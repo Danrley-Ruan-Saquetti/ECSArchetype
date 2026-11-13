@@ -68,7 +68,7 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "dependencies": { "@oly/core": "*", "@oly/client": "*" }
+  "dependencies": { "@oly/core": "*", "@oly/web-host": "*" }
 }
 ```
 
@@ -92,7 +92,7 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
   "references": [
     { "path": "./tsconfig.json" },
     { "path": "../../engine/environments/web/clients/typescript/core" },
-    { "path": "../../engine/packages/client" }
+    { "path": "../../engine/environments/web/host/js" }
   ]
 }
 ```
@@ -192,7 +192,7 @@ export function installGame(engine: Engine, drawer: Drawer): void {
 
 ```ts
 import { loadRuntime } from "@oly/core";
-import { attachBrowserInput, moduleFactoryFromUrl, runInBrowser } from "@oly/client";
+import { attachBrowserInput, moduleFactoryFromUrl, runInBrowser } from "@oly/web-host";
 
 import schema from "../schema.js";
 import { installGame } from "./game.js";

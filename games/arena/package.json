@@ -3,5 +3,5 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "dependencies": { "@oly/core": "*", "@oly/client": "*" }
+  "dependencies": { "@oly/core": "*", "@oly/web-host": "*" }
 }

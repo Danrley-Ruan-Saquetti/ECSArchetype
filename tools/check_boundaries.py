@@ -79,8 +79,8 @@ def check_ts_file(path, relative_path, root):
                 specifier = match.group(1)
                 if specifier.startswith("@oly/core/internal") and not inside_engine:
                     violations.append(f"{relative_path}:{line_number}: @oly/core/internal can only be used inside engine/")
-                if specifier.startswith("@oly/client") and inside_core:
-                    violations.append(f"{relative_path}:{line_number}: @oly/core cannot depend on @oly/client")
+                if specifier.startswith("@oly/web-host") and inside_core:
+                    violations.append(f"{relative_path}:{line_number}: @oly/core cannot depend on @oly/web-host")
                 if specifier.startswith(".") and package_directory is not None:
                     resolved = os.path.abspath(os.path.join(os.path.dirname(path), specifier))
                     if os.path.commonpath([resolved, os.path.abspath(package_directory)]) != os.path.abspath(package_directory):

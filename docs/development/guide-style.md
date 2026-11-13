@@ -11,7 +11,7 @@ The public API is:
 | Surface | Where it is defined |
 |---|---|
 | `@oly/core` exports | `engine/environments/web/clients/typescript/core/api/public-exports.txt` |
-| `@oly/client` exports | `engine/packages/client/src/index.ts` |
+| `@oly/web-host` exports | `engine/environments/web/host/js/src/index.ts` |
 | C++ public headers | `engine/runtime/<module>/include/oly/<module>/*.hpp`, except `detail/` |
 | registration macros | `OLY_SYSTEM`, `OLY_HANDLER`, `OLY_STATE_HOOK` |
 | the C API | `engine/runtime/capi/include/oly/capi/c_api.hpp` |

@@ -93,7 +93,7 @@ velocity.y.set(row, direction.y * speed);
 `attachBrowserInput` sends keyboard and mouse events to the engine:
 
 ```ts
-import { attachBrowserInput } from "@oly/client";
+import { attachBrowserInput } from "@oly/web-host";
 
 const input = attachBrowserInput(engine, canvas);
 // input.detach() removes all listeners

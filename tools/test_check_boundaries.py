@@ -97,23 +97,23 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(output, "")
 
-    def test_core_importing_client_fails(self):
-        self.write("engine/environments/web/clients/typescript/core/src/a.ts", 'import { moduleFactoryFromUrl } from "@oly/client";\n')
+    def test_core_importing_web_host_fails(self):
+        self.write("engine/environments/web/clients/typescript/core/src/a.ts", 'import { moduleFactoryFromUrl } from "@oly/web-host";\n')
 
         code, output = self.run_check([])
 
         self.assertEqual(code, 1)
-        self.assertIn("engine/environments/web/clients/typescript/core/src/a.ts:1: @oly/core cannot depend on @oly/client", output)
+        self.assertIn("engine/environments/web/clients/typescript/core/src/a.ts:1: @oly/core cannot depend on @oly/web-host", output)
 
     def test_relative_across_packages_fails(self):
-        self.write("engine/packages/client/package.json", "{}")
+        self.write("engine/environments/web/host/js/package.json", "{}")
         self.write("engine/environments/web/clients/typescript/core/package.json", "{}")
-        self.write("engine/packages/client/src/a.ts", 'import { World } from "../../../environments/web/clients/typescript/core/src/world.js";\n')
+        self.write("engine/environments/web/host/js/src/a.ts", 'import { World } from "../../../clients/typescript/core/src/world.js";\n')
 
         code, output = self.run_check([])
 
         self.assertEqual(code, 1)
-        self.assertIn("engine/packages/client/src/a.ts:1: relative import crosses packages; use the package name", output)
+        self.assertIn("engine/environments/web/host/js/src/a.ts:1: relative import crosses packages; use the package name", output)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,10 @@ graph BT
   capi --> app
   games["games (oly_add_game)"] --> capi
   codegen["@oly/codegen"] --> tscore["@oly/core"]
-  client["@oly/client"] --> tscore
+  webHost["@oly/web-host"] --> tscore
   testing["@oly/testing"] --> tscore
   arena["games/arena (TS)"] --> tscore
-  arena --> client
+  arena --> webHost
 ```
 
 | Module | CMake target | `DEPENDS` | Type |
@@ -36,7 +36,7 @@ The boundaries do not hold by convention alone. Three mechanisms enforce them:
    - `#include "oly/<x>/..."` in a module or game that did not declare `<x>` in `DEPENDS` (dependencies are `PUBLIC` and transitive, so only the lint catches the undeclared direct include);
    - `oly/<x>/detail/` included outside `engine/runtime/<x>/` (the module's own tests and benchmarks may);
    - `@oly/core/internal` imported outside `engine/`;
-   - `@oly/client` imported in `@oly/core`;
+   - `@oly/web-host` imported in `@oly/core`;
    - a relative import that crosses packages.
 3. **The TS surface test** (`ts.core.unit`, `surface.test.ts`). It checks the public exports of `@oly/core` against the versioned list `engine/environments/web/clients/typescript/core/api/public-exports.txt`. Adding something to the public API is an explicit change in that file.
 

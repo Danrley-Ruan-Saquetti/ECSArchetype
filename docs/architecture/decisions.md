@@ -16,6 +16,6 @@
 | State scope through an internal tag | cleanup by query, cheap `persist` | twin archetypes with and without the tag |
 | Schedule as a min-heap in `app`, not as entities | tasks do not show up in the game's queries | task scope implemented separately |
 | Input in its own module, without a platform interface | edge rules testable without `Engine`; the host only pushes events | — |
-| `@oly/core` without DOM, `@oly/client` with DOM | the TS core runs in node, browser and worker | two packages |
+| `@oly/core` without DOM, `@oly/web-host` with DOM | the TS core runs in node, browser and worker | two packages |
 
 The details of each decision are in the module files ([README.md](README.md#index)) and in the specs.

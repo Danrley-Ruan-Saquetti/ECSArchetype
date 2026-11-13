@@ -2,7 +2,7 @@
   "name": "oly",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["engine/environments/web/clients/typescript/core", "engine/packages/*", "engine/tools/*", "engine/testing", "games/*"],
+  "workspaces": ["engine/environments/web/clients/typescript/core", "engine/environments/web/host/js", "engine/tools/*", "engine/testing", "games/*"],
   "scripts": {
     "build": "tsc -b"
   },

@@ -7,5 +7,5 @@
     "types": []
   },
   "include": ["src/main.ts"],
-  "references": [{ "path": "./tsconfig.json" }, { "path": "../../engine/environments/web/clients/typescript/core" }, { "path": "../../engine/packages/client" }]
+  "references": [{ "path": "./tsconfig.json" }, { "path": "../../engine/environments/web/clients/typescript/core" }, { "path": "../../engine/environments/web/host/js" }]
 }
