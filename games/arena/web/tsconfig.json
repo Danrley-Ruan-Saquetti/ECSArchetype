@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "dist",
@@ -8,5 +8,5 @@
   },
   "include": ["schema.ts", "src"],
   "exclude": ["src/main.ts"],
-  "references": [{ "path": "../../engine/environments/web/clients/typescript/core" }]
+  "references": [{ "path": "../../../engine/environments/web/clients/typescript/core" }]
 }

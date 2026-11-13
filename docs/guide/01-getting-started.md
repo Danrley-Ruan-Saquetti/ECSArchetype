@@ -31,10 +31,10 @@ Open `http://localhost:8000`. The game's `README.md` lists its controls.
 You write the schema and the gameplay. The build turns them into one WASM module per game.
 
 ```
-games/<game>/schema.ts ──tsc──► schema.js ──oly-codegen──► schema.generated.hpp (C++ structs, ids)
+games/<game>/web/schema.ts ──tsc──► schema.js ──oly-codegen──► schema.generated.hpp (C++ structs, ids)
 games/<game>/native/*.cpp  (your C++ systems, optional) ──┐
 engine (ecs + app + input + capi) ────────────────────────┴──emcc──► <game>_game.mjs + .wasm
-games/<game>/src/*.ts  (your TS systems and the shell) ──tsc + esbuild──► main.js
+games/<game>/web/src/*.ts  (your TS systems and the shell) ──tsc + esbuild──► main.js
 ```
 
 At start-up, `loadRuntime` checks that the WASM was built from the same schema as the TS code. If you change the schema and forget to rebuild, you get a `SchemaMismatchError` instead of corrupted data.
@@ -47,20 +47,21 @@ The steps below create `games/hello`. Copy the files, then run the build.
 
 ```
 games/hello/
-  package.json
-  tsconfig.json            DOM-free code: schema and game logic
-  tsconfig.browser.json    only src/main.ts, with the DOM
   CMakeLists.txt
-  schema.ts
-  native/hello.cpp         optional C++ systems
-  src/game.ts              installGame(engine): registers everything, no DOM
-  src/main.ts              browser shell
-  web/index.html
+  native/hello.cpp           optional C++ systems
+  web/
+    package.json
+    tsconfig.json            DOM-free code: schema and game logic
+    tsconfig.browser.json    only src/main.ts, with the DOM
+    schema.ts
+    src/game.ts              installGame(engine): registers everything, no DOM
+    src/main.ts              browser shell
+    index.html
 ```
 
 Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-testing.md). The two `tsconfig` files enforce it: using `document` outside `main.ts` is a compile error.
 
-### 2. `package.json`
+### 2. `web/package.json`
 
 ```json
 {
@@ -72,27 +73,27 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
 }
 ```
 
-### 3. `tsconfig.json` and `tsconfig.browser.json`
+### 3. `web/tsconfig.json` and `web/tsconfig.browser.json`
 
 ```json
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": { "rootDir": ".", "outDir": "dist", "lib": ["ES2022"], "types": [] },
   "include": ["schema.ts", "src"],
   "exclude": ["src/main.ts"],
-  "references": [{ "path": "../../engine/environments/web/clients/typescript/core" }]
+  "references": [{ "path": "../../../engine/environments/web/clients/typescript/core" }]
 }
 ```
 
 ```json
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": { "rootDir": ".", "outDir": "dist", "lib": ["ES2022", "DOM"], "types": [] },
   "include": ["src/main.ts"],
   "references": [
     { "path": "./tsconfig.json" },
-    { "path": "../../engine/environments/web/clients/typescript/core" },
-    { "path": "../../engine/environments/web/host/js" }
+    { "path": "../../../engine/environments/web/clients/typescript/core" },
+    { "path": "../../../engine/environments/web/host/js" }
   ]
 }
 ```
@@ -103,14 +104,14 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
 file(GLOB nativeSources CONFIGURE_DEPENDS native/*.cpp)
 
 oly_add_game(hello_game
-  SCHEMA_JS ${CMAKE_CURRENT_SOURCE_DIR}/dist/schema.js
+  SCHEMA_JS ${CMAKE_CURRENT_SOURCE_DIR}/web/dist/schema.js
   SOURCES ${nativeSources}
   DEPENDS ecs app capi)
 ```
 
 The target name must be `<folder>_game`: `make game G=hello` looks for `hello_game.mjs`.
 
-### 5. `schema.ts`
+### 5. `web/schema.ts`
 
 ```ts
 import { action, component, defineSchema, tag } from "@oly/core";

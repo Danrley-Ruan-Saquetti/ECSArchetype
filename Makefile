@@ -36,7 +36,7 @@ games-test: ts
 # game/serve only work with the wasm-games* presets: without PRESET on the command line or in the environment, Release applies.
 WEB_PRESET = $(if $(filter command line environment,$(origin PRESET)),$(PRESET),wasm-games-release)
 WEB_DIR = build/$(WEB_PRESET)/web/$(G)
-ESBUILD = node_modules/.bin/esbuild games/$(G)/dist/src/main.js --bundle --format=esm --platform=browser --target=es2022
+ESBUILD = node_modules/.bin/esbuild games/$(G)/web/dist/src/main.js --bundle --format=esm --platform=browser --target=es2022
 
 ifneq ($(filter game serve,$(MAKECMDGOALS)),)
 ifeq ($(G),)

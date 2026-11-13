@@ -4,15 +4,16 @@ Arena is the validation game: a top-down 2D shooter (move, aim, shoot, dash, ene
 
 ```
 games/arena/
-  schema.ts          the game's components, tags, events, actions and states
-  native/            per-entity C++ gameplay: control, shooting, chasing, movement, collision
-  src/game.ts        installGame(engine, { drawer, random }): registers everything, no DOM
-  src/render.ts      render through a Drawer interface
-  src/main.ts        browser shell: canvas, Drawer over Canvas 2D, runInBrowser, attachBrowserInput
-  src/arena.ts       constants shared with native/arena.hpp
-  tests/smoke.test.ts  script in node against the real WASM (ts.arena.smoke)
-  web/index.html
-  README.md          how to run, manual checklist and the phase list
+  native/                per-entity C++ gameplay: control, shooting, chasing, movement, collision
+  web/                   the game's npm package, and the page that serves it
+    schema.ts            the game's components, tags, events, actions and states
+    src/game.ts          installGame(engine, { drawer, random }): registers everything, no DOM
+    src/render.ts        render through a Drawer interface
+    src/main.ts          browser shell: canvas, Drawer over Canvas 2D, runInBrowser, attachBrowserInput
+    src/arena.ts         constants shared with native/arena.hpp
+    tests/smoke.test.ts  script in node against the real WASM (ts.arena.smoke)
+    index.html
+  README.md              how to run, manual checklist and the phase list
 ```
 
 ## Split between the languages

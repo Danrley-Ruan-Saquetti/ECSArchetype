@@ -238,16 +238,16 @@ Add to the game's `CMakeLists.txt`, next to `oly_add_game`:
 
 ```cmake
 if(OLY_BUILD_TESTS)
-  add_test(NAME ts.hello.smoke COMMAND ${OLY_NODE} --test ${CMAKE_CURRENT_SOURCE_DIR}/dist/tests/)
+  add_test(NAME ts.hello.smoke COMMAND ${OLY_NODE} --test ${CMAKE_CURRENT_SOURCE_DIR}/web/dist/tests/)
   set_tests_properties(ts.hello.smoke PROPERTIES ENVIRONMENT OLY_GAME_MODULE=$<TARGET_FILE:hello_game>)
 endif()
 ```
 
-The test TS project must emit to `dist/tests/`, so its relative imports (`../schema.js`, `../src/game.js`) resolve at run time. `tests/tsconfig.json`:
+The test TS project must emit to `web/dist/tests/`, so its relative imports (`../schema.js`, `../src/game.js`) resolve at run time. `web/tests/tsconfig.json`:
 
 ```json
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "..",
     "outDir": "../dist",
@@ -255,11 +255,11 @@ The test TS project must emit to `dist/tests/`, so its relative imports (`../sch
     "types": ["node"]
   },
   "include": ["**/*.ts"],
-  "references": [{ "path": ".." }, { "path": "../../../engine/environments/web/clients/typescript/core" }]
+  "references": [{ "path": ".." }, { "path": "../../../../engine/environments/web/clients/typescript/core" }]
 }
 ```
 
-Add `{ "path": "games/<game>/tests" }` to the `references` of the root `tsconfig.json`.
+Add `{ "path": "games/<game>/web/tests" }` to the `references` of the root `tsconfig.json`.
 
 Run:
 
