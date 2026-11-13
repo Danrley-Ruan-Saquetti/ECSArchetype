@@ -1,0 +1,2 @@
+# expect: 2:11: invalid type name "1abc": use PascalCase ([A-Z][A-Za-z0-9]*)
+component 1abc { x: f32 }

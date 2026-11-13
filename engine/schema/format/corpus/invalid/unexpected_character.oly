@@ -1,0 +1,2 @@
+# expect: 2:23: unexpected character '$'
+component A { x: f32 }$

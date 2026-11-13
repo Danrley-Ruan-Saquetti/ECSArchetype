@@ -1,0 +1,2 @@
+# expect: 2:17: expected ":" after field x, found "f32"
+component A { x f32 }

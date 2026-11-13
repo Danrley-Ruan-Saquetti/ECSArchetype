@@ -1,0 +1,15 @@
+# every kind of declaration
+action go: button
+
+component Mixed {
+  a: i8, b: u8, c: i16, d: u16,
+  e: i32, f: u32, g: f32, h: f64,
+  owner: entity,
+}
+tag Marker # a tag has no fields
+event Hit { target: entity, damage: u8 }
+
+action aim: pointer
+action move: axis2d
+state menu
+state playing

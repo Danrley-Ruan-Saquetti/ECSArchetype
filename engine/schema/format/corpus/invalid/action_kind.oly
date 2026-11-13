@@ -1,0 +1,2 @@
+# expect: 2:12: action go: unknown kind "trigger"; use button, axis2d or pointer
+action go: trigger

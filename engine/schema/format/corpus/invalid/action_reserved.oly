@@ -1,0 +1,2 @@
+# expect: 2:8: invalid action "for": use camelCase ([a-z][A-Za-z0-9]*) and avoid C++ reserved words
+action for: button

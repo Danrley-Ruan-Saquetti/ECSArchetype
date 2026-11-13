@@ -1,2 +1,5 @@
 oly_add_test(MODULE schema NAME layout SOURCES layout.cpp)
 oly_add_test(MODULE schema NAME hash SOURCES hash.cpp)
+oly_add_test(MODULE schema NAME parser SOURCES parser.cpp)
+oly_add_test(MODULE schema NAME corpus SOURCES corpus.cpp)
+target_compile_definitions(schema_corpus PRIVATE OLY_SCHEMA_CORPUS="${PROJECT_SOURCE_DIR}/engine/schema/format/corpus")

@@ -1,0 +1,3 @@
+# expect: 3:7: repeated name "go"
+action go: button
+state go

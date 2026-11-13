@@ -1,0 +1,2 @@
+# expect: 2:23: repeated field "x" in A
+component A { x: f32, x: f64 }

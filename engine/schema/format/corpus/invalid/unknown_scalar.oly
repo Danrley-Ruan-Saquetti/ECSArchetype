@@ -1,0 +1,2 @@
+# expect: 2:18: unknown type "f16" for field x in A; use f32, f64, i8, u8, i16, u16, i32, u32 or entity
+component A { x: f16 }

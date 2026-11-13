@@ -1,0 +1,1 @@
+component A { state: f32, tag: u8, event: i16, action: u32, component: f64 }

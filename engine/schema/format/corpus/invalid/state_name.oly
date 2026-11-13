@@ -1,0 +1,2 @@
+# expect: 2:7: invalid state "Menu": use camelCase ([a-z][A-Za-z0-9]*) and avoid C++ reserved words
+state Menu

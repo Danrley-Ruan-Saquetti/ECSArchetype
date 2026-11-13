@@ -1,0 +1,2 @@
+# expect: 2:5: invalid type name "lower": use PascalCase ([A-Z][A-Za-z0-9]*)
+tag lower

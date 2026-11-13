@@ -1,0 +1,2 @@
+# expect: 2:11: expected a type name after component, found "{"
+component { x: f32 }

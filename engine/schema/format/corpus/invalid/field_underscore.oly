@@ -1,0 +1,2 @@
+# expect: 2:15: invalid field "_x" in A: use camelCase ([a-z][A-Za-z0-9]*) and avoid C++ reserved words
+component A { _x: f32 }

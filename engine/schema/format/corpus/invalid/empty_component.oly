@@ -1,0 +1,2 @@
+# expect: 2:11: component A has no fields: use tag A
+component A {}

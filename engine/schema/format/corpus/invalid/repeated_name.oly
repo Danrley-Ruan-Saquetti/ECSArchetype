@@ -1,0 +1,3 @@
+# expect: 3:7: repeated name "Dup"
+component Dup { x: f32 }
+event Dup { y: f32 }

@@ -1,0 +1,2 @@
+# expect: 3:1: expected "," or "}" after field x, found end of file
+component A { x: f32

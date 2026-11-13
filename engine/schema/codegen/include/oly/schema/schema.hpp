@@ -8,11 +8,23 @@
 #include <vector>
 
 namespace oly::schema {
-  enum class ScalarType : uint8_t { F32, F64, I8, U8, I16, U16, I32, U32, Entity };
+  enum class ScalarType : uint8_t { F32,
+                                    F64,
+                                    I8,
+                                    U8,
+                                    I16,
+                                    U16,
+                                    I32,
+                                    U32,
+                                    Entity };
 
-  enum class ActionKind : uint8_t { Button, Axis2d, Pointer };
+  enum class ActionKind : uint8_t { Button,
+                                    Axis2d,
+                                    Pointer };
 
-  enum class TypeKind : uint8_t { Component, Tag, Event };
+  enum class TypeKind : uint8_t { Component,
+                                  Tag,
+                                  Event };
 
   // 1-based; the column counts bytes.
   struct SourceLocation {
@@ -67,11 +79,15 @@ namespace oly::schema {
 
   // A syntax or validation error in a .oly file; what() is "<file>:<line>:<column>: <message>".
   class SchemaError : public std::runtime_error {
-  public:
+   public:
     SchemaError(std::string_view fileName, SourceLocation location, std::string_view message);
   };
 
   // The .oly spelling: "f32", "entity", "button", "axis2d".
   std::string_view scalarTypeName(ScalarType type);
   std::string_view actionKindName(ActionKind kind);
+
+  // Parses, validates, lays out and hashes a .oly source. `fileName` prefixes the errors and is kept in the Schema.
+  // Throws SchemaError at the first error.
+  Schema parseSchema(std::string_view source, std::string_view fileName);
 }
