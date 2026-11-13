@@ -46,18 +46,18 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(output, "")
 
     def test_undeclared_include_fails(self):
-        self.write("engine/runtime/bridge/src/x.cpp", '#include <cstdint>\n\n#include "oly/core/assert.hpp"\n')
+        self.write("engine/runtime/capi/src/x.cpp", '#include <cstdint>\n\n#include "oly/core/assert.hpp"\n')
 
-        code, output = self.run_check([("ecs", "engine/runtime/ecs", []), ("bridge", "engine/runtime/bridge", ["ecs"])])
+        code, output = self.run_check([("ecs", "engine/runtime/ecs", []), ("capi", "engine/runtime/capi", ["ecs"])])
 
         self.assertEqual(code, 1)
-        self.assertIn("engine/runtime/bridge/src/x.cpp:3:", output)
+        self.assertIn("engine/runtime/capi/src/x.cpp:3:", output)
         self.assertIn("without declaring core", output)
 
     def test_detail_from_outside_fails(self):
-        self.write("engine/runtime/bridge/src/x.cpp", '#include "oly/ecs/detail/table.hpp"\n')
+        self.write("engine/runtime/capi/src/x.cpp", '#include "oly/ecs/detail/table.hpp"\n')
 
-        code, output = self.run_check([("ecs", "engine/runtime/ecs", []), ("bridge", "engine/runtime/bridge", ["ecs"])])
+        code, output = self.run_check([("ecs", "engine/runtime/ecs", []), ("capi", "engine/runtime/capi", ["ecs"])])
 
         self.assertEqual(code, 1)
         self.assertIn("oly/ecs/detail is internal to module ecs", output)
@@ -74,8 +74,8 @@ class CheckBoundariesTest(unittest.TestCase):
         self.write("engine/fixture/systems.cpp", '#include "oly/core/assert.hpp"\n')
 
         code, output = self.run_check(
-            [("core", "engine/runtime/core", []), ("ecs", "engine/runtime/ecs", ["core"]), ("bridge", "engine/runtime/bridge", ["ecs"])],
-            games=[("fixture_game", "engine/fixture", ["ecs", "bridge"])],
+            [("core", "engine/runtime/core", []), ("ecs", "engine/runtime/ecs", ["core"]), ("capi", "engine/runtime/capi", ["ecs"])],
+            games=[("fixture_game", "engine/fixture", ["ecs", "capi"])],
         )
 
         self.assertEqual(code, 1)

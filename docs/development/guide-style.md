@@ -14,7 +14,7 @@ The public API is:
 | `@oly/client` exports | `engine/packages/client/src/index.ts` |
 | C++ public headers | `engine/runtime/<module>/include/oly/<module>/*.hpp`, except `detail/` |
 | registration macros | `OLY_SYSTEM`, `OLY_HANDLER`, `OLY_STATE_HOOK` |
-| the C API | `engine/runtime/bridge/include/oly/bridge/c_api.hpp` |
+| the C API | `engine/runtime/capi/include/oly/capi/c_api.hpp` |
 | the schema language and the generated C++ | `engine/packages/core/src/schema.ts`, `engine/tools/codegen/` |
 | how a game is built | `cmake/OlyGame.cmake` (`oly_add_game`), the `game`, `serve` and `games-test` targets of the `Makefile` |
 | behaviour a game relies on | loop order, deferred vs. direct changes, event rounds, scope rules, validity of views, error messages |

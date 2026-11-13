@@ -24,7 +24,7 @@ A new test in this repository has steps that do not show up in the code it tests
 |---|---|
 | Correct behavior of a module that already has a suite | `TEST_CASE` in the module's existing suite |
 | New module or feature, with no suite representing it | New suite (new file in `tests/`) |
-| A use forbidden by the contract aborts with `OLY_ASSERT` | Death case in the module's `contract_death.cpp` (`ecs` or `bridge`) |
+| A use forbidden by the contract aborts with `OLY_ASSERT` | Death case in the module's `contract_death.cpp` (`ecs` or `capi`) |
 | An exception from user code crosses the ECS without corrupting state | `CHECK_THROWS` in a doctest suite |
 
 Why a contract violation cannot be a `TEST_CASE`: the default `OLY_ASSERT` handler calls `std::abort()`, which takes down the whole suite executable. Besides, `OLY_ASSERT` disappears with `OLY_ENABLE_ASSERTS=0`, and the doctest suites also run in the `release` preset. So a `TEST_CASE` can never depend on an assert firing. Death cases only exist with asserts enabled (`OLY_ENABLE_ASSERTS`). `contract_death` is only compiled when asserts are enabled, and that is why these cases live there.
@@ -94,7 +94,7 @@ Only the `TEST_CASE`; the wiring already exists. Check that the file appears in 
 
 ## 2c. Death case
 
-`<module>_contract_death` (`ecs_contract_death`, `bridge_contract_death`) is an executable without doctest. Each case is a command-line argument. The installed handler checks whether the assert message contains all the required substrings: it exits with 0 if it does and with 2 if any is missing. If the case ends without an assert, `main` returns 1. A new case touches **three** places, and all three must use the same name:
+`<module>_contract_death` (`ecs_contract_death`, `capi_contract_death`) is an executable without doctest. Each case is a command-line argument. The installed handler checks whether the assert message contains all the required substrings: it exits with 0 if it does and with 2 if any is missing. If the case ends without an assert, `main` returns 1. A new case touches **three** places, and all three must use the same name:
 
 1. **The function**, inside the anonymous `namespace` of `engine/runtime/<module>/tests/contract_death.cpp`, in `camelCase`, with no return value and no parameters:
 

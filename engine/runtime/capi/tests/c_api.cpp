@@ -1,4 +1,4 @@
-#include "oly/bridge/c_api.hpp"
+#include "oly/capi/c_api.hpp"
 
 #include <doctest/doctest.h>
 
@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "components.hpp"
-#include "oly/bridge/world.hpp"
+#include "oly/capi/world.hpp"
 #include "test_events.hpp"
 
 namespace {
@@ -34,7 +34,7 @@ namespace {
     }
 
     oly::ecs::World& ecs() {
-      return oly::bridge::worldOf(world);
+      return oly::capi::worldOf(world);
     }
   };
 }
@@ -191,7 +191,7 @@ TEST_CASE("worldOf gives access to the handle's World") {
   WorldFixture fixture;
   OlyEntity handle = fixture.spawn();
 
-  CHECK(oly::bridge::worldOf(fixture.world).isAlive(oly::ecs::Entity{handle.index, handle.generation}));
+  CHECK(oly::capi::worldOf(fixture.world).isAlive(oly::ecs::Entity{handle.index, handle.generation}));
 }
 
 TEST_CASE("repeated iteration reuses the slot") {
@@ -212,8 +212,8 @@ TEST_CASE("repeated iteration reuses the slot") {
 
 TEST_CASE("schema events exposed by the C API") {
   CHECK(olySchemaEventCount() == 1);
-  CHECK(olySchemaEventSize(0) == sizeof(BridgeTestEvent));
-  CHECK(olySchemaEventAlignment(0) == alignof(BridgeTestEvent));
+  CHECK(olySchemaEventSize(0) == sizeof(CapiTestEvent));
+  CHECK(olySchemaEventAlignment(0) == alignof(CapiTestEvent));
 }
 
 TEST_CASE("schema actions exposed by the C API") {

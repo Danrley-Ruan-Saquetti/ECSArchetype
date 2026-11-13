@@ -11,7 +11,7 @@ namespace oly::app {
   class Engine;
 }
 
-namespace oly::bridge {
+namespace oly::capi {
   struct SchemaEvent {
     std::string_view name;
     uint32_t size;

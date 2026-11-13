@@ -37,7 +37,7 @@ $DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<file>.json --nam
 
 ```sh
 $WC make ts                 # npm ci (if needed) + tsc -b in every workspace
-$WC make games-test         # ts + ctest in the wasm-games preset (ECS in WASM, bridge, TS tests)
+$WC make games-test         # ts + ctest in the wasm-games preset (ECS in WASM, capi, TS tests)
 $WC make game G=arena       # assembles build/wasm-games-release/web/arena/ (index.html, esbuild's main.js, arena_game.mjs/.wasm)
 $WC sh -c 'make ts && make test PRESET=wasm-games-release T=^ts\.'   # Release: only the TS validations catch the errors
 $WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/<file>.json --commit $(git rev-parse --short HEAD)

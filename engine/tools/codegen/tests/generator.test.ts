@@ -31,7 +31,8 @@ test("registry with hash and ids in order", () => {
 
   assert.ok(registry.includes(`0x${schema.hash.toString(16)}u`));
   assert.match(registry, /oly::ecs::componentId<P>\(\),\s*oly::ecs::componentId<T>\(\)/);
-  assert.match(registry, /namespace oly::bridge/);
+  assert.match(registry, /namespace oly::capi/);
+  assert.match(registry, /#include "oly\/capi\/schema_registry.hpp"/);
 });
 
 const Hit = event("Hit", { target: "entity", amount: "f32" });

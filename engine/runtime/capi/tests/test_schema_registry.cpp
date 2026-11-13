@@ -1,9 +1,9 @@
 #include "components.hpp"
 #include "oly/app/engine.hpp"
-#include "oly/bridge/schema_registry.hpp"
+#include "oly/capi/schema_registry.hpp"
 #include "test_events.hpp"
 
-namespace oly::bridge {
+namespace oly::capi {
   uint32_t schemaHash() noexcept {
     return 0x1234u;
   }
@@ -15,24 +15,24 @@ namespace oly::bridge {
 
   std::span<const SchemaEvent> schemaEvents() {
     static const SchemaEvent events[] = {
-      {"BridgeTestEvent", sizeof(BridgeTestEvent), alignof(BridgeTestEvent), [](oly::app::Engine& engine) { engine.declareEvent<BridgeTestEvent>("BridgeTestEvent"); }},
+      {"CapiTestEvent", sizeof(CapiTestEvent), alignof(CapiTestEvent), [](oly::app::Engine& engine) { engine.declareEvent<CapiTestEvent>("CapiTestEvent"); }},
     };
     return events;
   }
 
   std::span<const SchemaAction> schemaActions() {
     static const SchemaAction actions[] = {
-      {"bridgeJump", oly::input::ActionKind::Button},
-      {"bridgeMove", oly::input::ActionKind::Axis2d},
-      {"bridgeAim", oly::input::ActionKind::Pointer},
+      {"capiJump", oly::input::ActionKind::Button},
+      {"capiMove", oly::input::ActionKind::Axis2d},
+      {"capiAim", oly::input::ActionKind::Pointer},
     };
     return actions;
   }
 
   std::span<const SchemaState> schemaStates() {
     static const SchemaState states[] = {
-      {"bridgeMenu"},
-      {"bridgePlaying"},
+      {"capiMenu"},
+      {"capiPlaying"},
     };
     return states;
   }

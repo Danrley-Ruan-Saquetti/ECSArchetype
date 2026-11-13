@@ -25,7 +25,7 @@ Three rules guide the design:
    @oly/client: rAF, visibility,   │    app:    Engine (loop, phases, pause,
                 keyboard and mouse │            events, schedule, states)
    @oly/core:   schema, World,     │    input:  ActionMap
-                Engine, contexts,  │    bridge: C API oly*, callback
+                Engine, contexts,  │    capi: C API oly*, callback
                 copy-free views    │    the game's C++ systems and handlers
  ──────────────── C API (extern "C") + 1 imported JS function ────────────
  ECS: component → entity → table → archetype → query / command_buffer → world

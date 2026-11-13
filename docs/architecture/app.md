@@ -36,7 +36,7 @@ fixed step:
 
 ## Systems and contexts
 
-A system is a function pointer plus `userData`. That way `app` does not know about TS: `bridge` registers a TS system as an ordinary C++ function ([bridge.md](bridge.md)).
+A system is a function pointer plus `userData`. That way `app` does not know about TS: `capi` registers a TS system as an ordinary C++ function ([bridge.md](bridge.md)).
 
 Registration: `addSystem(phase, name, function)` or, by name, the `OLY_SYSTEM(name)` macro, which TS adds with `addNativeSystem`. C++ and TS systems mix in the same phase, in registration order.
 

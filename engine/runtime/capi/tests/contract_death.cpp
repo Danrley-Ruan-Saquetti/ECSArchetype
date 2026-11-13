@@ -6,13 +6,13 @@
 #include <span>
 #include <vector>
 
-#include "oly/bridge/c_api.hpp"
-#include "oly/bridge/engine_api.hpp"
-#include "oly/bridge/schema_registry.hpp"
+#include "oly/capi/c_api.hpp"
+#include "oly/capi/engine_api.hpp"
+#include "oly/capi/schema_registry.hpp"
 #include "oly/core/assert.hpp"
 #include "oly/ecs/component.hpp"
 
-namespace oly::bridge {
+namespace oly::capi {
   uint32_t schemaHash() noexcept {
     return 0;
   }
@@ -159,7 +159,7 @@ int main(int argumentCount, char** arguments) {
   };
 
   if (argumentCount != 2) {
-    std::fprintf(stderr, "usage: bridge_contract_death <case>\n");
+    std::fprintf(stderr, "usage: capi_contract_death <case>\n");
     return 64;
   }
 

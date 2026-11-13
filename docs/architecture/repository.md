@@ -11,7 +11,7 @@ engine/
     ecs/          the archetype ECS
     input/        input actions (ActionMap)
     app/          the Engine: loop, systems, events, schedule, states
-    bridge/       C API oly*, OlyWorld, OlyEngine, schema registration
+    capi/         C API oly*, OlyWorld, OlyEngine, schema registration
   packages/       TS, one npm package per folder
     core/         @oly/core: the engine on the TS side, no DOM
     client/       @oly/client: browser layer

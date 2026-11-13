@@ -8,8 +8,8 @@ graph BT
   input --> core
   app --> ecs
   app --> input
-  bridge --> app
-  games["games (oly_add_game)"] --> bridge
+  capi --> app
+  games["games (oly_add_game)"] --> capi
   codegen["@oly/codegen"] --> tscore["@oly/core"]
   client["@oly/client"] --> tscore
   testing["@oly/testing"] --> tscore
@@ -23,15 +23,15 @@ graph BT
 | `ecs` | `oly::ecs` | `core` | library |
 | `input` | `oly::input` | `core` | library |
 | `app` | `oly::app` | `input ecs core` | library |
-| `bridge` | `oly::bridge` | `app input ecs core` | `OBJECT` |
+| `capi` | `oly::capi` | `app input ecs core` | `OBJECT` |
 
-`bridge` is `OBJECT` because, in a static library, the linker would discard the unreferenced members and take the `EMSCRIPTEN_KEEPALIVE` functions with them.
+`capi` is `OBJECT` because, in a static library, the linker would discard the unreferenced members and take the `EMSCRIPTEN_KEEPALIVE` functions with them.
 
 ## How the boundaries are enforced
 
 The boundaries do not hold by convention alone. Three mechanisms enforce them:
 
-1. **The build.** `oly_add_module(NAME <m> DEPENDS <...>)` links only the declared modules. `ecs` does not link `bridge`, so an include of `bridge` inside the ECS does not compile.
+1. **The build.** `oly_add_module(NAME <m> DEPENDS <...>)` links only the declared modules. `ecs` does not link `capi`, so an include of `capi` inside the ECS does not compile.
 2. **The `oly.lint.boundaries` lint** (`tools/check_boundaries.py`, runs in ctest, with a self-test in `oly.lint.boundaries_selftest`). It rejects:
    - `#include "oly/<x>/..."` in a module or game that did not declare `<x>` in `DEPENDS` (dependencies are `PUBLIC` and transitive, so only the lint catches the undeclared direct include);
    - `oly/<x>/detail/` included outside `engine/runtime/<x>/` (the module's own tests and benchmarks may);
@@ -46,5 +46,5 @@ Why `detail/` and a lint, and not pimpl: the hot-path templates (`Query<Ts...>::
 
 - Game concepts (enemy, coin, dash) never enter `engine/`. Game names only appear in `engine/testing/fixture/` and in `games/`.
 - The same verb holds across the three surfaces (C++, C API, TS): `spawn`, `destroy`, `add`, `remove`, `has`, `get`, `query`, `eachBlock`. The full glossary is in [glossary.md](glossary.md).
-- The `oly` prefix appears only in the C API (`oly*`, `OlyWorld`, `OLY_API`) and in what is internal to the bridge. `extern "C"` symbols live in a single global namespace of the WASM module, together with libc and the game's exports; the prefix avoids collisions. The C++ (`oly::ecs::World`) and TS (`World`) APIs do not repeat `oly`.
+- The `oly` prefix appears only in the C API (`oly*`, `OlyWorld`, `OLY_API`) and in what is internal to `capi`. `extern "C"` symbols live in a single global namespace of the WASM module, together with libc and the game's exports; the prefix avoids collisions. The C++ (`oly::ecs::World`) and TS (`World`) APIs do not repeat `oly`.
 - The `ById` suffix marks the variant by `ComponentId` at run time: `addById`, `removeById`, `hasById`, `getById`, `tryGetById`, `queryById`.

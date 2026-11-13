@@ -1,4 +1,4 @@
-#include "oly/bridge/engine_api.hpp"
+#include "oly/capi/engine_api.hpp"
 
 #include <doctest/doctest.h>
 
@@ -10,8 +10,8 @@
 #include "oly/app/handler.hpp"
 #include "oly/app/system.hpp"
 #include "oly/app/task_context.hpp"
-#include "oly/bridge/c_api.hpp"
-#include "oly/bridge/engine.hpp"
+#include "oly/capi/c_api.hpp"
+#include "oly/capi/engine.hpp"
 #include "test_events.hpp"
 
 namespace {
@@ -31,7 +31,7 @@ namespace {
     g_invocations.emplace_back(engine, id);
     g_kinds.push_back(kind);
     g_eventCounts.push_back(eventCount);
-    const auto* batch = static_cast<const BridgeTestEvent*>(events);
+    const auto* batch = static_cast<const CapiTestEvent*>(events);
     for (uint32_t index = 0; batch != nullptr && index < eventCount; ++index) {
       g_values.push_back(batch[index].value);
     }
@@ -57,7 +57,7 @@ namespace {
 
   struct EngineFixture {
     OlyEngine* engine = olyEngineCreate(60.0, 5, 16);
-    oly::bridge::ScriptInvoker previous = oly::bridge::setScriptInvoker(&recordingInvoker);
+    oly::capi::ScriptInvoker previous = oly::capi::setScriptInvoker(&recordingInvoker);
     double now = 0.0;
     bool primed = false;
 
@@ -75,7 +75,7 @@ namespace {
     }
 
     ~EngineFixture() {
-      oly::bridge::setScriptInvoker(previous);
+      oly::capi::setScriptInvoker(previous);
       olyEngineDestroy(engine);
     }
 
@@ -111,7 +111,7 @@ namespace {
   }
 
   void emitValue(OlyEngine* engine, uint32_t value) {
-    BridgeTestEvent event{value, 0.0f};
+    CapiTestEvent event{value, 0.0f};
     olyEngineEmit(engine, 0, &event);
   }
 
@@ -134,23 +134,23 @@ namespace {
   }
 }
 
-OLY_SYSTEM(bridgeTestNative) {
+OLY_SYSTEM(capiTestNative) {
   g_order.push_back("n");
 }
 
-OLY_HANDLER(bridgeTestNativeHandler, BridgeTestEvent) {
+OLY_HANDLER(capiTestNativeHandler, CapiTestEvent) {
   g_order.push_back("n");
-  for (const BridgeTestEvent& event : events) {
+  for (const CapiTestEvent& event : events) {
     g_values.push_back(event.value);
   }
 }
 
-OLY_HANDLER(bridgeTestOtherHandler, BridgeOtherEvent) {}
+OLY_HANDLER(capiTestOtherHandler, CapiOtherEvent) {}
 
 TEST_CASE("script system is called by the invoker, in order with the native ones") {
   EngineFixture fixture;
   const uint32_t first = olyEngineAddScriptSystem(fixture.engine, 1, "s1");
-  const uint32_t native = olyEngineAddNativeSystem(fixture.engine, 1, "bridgeTestNative");
+  const uint32_t native = olyEngineAddNativeSystem(fixture.engine, 1, "capiTestNative");
   const uint32_t second = olyEngineAddScriptSystem(fixture.engine, 1, "s2");
 
   fixture.step();
@@ -213,8 +213,8 @@ TEST_CASE("olyEngineWorld works with the existing World API") {
 TEST_CASE("schema events are declared at creation, in order") {
   EngineFixture fixture;
 
-  CHECK(oly::bridge::engineOf(fixture.engine).eventTypeOf(oly::app::eventKey<BridgeTestEvent>()) == 0);
-  CHECK(oly::bridge::engineOf(fixture.engine).eventTypeCount() == 1);
+  CHECK(oly::capi::engineOf(fixture.engine).eventTypeOf(oly::app::eventKey<CapiTestEvent>()) == 0);
+  CHECK(oly::capi::engineOf(fixture.engine).eventTypeCount() == 1);
 }
 
 TEST_CASE("script handler receives kind, id and the batch") {
@@ -236,7 +236,7 @@ TEST_CASE("script handler receives kind, id and the batch") {
 TEST_CASE("script handlers and a native one by name in registration order") {
   EngineFixture fixture;
   olyEngineAddScriptHandler(fixture.engine, 0, "s1");
-  const uint32_t native = olyEngineAddNativeHandler(fixture.engine, 0, "bridgeTestNativeHandler");
+  const uint32_t native = olyEngineAddNativeHandler(fixture.engine, 0, "capiTestNativeHandler");
   olyEngineAddScriptHandler(fixture.engine, 0, "s2");
   emitValue(fixture.engine, 1);
 
@@ -262,13 +262,13 @@ TEST_CASE("unknown handler name and handler of another type") {
   EngineFixture fixture;
 
   CHECK(olyEngineAddNativeHandler(fixture.engine, 0, "doesNotExist") == OLY_INVALID_HANDLER);
-  CHECK(olyEngineAddNativeHandler(fixture.engine, 0, "bridgeTestOtherHandler") == OLY_HANDLER_TYPE_MISMATCH);
+  CHECK(olyEngineAddNativeHandler(fixture.engine, 0, "capiTestOtherHandler") == OLY_HANDLER_TYPE_MISMATCH);
 }
 
 TEST_CASE("olyEngineEmit inside a script system is dispatched in the same step") {
   EngineFixture fixture;
   olyEngineAddScriptSystem(fixture.engine, 1, "emitter");
-  olyEngineAddNativeHandler(fixture.engine, 0, "bridgeTestNativeHandler");
+  olyEngineAddNativeHandler(fixture.engine, 0, "capiTestNativeHandler");
   g_action = emitTwoFromScript;
 
   fixture.step();
@@ -335,29 +335,29 @@ namespace {
   }
 }
 
-OLY_SYSTEM(bridgeTestReadJump) {
+OLY_SYSTEM(capiTestReadJump) {
   g_sawJumpPressed = context.actions().button(oly::input::ButtonAction{0}).pressed;
 }
 
 TEST_CASE("schema actions are declared at creation, in order") {
   EngineFixture fixture;
-  const oly::input::ActionMap& actions = oly::bridge::engineOf(fixture.engine).actions();
+  const oly::input::ActionMap& actions = oly::capi::engineOf(fixture.engine).actions();
 
   CHECK(actions.actionCount() == 3);
-  CHECK(actions.name(0) == "bridgeJump");
+  CHECK(actions.name(0) == "capiJump");
   CHECK(actions.kind(2) == oly::input::ActionKind::Pointer);
 }
 
 TEST_CASE("olyEngineCreate declares the schema states in order") {
   EngineFixture fixture;
 
-  CHECK(oly::bridge::engineOf(fixture.engine).stateCount() == 2);
+  CHECK(oly::capi::engineOf(fixture.engine).stateCount() == 2);
 }
 
 TEST_CASE("bind, press and read through the snapshot") {
   ActionFixture fixture;
   g_sawJumpPressed = false;
-  olyEngineAddNativeSystem(fixture.engine, 1, "bridgeTestReadJump");
+  olyEngineAddNativeSystem(fixture.engine, 1, "capiTestReadJump");
 
   olyEngineBindButton(fixture.engine, 0, SpaceUsage);
   olyEngineButtonDown(fixture.engine, SpaceUsage);
@@ -467,7 +467,7 @@ TEST_CASE("script and native tasks in due order") {
   EngineFixture fixture;
   OlyTaskHandle task{};
   olyEngineScheduleScriptTask(fixture.engine, 0.0, 0.0, 1, &task);
-  oly::bridge::engineOf(fixture.engine).schedule().after(1.0 / 60, nativeTask);
+  oly::capi::engineOf(fixture.engine).schedule().after(1.0 / 60, nativeTask);
   olyEngineScheduleScriptTask(fixture.engine, 2.0 / 60, 0.0, 2, &task);
 
   for (int step = 0; step <= 3; ++step) {
@@ -478,7 +478,7 @@ TEST_CASE("script and native tasks in due order") {
   CHECK(fixture.invariantsHold());
 }
 
-OLY_STATE_HOOK(bridgeNamedEnter) {
+OLY_STATE_HOOK(capiNamedEnter) {
   g_order.push_back("ne");
 }
 
@@ -520,7 +520,7 @@ TEST_CASE("script hook: OLY_SCRIPT_STATE_HOOK with the hookId and the other stat
 
 TEST_CASE("native hook by name and OLY_INVALID_STATE_HOOK for an unknown name") {
   EngineFixture fixture;
-  const uint32_t named = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "bridgeNamedEnter");
+  const uint32_t named = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "capiNamedEnter");
   const uint32_t unknown = olyEngineAddNativeStateHook(fixture.engine, OLY_STATE_ENTER, MenuState, "doesNotExist");
   olyEngineRequestState(fixture.engine, MenuState);
 

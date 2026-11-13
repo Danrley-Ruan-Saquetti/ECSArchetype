@@ -33,7 +33,7 @@ You write the schema and the gameplay. The build turns them into one WASM module
 ```
 games/<game>/schema.ts ──tsc──► schema.js ──oly-codegen──► schema.generated.hpp (C++ structs, ids)
 games/<game>/native/*.cpp  (your C++ systems, optional) ──┐
-engine (ecs + app + input + bridge) ──────────────────────┴──emcc──► <game>_game.mjs + .wasm
+engine (ecs + app + input + capi) ────────────────────────┴──emcc──► <game>_game.mjs + .wasm
 games/<game>/src/*.ts  (your TS systems and the shell) ──tsc + esbuild──► main.js
 ```
 
@@ -105,7 +105,7 @@ file(GLOB nativeSources CONFIGURE_DEPENDS native/*.cpp)
 oly_add_game(hello_game
   SCHEMA_JS ${CMAKE_CURRENT_SOURCE_DIR}/dist/schema.js
   SOURCES ${nativeSources}
-  DEPENDS ecs app bridge)
+  DEPENDS ecs app capi)
 ```
 
 The target name must be `<folder>_game`: `make game G=hello` looks for `hello_game.mjs`.

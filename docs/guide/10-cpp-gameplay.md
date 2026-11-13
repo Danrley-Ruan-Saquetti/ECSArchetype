@@ -248,7 +248,7 @@ Today there is no native window or renderer: a C++-only host is a test, a tool o
 
 ## Advanced: your own exported C functions
 
-A game can export extra `extern "C"` functions with `OLY_API`. From an `OlyWorld*` (the C API handle), `oly::bridge::worldOf(world)` gives the `oly::ecs::World&` behind it, and `oly::bridge::engineOf(engine)` gives the `Engine&`. The engine's test fixture (`engine/testing/fixture/systems.cpp`) shows this. Calling such functions from TS needs the module internals (`@oly/core/internal`), which are reserved for the engine; in game code, prefer `OLY_SYSTEM`, `OLY_HANDLER` and `OLY_STATE_HOOK`.
+A game can export extra `extern "C"` functions with `OLY_API`. From an `OlyWorld*` (the C API handle), `oly::capi::worldOf(world)` gives the `oly::ecs::World&` behind it, and `oly::capi::engineOf(engine)` gives the `Engine&`. The engine's test fixture (`engine/testing/fixture/systems.cpp`) shows this. Calling such functions from TS needs the module internals (`@oly/core/internal`), which are reserved for the engine; in game code, prefer `OLY_SYSTEM`, `OLY_HANDLER` and `OLY_STATE_HOOK`.
 
 ## Next
 

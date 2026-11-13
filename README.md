@@ -4,7 +4,7 @@ Oly is a game engine in C++20 and TypeScript. The core is an archetype-based, si
 
 It is a study project. The goal is to measure how data representation (SoA, archetypes, aligned columns) and architectural decisions affect execution cost. That is why every performance target has a benchmark and a recorded result.
 
-> **Status:** in development. The ECS, the C/WASM bridge and the base TypeScript packages already work and have tests. There is no rendering, input, audio or example game yet. The packages are not published on npm yet. The API may change.
+> **Status:** in development. The ECS, the C API for WASM and the base TypeScript packages already work and have tests. There is no rendering, input, audio or example game yet. The packages are not published on npm yet. The API may change.
 
 ## What already exists
 
@@ -12,7 +12,7 @@ It is a study project. The goal is to measure how data representation (SoA, arch
 |---|---|---|
 | `oly::core` | `engine/runtime/core` | Base utilities: `OLY_ASSERT`, alignment, `small_map`, type name. |
 | `oly::ecs` | `engine/runtime/ecs` | The ECS: `World`, `Entity`, cached queries, `CommandBuffer`, invariant diagnostics. |
-| `oly::bridge` | `engine/runtime/bridge` | C API (`oly*`) that exposes the ECS to WebAssembly. |
+| `oly::capi` | `engine/runtime/capi` | C API (`oly*`) that exposes the ECS to WebAssembly. |
 | `@oly/core` | `engine/packages/core` | TypeScript API: schema, `World`, `Query`, `Block`. |
 | `@oly/client` | `engine/packages/client` | Loads the WASM module by URL in the browser. |
 | `@oly/codegen` | `engine/tools/codegen` | Generates the C++ structs from the TypeScript schema. |

@@ -17,7 +17,7 @@ Each layer uses only the ones below it. Public headers: `world`, `entity`, `comp
 | `detail/table` | SoA storage: a single `count` and `capacity` for all columns, each column aligned to 64 B, ×2 growth. It does not know about alive entities, records or queries. `pushUninit` leaves a dead row; `fillHole(r)` does a swap-remove and returns the displaced entity. |
 | `detail/archetype` | Owns a `Table`. Holds `signature` (with the tags) and `columnTypes` (only components with data); mixing the two up is the classic source of a wrong column. Memoized `±ComponentId` edges carry the precomputed `sourceToDestination` column mapping. Archetypes are never removed, so pointers are stable. |
 | `query` | `Query<Ts...>` cached by the `World`, with incremental matching. `With<...>` and `Without<...>` filters are part of the cache key. `each`, `eachBlock`, `single`, `trySingle`. |
-| `query_by_id` | `QueryById`: the same query, type-erased through `ComponentId` lists (`read`, `write`, `with`, `without`). It is what the bridge and TS use. |
+| `query_by_id` | `QueryById`: the same query, type-erased through `ComponentId` lists (`read`, `write`, `with`, `without`). It is what `capi` and TS use. |
 | `command_buffer` | Records deferred structural changes. `spawn()` reserves the index immediately. `flush` groups by entity and makes a single transition per entity to the final archetype. |
 | `world` | Sole owner of the records and the only one that calls `fillHole`, so fixing the record of the displaced entity lives in one place. |
 | `diagnostics` | Free functions: `checkInvariants`, `stats`, `signatureLookupCount`, `archetypeCount`. |

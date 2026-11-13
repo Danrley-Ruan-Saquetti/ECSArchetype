@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "oly/bridge/c_api.hpp"
+#include "oly/capi/c_api.hpp"
 
 struct OlyEngine;
 
@@ -41,8 +41,8 @@ struct OlyActionState {
 
 extern "C" {
 // fixedHz, maxStepsPerFrame and maxEventRounds must be positive (OLY_ASSERT). Declares, in schema order, all
-// the events from oly::bridge::schemaEvents(): the event's index in the schema is its event type (eventType).
-// After the events and the actions, declares the states from oly::bridge::schemaStates(): the state's index in the schema is
+// the events from oly::capi::schemaEvents(): the event's index in the schema is its event type (eventType).
+// After the events and the actions, declares the states from oly::capi::schemaStates(): the state's index in the schema is
 // its StateId.
 OLY_API OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame, uint32_t maxEventRounds);
 OLY_API void olyEngineDestroy(OlyEngine* engine);
@@ -105,7 +105,7 @@ OLY_API void olyContextPersist(OlyEngine* engine, uint32_t index, uint32_t gener
 // 1 if the task was pending and lost its scope; 0 if it is not pending.
 OLY_API int32_t olyEnginePersistTask(OlyEngine* engine, uint32_t slot, uint32_t generation);
 
-// Actions: olyEngineCreate declares, after the events, all those from oly::bridge::schemaActions(); the action's index in the
+// Actions: olyEngineCreate declares, after the events, all those from oly::capi::schemaActions(); the action's index in the
 // schema is its ActionId (action). `button` is a HID usage (page in the high 16 bits). Binding checks the range
 // and the kind of the action (OLY_ASSERT); clearing checks only the range. Valid inside and outside olyEngineFrame.
 OLY_API void olyEngineBindButton(OlyEngine* engine, uint32_t action, uint32_t button);

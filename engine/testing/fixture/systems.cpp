@@ -4,9 +4,9 @@
 #include "oly/app/state_context.hpp"
 #include "oly/app/system.hpp"
 #include "oly/app/task_context.hpp"
-#include "oly/bridge/engine.hpp"
-#include "oly/bridge/c_api.hpp"
-#include "oly/bridge/world.hpp"
+#include "oly/capi/c_api.hpp"
+#include "oly/capi/engine.hpp"
+#include "oly/capi/world.hpp"
 #include "oly/ecs/entity.hpp"
 #include "schema.generated.hpp"
 
@@ -29,7 +29,7 @@ namespace {
 
 extern "C" {
 OLY_API void fixtureMove(OlyWorld* world, float deltaTime) {
-  oly::bridge::worldOf(world).query<Position, const Velocity>().each([deltaTime](Position& position, const Velocity& velocity) {
+  oly::capi::worldOf(world).query<Position, const Velocity>().each([deltaTime](Position& position, const Velocity& velocity) {
     position.x += velocity.x * deltaTime;
     position.y += velocity.y * deltaTime;
   });
@@ -37,7 +37,7 @@ OLY_API void fixtureMove(OlyWorld* world, float deltaTime) {
 
 OLY_API double fixtureSumPositionX(OlyWorld* world) {
   double sum = 0;
-  oly::bridge::worldOf(world).query<const Position>().each([&sum](const Position& position) { sum += position.x; });
+  oly::capi::worldOf(world).query<const Position>().each([&sum](const Position& position) { sum += position.x; });
 
   return sum;
 }
@@ -54,7 +54,7 @@ OLY_API uint32_t fixtureTakeFirePressCount() {
 }
 
 OLY_API void fixtureScheduleDigit(OlyEngine* engine, double delaySeconds, uint32_t index, uint32_t generation, uint32_t digit) {
-  oly::bridge::engineOf(engine).schedule().after(delaySeconds, appendDigitTask, AppendDigit{oly::ecs::Entity{index, generation}, digit});
+  oly::capi::engineOf(engine).schedule().after(delaySeconds, appendDigitTask, AppendDigit{oly::ecs::Entity{index, generation}, digit});
 }
 
 OLY_API double fixtureTakePingSum() {
@@ -65,7 +65,7 @@ OLY_API double fixtureTakePingSum() {
 }
 
 OLY_API double fixtureMixedChecksum(OlyWorld* world, uint32_t index, uint32_t generation) {
-  const Mixed& mixed = oly::bridge::worldOf(world).get<Mixed>(oly::ecs::Entity{index, generation});
+  const Mixed& mixed = oly::capi::worldOf(world).get<Mixed>(oly::ecs::Entity{index, generation});
 
   return mixed.a + mixed.b + mixed.c + mixed.owner.index + mixed.owner.generation;
 }

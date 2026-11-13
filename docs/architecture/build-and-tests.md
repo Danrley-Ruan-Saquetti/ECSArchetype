@@ -22,7 +22,7 @@ There is no C++ toolchain on the host. Everything runs in Docker Compose:
 | `relwithdebinfo` | benchmarks for `perf` |
 | `native-clang`, `native-clang-32`, `native-clang-32-scalar`, `native-clang-avx2`, `wasm-scalar`, `wasm-simd` | ladder of the native × WASM cost study |
 | `wasm-debug` | ECS tests in WASM |
-| `wasm-games`, `wasm-games-release` | games, `bridge`, TS tests |
+| `wasm-games`, `wasm-games-release` | games, `capi`, TS tests |
 
 Each rung of the cost study ladder changes a single factor (compiler, pointer width, WASM target, SIMD).
 
@@ -42,7 +42,7 @@ CMake options: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR
 ## Tests
 
 - **One doctest suite = one executable**, registered with `oly_add_test(MODULE <m> NAME <suite> SOURCES ... [SUPPORT <dirs>])` in the module's `tests/CMakeLists.txt`. A new test file must be added there; the sources in `src/*.cpp` come in by glob.
-- **Names in ctest** carry the module prefix: `core.*`, `ecs.*`, `input.*`, `app.*`, `bridge.*`, `<module>.contract_death.<case>`, `ts.<package>.<suite>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`, `ts.arena.smoke`) and `oly.lint.boundaries` / `oly.lint.boundaries_selftest`.
+- **Names in ctest** carry the module prefix: `core.*`, `ecs.*`, `input.*`, `app.*`, `capi.*`, `<module>.contract_death.<case>`, `ts.<package>.<suite>` (`ts.core.unit`, `ts.codegen.unit`, `ts.client.unit`, `ts.testing.wasm`, `ts.arena.smoke`) and `oly.lint.boundaries` / `oly.lint.boundaries_selftest`.
 - **Death tests**: registered with `oly_add_contract_death(MODULE <m> SOURCE <file> CASES ...)`. Each case is a command-line argument. An assert handler checks substrings of the message and exits with 0; if the case does not fire the assert, it fails. New case = function in the file + name in the `CASES` list. They exist in `ecs`, `input`, `app` and `bridge`, only with asserts enabled.
 - **Invariants**: `checkInvariants(const World&, std::string* why)` checks I-1 to I-11 (records, columns, indices, edges, queries, free list, iterating mode). Tests call it after every structural operation.
 - **Fuzz against a model**: `fuzz_vs_model` compares the `World` with a trivial map. Values derive from the `Entity`, so swapped rows show up as a wrong value. Seed and number of operations via `OLY_FUZZ_SEED`/`OLY_FUZZ_OPS`.

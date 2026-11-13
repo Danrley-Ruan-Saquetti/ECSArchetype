@@ -1,4 +1,4 @@
-#include "oly/bridge/engine_api.hpp"
+#include "oly/capi/engine_api.hpp"
 
 #include <cstddef>
 
@@ -7,8 +7,8 @@
 #include "oly/app/state_context.hpp"
 #include "oly/app/system.hpp"
 #include "oly/app/task_context.hpp"
-#include "oly/bridge/engine.hpp"
-#include "oly/bridge/schema_registry.hpp"
+#include "oly/capi/engine.hpp"
+#include "oly/capi/schema_registry.hpp"
 #include "oly/core/assert.hpp"
 
 #if defined(__EMSCRIPTEN__)
@@ -21,7 +21,7 @@ EM_JS(void, olyHostInvokeScript, (OlyEngine * engine, uint32_t kind, uint32_t id
 static_assert(sizeof(OlyActionState) == sizeof(oly::input::ActionState) && offsetof(OlyActionState, x) == offsetof(oly::input::ActionState, x) && offsetof(OlyActionState, y) == offsetof(oly::input::ActionState, y) && offsetof(OlyActionState, flags) == offsetof(oly::input::ActionState, flags), "OlyActionState must have the layout of oly::input::ActionState");
 static_assert(OLY_ACTION_PRESSED == oly::input::ActionPressed && OLY_ACTION_HELD == oly::input::ActionHeld && OLY_ACTION_RELEASED == oly::input::ActionReleased && OLY_ACTION_VALID == oly::input::ActionValid, "OLY_ACTION_* must match oly::input::Action*");
 
-namespace oly::bridge {
+namespace oly::capi {
   namespace {
     void defaultInvoker([[maybe_unused]] OlyEngine* engine, [[maybe_unused]] uint32_t kind, [[maybe_unused]] uint32_t id, [[maybe_unused]] const void* events, [[maybe_unused]] uint32_t eventCount) {
 #if defined(__EMSCRIPTEN__)
@@ -138,16 +138,16 @@ extern "C" {
 OlyEngine* olyEngineCreate(double fixedHz, uint32_t maxStepsPerFrame, uint32_t maxEventRounds) {
   OlyEngine* engine = new OlyEngine(oly::app::EngineConfig{fixedHz, maxStepsPerFrame, maxEventRounds});
 
-  for (const oly::bridge::SchemaEvent& schemaEvent : oly::bridge::schemaEvents()) {
+  for (const oly::capi::SchemaEvent& schemaEvent : oly::capi::schemaEvents()) {
     schemaEvent.declare(engine->engine);
   }
 
-  for (const oly::bridge::SchemaAction& schemaAction : oly::bridge::schemaActions()) {
+  for (const oly::capi::SchemaAction& schemaAction : oly::capi::schemaActions()) {
     [[maybe_unused]] const oly::input::ActionId id = engine->engine.actions().declare(schemaAction.kind, schemaAction.name);
     OLY_ASSERT(id == engine->engine.actions().actionCount() - 1, "olyEngineCreate: action \"%.*s\" out of order", static_cast<int>(schemaAction.name.size()), schemaAction.name.data());
   }
 
-  for (const oly::bridge::SchemaState& schemaState : oly::bridge::schemaStates()) {
+  for (const oly::capi::SchemaState& schemaState : oly::capi::schemaStates()) {
     [[maybe_unused]] const oly::app::StateId id = engine->engine.declareState(schemaState.name);
     OLY_ASSERT(id == engine->engine.stateCount() - 1, "olyEngineCreate: state \"%.*s\" out of order", static_cast<int>(schemaState.name.size()), schemaState.name.data());
   }
@@ -199,7 +199,7 @@ double olyEngineInterpolation(OlyEngine* engine) {
 }
 
 uint32_t olyEngineAddNativeSystem(OlyEngine* engine, uint32_t phase, const char* name) {
-  const oly::app::Phase checkedPhase = oly::bridge::phaseOf(phase, "olyEngineAddNativeSystem");
+  const oly::app::Phase checkedPhase = oly::capi::phaseOf(phase, "olyEngineAddNativeSystem");
   const oly::app::SystemFunction function = oly::app::findNamedSystem(name);
   if (function == nullptr) {
     return OLY_INVALID_SYSTEM;
@@ -209,8 +209,8 @@ uint32_t olyEngineAddNativeSystem(OlyEngine* engine, uint32_t phase, const char*
 }
 
 uint32_t olyEngineAddScriptSystem(OlyEngine* engine, uint32_t phase, const char* name) {
-  const oly::app::Phase checkedPhase = oly::bridge::phaseOf(phase, "olyEngineAddScriptSystem");
-  return engine->engine.addSystem(checkedPhase, name, &oly::bridge::runScriptSystem, engine);
+  const oly::app::Phase checkedPhase = oly::capi::phaseOf(phase, "olyEngineAddScriptSystem");
+  return engine->engine.addSystem(checkedPhase, name, &oly::capi::runScriptSystem, engine);
 }
 
 void olyEngineSetWhilePaused(OlyEngine* engine, uint32_t systemId, int32_t whilePaused) {
@@ -218,11 +218,11 @@ void olyEngineSetWhilePaused(OlyEngine* engine, uint32_t systemId, int32_t while
 }
 
 void olyEngineEmit(OlyEngine* engine, uint32_t eventType, const void* value) {
-  engine->engine.emitById(oly::bridge::checkedEventType(engine, eventType, "olyEngineEmit"), value);
+  engine->engine.emitById(oly::capi::checkedEventType(engine, eventType, "olyEngineEmit"), value);
 }
 
 uint32_t olyEngineAddNativeHandler(OlyEngine* engine, uint32_t eventType, const char* name) {
-  const uint32_t checkedType = oly::bridge::checkedEventType(engine, eventType, "olyEngineAddNativeHandler");
+  const uint32_t checkedType = oly::capi::checkedEventType(engine, eventType, "olyEngineAddNativeHandler");
   const oly::app::NamedHandler* named = oly::app::findNamedHandler(name);
   if (named == nullptr) {
     return OLY_INVALID_HANDLER;
@@ -235,13 +235,13 @@ uint32_t olyEngineAddNativeHandler(OlyEngine* engine, uint32_t eventType, const 
 }
 
 uint32_t olyEngineAddScriptHandler(OlyEngine* engine, uint32_t eventType, const char* name) {
-  const uint32_t checkedType = oly::bridge::checkedEventType(engine, eventType, "olyEngineAddScriptHandler");
+  const uint32_t checkedType = oly::capi::checkedEventType(engine, eventType, "olyEngineAddScriptHandler");
 
-  return engine->engine.onById(checkedType, name, &oly::bridge::runScriptHandler, engine);
+  return engine->engine.onById(checkedType, name, &oly::capi::runScriptHandler, engine);
 }
 
 void olyEngineScheduleScriptTask(OlyEngine* engine, double delaySeconds, double intervalSeconds, uint32_t scriptId, OlyTaskHandle* out) {
-  const oly::app::TaskHandle task = engine->engine.schedule().schedule(delaySeconds, intervalSeconds, &oly::bridge::runScriptTask, oly::app::TaskPayload::of(oly::bridge::ScriptTaskPayload{engine, scriptId}), &oly::bridge::discardScriptTask);
+  const oly::app::TaskHandle task = engine->engine.schedule().schedule(delaySeconds, intervalSeconds, &oly::capi::runScriptTask, oly::app::TaskPayload::of(oly::capi::ScriptTaskPayload{engine, scriptId}), &oly::capi::discardScriptTask);
 
   out->slot = task.slot;
   out->generation = task.generation;
@@ -276,7 +276,7 @@ void olyEngineSetHandlerStates(OlyEngine* engine, uint32_t handlerId, uint32_t s
 }
 
 uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name) {
-  const uint32_t hookWhen = oly::bridge::checkedWhen(when, "olyEngineAddNativeStateHook");
+  const uint32_t hookWhen = oly::capi::checkedWhen(when, "olyEngineAddNativeStateHook");
   const oly::app::StateHookFunction function = oly::app::findNamedStateHook(name);
   if (function == nullptr) {
     return OLY_INVALID_STATE_HOOK;
@@ -286,21 +286,21 @@ uint32_t olyEngineAddNativeStateHook(OlyEngine* engine, uint32_t when, uint32_t 
 }
 
 uint32_t olyEngineAddScriptStateHook(OlyEngine* engine, uint32_t when, uint32_t state, const char* name) {
-  const uint32_t hookWhen = oly::bridge::checkedWhen(when, "olyEngineAddScriptStateHook");
+  const uint32_t hookWhen = oly::capi::checkedWhen(when, "olyEngineAddScriptStateHook");
 
-  return hookWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, &oly::bridge::runScriptStateHook, engine) : engine->engine.onExit(state, name, &oly::bridge::runScriptStateHook, engine);
+  return hookWhen == OLY_STATE_ENTER ? engine->engine.onEnter(state, name, &oly::capi::runScriptStateHook, engine) : engine->engine.onExit(state, name, &oly::capi::runScriptStateHook, engine);
 }
 
 void olyEngineBindButton(OlyEngine* engine, uint32_t action, uint32_t button) {
   oly::input::ActionMap& actions = engine->engine.actions();
-  oly::bridge::checkedAction(actions, action, oly::input::ActionKind::Button, "olyEngineBindButton");
+  oly::capi::checkedAction(actions, action, oly::input::ActionKind::Button, "olyEngineBindButton");
 
   actions.bind(oly::input::ButtonAction{action}, oly::input::PhysicalButton(button));
 }
 
 void olyEngineBindAxis2d(OlyEngine* engine, uint32_t action, uint32_t up, uint32_t down, uint32_t left, uint32_t right) {
   oly::input::ActionMap& actions = engine->engine.actions();
-  oly::bridge::checkedAction(actions, action, oly::input::ActionKind::Axis2d, "olyEngineBindAxis2d");
+  oly::capi::checkedAction(actions, action, oly::input::ActionKind::Axis2d, "olyEngineBindAxis2d");
 
   actions.bind(oly::input::Axis2dAction{action}, oly::input::Axis2dBinding{oly::input::PhysicalButton(up), oly::input::PhysicalButton(down), oly::input::PhysicalButton(left), oly::input::PhysicalButton(right)});
 }
@@ -337,21 +337,21 @@ const OlyActionState* olyEngineActionSnapshot(OlyEngine* engine) {
 }
 
 void olySystemSpawn(OlyEngine* engine, OlyEntity* out) {
-  const oly::ecs::Entity entity = oly::bridge::currentContext(engine, "olySystemSpawn").spawn();
+  const oly::ecs::Entity entity = oly::capi::currentContext(engine, "olySystemSpawn").spawn();
   out->index = entity.index;
   out->generation = entity.generation;
 }
 
 void olySystemDestroy(OlyEngine* engine, uint32_t index, uint32_t generation) {
-  oly::bridge::currentContext(engine, "olySystemDestroy").destroy(oly::bridge::entityOf(index, generation));
+  oly::capi::currentContext(engine, "olySystemDestroy").destroy(oly::capi::entityOf(index, generation));
 }
 
 void olySystemAdd(OlyEngine* engine, uint32_t index, uint32_t generation, uint32_t componentId, void* value) {
-  oly::bridge::currentContext(engine, "olySystemAdd").addById(oly::bridge::entityOf(index, generation), componentId, value);
+  oly::capi::currentContext(engine, "olySystemAdd").addById(oly::capi::entityOf(index, generation), componentId, value);
 }
 
 void olySystemRemove(OlyEngine* engine, uint32_t index, uint32_t generation, uint32_t componentId) {
-  oly::bridge::currentContext(engine, "olySystemRemove").removeById(oly::bridge::entityOf(index, generation), componentId);
+  oly::capi::currentContext(engine, "olySystemRemove").removeById(oly::capi::entityOf(index, generation), componentId);
 }
 
 void olyDirectSpawn(OlyEngine* engine, OlyEntity* out) {
@@ -365,7 +365,7 @@ void olyDirectSpawn(OlyEngine* engine, OlyEntity* out) {
 void olyContextPersist(OlyEngine* engine, uint32_t index, uint32_t generation) {
   OLY_ASSERT(engine->directContext != nullptr || engine->currentContext != nullptr, "olyContextPersist: called outside a system, handler, task or hook");
 
-  const oly::ecs::Entity entity = oly::bridge::entityOf(index, generation);
+  const oly::ecs::Entity entity = oly::capi::entityOf(index, generation);
   if (engine->directContext != nullptr) {
     engine->directContext->persist(entity);
   } else {
