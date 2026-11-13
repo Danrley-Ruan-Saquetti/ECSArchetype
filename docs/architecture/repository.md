@@ -18,7 +18,7 @@ engine/
   tools/codegen/  @oly/codegen: TS schema -> C++ header
   testing/        @oly/testing (private): fixture game, WASM tests, boundary benchmarks
 games/
-  arena/          validation game (C++ in native/, TS in src/, smoke test in tests/)
+  arena/          validation game (C++ in native/, TS package in web/ (src/, tests/))
 tools/            measurement and lint scripts (Python and shell)
 docs/
   architecture/   this documentation

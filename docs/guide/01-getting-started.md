@@ -257,11 +257,11 @@ add_subdirectory(hello)
 Add the two TS projects to the `references` of the root `tsconfig.json`:
 
 ```json
-{ "path": "games/hello" },
-{ "path": "games/hello/tsconfig.browser.json" }
+{ "path": "games/hello/web" },
+{ "path": "games/hello/web/tsconfig.browser.json" }
 ```
 
-`games/*` is already an npm workspace. Run `$WC npm install` once, so `package-lock.json` includes the new package.
+`games/*/web` is already an npm workspace. Run `$WC npm install` once, so `package-lock.json` includes the new package.
 
 ### 11. Build and run
 
