@@ -5,6 +5,7 @@ if(EMSCRIPTEN)
 else()
   # oly-schema runs at build time, so it is built for the machine; WASM builds use the schema-tool preset's.
   add_subdirectory(schema/codegen)
+  add_subdirectory(environments/web/clients/typescript/codegen)
 endif()
 
 if(OLY_BUILD_GAMES)

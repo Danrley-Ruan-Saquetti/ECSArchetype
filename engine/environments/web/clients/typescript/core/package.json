@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./internal": { "types": "./dist/internal.d.ts", "default": "./dist/internal.js" }
+    "./internal": { "types": "./dist/internal.d.ts", "default": "./dist/internal.js" },
+    "./generated": { "types": "./dist/generated.d.ts", "default": "./dist/generated.js" }
   }
 }
