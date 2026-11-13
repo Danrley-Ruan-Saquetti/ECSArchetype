@@ -1,7 +1,0 @@
-{
-  "name": "@oly/codegen",
-  "version": "0.1.0",
-  "type": "module",
-  "bin": { "oly-codegen": "./dist/main.js" },
-  "dependencies": { "@oly/core": "*" }
-}

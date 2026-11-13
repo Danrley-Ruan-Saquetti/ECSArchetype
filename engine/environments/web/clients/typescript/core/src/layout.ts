@@ -1,5 +1,3 @@
-import type { Fields } from "./schema.js";
-
 export type ScalarType = "f32" | "f64" | "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "entity";
 
 export interface FieldLayout {
@@ -28,28 +26,4 @@ const scalarSizes: Readonly<Record<ScalarType, number>> = {
 
 export function scalarSize(type: ScalarType): number {
   return scalarSizes[type];
-}
-
-// `entity` is oly::ecs::Entity: two u32, alignment 4.
-export function scalarAlignment(type: ScalarType): number {
-  return type === "entity" ? 4 : scalarSizes[type];
-}
-
-function alignUp(value: number, alignment: number): number {
-  return Math.ceil(value / alignment) * alignment;
-}
-
-export function computeLayout(fields: Fields): ComponentLayout {
-  const layouts: FieldLayout[] = [];
-  let offset = 0;
-  let alignment = 1;
-  for (const [name, type] of Object.entries(fields)) {
-    const fieldAlignment = scalarAlignment(type);
-    offset = alignUp(offset, fieldAlignment);
-    layouts.push({ name, type, offset });
-    offset += scalarSize(type);
-    alignment = Math.max(alignment, fieldAlignment);
-  }
-
-  return { size: alignUp(offset, alignment), alignment, fields: layouts };
 }

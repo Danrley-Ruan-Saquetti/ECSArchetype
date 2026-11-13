@@ -13,7 +13,6 @@ export type { RawField, ReadField, ReadView, WriteField, WriteView } from "./fie
 export { Block, Query, SingleRow } from "./query.js";
 export type { QuerySpec } from "./query.js";
 export { loadRuntime, Runtime } from "./runtime.js";
-export { action, component, defineSchema, event, state, tag } from "./schema.js";
 export type {
   ActionKind,
   ActionType,

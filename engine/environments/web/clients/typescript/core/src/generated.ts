@@ -2,8 +2,8 @@ import type { ComponentLayout } from "./layout.js";
 import type { ActionKind, ActionType, ComponentType, EventType, Fields, Schema, SchemaType, State, TagType } from "./schema.js";
 
 // Constructors for the code oly-schema generates (`*.generated.ts`); the boundary lint keeps hand-written code out.
-// They trust their input: oly-schema has validated the names and computed the layout. Properties keep the order the
-// old defineSchema objects had, so the hot path sees the same object shapes.
+// They trust their input: oly-schema has validated the names and computed the layout. Properties keep a fixed order
+// (kind, name, fields, layout, schemaIndex), so the hot path sees the same object shapes.
 
 export interface GeneratedLayout<F extends Fields> {
   readonly size: number;

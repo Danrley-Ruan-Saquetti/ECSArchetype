@@ -201,6 +201,32 @@ class CheckBoundariesTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(output, "")
 
+    def test_generated_subpath_in_hand_written_code_fails(self):
+        self.write("games/g/web/src/a.ts", 'import { componentType } from "@oly/core/generated";\n')
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("games/g/web/src/a.ts:1: @oly/core/generated can only be imported by generated code (*.generated.ts)", output)
+
+    def test_generated_subpath_in_generated_code_and_in_core_passes(self):
+        self.write("games/g/web/schema.generated.ts", 'import { componentType } from "@oly/core/generated";\n')
+        self.write("engine/environments/web/clients/typescript/core/tests/unit/generated.test.ts", 'import { schemaOf } from "@oly/core/generated";\n')
+
+        code, output = self.run_check([])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(output, "")
+
+    def test_schema_tooling_including_environment_fails(self):
+        self.write("engine/environments/web/clients/typescript/codegen/include/oly/schema_typescript/typescript_emitter.hpp", "#pragma once\n")
+        self.write("engine/schema/codegen/src/x.cpp", '#include "oly/schema_typescript/typescript_emitter.hpp"\n')
+
+        code, output = self.run_check([("schema", "engine/schema/codegen", ["schema_typescript"]), ("schema_typescript", "engine/environments/web/clients/typescript/codegen", ["schema"])])
+
+        self.assertEqual(code, 1)
+        self.assertIn("engine/schema/codegen/src/x.cpp:1: engine/schema cannot depend on environment web (oly/schema_typescript)", output)
+
 
 if __name__ == "__main__":
     unittest.main()

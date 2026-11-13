@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rejects includes that cross the boundaries between Oly modules and environment boundaries, and Emscripten outside the web environment.
+"""Rejects includes that cross the boundaries between Oly modules and environment boundaries, and Emscripten outside the web environment, generated-code imports and the core's independence from environments.
 
 Usage: python3 -I tools/check_boundaries.py --root <repo> --manifest <json>
 Exits 0 with no violations; exits 1 printing "<file>:<line>: <reason>" per violation.
@@ -16,6 +16,8 @@ TS_EXTENSION = ".ts"
 
 INCLUDE_PATTERN = re.compile(r'^\s*#\s*include\s+"oly/([a-z_]+)/([^"]*)"')
 RUNTIME_PREFIX = "engine/runtime/"
+# The engine and its schema tooling know no environment; environments depend on them.
+CORE_PREFIXES = ("engine/runtime/", "engine/schema/")
 ENVIRONMENTS_PREFIX = "engine/environments/"
 MODULE_INCLUDE_DIRECTORY = re.compile(r"^(.+)/include/oly/([a-z_]+)$")
 
@@ -73,8 +75,9 @@ def environment_violation(relative_path, target_directory, target_name):
     target_environment = environment_of(target_directory)
     if target_environment is None:
         return None
-    if relative_path.startswith(RUNTIME_PREFIX):
-        return f"engine/runtime cannot depend on environment {target_environment} ({target_name})"
+    for prefix in CORE_PREFIXES:
+        if relative_path.startswith(prefix):
+            return f"{prefix.rstrip('/')} cannot depend on environment {target_environment} ({target_name})"
     source_environment = environment_of(relative_path)
     if source_environment is not None and source_environment != target_environment:
         return f"environment {source_environment} cannot depend on environment {target_environment} ({target_name})"
@@ -145,6 +148,8 @@ def check_ts_file(path, relative_path, root, package_directories):
                 specifier = match.group(1)
                 if specifier.startswith("@oly/core/internal") and not inside_engine:
                     violations.append(f"{relative_path}:{line_number}: @oly/core/internal can only be used inside engine/")
+                if specifier.startswith("@oly/core/generated") and not relative_path.endswith(".generated.ts") and not inside_core:
+                    violations.append(f"{relative_path}:{line_number}: @oly/core/generated can only be imported by generated code (*.generated.ts)")
                 if specifier.startswith("@oly/web-host") and inside_core:
                     violations.append(f"{relative_path}:{line_number}: @oly/core cannot depend on @oly/web-host")
                 if specifier.startswith("@oly/"):

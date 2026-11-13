@@ -5,8 +5,6 @@
     { "path": "engine/environments/web/clients/typescript/core/tests" },
     { "path": "engine/environments/web/host/js" },
     { "path": "engine/environments/web/host/js/tests" },
-    { "path": "engine/tools/codegen" },
-    { "path": "engine/tools/codegen/tests" },
     { "path": "engine/testing" },
     { "path": "games/arena/web" },
     { "path": "games/arena/web/tests" },
