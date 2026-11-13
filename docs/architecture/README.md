@@ -16,7 +16,7 @@ Three rules guide the design:
 
 1. **The engine is complete in C++.** A C++-only game uses every mechanism without depending on anything written in TS. TS has API conveniences, never engine behaviour.
 2. **The WASM↔JS boundary is crossed per block, per batch or per system, never per entity** on hot paths.
-3. **There is a single source for the data layout**: the game schema, written in TS. A generator produces the C++ from it.
+3. **There is a single source for the data layout**: the game's `.oly` file. `oly-schema`, a C++ generator, produces the C++ and each client's code from it.
 
 ```
  game (TS and/or C++)                        games/<game>/
@@ -43,8 +43,8 @@ Three rules guide the design:
 | [input.md](input.md) | input actions and HID physical buttons |
 | [app.md](app.md) | the `Engine`: loop, systems, pause, events, schedule, states, recovery |
 | [bridge.md](bridge.md) | the C API and the per-engine script invoker |
-| [schema-and-codegen.md](schema-and-codegen.md) | the game schema, the generator and each game's WASM module |
-| [ts-packages.md](ts-packages.md) | `@oly/core`, `@oly/web-host`, `@oly/codegen`, `@oly/testing` |
+| [schema-and-codegen.md](schema-and-codegen.md) | the `.oly` schema, `oly-schema` and each game's WASM module |
+| [ts-packages.md](ts-packages.md) | `@oly/core`, `@oly/web-host`, `@oly/testing` |
 | [games.md](games.md) | the validation game `games/arena` |
 | [build-and-tests.md](build-and-tests.md) | Docker, presets, tests and code quality |
 | [performance.md](performance.md) | targets, current status and boundary costs |

@@ -15,9 +15,10 @@ The same verb stands for the same concept in C++, in the C API and in TS.
 | register system | `Engine::addSystem(phase, name, function)`, `OLY_SYSTEM(name)` (by name) | `olyEngineAddNativeSystem` (by name), `olyEngineAddScriptSystem` | `addSystem`, `addNativeSystem` |
 | system runs while paused | `Engine::setWhilePaused` | `olyEngineSetWhilePaused` | `SystemRegistration.whilePaused()` |
 | deferred structural change (inside a system) | `SystemContext::spawn/destroy/add/remove` | `olySystemSpawn/Destroy/Add/Remove` | `context.spawn/destroy/add/remove` |
-| declare event (order = dispatch order) | `Engine::declareEvent<T>(name)` | (schema events, when the `OlyEngine` is created) | `event(name, fields)` in the schema |
+| declare component / tag (order = ComponentId) | the generated `struct Name { ... }` / `struct Name {}` | (schema types, when the `OlyEngine` is created) | `component Name { ... }` / `tag Name` in the `.oly` schema |
+| declare event (order = dispatch order) | `Engine::declareEvent<T>(name)` | (schema events, when the `OlyEngine` is created) | `event Name { ... }` in the `.oly` schema |
 | emit event | `Engine::emit`, `SystemContext/HandlerContext::emit` | `olyEngineEmit` | `context.emit` |
-| declare action | `ActionMap::declareButton/declareAxis2d/declarePointer` | (schema actions, when the `OlyEngine` is created) | `action(name, kind)` in the schema |
+| declare action | `ActionMap::declareButton/declareAxis2d/declarePointer` | (schema actions, when the `OlyEngine` is created) | `action name: kind` in the `.oly` schema |
 | bind action to physical button | `ActionMap::bind`, `clearBindings`, `isBound` | `olyEngineBindButton/BindAxis2d`, `olyEngineClearBindings`, `olyEngineIsBound` | `engine.actions.bind/clearBindings/isBound` |
 | deliver host input | `buttonDown`, `buttonUp`, `pointerMove`, `releaseAll` | `olyEngineButtonDown/Up`, `olyEnginePointerMove`, `olyEngineReleaseAll` | `engine.actions.buttonDown/buttonUp/pointerMove/releaseAll` |
 | read action in the step | `ActionMap::button/axis2d/pointer` (`context.actions()`) | `olyEngineActionSnapshot` (read without crossing) | `context.actions.button/axis2d/pointer` |
@@ -25,7 +26,7 @@ The same verb stands for the same concept in C++, in the C API and in TS.
 | handler by name | `OLY_HANDLER(name, EventType)` | `olyEngineAddNativeHandler` | `addNativeHandler` |
 | schedule task (game clock) | `Scheduler::after/every` (`engine.schedule()`, `context.schedule()`) | `olyEngineScheduleScriptTask` | `schedule.after/every` |
 | cancel / query task | `Scheduler::cancel/isPending` | `olyEngineCancelTask`, `olyEngineIsTaskPending` | `schedule.cancel/isPending` |
-| declare state (order = StateId) | `Engine::declareState(name)` | (schema states, when the `OlyEngine` is created) | `state(name)` in the schema |
+| declare state (order = StateId) | `Engine::declareState(name)` | (schema states, when the `OlyEngine` is created) | `state name` in the `.oly` schema |
 | request / read state | `Engine::requestState`, `state`; `EngineContext::requestState/state` | `olyEngineRequestState`, `olyEngineState` | `engine.requestState`, `engine.state`, `context.requestState/state` |
 | state hook | `Engine::onEnter/onExit(state, name, function)`, `OLY_STATE_HOOK(name)` (by name) | `olyEngineAddNativeStateHook` (by name), `olyEngineAddScriptStateHook` | `onEnter`, `onExit`, `addNativeOnEnter/addNativeOnExit` |
 | call script code | — (C++ code is called directly) | `olyEngineSetScriptInvoker` (per engine, dispatch by `kind`) | installed by `Runtime.createEngine` |

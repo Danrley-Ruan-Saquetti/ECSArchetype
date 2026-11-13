@@ -31,7 +31,7 @@ Open `http://localhost:8000`. The game's `README.md` lists its controls.
 You write the schema and the gameplay. The build turns them into one WASM module per game.
 
 ```
-games/<game>/web/schema.ts ──tsc──► schema.js ──oly-codegen──► schema.generated.hpp (C++ structs, ids)
+games/<game>/<game>.oly ──oly-schema──► schema.generated.hpp (C++) + web/schema.generated.ts (TS)
 games/<game>/native/*.cpp  (your C++ systems, optional) ──┐
 engine (ecs + app + input + capi + web_host) ─────────────┴──emcc──► <game>_game.mjs + .wasm
 games/<game>/web/src/*.ts  (your TS systems and the shell) ──tsc + esbuild──► main.js
@@ -48,12 +48,13 @@ The steps below create `games/hello`. Copy the files, then run the build.
 ```
 games/hello/
   CMakeLists.txt
+  hello.oly                  the schema: components, tags, events, actions, states
   native/hello.cpp           optional C++ systems
   web/
     package.json
     tsconfig.json            DOM-free code: schema and game logic
     tsconfig.browser.json    only src/main.ts, with the DOM
-    schema.ts
+    schema.generated.ts      generated from hello.oly by the build, not committed
     src/game.ts              installGame(engine): registers everything, no DOM
     src/main.ts              browser shell
     index.html
@@ -79,7 +80,7 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": { "rootDir": ".", "outDir": "dist", "lib": ["ES2022"], "types": [] },
-  "include": ["schema.ts", "src"],
+  "include": ["schema.generated.ts", "src"],
   "exclude": ["src/main.ts"],
   "references": [{ "path": "../../../engine/environments/web/clients/typescript/core" }]
 }
@@ -104,24 +105,21 @@ Keeping `game.ts` free of the DOM is what lets you [test the game in Node](11-te
 file(GLOB nativeSources CONFIGURE_DEPENDS native/*.cpp)
 
 oly_add_game(hello_game
-  SCHEMA_JS ${CMAKE_CURRENT_SOURCE_DIR}/web/dist/schema.js
+  SCHEMA ${CMAKE_CURRENT_SOURCE_DIR}/hello.oly
   SOURCES ${nativeSources}
   DEPENDS ecs app capi)
 ```
 
 The target name must be `<folder>_game`: `make game G=hello` looks for `hello_game.mjs`.
 
-### 5. `web/schema.ts`
+### 5. `hello.oly`
 
-```ts
-import { action, component, defineSchema, tag } from "@oly/core";
-
-export const Position = component("Position", { x: "f32", y: "f32" });
-export const Velocity = component("Velocity", { x: "f32", y: "f32" });
-export const Player = tag("Player");
-export const move = action("move", "axis2d");
-
-export default defineSchema([Position, Velocity, Player, move]);
+```
+# hello.oly
+component Position { x: f32, y: f32 }
+component Velocity { x: f32, y: f32 }
+tag Player
+action move: axis2d
 ```
 
 ### 6. `native/hello.cpp` (optional)
@@ -143,7 +141,7 @@ OLY_SYSTEM(integrate) {
 }
 ```
 
-`schema.generated.hpp` is created by the build from `schema.ts`. It has the `Position`, `Velocity` and `Player` structs and the `actions::move` handle.
+`schema.generated.hpp` is created by the build from `hello.oly`. It has the `Position`, `Velocity` and `Player` structs and the `actions::move` handle.
 
 ### 7. `src/game.ts`
 
@@ -151,7 +149,7 @@ OLY_SYSTEM(integrate) {
 import { Phase } from "@oly/core";
 import type { Engine } from "@oly/core";
 
-import { Player, Position, Velocity, move } from "../schema.js";
+import { Player, Position, Velocity, move } from "../schema.generated.js";
 
 const PlayerSpeed = 200;
 
@@ -195,7 +193,7 @@ export function installGame(engine: Engine, drawer: Drawer): void {
 import { loadRuntime } from "@oly/core";
 import { attachBrowserInput, moduleFactoryFromUrl, runInBrowser } from "@oly/web-host";
 
-import schema from "../schema.js";
+import schema from "../schema.generated.js";
 import { installGame } from "./game.js";
 
 const Width = 640;
@@ -274,7 +272,7 @@ docker compose run --rm --service-ports web make serve G=hello   # http://localh
 
 | Style | When it fits | What you write |
 |---|---|---|
-| **TS only** | prototypes, small games, few entities | `schema.ts` and TS systems. The `native/` folder can be empty: the WASM still holds the engine and your structs. |
+| **TS only** | prototypes, small games, few entities | `hello.oly` and TS systems. The `native/` folder can be empty: the WASM still holds the engine and your structs. |
 | **TS + C++** (recommended) | real games | per-entity work (movement, collision, AI) in C++; render, HUD, waves, score and menus in TS. |
 | **C++ only** | native tools, benchmarks, a future native host | an `oly::app::Engine` over an `oly::ecs::World`, with no TS at all. See [C++ gameplay](10-cpp-gameplay.md#a-c-only-game). |
 

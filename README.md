@@ -15,7 +15,7 @@ It is a study project. The goal is to measure how data representation (SoA, arch
 | `oly::capi` | `engine/runtime/capi` | C API (`oly*`) that exposes the ECS to WebAssembly. |
 | `@oly/core` | `engine/environments/web/clients/typescript/core` | TypeScript API: schema, `World`, `Query`, `Block`. |
 | `@oly/web-host` | `engine/environments/web/host/js` | Loads the WASM module by URL in the browser. |
-| `@oly/codegen` | `engine/tools/codegen` | Generates the C++ structs from the TypeScript schema. |
+| oly-schema | `engine/schema/codegen` | Generates the C++ and the TS of a game's .oly schema. |
 
 ## How the ECS works
 
@@ -58,16 +58,20 @@ world.flush(commands);
 
 ### TypeScript
 
-The game declares the schema in TypeScript. `@oly/codegen` generates the equivalent C++, which goes into the game's WASM module.
+The game declares the schema in a `.oly` file. `oly-schema` generates the C++ and the TS from it.
+
+```
+# game.oly
+component Position { x: f32, y: f32 }
+component Velocity { x: f32, y: f32 }
+tag Enemy
+```
 
 ```ts
-import { component, defineSchema, loadRuntime, tag } from "@oly/core";
+import { loadRuntime } from "@oly/core";
 import { moduleFactoryFromUrl } from "@oly/web-host";
 
-const Position = component("Position", { x: "f32", y: "f32" });
-const Velocity = component("Velocity", { x: "f32", y: "f32" });
-const Enemy = tag("Enemy");
-const schema = defineSchema([Position, Velocity, Enemy]);
+import schema, { Position, Velocity, Enemy } from "./schema.generated.js";
 
 // Throws SchemaMismatchError if the WASM was generated with another schema.
 const runtime = await loadRuntime(moduleFactoryFromUrl("/game.mjs"), schema);

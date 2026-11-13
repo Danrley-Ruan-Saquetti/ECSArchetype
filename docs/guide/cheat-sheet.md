@@ -20,14 +20,14 @@ engine.dispose();
 
 ## Schema
 
-| Call | Notes |
+| In the `.oly` file | Notes |
 |---|---|
-| `component("Name", { field: "f32" })` | types: `f32 f64 i8 u8 i16 u16 i32 u32 entity` |
-| `tag("Name")` | no data |
-| `event("Name", { field: "u32" })` | at least one field; order = dispatch order |
-| `action("name", "button" \| "axis2d" \| "pointer")` | |
-| `state("name")` | at most 32 |
-| `defineSchema([...])` | `export default` it |
+| `component Name { field: f32 }` | types: `f32 f64 i8 u8 i16 u16 i32 u32 entity` |
+| `tag Name` | no data |
+| `event Name { field: u32 }` | at least one field; order = dispatch order |
+| `action name: button \| axis2d \| pointer` | |
+| `state name` | at most 32 |
+| `import schema from "../schema.generated.js"` | pass it to `loadRuntime` |
 
 ## World (and contexts)
 

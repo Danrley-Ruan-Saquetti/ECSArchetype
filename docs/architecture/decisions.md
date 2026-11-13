@@ -10,7 +10,7 @@
 | `CommandBuffer` with one transition per entity | cheap batched flush | coalescing complexity (covered by fuzz) |
 | Loop and every engine rule in C++ | a C++-only game does not end up with an incomplete engine | TS needs the callback |
 | A per-engine script invoker set through the C API; the web host installs the JS one | the core knows no environment; a managed client passes its own handle in `userData` | one function pointer and one `userData` per engine; dispatch by `kind` in each client |
-| TS schema as the single source + codegen + hash | layout never diverges between C++ and TS | WASM compiled per game |
+| `.oly` as the single source + C++ generator + hash; each client gets generated code | one schema for every environment and language; layout and hash computed once | the TS schema API and the TS generator are gone; `make ts` builds `oly-schema` first |
 | Column of structs, strided view | does not change the `Table` or the query API | strided accessor in TS |
 | `Engine` does not own the `World` | the ECS stays below and independent of the engine | two `Engine`s on the same `World` share the scope tag |
 | State scope through an internal tag | cleanup by query, cheap `persist` | twin archetypes with and without the tag |

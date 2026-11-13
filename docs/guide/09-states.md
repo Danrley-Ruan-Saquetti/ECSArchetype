@@ -6,11 +6,11 @@ States split the game into screens or modes: `menu`, `playing`, `gameOver`. Each
 
 ## Declare and start
 
-```ts
-// schema.ts
-export const menu = state("menu");
-export const playing = state("playing");
-export const gameOver = state("gameOver");
+```
+# game.oly
+state menu
+state playing
+state gameOver
 ```
 
 The engine starts with **no state** (`engine.state === null`). Request the first one before the first frame:

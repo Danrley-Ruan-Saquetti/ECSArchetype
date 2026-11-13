@@ -4,9 +4,10 @@ Arena is the validation game: a top-down 2D shooter (move, aim, shoot, dash, ene
 
 ```
 games/arena/
+  arena.oly              the game's components, tags, events, actions and states
   native/                per-entity C++ gameplay: control, shooting, chasing, movement, collision
   web/                   the game's npm package, and the page that serves it
-    schema.ts            the game's components, tags, events, actions and states
+    schema.generated.ts  generated from arena.oly by make ts (not committed)
     src/game.ts          installGame(engine, { drawer, random }): registers everything, no DOM
     src/render.ts        render through a Drawer interface
     src/main.ts          browser shell: canvas, Drawer over Canvas 2D, runInBrowser, attachBrowserInput

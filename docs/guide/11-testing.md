@@ -32,7 +32,7 @@ import { pathToFileURL } from "node:url";
 import { loadRuntime } from "@oly/core";
 import type { ButtonName, Engine, OlyModuleFactory, Runtime, SchemaType } from "@oly/core";
 
-import schema from "../schema.js";
+import schema from "../schema.generated.js";
 import { installGame } from "../src/game.js";
 
 const StepsPerSecond = 60;
@@ -116,7 +116,7 @@ Tests use `node:test` and `node:assert`, like the engine's own tests.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { Collider, Enemy, Health, Player, Position, menu, playing } from "../schema.js";
+import { Collider, Enemy, Health, Player, Position, menu, playing } from "../schema.generated.js";
 import { loadGame, withGame } from "./harness.js";
 
 const runtime = await loadGame();
@@ -243,7 +243,7 @@ if(OLY_BUILD_TESTS)
 endif()
 ```
 
-The test TS project must emit to `web/dist/tests/`, so its relative imports (`../schema.js`, `../src/game.js`) resolve at run time. `web/tests/tsconfig.json`:
+The test TS project must emit to `web/dist/tests/`, so its relative imports (`../schema.generated.js`, `../src/game.js`) resolve at run time. `web/tests/tsconfig.json`:
 
 ```json
 {

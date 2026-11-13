@@ -8,9 +8,9 @@ Use events when one thing must trigger several independent reactions: an enemy d
 
 ## Declare, emit, handle
 
-```ts
-// schema.ts
-export const EnemyDied = event("EnemyDied", { entity: "entity", x: "f32", y: "f32" });
+```
+# game.oly
+event EnemyDied { entity: entity, x: f32, y: f32 }
 ```
 
 ```ts

@@ -36,7 +36,8 @@ $DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<file>.json --nam
 ## WASM, TypeScript and games
 
 ```sh
-$WC make ts                 # npm ci (if needed) + tsc -b in every workspace
+$WC make schema-tool        # builds oly-schema for the machine (preset schema-tool)
+$WC make ts                 # builds oly-schema, generates every TS schema and compiles the TS
 $WC make games-test         # ts + ctest in the wasm-games preset (ECS in WASM, capi, TS tests)
 $WC make game G=arena       # assembles build/wasm-games-release/web/arena/ (index.html, esbuild's main.js, arena_game.mjs/.wasm)
 $WC sh -c 'make ts && make test PRESET=wasm-games-release T=^ts\.'   # Release: only the TS validations catch the errors
@@ -46,6 +47,6 @@ docker compose run --rm --service-ports web make serve G=arena   # http://localh
 
 Caveats:
 
-- The `wasm-games*` presets require `make ts` before configuring (codegen and the schema come from the packages' `dist/`).
+- The `wasm-games*` presets require `make ts` (or `make schema-tool`) before configuring: `oly_add_game` runs `build/schema-tool/bin/oly-schema`.
 - `make game` and `make serve` only accept `wasm-games*` presets. Without `PRESET` on the command line or in the environment, they use `wasm-games-release`.
 - `make serve` needs an open stdin (interactive terminal): esbuild exits when stdin closes.

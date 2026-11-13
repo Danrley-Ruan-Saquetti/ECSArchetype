@@ -145,9 +145,12 @@ Use the phase boundary on purpose. For example, destroy out-of-bounds bullets in
 
 Render runs between steps. To draw smooth motion at high refresh rates, blend the previous and current positions with `interpolation`:
 
-```ts
-const PreviousPosition = component("PreviousPosition", { x: "f32", y: "f32" });
+```
+# game.oly
+component PreviousPosition { x: f32, y: f32 }
+```
 
+```ts
 // first system of UpdateBefore: remember where everything was
 engine.addSystem(Phase.UpdateBefore, "rememberPosition", (context) => {
   context.query({ read: [Position], write: [PreviousPosition] }).eachBlock((block) => {

@@ -20,6 +20,7 @@ There is no C++ toolchain on the host. Everything runs in Docker Compose:
 | `debug-asan` (default) | tests with ASan + UBSan and asserts enabled |
 | `release` | tests and benchmarks with `OLY_ENABLE_ASSERTS=0` |
 | `relwithdebinfo` | benchmarks for `perf` |
+| `schema-tool` | `oly-schema` built for the machine in the `wasm` image (Release, no tests, target `oly-schema` only); `make schema-tool` |
 | `native-clang`, `native-clang-32`, `native-clang-32-scalar`, `native-clang-avx2`, `wasm-scalar`, `wasm-simd` | ladder of the native × WASM cost study |
 | `wasm-debug` | ECS tests in WASM |
 | `wasm-games`, `wasm-games-release` | games, `capi`, TS tests |
@@ -36,13 +37,13 @@ CMake options: `OLY_BUILD_TESTS`, `OLY_BUILD_BENCH`, `OLY_SANITIZE`, `OLY_WERROR
 | `oly_add_test` | registers a doctest suite as an executable and a ctest test |
 | `oly_add_contract_death` | registers a module's death cases |
 | `oly_add_bench` | registers a benchmark executable |
-| `oly_add_game` | runs codegen and links a game's `.mjs`/`.wasm` module, with `oly::web_host` |
+| `oly_add_game` | runs `oly-schema` and links a game's `.mjs`/`.wasm` module, with `oly::web_host` |
 | `oly_warnings`, `oly_wasm_exceptions`, `oly_wasm_node_env` | warnings and Emscripten settings |
 
 ## Tests
 
 - **One doctest suite = one executable**, registered with `oly_add_test(MODULE <m> NAME <suite> SOURCES ... [SUPPORT <dirs>])` in the module's `tests/CMakeLists.txt`. A new test file must be added there; the sources in `src/*.cpp` come in by glob.
-- **Names in ctest** carry the module prefix: `core.*`, `ecs.*`, `input.*`, `app.*`, `capi.*`, `<module>.contract_death.<case>`, `ts.<package>.<suite>` (`ts.core.unit`, `ts.codegen.unit`, `ts.web_host.unit`, `ts.testing.wasm`, `ts.arena.smoke`) and `oly.lint.boundaries` / `oly.lint.boundaries_selftest`.
+- **Names in ctest** carry the module prefix: `core.*`, `ecs.*`, `input.*`, `app.*`, `capi.*`, `schema.*`, `schema_typescript.*`, `<module>.contract_death.<case>`, `ts.<package>.<suite>` (`ts.core.unit`, `ts.web_host.unit`, `ts.testing.wasm`, `ts.arena.smoke`) and `oly.lint.boundaries` / `oly.lint.boundaries_selftest`.
 - **Death tests**: registered with `oly_add_contract_death(MODULE <m> SOURCE <file> CASES ...)`. Each case is a command-line argument. An assert handler checks substrings of the message and exits with 0; if the case does not fire the assert, it fails. New case = function in the file + name in the `CASES` list. They exist in `ecs`, `input`, `app` and `capi`, only with asserts enabled.
 - **Invariants**: `checkInvariants(const World&, std::string* why)` checks I-1 to I-11 (records, columns, indices, edges, queries, free list, iterating mode). Tests call it after every structural operation.
 - **Fuzz against a model**: `fuzz_vs_model` compares the `World` with a trivial map. Values derive from the `Entity`, so swapped rows show up as a wrong value. Seed and number of operations via `OLY_FUZZ_SEED`/`OLY_FUZZ_OPS`.

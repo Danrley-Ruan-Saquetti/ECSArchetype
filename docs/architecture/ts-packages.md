@@ -6,12 +6,12 @@ npm workspaces at the root, a single `package-lock.json`, `tsconfig.base.json` (
 
 The engine on the TS side (`engine/environments/web/clients/typescript/core/`), with no DOM and no node (`types: []`): it runs in node, in the browser and in a worker. What depends on the environment comes in by injection (the WASM module factory, the time, the input).
 
-- **Schema**: `defineSchema`, `component`, `tag`, `event`, `action`, `state`.
+- **Schema**: the types (`ComponentType`, `TagType`, `EventType`, `ActionType`, `State`, `Schema`); the objects come from the game's generated `schema.generated.ts`, built with the `@oly/core/generated` constructors.
 - **Runtime**: `loadRuntime(factory, schema)` → `Runtime` (`schema`, `createWorld()`).
 - **World**: `World`, `Query` (`eachBlock`, `single`, `trySingle`), `Block` (`read`, `write`), `Entity`.
 - **Engine**: `Engine`, `SystemContext`, `HandlerContext`, `TaskContext`, `StateContext`, `EventBatch`, `Scheduler`, `ActionMap`.
 - **Errors**: `ContractError`, `SchemaMismatchError`.
-- **Internal** (`@oly/core/internal`, only for `engine/`): `Bridge`, `bridgeOf`, `moduleOf`, `componentIdOf`, `Heap`, layout and hash.
+- **Internal** (`@oly/core/internal`, only for `engine/`): `Bridge`, `bridgeOf`, `moduleOf`, `componentIdOf`, `Heap`, `scalarSize`.
 
 The exact public list is `engine/environments/web/clients/typescript/core/api/public-exports.txt` ([modules-and-boundaries.md](modules-and-boundaries.md#how-the-boundaries-are-enforced)).
 
@@ -34,7 +34,6 @@ Thin browser layer (`engine/environments/web/host/js/`). It implements with DOM 
 
 Loop and input are kept separate because they change for different reasons.
 
-## `@oly/codegen` and `@oly/testing`
+## `@oly/testing`
 
-- `@oly/codegen` (`engine/tools/codegen/`): the `oly-codegen --schema <schema.js> --out <dir>` bin, called by `oly_add_game` ([schema-and-codegen.md](schema-and-codegen.md)).
 - `@oly/testing` (`engine/testing/`, private): the `fixture` game (`engine/testing/fixture/`, the only place in the engine with game names), the integration tests against the real WASM (`tests/wasm/`) and the boundary, loop and event benchmarks (`bench/`). It stays outside `@oly/core` so as not to create a cycle in the project references or put game names in the package.

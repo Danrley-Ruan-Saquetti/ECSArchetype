@@ -51,16 +51,12 @@ Then use these as references:
 
 A complete game is three things: a **schema** (the data), **systems** (the behaviour) and a **shell** (browser or test) that drives the loop.
 
-```ts
-// schema.ts — the data, shared by TS and C++
-import { action, component, defineSchema, tag } from "@oly/core";
-
-export const Position = component("Position", { x: "f32", y: "f32" });
-export const Velocity = component("Velocity", { x: "f32", y: "f32" });
-export const Player = tag("Player");
-export const move = action("move", "axis2d");
-
-export default defineSchema([Position, Velocity, Player, move]);
+```
+# hello.oly — the data, shared by TS and C++
+component Position { x: f32, y: f32 }
+component Velocity { x: f32, y: f32 }
+tag Player
+action move: axis2d
 ```
 
 ```ts
@@ -68,7 +64,7 @@ export default defineSchema([Position, Velocity, Player, move]);
 import { Phase } from "@oly/core";
 import type { Engine } from "@oly/core";
 
-import { Player, Position, Velocity, move } from "../schema.js";
+import { Player, Position, Velocity, move } from "../schema.generated.js";
 
 const PlayerSpeed = 200;
 
@@ -108,7 +104,7 @@ export function installGame(engine: Engine): void {
 import { loadRuntime } from "@oly/core";
 import { attachBrowserInput, moduleFactoryFromUrl, runInBrowser } from "@oly/web-host";
 
-import schema from "../schema.js";
+import schema from "../schema.generated.js";
 import { installGame } from "./game.js";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;

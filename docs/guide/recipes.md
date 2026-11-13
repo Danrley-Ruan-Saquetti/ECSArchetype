@@ -29,8 +29,9 @@ Ready patterns for common game features. Each recipe shows the schema entries it
 
 ## Projectile with a lifetime
 
-```ts
-export const Lifetime = component("Lifetime", { seconds: "f32" });
+```
+# game.oly
+component Lifetime { seconds: f32 }
 ```
 
 ```ts
@@ -94,8 +95,9 @@ engine.onEnter(playing, "startWaves", (context) => {
 
 Use `u8` fields for flags that change often; adding and removing tags every use would move the entity between tables.
 
-```ts
-export const Dash = component("Dash", { ready: "u8", active: "u8", duration: "f32", recharge: "f32", speed: "f32" });
+```
+# game.oly
+component Dash { ready: u8, active: u8, duration: f32, recharge: f32, speed: f32 }
 ```
 
 ```ts
@@ -131,9 +133,10 @@ In C++, the same logic fits in one `OLY_SYSTEM`, with the timers scheduled throu
 
 Damage is applied where the hit is detected. Death is an event, so several reactions can hang off it.
 
-```ts
-export const Health = component("Health", { value: "i32" });
-export const EnemyDied = event("EnemyDied", { entity: "entity", x: "f32", y: "f32" });
+```
+# game.oly
+component Health { value: i32 }
+event EnemyDied { entity: entity, x: f32, y: f32 }
 ```
 
 ```cpp
@@ -162,8 +165,9 @@ engine.on(EnemyDied, "destroyDead", (context, batch) => {             // destroy
 
 A tag that lasts a few seconds. Filtering with `without` makes affected entities skip systems for free.
 
-```ts
-export const Stunned = tag("Stunned");
+```
+# game.oly
+tag Stunned
 ```
 
 ```ts
@@ -188,9 +192,10 @@ context.query({ read: [Position, Chaser], write: [Velocity], with: [Enemy], with
 
 Detect the overlap in a system, emit an event, collect in a handler.
 
-```ts
-export const Coin = tag("Coin");
-export const CoinCollected = event("CoinCollected", { coin: "entity" });
+```
+# game.oly
+tag Coin
+event CoinCollected { coin: entity }
 ```
 
 ```ts
@@ -231,8 +236,9 @@ engine.on(CoinCollected, "collect", (context, batch) => {
 
 ## Homing projectile
 
-```ts
-export const Homing = component("Homing", { target: "entity", speed: "f32" });
+```
+# game.oly
+component Homing { target: entity, speed: f32 }
 ```
 
 ```ts
@@ -265,8 +271,9 @@ engine.addSystem(Phase.Update, "home", (context) => {
 
 A shield, a health bar or a turret that follows its owner.
 
-```ts
-export const Attached = component("Attached", { parent: "entity", offsetX: "f32", offsetY: "f32" });
+```
+# game.oly
+component Attached { parent: entity, offsetX: f32, offsetY: f32 }
 ```
 
 ```ts

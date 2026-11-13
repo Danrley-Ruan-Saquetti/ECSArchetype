@@ -2,46 +2,50 @@
 
 [← Getting started](01-getting-started.md) · [Guide index](README.md) · Next: [World and entities →](03-world-and-entities.md)
 
-The schema is the **single source** of your game's data. You write it once, in TypeScript. The build generates the matching C++ from it, so TS and C++ always agree on the memory layout.
+The schema is the **single source** of your game's data. You write it once, in a `<game>.oly` file. The build generates the matching C++ and TS from it, so TS and C++ always agree on the memory layout.
 
 ## The five kinds of entries
 
-| Function | Declares | Example |
+| Declaration | Declares | Example |
 |---|---|---|
-| `component(Name, fields)` | data attached to an entity | `component("Health", { value: "i32" })` |
-| `tag(Name)` | a marker with no data | `tag("Enemy")` |
-| `event(Name, fields)` | a message sent between systems | `event("EnemyDied", { entity: "entity", x: "f32", y: "f32" })` |
-| `action(name, kind)` | an input action (`"button"`, `"axis2d"`, `"pointer"`) | `action("shoot", "button")` |
-| `state(name)` | a game state (menu, playing...) | `state("playing")` |
+| `component Name { fields }` | data attached to an entity | `component Health { value: i32 }` |
+| `tag Name` | a marker with no data | `tag Enemy` |
+| `event Name { fields }` | a message sent between systems | `event EnemyDied { entity: entity, x: f32, y: f32 }` |
+| `action name: kind` | an input action (`button`, `axis2d`, `pointer`) | `action shoot: button` |
+| `state name` | a game state (menu, playing...) | `state playing` |
 
-```ts
-import { action, component, defineSchema, event, state, tag } from "@oly/core";
+```
+# game.oly
+component Position { x: f32, y: f32 }
+component Health { value: i32 }
+component Weapon { interval: f32, cooldown: f32 }
+component Target { entity: entity }
+tag Enemy
+tag Frozen
 
-export const Position = component("Position", { x: "f32", y: "f32" });
-export const Health = component("Health", { value: "i32" });
-export const Weapon = component("Weapon", { interval: "f32", cooldown: "f32" });
-export const Target = component("Target", { entity: "entity" });
-export const Enemy = tag("Enemy");
-export const Frozen = tag("Frozen");
+event EnemyDied { entity: entity, x: f32, y: f32 }
 
-export const EnemyDied = event("EnemyDied", { entity: "entity", x: "f32", y: "f32" });
+action move: axis2d
+action aim: pointer
+action shoot: button
 
-export const move = action("move", "axis2d");
-export const aim = action("aim", "pointer");
-export const shoot = action("shoot", "button");
-
-export const menu = state("menu");
-export const playing = state("playing");
-
-export default defineSchema([
-  Position, Health, Weapon, Target, Enemy, Frozen,
-  EnemyDied,
-  move, aim, shoot,
-  menu, playing,
-]);
+state menu
+state playing
 ```
 
-Export every entry. You pass these objects to every API call: `world.get(entity, Health)`, `context.emit(EnemyDied, ...)`, `actions.button(shoot)`. There are no string lookups at run time.
+Whitespace is free and `#` starts a comment. A field list can span several lines and may end with a comma.
+
+TS gets every entry from the generated module, and C++ from the generated header:
+
+```ts
+import schema, { Health, shoot } from "../schema.generated.js";
+```
+
+```cpp
+#include "schema.generated.hpp"
+```
+
+The default export is the schema you pass to `loadRuntime`. You pass the entries to every API call: `world.get(entity, Health)`, `context.emit(EnemyDied, ...)`, `actions.button(shoot)`. There are no string lookups at run time.
 
 ## Field types
 
@@ -58,13 +62,13 @@ There are no 64-bit integers (they would need `BigInt` in JS) and no strings. Ke
 
 Booleans are a `u8` field with `0` or `1`:
 
-```ts
-export const Dash = component("Dash", { speed: "f32", duration: "f32", ready: "u8", active: "u8" });
+```
+component Dash { speed: f32, duration: f32, ready: u8, active: u8 }
 ```
 
 ## Naming rules
 
-The names become C++ identifiers, so the schema checks them and throws `ContractError` when they break a rule.
+The names become C++ identifiers, so the build checks them. A broken rule stops the build with `<game>.oly:<line>:<column>: <message>`, and no file is written.
 
 | Entry | Rule | Good | Bad |
 |---|---|---|---|
@@ -76,13 +80,14 @@ Other rules:
 
 - A component needs at least one field. With no data, use `tag`.
 - An event needs at least one field.
-- A name can appear only once in a schema (components, tags and events share one namespace).
-- An entry belongs to one schema only. Define the schema once and import it.
+- A field name appears once per component or event.
+- A name can appear only once in the file (components, tags, events, actions and states share one namespace).
+- An action or state cannot be a TypeScript reserved word such as `function`, because TS gets it as a constant.
 - At most 32 states.
 
 ## Order matters
 
-`defineSchema` gives each entry an index inside its group, in the order you pass them:
+Each entry gets an index inside its group, in the order you write them:
 
 - **Events**: the index is the dispatch order. Earlier events are handled first in each round ([Events](06-events.md#order)).
 - **Actions** and **states**: the index is the id used in C++ (`actions::shoot`, `states::playing`).
@@ -93,8 +98,8 @@ Changing the order, adding or removing an entry changes the **schema hash**. The
 
 Each component becomes a plain C++ struct with natural alignment, in field order:
 
-```ts
-const Mixed = component("Mixed", { a: "u8", b: "f64", c: "i16" });
+```
+component Mixed { a: u8, b: f64, c: i16 }
 ```
 
 ```cpp
@@ -104,14 +109,16 @@ struct Mixed {
   double b;    // offset 8 (7 bytes of padding before it)
   int16_t c;   // offset 16
 };
-static_assert(sizeof(Mixed) == 24 && alignof(Mixed) == 8, "schema: layout of Mixed diverges from TS");
+static_assert(sizeof(Mixed) == 24 && alignof(Mixed) == 8, "schema: layout of Mixed diverges from oly-schema");
 ```
 
-Tip: order fields from the largest to the smallest type to avoid padding. `{ b: "f64", c: "i16", a: "u8" }` takes 16 bytes instead of 24.
+Tip: order fields from the largest to the smallest type to avoid padding. `{ b: f64, c: i16, a: u8 }` takes 16 bytes instead of 24.
 
 Each archetype stores one column per component (SoA across components). Inside a column, each element is the whole struct (AoS inside the component). So split data that is read by different systems into different components: a system that reads only `Position` does not pull `Health` into the cache.
 
 ## What the build generates
+
+On every build, `oly-schema` reads the `.oly` file and writes two files. They are generated, never committed and never edited.
 
 From the schema above, `schema.generated.hpp` contains:
 
@@ -136,6 +143,14 @@ namespace states {
 
 A typo such as `actions::shoto` in C++ is a compile error.
 
+`schema.generated.ts` has one constant per entry and the schema as the default export:
+
+```ts
+export const Health = componentType("Health", { value: "i32" }, 1, { size: 4, alignment: 4, offsets: { value: 0 } });
+// ...
+export default schemaOf([Position, Health, Weapon, Target, Enemy, Frozen, EnemyDied, move, aim, shoot, menu, playing], 0x1a2b3c4d);
+```
+
 ## The schema check at start-up
 
 ```ts
@@ -155,7 +170,7 @@ try {
 
 ## Using the schema in several places
 
-The schema module has no side effects beyond creating objects. Import it from the game, from the shell and from tests. Do not call `defineSchema` twice with the same entries: an entry that already belongs to a schema is refused.
+Import the generated module everywhere: from the game, from the shell and from tests. An entry from another generated module is refused by `loadRuntime` and by the API calls, because the runtime only accepts the entries of its own schema.
 
 ## Next
 

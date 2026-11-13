@@ -117,9 +117,12 @@ let target = NullEntity;             // "no entity"
 
 Store the other entity's handle in a component and check it each time you use it.
 
-```ts
-const Follower = component("Follower", { leader: "entity", distance: "f32" });
+```
+# game.oly
+component Follower { leader: entity, distance: f32 }
+```
 
+```ts
 // later, in a system
 const leader = follower.leader.get(row);
 if (!context.isAlive(leader)) {

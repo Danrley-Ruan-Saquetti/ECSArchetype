@@ -12,13 +12,13 @@ Gameplay never reads keys directly. It reads **actions** ("shoot", "move", "aim"
 | `"axis2d"` | `{ x, y }`, each in -1..1 | movement with WASD or arrows |
 | `"pointer"` | `{ x, y, valid }` in canvas pixels | aim, click targets |
 
-```ts
-// schema.ts
-export const move = action("move", "axis2d");
-export const aim = action("aim", "pointer");
-export const shoot = action("shoot", "button");
-export const jump = action("jump", "button");
-export const pause = action("pause", "button");
+```
+# game.oly
+action move: axis2d
+action aim: pointer
+action shoot: button
+action jump: button
+action pause: button
 ```
 
 ## Bind buttons

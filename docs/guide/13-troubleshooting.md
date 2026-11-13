@@ -35,8 +35,9 @@ In C++, the same violations stop on `OLY_ASSERT` in debug builds (`wasm-games`, 
 | `the native handler is for another event type` | `addNativeHandler(EventA, "x")` for an `OLY_HANDLER(x, EventB)` | pass the matching event |
 | `action of kind button, expected axis2d` | `axis2d(shoot)` on a button action | read with the method of the action's kind |
 | `button outside the W3C table` | a key name that does not exist (`"W"` instead of `"KeyW"`) | use `KeyboardEvent.code` names; check with `isButtonName` |
-| `does not belong to this runtime's schema` | a type, event, action or state from another `defineSchema` call | import the entries from the one schema module |
+| `does not belong to this runtime's schema` | an entry from another generated schema module | import the entries from the game's `schema.generated.js` |
 | `invalid type name` / `invalid field` | schema naming rules | `PascalCase` types, `camelCase` fields, no C++ keywords |
+| `<game>.oly:<line>:<column>: ...` when building | a schema rule is broken | fix that line; the rules are in [Schema](02-schema.md#naming-rules) |
 | `Engine already disposed` / `World already disposed` | use after `dispose()` | keep the engine alive while the game runs |
 | `World belongs to the Engine; use engine.dispose()` | `engine.world.dispose()` | dispose the engine instead |
 
@@ -61,7 +62,7 @@ In C++, the same violations stop on `OLY_ASSERT` in debug builds (`wasm-games`, 
 
 After changing the schema:
 
-1. `$WC make ts` — compiles the schema and the codegen;
+1. `$WC make ts` — builds `oly-schema`, generates the TS schemas and compiles the TS;
 2. build the game (`$WC make game G=<game>` or `$WC make games-test`) — regenerates `schema.generated.hpp` and the WASM;
 3. reload the page (or rerun the tests).
 

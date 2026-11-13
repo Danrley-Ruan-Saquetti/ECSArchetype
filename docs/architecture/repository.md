@@ -16,10 +16,13 @@ engine/
     web/clients/typescript/core/  @oly/core: the engine on the TS side, no DOM
     web/host/js/                  @oly/web-host: browser layer
     web/host/native/              web_host: C++ linked into every web game's WASM (JS script invoker)
-  tools/codegen/  @oly/codegen: TS schema -> C++ header
+    web/clients/typescript/codegen/  schema_typescript: the TS emitter of oly-schema
+  schema/         the game schema tooling
+    format/       the .oly language and its test corpus
+    codegen/      oly-schema: parser, validation, layout, hash, emitters, C++ emitter
   testing/        @oly/testing (private): fixture game, WASM tests, boundary benchmarks
 games/
-  arena/          validation game (C++ in native/, TS package in web/ (src/, tests/))
+  arena/          validation game (arena.oly, C++ in native/, TS package in web/ (src/, tests/))
 tools/            measurement and lint scripts (Python and shell)
 docs/
   architecture/   this documentation

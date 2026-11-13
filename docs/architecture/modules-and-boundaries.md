@@ -12,7 +12,7 @@ graph BT
   webHost_native["web_host (C++, web only)"] --> capi
   games["games (oly_add_game)"] --> capi
   games --> webHost_native
-  codegen["@oly/codegen"] --> tscore["@oly/core"]
+  schema_typescript["schema_typescript (C++, native only)"] --> schema["schema (C++, native only)"]
   webHost["@oly/web-host"] --> tscore
   testing["@oly/testing"] --> tscore
   arena["games/arena (TS)"] --> tscore
@@ -27,6 +27,8 @@ graph BT
 | `app` | `oly::app` | `input ecs core` | library |
 | `capi` | `oly::capi` | `app input ecs core` | `OBJECT` |
 | `web_host` | `oly::web_host` | `capi` | `OBJECT`, built only with Emscripten |
+| `schema` | `oly::schema` | — | `STATIC`, native builds only |
+| `schema_typescript` | `oly::schema_typescript` | `schema` | `OBJECT`, native builds only |
 
 `capi` and `web_host` are `OBJECT` because, in a static library, the linker would discard the unreferenced members and take the `EMSCRIPTEN_KEEPALIVE` functions with them.
 
@@ -39,9 +41,11 @@ The boundaries do not hold by convention alone. Three mechanisms enforce them:
    - `#include "oly/<x>/..."` in a module or game that did not declare `<x>` in `DEPENDS` (dependencies are `PUBLIC` and transitive, so only the lint catches the undeclared direct include);
    - `oly/<x>/detail/` included outside `engine/runtime/<x>/` (the module's own tests and benchmarks may);
    - `@oly/core/internal` imported outside `engine/`;
+   - `@oly/core/generated` imported outside `*.generated.ts` and `@oly/core`;
    - `@oly/web-host` imported in `@oly/core`;
    - a relative import that crosses packages;
    - `engine/runtime/` including a module or importing a package of `engine/environments/`;
+   - `engine/schema/` including a module or importing a package of `engine/environments/`;
    - one environment including or importing another;
    - `__EMSCRIPTEN__`, `EM_*`, `EMSCRIPTEN_*` or `<emscripten.h>` outside `engine/environments/web/` and `OLY_API` (`c_api.hpp`); a test under `tests/` or a benchmark under `bench/` may use `__EMSCRIPTEN__` to skip a case on WASM.
 3. **The TS surface test** (`ts.core.unit`, `surface.test.ts`). It checks the public exports of `@oly/core` against the versioned list `engine/environments/web/clients/typescript/core/api/public-exports.txt`. Adding something to the public API is an explicit change in that file.
