@@ -8,3 +8,4 @@ RUN apt-get update \
   && ln -s /usr/bin/clang-format-22 /usr/local/bin/clang-format
 
 WORKDIR /app
+ENV OLY_TOOLCHAIN=dev

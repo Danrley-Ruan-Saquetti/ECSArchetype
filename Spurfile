@@ -1,0 +1,100 @@
+_fail() {
+  printf 'spur %s: %s\n' "$SPUR_TASK" "$2" >&2
+  exit "$1"
+}
+
+_image_for() {
+  case $1 in
+    wasm* | native-clang* | schema-tool) echo wasm ;;
+    *) echo dev ;;
+  esac
+}
+
+# _in IMAGE [--service SERVICE] [compose run options...] -- [task args...]
+# Returns when this is the IMAGE toolchain; on the host, re-runs the task in
+# the compose service. The compose options must end up before the service, and
+# the task arguments after it, with no word splitting.
+_in() {
+  _image=$1
+  _service=$1
+  shift
+  if [ "${1:-}" = --service ]; then
+    _service=$2
+    shift 2
+  fi
+
+  if [ "${OLY_TOOLCHAIN:-}" = "$_image" ]; then
+    return 0
+  fi
+
+  if [ -n "${OLY_TOOLCHAIN:-}" ]; then
+    _fail 64 "runs in the $_image image, this is the $OLY_TOOLCHAIN image"
+  fi
+
+  # 69 stays outside spur's own 64-68.
+  if ! command -v docker > /dev/null 2>&1; then
+    _fail 69 "this image predates OLY_TOOLCHAIN and has no docker: run 'docker compose build' on the host"
+  fi
+
+  _options=0
+  while [ "$1" != -- ]; do
+    set -- "$@" "$1"
+    shift
+    _options=$((_options + 1))
+  done
+  shift
+
+  set -- "$_service" ./spur "$SPUR_TASK" "$@"
+  _rotate=$(($# - _options))
+  while [ "$_rotate" -gt 0 ]; do
+    set -- "$@" "$1"
+    shift
+    _rotate=$((_rotate - 1))
+  done
+
+  # Git Bash would rewrite arguments such as '^ecs\.' as Windows paths.
+  export MSYS_NO_PATHCONV=1
+  exec docker compose run --rm -e PRESET -e OLY_FUZZ_SEED -e OLY_FUZZ_OPS "$@"
+}
+
+configure: ## cmake --preset $PRESET (default debug-asan)
+  preset=${PRESET:-debug-asan}
+  _in "$(_image_for "$preset")" -- "$@"
+
+  cmake --preset "$preset"
+
+build: ## configure and build $PRESET (default debug-asan)
+  preset=${PRESET:-debug-asan}
+  _in "$(_image_for "$preset")" -- "$@"
+
+  PRESET=$preset spur configure
+  cmake --build --preset "$preset" -j
+
+## Run ctest on $PRESET after building it; the arguments go to ctest.
+##
+##   ./spur test -R '^ecs\.'
+test: ## build and run the tests of $PRESET (default debug-asan)
+  preset=${PRESET:-debug-asan}
+  _in "$(_image_for "$preset")" -- "$@"
+
+  PRESET=$preset spur build
+  ctest --preset "$preset" --no-tests=error "$@"
+
+## Run a command in the dev container, or a shell.
+##
+##   ./spur dev ./build/release/bench/ecs_bench_iterate
+##   ./spur dev ./spur -x test   # trace a task
+dev: ## command or shell in the dev container
+  _in dev -- "$@"
+
+  [ "$#" -gt 0 ] || set -- bash
+  exec "$@"
+
+## Run a command in the wasm container, or a shell.
+##
+##   ./spur wasm node --version
+wasm: ## command or shell in the wasm container
+  _in wasm -- "$@"
+
+  [ "$#" -gt 0 ] || set -- bash
+  exec "$@"

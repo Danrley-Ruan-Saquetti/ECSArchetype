@@ -1,2 +1,4 @@
 *.sh text eol=lf
 *.oly text eol=lf
+spur text eol=lf
+Spurfile text eol=lf

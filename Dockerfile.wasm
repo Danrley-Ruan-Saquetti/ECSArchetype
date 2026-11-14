@@ -8,6 +8,7 @@ RUN apt-get update \
   && pip install --no-cache-dir cmake==3.30.5
 
 WORKDIR /app
+ENV OLY_TOOLCHAIN=wasm
 
 # The emsdk LLVM is the same as Emscripten's and already has the x86-64 target: it serves as the native Clang (V1/V2/VX).
 RUN /emsdk/upstream/bin/clang++ --print-targets | grep -q x86-64 \
