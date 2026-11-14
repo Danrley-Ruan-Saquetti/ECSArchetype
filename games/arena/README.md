@@ -5,13 +5,12 @@ Shooter that validates the engine (phase 7, §4.9 of the spec). C++ runs the per
 ## How to run
 
 ```sh
-WC="docker compose run --rm wasm"
-$WC make games-test                                          # includes ts.arena.smoke
-docker compose run --rm --service-ports web make serve G=arena   # open http://localhost:8000 in Chromium
-$WC make game G=arena                                        # only assembles the static folder in build/wasm-games-release/web/arena/
+./spur games-test       # includes ts.arena.smoke
+./spur serve arena      # open http://localhost:8000 in Chromium
+./spur game arena       # only assembles the static folder in build/wasm-games-release/web/arena/
 ```
 
-`make serve` needs an open stdin (interactive terminal): esbuild exits when stdin closes.
+`./spur serve` needs an open stdin (interactive terminal): esbuild exits when stdin closes.
 The server serves `arena_game.wasm` as `application/wasm`.
 
 ## Manual checklist (Chromium)

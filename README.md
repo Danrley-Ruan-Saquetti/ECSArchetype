@@ -101,18 +101,20 @@ A complete example, with C++ systems called from TypeScript, is in [`engine/test
 
 ## Build and test
 
-The only requirement on the host is **Docker** with Docker Compose. The images ship GCC 14, CMake, `perf`, Emscripten and Node.
+The requirements on the host are **Git Bash** and **Docker** with Docker Compose. The images ship GCC 14, CMake, `perf`, Emscripten and Node. Run `docker compose build` once; `./spur --list` shows every task.
 
 ```sh
 # Native C++: builds and runs all tests with ASan + UBSan.
-docker compose run --rm dev make test
+./spur test
 
-# Only one module or one suite (T is a ctest regex).
-docker compose run --rm dev make test T='^ecs\.'
+# Only one module or one suite (the arguments go to ctest).
+./spur test -R '^ecs\.'
 
 # ECS in WebAssembly + TypeScript packages + integration tests.
-docker compose run --rm wasm make games-test
+./spur games-test
 ```
+
+`-x` and `-n` given on the host show only the dispatch to the container; trace a task with `./spur dev ./spur -x test`.
 
 The build goes to `build/<preset>/`. The presets are in [`CMakePresets.json`](CMakePresets.json). The main ones are `debug-asan` (default), `release` and `wasm-games`.
 
@@ -121,8 +123,8 @@ The build goes to `build/<preset>/`. The presets are in [`CMakePresets.json`](CM
 Performance targets are ratios against a baseline measured in the same run, for example: "iterating in the ECS costs at most 1.10× the cost of a hand-written SoA loop".
 
 ```sh
-docker compose run --rm dev make build PRESET=release
-docker compose run --rm dev ./build/release/bench/ecs_bench_iterate
+PRESET=release ./spur build
+./spur dev ./build/release/bench/ecs_bench_iterate
 ```
 
 The recorded results and the status of each target are in [`docs/benchmarks/README.md`](docs/benchmarks/README.md).

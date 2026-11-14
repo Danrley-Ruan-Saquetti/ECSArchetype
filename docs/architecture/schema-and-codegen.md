@@ -38,8 +38,8 @@ state playing
 - `oly_add_game` (`cmake/OlyGame.cmake`) runs `oly-schema` on the game's `.oly` and puts it all together. The WASM is compiled **per game**.
 - The generated C++ has `static_assert`s on `sizeof`, `alignof` and `offsetof` ("diverges from oly-schema"), and `actions::` and `states::` namespaces with the ids. A wrong name in a native system is a compile error.
 - **Schema hash**: 32-bit FNV-1a of a canonical form (components, tags, events, actions and states). The form did not change when the schema moved to `.oly`, so the hash of an existing schema is the same. `loadRuntime` checks the hash and the sizes and throws `SchemaMismatchError` if the WASM was generated with another schema.
-- **Where `oly-schema` is built**: native presets build it with the tree. A WASM build cannot run a tool it compiles to WASM, so the `wasm` image builds it for the machine with the `schema-tool` preset (`make schema-tool`, which `make ts` runs first). `oly_add_game` runs the executable named by the cache variable `OLY_SCHEMA_TOOL` (default `build/schema-tool/bin/oly-schema`).
-- `make ts` generates `games/<game>/web/schema.generated.ts` from every game's `.oly` before `tsc`. `*.generated.ts` is never committed and never edited.
+- **Where `oly-schema` is built**: native presets build it with the tree. A WASM build cannot run a tool it compiles to WASM, so the `wasm` image builds it for the machine with the `schema-tool` preset (`./spur schema-tool`, which `./spur ts` runs first). `oly_add_game` runs the executable named by the cache variable `OLY_SCHEMA_TOOL` (default `build/schema-tool/bin/oly-schema`).
+- `./spur ts` generates `games/<game>/web/schema.generated.ts` from every game's `.oly` before `tsc`. `*.generated.ts` is never committed and never edited.
 - Link: `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=node,web`, growable memory. The output goes to `build/<preset>/games/<game>_game.{mjs,wasm}`.
 
 See also: [bridge.md](bridge.md) (how the `OlyEngine` declares the schema on creation) and [ts-packages.md](ts-packages.md) (the TS side: `@oly/core/generated`).

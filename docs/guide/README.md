@@ -125,5 +125,5 @@ All example games follow the same layout ([Getting started](01-getting-started.m
 ## Conventions used in this guide
 
 - `TS` blocks use `@oly/core` and `@oly/web-host`. `C++` blocks use the `oly::ecs`, `oly::app` and `oly::input` namespaces.
-- Commands run inside Docker. `$WC` means `docker compose run --rm wasm` and `$DC` means `docker compose run --rm dev` ([commands](../development/commands.md)).
+- Commands are `./spur` tasks, run from Git Bash; each one runs inside Docker ([commands](../development/commands.md)).
 - "Contract error" means the engine refuses the call: TS throws `ContractError`; C++ stops on `OLY_ASSERT` (in debug builds).

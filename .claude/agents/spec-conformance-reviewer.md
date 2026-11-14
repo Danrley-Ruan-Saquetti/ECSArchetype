@@ -60,11 +60,7 @@ Look for each one in the diff and in the surrounding code:
 
 ## How to review
 
-The host is Windows without a C++ toolchain, so everything runs in the container. In Git Bash, prefix with `MSYS_NO_PATHCONV=1`.
-
-```sh
-DC="docker compose run --rm dev"
-```
+The host is Windows without a C++ toolchain, so everything runs in the container, through `./spur` from Git Bash.
 
 ### 1. Delimit the diff
 
@@ -94,9 +90,9 @@ When the answer is "no", describe the concrete mutation that would go unnoticed.
 ### 4. Run the tests (optional, when it helps to confirm)
 
 ```sh
-$DC make test                       # debug-asan, asserts enabled
-$DC make test T=contract_death
-$DC make test T=<suite>
+./spur test                       # debug-asan, asserts enabled
+./spur test -R contract_death
+./spur test -R <suite>
 ```
 
 Running the suite and seeing green does not prove coverage. Use the run to confirm that a case you cited exists and passes, or to reproduce a suspicion. Do not edit code to do mutation testing. Describe the mutation and leave the decision to whoever asked.

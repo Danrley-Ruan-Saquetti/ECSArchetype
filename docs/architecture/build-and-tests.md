@@ -11,7 +11,7 @@ There is no C++ toolchain on the host. Everything runs in Docker Compose:
 | `dev` | `Dockerfile` (`gcc:14`, CMake, perf) | native build and tests |
 | `perf` | `Dockerfile`, privileged | `perf stat` |
 | `wasm` | `Dockerfile.wasm` (`emscripten/emsdk:3.1.74`, emsdk's Clang as the native compiler, node 20.18, Python) | WASM, TS, cost study |
-| `web` | `Dockerfile.wasm`, port 8000 | `make serve` |
+| `web` | `Dockerfile.wasm`, port 8000 | `./spur serve` |
 
 ## Presets
 
@@ -20,7 +20,7 @@ There is no C++ toolchain on the host. Everything runs in Docker Compose:
 | `debug-asan` (default) | tests with ASan + UBSan and asserts enabled |
 | `release` | tests and benchmarks with `OLY_ENABLE_ASSERTS=0` |
 | `relwithdebinfo` | benchmarks for `perf` |
-| `schema-tool` | `oly-schema` built for the machine in the `wasm` image (Release, no tests, target `oly-schema` only); `make schema-tool` |
+| `schema-tool` | `oly-schema` built for the machine in the `wasm` image (Release, no tests, target `oly-schema` only); `./spur schema-tool` |
 | `native-clang`, `native-clang-32`, `native-clang-32-scalar`, `native-clang-avx2`, `wasm-scalar`, `wasm-simd` | ladder of the native × WASM cost study |
 | `wasm-debug` | ECS tests in WASM |
 | `wasm-games`, `wasm-games-release` | games, `capi`, TS tests |

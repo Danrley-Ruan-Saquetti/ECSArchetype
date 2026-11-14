@@ -50,11 +50,7 @@ Design points that change what is "expensive" here:
 
 ## How to verify
 
-The host is Windows without a C++ toolchain: everything runs in the container. In Git Bash, prefix the commands with `MSYS_NO_PATHCONV=1`, otherwise paths like `/tmp/x.txt` become Windows paths before reaching the container.
-
-```sh
-DC="docker compose run --rm dev"
-```
+The host is Windows without a C++ toolchain: everything runs in the container, through `./spur dev <command>` from Git Bash (`./spur` already sets `MSYS_NO_PATHCONV=1`, so paths like `/tmp/x.txt` reach the container intact).
 
 ### 1. Delimit the diff
 
@@ -71,7 +67,7 @@ If the request names another target (a commit, a file), use that one. Read the w
 Use a dedicated build directory, so as not to dirty the `build/release` cache:
 
 ```sh
-MSYS_NO_PATHCONV=1 $DC sh -c 'cmake --preset release -B build/perf-review -DOLY_VEC_REPORT=ON > /dev/null && cmake --build build/perf-review -j --clean-first 2>&1 | grep -E "vectorized|missed" | sort -u'
+./spur dev sh -c 'cmake --preset release -B build/perf-review -DOLY_VEC_REPORT=ON > /dev/null && cmake --build build/perf-review -j --clean-first 2>&1 | grep -E "vectorized|missed" | sort -u'
 ```
 
 `--clean-first` is required: in an incremental build the unchanged TUs do not recompile and print nothing. The recorded reference is `docs/benchmarks/ecs/m3_vectorization.txt` (loops of `bench/iterate.cpp` vectorized with 16 B vectors). A loop that was there and disappeared is a finding.
@@ -81,7 +77,7 @@ MSYS_NO_PATHCONV=1 $DC sh -c 'cmake --preset release -B build/perf-review -DOLY_
 `tools/extract_codegen.sh <binary> <function-regex> <output>` writes the body of a disassembled function (Intel syntax, demangled name). The output stays in the container's `/tmp`, so extract and read it in the same command:
 
 ```sh
-MSYS_NO_PATHCONV=1 $DC sh -c 'make build PRESET=release > /dev/null && tools/extract_codegen.sh build/release/bench/ecs_bench_iterate "^BM_IterateSingle_ECS" /tmp/out.txt && cat /tmp/out.txt'
+./spur dev sh -c 'PRESET=release ./spur build > /dev/null && tools/extract_codegen.sh build/release/bench/ecs_bench_iterate "^BM_IterateSingle_ECS" /tmp/out.txt && cat /tmp/out.txt'
 ```
 
 Usual targets:
@@ -110,7 +106,7 @@ What to look for in the assembly:
 If a finding depends on quantification, an isolated benchmark with a filter gives an order of magnitude:
 
 ```sh
-$DC ./build/release/bench/ecs_bench_iterate --benchmark_filter='BM_IterateSingle_(ECS|SoA)/1000000' --benchmark_repetitions=5 --benchmark_report_aggregates_only=true
+./spur dev ./build/release/bench/ecs_bench_iterate --benchmark_filter='BM_IterateSingle_(ECS|SoA)/1000000' --benchmark_repetitions=5 --benchmark_report_aggregates_only=true
 ```
 
 Report only the ratio between the medians of the same run, never isolated ns, and make it clear it is not the official round. Do not write anything to `docs/benchmarks/`.

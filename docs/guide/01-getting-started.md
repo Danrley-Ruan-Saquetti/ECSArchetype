@@ -6,25 +6,22 @@ This page takes you from a clean clone to your own game running in the browser.
 
 ## What you need
 
-Only **Docker** with Docker Compose. The images bring GCC, CMake, Emscripten, Node and Python. There is no compiler on the host.
+**Git Bash** and **Docker** with Docker Compose. The images bring GCC, CMake, Emscripten, Node and Python. There is no compiler on the host.
 
-```sh
-WC="docker compose run --rm wasm"   # WASM, TypeScript and games
-DC="docker compose run --rm dev"    # native C++ (tests and benchmarks)
-```
+Every command is a task of `./spur`, which runs it in the right container. `./spur --list` shows the tasks. Run `docker compose build` once before the first use.
 
 ## Run an example game
 
-Each folder in `games/` is a game. `G` is the folder name.
+Each folder in `games/` is a game. `<game>` is the folder name.
 
 ```sh
-$WC make games-test                                                 # builds everything and runs the tests of every game
-docker compose run --rm --service-ports web make serve G=<game>     # serves http://localhost:8000
+./spur games-test         # builds everything and runs the tests of every game
+./spur serve <game>       # serves http://localhost:8000
 ```
 
 Open `http://localhost:8000`. The game's `README.md` lists its controls.
 
-> `make serve` needs an interactive terminal: esbuild stops when stdin closes.
+> `./spur serve` needs an interactive terminal: esbuild stops when stdin closes.
 
 ## How a game is built
 
@@ -110,7 +107,7 @@ oly_add_game(hello_game
   DEPENDS ecs app capi)
 ```
 
-The target name must be `<folder>_game`: `make game G=hello` looks for `hello_game.mjs`.
+The target name must be `<folder>_game`: `./spur game hello` looks for `hello_game.mjs`.
 
 ### 5. `hello.oly`
 
@@ -259,13 +256,13 @@ Add the two TS projects to the `references` of the root `tsconfig.json`:
 { "path": "games/hello/web/tsconfig.browser.json" }
 ```
 
-`games/*/web` is already an npm workspace. Run `$WC npm install` once, so `package-lock.json` includes the new package.
+`games/*/web` is already an npm workspace. Run `./spur wasm npm install` once, so `package-lock.json` includes the new package.
 
 ### 11. Build and run
 
 ```sh
-$WC make game G=hello                                            # builds build/wasm-games-release/web/hello/
-docker compose run --rm --service-ports web make serve G=hello   # http://localhost:8000
+./spur game hello      # builds build/wasm-games-release/web/hello/
+./spur serve hello     # http://localhost:8000
 ```
 
 ## Three ways to split the work

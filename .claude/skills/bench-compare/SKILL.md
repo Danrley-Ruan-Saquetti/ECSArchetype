@@ -46,7 +46,7 @@ Points that often come out wrong:
 
 ## Flow
 
-All commands run in the container: `DC="docker compose run --rm dev"`.
+All commands are `./spur` tasks, which run in the container.
 
 ### 1. Prepare
 
@@ -58,7 +58,7 @@ All commands run in the container: `DC="docker compose run --rm dev"`.
 ### 2. Release build
 
 ```sh
-$DC make build PRESET=release
+PRESET=release ./spur build
 ```
 
 It has to be the `release` preset: the default `debug-asan` enables ASan, UBSan and asserts, and any ratio measured with it is meaningless. If the build fails, stop: there is nothing to measure.
@@ -68,7 +68,7 @@ It has to be the `release` preset: the default `debug-asan` enables ASan, UBSan 
 For each chosen executable:
 
 ```sh
-$DC ./build/release/bench/ecs_bench_<executable> --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_out=docs/benchmarks/ecs/<prefix>_<executable>.json
+./spur dev ./build/release/bench/ecs_bench_<executable> --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_out=docs/benchmarks/ecs/<prefix>_<executable>.json
 ```
 
 - The three flags are needed together: `bench_ratio.py` reads the `<name>_median` aggregate, which only exists with repetitions. Without `--benchmark_repetitions` it exits with code 2 (name not found).
@@ -80,7 +80,7 @@ $DC ./build/release/bench/ecs_bench_<executable> --benchmark_repetitions=10 --be
 For each row of the target table whose executable was run:
 
 ```sh
-$DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<prefix>_<executable>.json --name <name> --baseline <baseline> --max <max>
+./spur dev python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<prefix>_<executable>.json --name <name> --baseline <baseline> --max <max>
 ```
 
 Read the exit code, not just the text:

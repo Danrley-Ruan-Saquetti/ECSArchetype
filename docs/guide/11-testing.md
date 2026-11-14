@@ -264,8 +264,8 @@ Add `{ "path": "games/<game>/web/tests" }` to the `references` of the root `tsco
 Run:
 
 ```sh
-$WC make games-test                      # everything
-$WC make test PRESET=wasm-games T='^ts\.hello'   # only your game, after a full build
+./spur games-test                        # everything
+./spur games-test -R '^ts\.hello'        # only your game
 ```
 
 ## Testing C++ systems alone

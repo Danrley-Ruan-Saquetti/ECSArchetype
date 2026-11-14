@@ -1,7 +1,7 @@
 # Repository map
 
 ```
-CMakeLists.txt  CMakePresets.json  Makefile         C++ build and shortcuts
+CMakeLists.txt  CMakePresets.json  Spurfile  spur   C++ build and task runner
 Dockerfile  Dockerfile.wasm  docker-compose.yaml    toolchains (gcc:14 and emsdk 3.1.74)
 package.json  tsconfig.base.json  tsconfig.json     npm workspaces and project references
 cmake/            build functions: OlyModule, OlyGame, OlyOptions, OlyWarnings, OlyWasm, Dependencies

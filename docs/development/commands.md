@@ -1,21 +1,22 @@
 # Commands
 
-There is no C++ toolchain on the Windows host: everything runs in a container via Docker Compose. The services are described in [../architecture/build-and-tests.md](../architecture/build-and-tests.md#toolchain).
+There is no C++ toolchain on the Windows host: everything runs in a container via Docker Compose, driven by `./spur <task>` from Git Bash. The host needs Git Bash and Docker. The services are described in [../architecture/build-and-tests.md](../architecture/build-and-tests.md#toolchain).
 
-```sh
-DC="docker compose run --rm dev"     # gcc:14 + cmake + perf
-WC="docker compose run --rm wasm"    # emsdk + Clang + node + Python
-```
+`./spur --list` shows the tasks, and `./spur --describe <task>` the help of one. Each task runs in the container its preset needs (`dev`: gcc:14 + cmake + perf; `wasm`: emsdk + Clang + node + Python); typed inside the wrong container, it exits with 64.
+
+- Run `docker compose build` once after pulling the change that introduced `./spur`: images built before it lack `OLY_TOOLCHAIN` and stop with exit 69.
+- `-x` and `-n` given on the host show only the dispatch to the container. To trace a task, run it inside: `./spur dev ./spur -x test`.
 
 ## Native C++
 
 ```sh
-$DC make test                       # configure + build + ctest in the debug-asan preset (ASan+UBSan, asserts enabled)
-$DC make test T='^ecs\.'            # one module (T is a regex passed to `ctest -R`)
-$DC make test T='ecs.unit_world'    # one suite
-$DC make test T='contract_death'    # all death cases
-$DC make build PRESET=release       # builds tests + benchmarks in Release, asserts disabled
-$DC ./build/debug-asan/tests/ecs_unit_world -tc="case name"   # one specific doctest TEST_CASE
+./spur test                       # configure + build + ctest in the debug-asan preset (ASan+UBSan, asserts enabled)
+./spur test -R '^ecs\.'           # one module (the arguments go to ctest)
+./spur test -R 'ecs.unit_world'   # one suite
+./spur test -R 'contract_death'   # all death cases
+PRESET=release ./spur build       # builds tests + benchmarks in Release, asserts disabled
+./spur dev ./build/debug-asan/tests/ecs_unit_world -tc="case name"   # one specific doctest TEST_CASE
+./spur dev                        # a shell in the dev container
 ```
 
 - Build in `build/<preset>/`. Test executables in `build/<preset>/tests/<module>_<suite>`; benchmark executables in `build/<preset>/bench/ecs_bench_*`.
@@ -24,9 +25,9 @@ $DC ./build/debug-asan/tests/ecs_unit_world -tc="case name"   # one specific doc
 ## ECS benchmarks
 
 ```sh
-$DC make build PRESET=release
-$DC ./build/release/bench/ecs_bench_iterate --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_out=docs/benchmarks/ecs/<file>.json
-$DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<file>.json --name <bench> --baseline <bench> --max <ratio>
+PRESET=release ./spur build
+./spur dev ./build/release/bench/ecs_bench_iterate --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_out=docs/benchmarks/ecs/<file>.json
+./spur dev python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<file>.json --name <bench> --baseline <bench> --max <ratio>
 ```
 
 - Executables: `ecs_bench_iterate`, `ecs_bench_transitions`, `ecs_bench_fragmented`, `ecs_bench_flush`.
@@ -36,17 +37,17 @@ $DC python3 -I tools/bench_ratio.py --json docs/benchmarks/ecs/<file>.json --nam
 ## WASM, TypeScript and games
 
 ```sh
-$WC make schema-tool        # builds oly-schema for the machine (preset schema-tool)
-$WC make ts                 # builds oly-schema, generates every TS schema and compiles the TS
-$WC make games-test         # ts + ctest in the wasm-games preset (ECS in WASM, capi, TS tests)
-$WC make game G=arena       # assembles build/wasm-games-release/web/arena/ (index.html, esbuild's main.js, arena_game.mjs/.wasm)
-$WC sh -c 'make ts && make test PRESET=wasm-games-release T=^ts\.'   # Release: only the TS validations catch the errors
-$WC node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/<file>.json --commit $(git rev-parse --short HEAD)
-docker compose run --rm --service-ports web make serve G=arena   # http://localhost:8000
+./spur schema-tool        # builds oly-schema for the machine (preset schema-tool)
+./spur ts                 # builds oly-schema, generates every TS schema and compiles the TS
+./spur games-test         # ts + ctest in the wasm-games preset (ECS in WASM, capi, TS tests)
+./spur game arena         # assembles build/wasm-games-release/web/arena/ (index.html, esbuild's main.js, arena_game.mjs/.wasm)
+PRESET=wasm-games-release ./spur games-test -R '^ts\.'   # Release: only the TS validations catch the errors
+./spur wasm node engine/testing/dist/bench/boundary.js --module build/wasm-games-release/games/fixture_game.mjs --out docs/benchmarks/bridge/<file>.json --commit $(git rev-parse --short HEAD)
+./spur serve arena        # http://localhost:8000
 ```
 
 Caveats:
 
-- The `wasm-games*` presets require `make ts` (or `make schema-tool`) before configuring: `oly_add_game` runs `build/schema-tool/bin/oly-schema`.
-- `make game` and `make serve` only accept `wasm-games*` presets. Without `PRESET` on the command line or in the environment, they use `wasm-games-release`.
-- `make serve` needs an open stdin (interactive terminal): esbuild exits when stdin closes.
+- The `wasm-games*` presets require `./spur ts` (or `./spur schema-tool`) before configuring: `oly_add_game` runs `build/schema-tool/bin/oly-schema`.
+- `./spur games-test`, `game` and `serve` only accept `wasm-games*` presets. Without `PRESET`, `games-test` uses `wasm-games` and `game` and `serve` use `wasm-games-release`.
+- `./spur serve` needs an open stdin (interactive terminal): esbuild exits when stdin closes.

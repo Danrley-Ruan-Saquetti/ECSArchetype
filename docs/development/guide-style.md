@@ -16,7 +16,7 @@ The public API is:
 | registration macros | `OLY_SYSTEM`, `OLY_HANDLER`, `OLY_STATE_HOOK` |
 | the C API | `engine/runtime/capi/include/oly/capi/c_api.hpp` |
 | the schema language and the generated code | `engine/schema/format/`, `engine/schema/codegen/`, `engine/environments/web/clients/typescript/codegen/`, `@oly/core/generated` |
-| how a game is built | `cmake/OlyGame.cmake` (`oly_add_game`), the `schema-tool`, `game`, `serve` and `games-test` targets of the `Makefile` |
+| how a game is built | `cmake/OlyGame.cmake` (`oly_add_game`), the `schema-tool`, `game`, `serve` and `games-test` tasks of the `Spurfile` |
 | behaviour a game relies on | loop order, deferred vs. direct changes, event rounds, scope rules, validity of views, error messages |
 
 What to update:
@@ -92,7 +92,7 @@ docs/guide/
 - **Complete enough to copy**: imports when they are not obvious, the schema entries an example needs, no `...` inside the logic that matters.
 - **Follow the code style** ([code-style.md](code-style.md)): full names, braces on every `if`/`for`, blank lines between steps.
 - **Comments only for the why**, the same rule as in the code. No comments that narrate the example step by step: put that in the prose before the block.
-- **Commands** use `$WC` (`docker compose run --rm wasm`) and `$DC` (`docker compose run --rm dev`), as in [commands.md](commands.md).
+- **Commands** are `./spur` tasks (`./spur games-test`, `./spur wasm <command>`, `./spur dev <command>`), as in [commands.md](commands.md).
 - Show the wrong way only when the mistake is common, and always next to the right way.
 
 ## Recipes

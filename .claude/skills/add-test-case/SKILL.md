@@ -160,7 +160,7 @@ If the case covers an `OLY_ASSERT` that is still to be written, its message foll
 
 The build and test commands, and how to filter a test by name, are in `docs/development/commands.md`. Everything runs in the container, in the default preset (ASan + UBSan + asserts).
 
-- **Doctest suite or case:** run only the affected suite (`make test T='^ecs\.<name>'`) and confirm in the output that the number of cases went up. "0 test cases" or a filter with no test found means the wiring failed, not that it passed.
+- **Doctest suite or case:** run only the affected suite (`./spur test -R '^ecs\.<name>'`) and confirm in the output that the number of cases went up. "0 test cases" or a filter with no test found means the wiring failed, not that it passed.
 - **Death case:** run the executable directly, `build/debug-asan/tests/<module>_contract_death <name>`, and read the message printed to stderr. It must be the intended assert's message, not just "some assert". Then run the `<module>.contract_death.<name>` filter through CTest to confirm the `foreach` created the test.
 - **Proof that the test detects the defect**, when it is cheap: swap a substring for one that does not exist (the case must exit with 2) or comment out the line that violates the contract (it must exit with 1), run and undo. A test that was never seen failing was never seen testing.
 

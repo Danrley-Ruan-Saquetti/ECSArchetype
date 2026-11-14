@@ -9,9 +9,9 @@ Oly checks how you use it and fails **at the wrong call**, with a message that n
 | Error | Meaning | What to do |
 |---|---|---|
 | `ContractError` | you called the API in a way it does not allow | read the message: it says the operation and why |
-| `SchemaMismatchError` | the WASM was built from a different schema | rebuild: `$WC make ts` then the game build |
+| `SchemaMismatchError` | the WASM was built from a different schema | rebuild: `./spur ts` then the game build |
 
-In C++, the same violations stop on `OLY_ASSERT` in debug builds (`wasm-games`, `debug-asan`). In release builds they are **not checked**. Develop and test with asserts on: `make game G=<game> PRESET=wasm-games`.
+In C++, the same violations stop on `OLY_ASSERT` in debug builds (`wasm-games`, `debug-asan`). In release builds they are **not checked**. Develop and test with asserts on: `PRESET=wasm-games ./spur game <game>`.
 
 ## Common messages
 
@@ -62,8 +62,8 @@ In C++, the same violations stop on `OLY_ASSERT` in debug builds (`wasm-games`, 
 
 After changing the schema:
 
-1. `$WC make ts` — builds `oly-schema`, generates the TS schemas and compiles the TS;
-2. build the game (`$WC make game G=<game>` or `$WC make games-test`) — regenerates `schema.generated.hpp` and the WASM;
+1. `./spur ts` — builds `oly-schema`, generates the TS schemas and compiles the TS;
+2. build the game (`./spur game <game>` or `./spur games-test`) — regenerates `schema.generated.hpp` and the WASM;
 3. reload the page (or rerun the tests).
 
 ## What Oly does not do

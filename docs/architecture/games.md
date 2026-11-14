@@ -7,7 +7,7 @@ games/arena/
   arena.oly              the game's components, tags, events, actions and states
   native/                per-entity C++ gameplay: control, shooting, chasing, movement, collision
   web/                   the game's npm package, and the page that serves it
-    schema.generated.ts  generated from arena.oly by make ts (not committed)
+    schema.generated.ts  generated from arena.oly by ./spur ts (not committed)
     src/game.ts          installGame(engine, { drawer, random }): registers everything, no DOM
     src/render.ts        render through a Drawer interface
     src/main.ts          browser shell: canvas, Drawer over Canvas 2D, runInBrowser, attachBrowserInput
@@ -26,6 +26,6 @@ The DOM-free game (`installGame`) is kept separate from the browser shell (`main
 
 ## Serving in the browser
 
-`make game G=arena` assembles a static folder in `build/wasm-games-release/web/arena/` (`index.html`, esbuild's `main.js`, `.mjs` and `.wasm`). The `.mjs` does not go into the bundle: it is loaded at run time. `make serve G=arena`, in the `web` service, serves that folder on port 8000 ([build-and-tests.md](build-and-tests.md)).
+`./spur game arena` assembles a static folder in `build/wasm-games-release/web/arena/` (`index.html`, esbuild's `main.js`, `.mjs` and `.wasm`). The `.mjs` does not go into the bundle: it is loaded at run time. `./spur serve arena`, in the `web` service, serves that folder on port 8000 ([build-and-tests.md](build-and-tests.md)).
 
 The manual checklist and the list of what was missing in the engine, what belongs to the game and what was worked around are in `games/arena/README.md`.
