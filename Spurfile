@@ -10,6 +10,23 @@ _image_for() {
   esac
 }
 
+_require_games_preset() {
+  case $1 in
+    wasm-games*) ;;
+    *) _fail 64 "needs a wasm-games* preset (got: $1)" ;;
+  esac
+}
+
+_require_game() {
+  [ -n "${1:-}" ] || _fail 64 "usage: ./spur $SPUR_TASK <game>"
+}
+
+_esbuild() {
+  _game=$1
+  shift
+  node_modules/.bin/esbuild "games/$_game/web/dist/src/main.js" --bundle --format=esm --platform=browser --target=es2022 "$@"
+}
+
 # _in IMAGE [--service SERVICE] [compose run options...] -- [task args...]
 # Returns when this is the IMAGE toolchain; on the host, re-runs the task in
 # the compose service. The compose options must end up before the service, and
@@ -98,3 +115,70 @@ wasm: ## command or shell in the wasm container
 
   [ "$#" -gt 0 ] || set -- bash
   exec "$@"
+
+schema-tool: ## build oly-schema for the machine
+  _in wasm -- "$@"
+
+  # Built for the machine: a WASM build cannot run the oly-schema it compiles. Only in the wasm image; native presets
+  # build oly-schema with the tree.
+  cmake --preset schema-tool
+  cmake --build --preset schema-tool -j
+
+ts: ## generate the schemas and build the TypeScript
+  _in wasm -- "$@"
+
+  spur schema-tool
+
+  # The TS code imports the generated schemas, so they exist before tsc: a game's goes into its web/ package, a test
+  # schema's next to its .oly.
+  for web in games/*/web; do
+    game=$(basename "$(dirname "$web")")
+    build/schema-tool/bin/oly-schema "games/$game/$game.oly" --emit "ts=$web/schema.generated.ts"
+  done
+  for schema in $(find engine/testing -name '*.oly'); do
+    build/schema-tool/bin/oly-schema "$schema" --emit "ts=${schema%.oly}.generated.ts"
+  done
+
+  # npm is the one next to node: in the emsdk image it is not on the PATH.
+  npm="$(dirname "$(command -v node)")/npm"
+  [ -d node_modules ] || "$npm" ci --no-audit --no-fund
+  "$npm" run build
+
+## Build the TypeScript and run ctest on a wasm-games* preset (default wasm-games).
+##
+##   PRESET=wasm-games-release ./spur games-test -R '^ts\.'
+games-test: ## ts, then the tests of a wasm-games* preset
+  preset=${PRESET:-wasm-games}
+  _require_games_preset "$preset"
+  _in wasm -- "$@"
+
+  spur ts
+  PRESET=$preset spur test "$@"
+
+game: ## bundle a game into build/<preset>/web/<game>
+  preset=${PRESET:-wasm-games-release}
+  _require_game "$@"
+  _require_games_preset "$preset"
+  _in wasm -- "$@"
+
+  spur ts
+  PRESET=$preset spur build
+
+  web_dir=build/$preset/web/$1
+  mkdir -p "$web_dir"
+  cp "games/$1/web/index.html" "$web_dir/"
+  cp "build/$preset/games/$1_game.mjs" "build/$preset/games/$1_game.wasm" "$web_dir/"
+  _esbuild "$1" --outfile="$web_dir/main.js"
+
+## Bundle a game and serve it on http://localhost:8000. esbuild stops when stdin closes.
+##
+##   ./spur serve arena
+serve: ## game, then serve it on port 8000
+  preset=${PRESET:-wasm-games-release}
+  _require_game "$@"
+  _require_games_preset "$preset"
+  _in wasm --service web --service-ports -- "$@"
+
+  PRESET=$preset spur game "$1"
+  web_dir=build/$preset/web/$1
+  _esbuild "$1" --outfile="$web_dir/main.js" --servedir="$web_dir" --serve=0.0.0.0:8000
