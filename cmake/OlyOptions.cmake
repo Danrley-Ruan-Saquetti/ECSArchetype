@@ -7,7 +7,7 @@ option(OLY_BUILD_BENCH "Build the benchmarks" OFF)
 option(OLY_SANITIZE "ASan + UBSan" OFF)
 option(OLY_WERROR "Warnings become errors" ON)
 option(OLY_VEC_REPORT "Vectorization report in the benchmarks" OFF)
-option(OLY_BUILD_GAMES "Build the games (requires make ts first)" OFF)
+option(OLY_BUILD_GAMES "Build the games (requires ./spur ts first)" OFF)
 set(OLY_ENABLE_ASSERTS "" CACHE STRING "0/1; empty = 0 with NDEBUG, otherwise 1")
 
 if(EMSCRIPTEN)

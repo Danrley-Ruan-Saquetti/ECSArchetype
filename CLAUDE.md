@@ -8,7 +8,7 @@ Start with `docs/architecture/README.md`. It has the overview and the index of a
 
 ## Rules that always apply
 
-- Toolchain only in Docker: `docker compose run --rm dev ...` (native C++) and `docker compose run --rm wasm ...` (WASM and TS). There is no C++ compiler on the host.
+- Toolchain only in Docker, through `./spur <task>` from Git Bash (`./spur --list` shows the tasks; `./spur dev ...` for any other native C++ command, `./spur wasm ...` for WASM and TS). There is no C++ compiler on the host.
 - Commits, comments and assert messages in English.
 - Do not format `.cpp`/`.hpp` by hand: the `.claude/hooks/clang-format.sh` hook formats after each edit (it fails if Docker is stopped).
 - Use the glossary names. No aliases or compatibility `using` with old names. Game concepts never in `engine/`; game names only in `engine/testing/fixture/` and `games/`.

@@ -7,7 +7,7 @@ function(oly_add_game target)
   cmake_parse_arguments(GAME "" "SCHEMA" "SOURCES;DEPENDS" ${ARGN})
 
   if(NOT EXISTS ${OLY_SCHEMA_TOOL})
-    message(FATAL_ERROR "oly-schema not found at ${OLY_SCHEMA_TOOL}: run 'make schema-tool' (or 'make ts') before configuring with OLY_BUILD_GAMES=ON")
+    message(FATAL_ERROR "oly-schema not found at ${OLY_SCHEMA_TOOL}: run './spur schema-tool' (or './spur ts') before configuring with OLY_BUILD_GAMES=ON")
   endif()
 
   set(generatedDirectory ${CMAKE_CURRENT_BINARY_DIR}/${target}_generated)

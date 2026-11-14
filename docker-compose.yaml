@@ -6,14 +6,14 @@ services:
     volumes:
       - .:/app
       - ./build:/app/build
-    command: make build
+    command: ./spur build
 
   run:
     build: .
     volumes:
       - .:/app
       - ./build:/app/build
-    command: make run
+    command: ./spur test
 
   dev:
     build: .
